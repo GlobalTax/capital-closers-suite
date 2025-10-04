@@ -63,9 +63,20 @@ export default function MandatoDetalle() {
 
     setUpdatingEstado(true);
     try {
-      await updateMandato(id, { estado: nuevoEstado as any });
+      const response = await updateMandato(id, { estado: nuevoEstado as any });
       setMandato({ ...mandato, estado: nuevoEstado as any });
-      toast.success("Estado actualizado correctamente");
+      toast.success(response.message || "Estado actualizado correctamente");
+      
+      // Mostrar info sobre tareas completadas
+      if (response.metadata?.tareasCompletadas > 0) {
+        toast.info(
+          `📋 ${response.metadata.tareasCompletadas} tarea${
+            response.metadata.tareasCompletadas !== 1 ? "s" : ""
+          } marcada${response.metadata.tareasCompletadas !== 1 ? "s" : ""} como completada${
+            response.metadata.tareasCompletadas !== 1 ? "s" : ""
+          }`
+        );
+      }
     } catch (error) {
       console.error("Error actualizando estado:", error);
       toast.error("Error al actualizar el estado");

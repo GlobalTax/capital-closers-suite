@@ -180,6 +180,7 @@ export interface ApiResponse<T> {
   data: T;
   success: boolean;
   message?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface PaginatedResponse<T> {

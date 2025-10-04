@@ -62,7 +62,54 @@ export const updateMandato = async (id: string, data: Partial<Mandato>): Promise
   if (index === -1) {
     return { data: {} as Mandato, success: false, message: "Mandato no encontrado" };
   }
-  mockMandatos[index] = { ...mockMandatos[index], ...data };
+  
+  const mandatoAnterior = mockMandatos[index];
+  
+  // Regla de negocio: Si cambia a "Cerrado", completar tareas abiertas
+  if (data.estado === "Cerrado" && mandatoAnterior.estado !== "Cerrado") {
+    // 1. Buscar tareas abiertas del mandato
+    const tareasAfectadas = mockTareas.filter(
+      (t) => t.mandatoId === id && t.estado !== "completada"
+    );
+    
+    // 2. Marcar como completadas
+    tareasAfectadas.forEach((tarea) => {
+      const tareaIndex = mockTareas.findIndex((t) => t.id === tarea.id);
+      if (tareaIndex !== -1) {
+        mockTareas[tareaIndex].estado = "completada";
+      }
+    });
+    
+    // 3. Registrar actividad en cronología
+    if (tareasAfectadas.length > 0) {
+      const nuevaActividad = {
+        id: `ACT-${String(mockActividades.length + 1).padStart(3, "0")}`,
+        tipo: "estado" as const,
+        titulo: "Mandato cerrado",
+        descripcion: `${tareasAfectadas.length} tarea${tareasAfectadas.length !== 1 ? "s" : ""} completada${tareasAfectadas.length !== 1 ? "s" : ""} automáticamente`,
+        usuario: "Sistema",
+        fecha: new Date().toISOString(),
+        mandatoId: id,
+      };
+      mockActividades.unshift(nuevaActividad);
+    }
+    
+    // 4. Actualizar mandato
+    mockMandatos[index] = { ...mandatoAnterior, ...data };
+    
+    // 5. Retornar con metadata
+    return {
+      data: mockMandatos[index],
+      success: true,
+      message: tareasAfectadas.length > 0 
+        ? `Mandato cerrado. ${tareasAfectadas.length} tarea${tareasAfectadas.length !== 1 ? "s" : ""} completada${tareasAfectadas.length !== 1 ? "s" : ""}.`
+        : "Mandato cerrado",
+      metadata: { tareasCompletadas: tareasAfectadas.length },
+    };
+  }
+  
+  // Flujo normal
+  mockMandatos[index] = { ...mandatoAnterior, ...data };
   return { data: mockMandatos[index], success: true, message: "Mandato actualizado" };
 };
 

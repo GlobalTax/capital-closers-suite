@@ -12,27 +12,29 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-interface Column {
+export interface Column<T = any> {
   key: string;
   label: string;
-  render?: (value: any, row: any) => React.ReactNode;
+  render?: (value: any, row: T) => React.ReactNode;
   sortable?: boolean;
   filterable?: boolean;
 }
 
-interface DataTableEnhancedProps {
-  columns: Column[];
-  data: any[];
-  onRowClick?: (row: any) => void;
+interface DataTableEnhancedProps<T = any> {
+  columns: Column<T>[];
+  data: T[];
+  onRowClick?: (row: T) => void;
   loading?: boolean;
   selectable?: boolean;
   selectedRows?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
   pageSize?: number;
+  rowClassName?: (row: T) => string;
 }
 
-export function DataTableEnhanced({
+export function DataTableEnhanced<T = any>({
   columns,
   data,
   onRowClick,
@@ -41,7 +43,8 @@ export function DataTableEnhanced({
   selectedRows: externalSelectedRows = [],
   onSelectionChange,
   pageSize = 10,
-}: DataTableEnhancedProps) {
+  rowClassName,
+}: DataTableEnhancedProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -87,10 +90,10 @@ export function DataTableEnhanced({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = paginatedData.map((row) => row.id);
+      const allIds = paginatedData.map((row) => (row as any).id);
       onSelectionChange?.([...new Set([...externalSelectedRows, ...allIds])]);
     } else {
-      const pageIds = new Set(paginatedData.map((row) => row.id));
+      const pageIds = new Set(paginatedData.map((row) => (row as any).id));
       onSelectionChange?.(externalSelectedRows.filter((id) => !pageIds.has(id)));
     }
   };
@@ -104,7 +107,7 @@ export function DataTableEnhanced({
   };
 
   const allSelected =
-    paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes(row.id));
+    paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes((row as any).id));
 
   return (
     <div className="space-y-4">
@@ -181,25 +184,30 @@ export function DataTableEnhanced({
                 </TableRow>
               ) : (
                 paginatedData.map((row) => {
-                  const isSelected = externalSelectedRows.includes(row.id);
+                  const rowId = (row as any).id;
+                  const isSelected = externalSelectedRows.includes(rowId);
+                  const customClass = rowClassName ? rowClassName(row) : "";
                   return (
                     <TableRow
-                      key={row.id}
-                      className={onRowClick ? "cursor-pointer" : ""}
+                      key={rowId}
+                      className={cn(
+                        onRowClick ? "cursor-pointer" : "",
+                        customClass
+                      )}
                       onClick={() => !selectable && onRowClick?.(row)}
                     >
                       {selectable && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={isSelected}
-                            onCheckedChange={(checked) => handleSelectRow(row.id, checked as boolean)}
-                            aria-label={`Seleccionar ${row.nombre || row.id}`}
+                            onCheckedChange={(checked) => handleSelectRow(rowId, checked as boolean)}
+                            aria-label={`Seleccionar ${(row as any).nombre || rowId}`}
                           />
                         </TableCell>
                       )}
                       {columns.map((column) => (
                         <TableCell key={column.key}>
-                          {column.render ? column.render(row[column.key], row) : row[column.key]}
+                          {column.render ? column.render((row as any)[column.key], row) : (row as any)[column.key]}
                         </TableCell>
                       ))}
                     </TableRow>
