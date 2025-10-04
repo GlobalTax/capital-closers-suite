@@ -1,53 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { DataTable } from "@/components/shared/DataTable";
-import { Badge } from "@/components/ui/badge";
+import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
+import { BadgeStatus } from "@/components/shared/BadgeStatus";
+import { fetchTargets } from "@/services/api";
+import type { EmpresaTarget } from "@/types";
+import { toast } from "sonner";
 
 export default function EmpresasTarget() {
-  const [empresas] = useState([
-    {
-      nombre: "FutureTech SA",
-      sector: "Tecnología",
-      facturacion: "€5.2M",
-      empleados: 45,
-      ubicacion: "Madrid",
-      interes: "Alto",
-    },
-    {
-      nombre: "BioHealth Labs",
-      sector: "Salud",
-      facturacion: "€3.8M",
-      empleados: 32,
-      ubicacion: "Barcelona",
-      interes: "Medio",
-    },
-    {
-      nombre: "EcoEnergy Solutions",
-      sector: "Energía",
-      facturacion: "€7.1M",
-      empleados: 68,
-      ubicacion: "Valencia",
-      interes: "Alto",
-    },
-  ]);
+  const navigate = useNavigate();
+  const [empresas, setEmpresas] = useState<EmpresaTarget[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarEmpresas();
+  }, []);
+
+  const cargarEmpresas = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchTargets();
+      setEmpresas(data);
+    } catch (error) {
+      console.error("Error cargando targets:", error);
+      toast.error("Error al cargar las empresas target");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
-    { key: "nombre", label: "Empresa" },
-    { key: "sector", label: "Sector" },
-    { key: "facturacion", label: "Facturación" },
-    { key: "empleados", label: "Empleados" },
-    { key: "ubicacion", label: "Ubicación" },
+    { key: "nombre", label: "Empresa", sortable: true, filterable: true },
+    { key: "sector", label: "Sector", sortable: true, filterable: true },
+    { key: "facturacion", label: "Facturación", sortable: true },
+    { key: "empleados", label: "Empleados", sortable: true },
+    { key: "ubicacion", label: "Ubicación", sortable: true, filterable: true },
     {
       key: "interes",
       label: "Nivel de Interés",
-      render: (value: string) => {
-        const variants: Record<string, "default" | "secondary" | "outline"> = {
-          Alto: "default",
-          Medio: "secondary",
-          Bajo: "outline",
-        };
-        return <Badge variant={variants[value] || "default"}>{value}</Badge>;
-      },
+      sortable: true,
+      render: (value: string) => <BadgeStatus status={value as any} type="interes" />,
     },
   ];
 
@@ -57,12 +49,14 @@ export default function EmpresasTarget() {
         title="Empresas Target"
         description="Empresas objetivo para adquisición o inversión"
         actionLabel="Nueva Empresa"
-        onAction={() => console.log("Crear nueva empresa target")}
+        onAction={() => toast.info("Función disponible próximamente")}
       />
-      <DataTable
+      <DataTableEnhanced
         columns={columns}
         data={empresas}
-        onRowClick={(row) => console.log("Detalles de:", row)}
+        loading={loading}
+        onRowClick={(row) => navigate(`/targets/${row.id}`)}
+        pageSize={10}
       />
     </div>
   );

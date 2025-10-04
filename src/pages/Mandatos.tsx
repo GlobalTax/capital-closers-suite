@@ -1,54 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { DataTable } from "@/components/shared/DataTable";
-import { Badge } from "@/components/ui/badge";
+import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
+import { BadgeStatus } from "@/components/shared/BadgeStatus";
+import { fetchMandatos } from "@/services/api";
+import type { Mandato } from "@/types";
+import { toast } from "sonner";
 
 export default function Mandatos() {
-  const [mandatos] = useState([
-    {
-      id: "M-001",
-      empresa: "TechCorp Solutions",
-      cliente: "María García",
-      estado: "En progreso",
-      valor: "€2.5M",
-      fecha: "2024-01-15",
-    },
-    {
-      id: "M-002",
-      empresa: "InnovateLab",
-      cliente: "Carlos Ruiz",
-      estado: "Negociación",
-      valor: "€1.8M",
-      fecha: "2024-01-20",
-    },
-    {
-      id: "M-003",
-      empresa: "DataStream Inc",
-      cliente: "Ana Martínez",
-      estado: "Due Diligence",
-      valor: "€3.2M",
-      fecha: "2024-01-10",
-    },
-  ]);
+  const navigate = useNavigate();
+  const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarMandatos();
+  }, []);
+
+  const cargarMandatos = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchMandatos();
+      setMandatos(data);
+    } catch (error) {
+      console.error("Error cargando mandatos:", error);
+      toast.error("Error al cargar los mandatos");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
-    { key: "id", label: "ID Mandato" },
-    { key: "empresa", label: "Empresa" },
-    { key: "cliente", label: "Cliente" },
+    { key: "id", label: "ID Mandato", sortable: true, filterable: true },
+    { key: "empresa", label: "Empresa", sortable: true, filterable: true },
+    { key: "cliente", label: "Cliente", sortable: true, filterable: true },
     {
       key: "estado",
       label: "Estado",
-      render: (value: string) => {
-        const variants: Record<string, "default" | "secondary" | "outline"> = {
-          "En progreso": "default",
-          "Negociación": "secondary",
-          "Due Diligence": "outline",
-        };
-        return <Badge variant={variants[value] || "default"}>{value}</Badge>;
-      },
+      sortable: true,
+      render: (value: string) => <BadgeStatus status={value as any} type="mandato" />,
     },
-    { key: "valor", label: "Valor Estimado" },
-    { key: "fecha", label: "Fecha Inicio" },
+    { key: "valor", label: "Valor Estimado", sortable: true },
+    { key: "fecha", label: "Fecha Inicio", sortable: true },
   ];
 
   return (
@@ -57,12 +49,14 @@ export default function Mandatos() {
         title="Mandatos"
         description="Gestiona todos los mandatos de venta activos"
         actionLabel="Nuevo Mandato"
-        onAction={() => console.log("Crear nuevo mandato")}
+        onAction={() => toast.info("Función disponible próximamente")}
       />
-      <DataTable
+      <DataTableEnhanced
         columns={columns}
         data={mandatos}
-        onRowClick={(row) => console.log("Detalles de:", row)}
+        loading={loading}
+        onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
+        pageSize={10}
       />
     </div>
   );

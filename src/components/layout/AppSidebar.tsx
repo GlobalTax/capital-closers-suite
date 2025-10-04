@@ -22,7 +22,7 @@ import {
 const menuItems = [
   { title: "Mandatos", url: "/mandatos", icon: FileText },
   { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Empresas Target", url: "/empresas-target", icon: Building2 },
+  { title: "Empresas Target", url: "/targets", icon: Building2 },
   { title: "Tareas", url: "/tareas", icon: CheckSquare },
   { title: "Documentos", url: "/documentos", icon: FolderOpen },
   { title: "Reportes", url: "/reportes", icon: BarChart3 },

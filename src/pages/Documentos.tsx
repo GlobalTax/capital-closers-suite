@@ -1,61 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { DataTable } from "@/components/shared/DataTable";
+import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { fetchDocumentos } from "@/services/api";
+import type { Documento } from "@/types";
+import { toast } from "sonner";
 
 export default function Documentos() {
-  const [documentos] = useState([
-    {
-      nombre: "Contrato_TechCorp_2024.pdf",
-      tipo: "Contrato",
-      mandato: "M-001",
-      fecha: "2024-01-15",
-      tamano: "2.3 MB",
-    },
-    {
-      nombre: "DD_Report_InnovateLab.xlsx",
-      tipo: "Due Diligence",
-      mandato: "M-002",
-      fecha: "2024-01-20",
-      tamano: "5.1 MB",
-    },
-    {
-      nombre: "Valuation_DataStream.pdf",
-      tipo: "Valoración",
-      mandato: "M-003",
-      fecha: "2024-01-18",
-      tamano: "1.8 MB",
-    },
-  ]);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarDocumentos();
+  }, []);
+
+  const cargarDocumentos = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchDocumentos();
+      setDocumentos(data);
+    } catch (error) {
+      console.error("Error cargando documentos:", error);
+      toast.error("Error al cargar los documentos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = (doc: Documento) => {
+    toast.success(`Descargando ${doc.nombre}...`);
+  };
 
   const columns = [
-    {
-      key: "nombre",
-      label: "Documento",
-      render: (value: string) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-            <FileText className="w-4 h-4 text-primary" />
-          </div>
-          <span className="font-medium">{value}</span>
-        </div>
-      ),
-    },
+    { key: "nombre", label: "Nombre", sortable: true, filterable: true },
     {
       key: "tipo",
       label: "Tipo",
+      sortable: true,
       render: (value: string) => <Badge variant="outline">{value}</Badge>,
     },
-    { key: "mandato", label: "Mandato" },
-    { key: "fecha", label: "Fecha Subida" },
+    { key: "mandato", label: "Mandato", sortable: true, filterable: true },
+    { key: "fecha", label: "Fecha", sortable: true },
     { key: "tamano", label: "Tamaño" },
     {
-      key: "acciones",
+      key: "id",
       label: "Acciones",
-      render: () => (
-        <Button variant="ghost" size="sm">
+      render: (_: any, row: Documento) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDownload(row);
+          }}
+        >
           <Download className="w-4 h-4 mr-2" />
           Descargar
         </Button>
@@ -67,11 +67,16 @@ export default function Documentos() {
     <div>
       <PageHeader
         title="Documentos"
-        description="Repositorio de documentos y archivos"
+        description="Gestión de documentos y archivos"
         actionLabel="Subir Documento"
-        onAction={() => console.log("Subir documento")}
+        onAction={() => toast.info("Función disponible próximamente")}
       />
-      <DataTable columns={columns} data={documentos} />
+      <DataTableEnhanced
+        columns={columns}
+        data={documentos}
+        loading={loading}
+        pageSize={15}
+      />
     </div>
   );
 }

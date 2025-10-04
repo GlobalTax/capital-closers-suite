@@ -9,7 +9,9 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import Mandatos from "./pages/Mandatos";
 import MandatoDetalle from "./pages/MandatoDetalle";
 import Clientes from "./pages/Clientes";
+import ClienteDetalle from "./pages/ClienteDetalle";
 import EmpresasTarget from "./pages/EmpresasTarget";
+import TargetDetalle from "./pages/TargetDetalle";
 import Tareas from "./pages/Tareas";
 import Documentos from "./pages/Documentos";
 import Reportes from "./pages/Reportes";
@@ -27,7 +29,9 @@ function AppContent() {
         <Route path="/mandatos" element={<AppLayout><Mandatos /></AppLayout>} />
         <Route path="/mandatos/:id" element={<AppLayout><MandatoDetalle /></AppLayout>} />
         <Route path="/clientes" element={<AppLayout><Clientes /></AppLayout>} />
+        <Route path="/clientes/:id" element={<AppLayout><ClienteDetalle /></AppLayout>} />
         <Route path="/targets" element={<AppLayout><EmpresasTarget /></AppLayout>} />
+        <Route path="/targets/:id" element={<AppLayout><TargetDetalle /></AppLayout>} />
         <Route path="/tareas" element={<AppLayout><Tareas /></AppLayout>} />
         <Route path="/documentos" element={<AppLayout><Documentos /></AppLayout>} />
         <Route path="/reportes" element={<AppLayout><Reportes /></AppLayout>} />
