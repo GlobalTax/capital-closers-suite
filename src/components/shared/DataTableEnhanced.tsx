@@ -27,7 +27,8 @@ interface DataTableEnhancedProps {
   onRowClick?: (row: any) => void;
   loading?: boolean;
   selectable?: boolean;
-  onSelectionChange?: (selected: any[]) => void;
+  selectedRows?: string[];
+  onSelectionChange?: (selectedIds: string[]) => void;
   pageSize?: number;
 }
 
@@ -37,6 +38,7 @@ export function DataTableEnhanced({
   onRowClick,
   loading = false,
   selectable = false,
+  selectedRows: externalSelectedRows = [],
   onSelectionChange,
   pageSize = 10,
 }: DataTableEnhancedProps) {
@@ -44,7 +46,6 @@ export function DataTableEnhanced({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
   // Filtrar datos
   let filteredData = data.filter((row) => {
@@ -86,27 +87,24 @@ export function DataTableEnhanced({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRows(new Set(paginatedData.map((_, idx) => startIndex + idx)));
-      onSelectionChange?.(filteredData);
+      const allIds = paginatedData.map((row) => row.id);
+      onSelectionChange?.([...new Set([...externalSelectedRows, ...allIds])]);
     } else {
-      setSelectedRows(new Set());
-      onSelectionChange?.([]);
+      const pageIds = new Set(paginatedData.map((row) => row.id));
+      onSelectionChange?.(externalSelectedRows.filter((id) => !pageIds.has(id)));
     }
   };
 
-  const handleSelectRow = (index: number, checked: boolean) => {
-    const newSelected = new Set(selectedRows);
+  const handleSelectRow = (rowId: string, checked: boolean) => {
     if (checked) {
-      newSelected.add(index);
+      onSelectionChange?.([...externalSelectedRows, rowId]);
     } else {
-      newSelected.delete(index);
+      onSelectionChange?.(externalSelectedRows.filter((id) => id !== rowId));
     }
-    setSelectedRows(newSelected);
-    const selectedData = filteredData.filter((_, idx) => newSelected.has(idx));
-    onSelectionChange?.(selectedData);
   };
 
-  const allSelected = paginatedData.length > 0 && paginatedData.every((_, idx) => selectedRows.has(startIndex + idx));
+  const allSelected =
+    paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes(row.id));
 
   return (
     <div className="space-y-4">
@@ -182,20 +180,20 @@ export function DataTableEnhanced({
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((row, index) => {
-                  const actualIndex = startIndex + index;
+                paginatedData.map((row) => {
+                  const isSelected = externalSelectedRows.includes(row.id);
                   return (
                     <TableRow
-                      key={actualIndex}
+                      key={row.id}
                       className={onRowClick ? "cursor-pointer" : ""}
                       onClick={() => !selectable && onRowClick?.(row)}
                     >
                       {selectable && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={selectedRows.has(actualIndex)}
-                            onCheckedChange={(checked) => handleSelectRow(actualIndex, checked as boolean)}
-                            aria-label={`Seleccionar fila ${actualIndex + 1}`}
+                            checked={isSelected}
+                            onCheckedChange={(checked) => handleSelectRow(row.id, checked as boolean)}
+                            aria-label={`Seleccionar ${row.nombre || row.id}`}
                           />
                         </TableCell>
                       )}
@@ -217,7 +215,7 @@ export function DataTableEnhanced({
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, filteredData.length)} de {filteredData.length} registros
-            {selectedRows.size > 0 && ` • ${selectedRows.size} seleccionados`}
+            {externalSelectedRows.length > 0 && ` • ${externalSelectedRows.length} seleccionados`}
           </p>
           <div className="flex items-center gap-2">
             <Button

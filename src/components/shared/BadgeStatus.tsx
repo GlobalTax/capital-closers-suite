@@ -1,11 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import type { MandatoEstado, NivelInteres, TareaEstado, TareaPrioridad } from "@/types";
+import type { MandatoEstado, NivelInteres, TareaEstado, TareaPrioridad, TargetEstado } from "@/types";
 
-type StatusType = MandatoEstado | NivelInteres | TareaEstado | TareaPrioridad;
+type StatusType = MandatoEstado | NivelInteres | TareaEstado | TareaPrioridad | TargetEstado;
 
 interface BadgeStatusProps {
   status: StatusType;
-  type?: "mandato" | "interes" | "tarea" | "prioridad";
+  type?: "mandato" | "interes" | "tarea" | "prioridad" | "target";
 }
 
 export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
@@ -48,6 +48,19 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
       return prioridadVariants[status as TareaPrioridad] || "default";
     }
 
+    if (type === "target") {
+      const targetVariants: Record<TargetEstado, "default" | "secondary" | "outline" | "destructive"> = {
+        "pendiente": "outline",
+        "contactada": "secondary",
+        "interesada": "default",
+        "rechazada": "destructive",
+        "en_dd": "default",
+        "oferta": "default",
+        "cerrada": "default",
+      };
+      return targetVariants[status as TargetEstado] || "outline";
+    }
+
     return "default";
   };
 
@@ -68,6 +81,19 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
         "baja": "Baja",
       };
       return prioridadTexts[status as TareaPrioridad] || status;
+    }
+
+    if (type === "target") {
+      const targetTexts: Record<TargetEstado, string> = {
+        "pendiente": "Pendiente",
+        "contactada": "Contactada",
+        "interesada": "Interesada",
+        "rechazada": "Rechazada",
+        "en_dd": "Due Diligence",
+        "oferta": "Oferta",
+        "cerrada": "Cerrada",
+      };
+      return targetTexts[status as TargetEstado] || status;
     }
 
     return status;

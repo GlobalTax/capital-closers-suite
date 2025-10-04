@@ -20,3 +20,13 @@ export const MANDATO_ESTADOS = [
 export const TAREA_ESTADOS = ["pendiente", "en-progreso", "completada"] as const;
 
 export const NIVEL_INTERES = ["Alto", "Medio", "Bajo"] as const;
+
+export const TARGET_ESTADOS = [
+  "pendiente",
+  "contactada",
+  "interesada",
+  "rechazada",
+  "en_dd",
+  "oferta",
+  "cerrada",
+] as const;

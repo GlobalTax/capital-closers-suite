@@ -24,6 +24,15 @@ export type DocumentoTipo =
   | "Financiero" 
   | "Legal";
 
+export type TargetEstado = 
+  | "pendiente" 
+  | "contactada" 
+  | "interesada" 
+  | "rechazada" 
+  | "en_dd" 
+  | "oferta" 
+  | "cerrada";
+
 // ============================================
 // MANDATO
 // ============================================
@@ -67,6 +76,24 @@ export interface Cliente {
 // ============================================
 // EMPRESA TARGET
 // ============================================
+export interface Interaccion {
+  id: string;
+  tipo: "email" | "llamada" | "reunion" | "nota";
+  titulo: string;
+  descripcion?: string;
+  fecha: string;
+  responsable: string;
+}
+
+export interface DatosFinancieros {
+  revenue?: number;
+  ebitda?: number;
+  margenEbitda?: number;
+  deuda?: number;
+  capitalCirculante?: number;
+  notas?: string;
+}
+
 export interface EmpresaTarget {
   id: string;
   nombre: string;
@@ -81,6 +108,14 @@ export interface EmpresaTarget {
   telefono?: string;
   sitioWeb?: string;
   fechaProspeccion?: string;
+  estado?: TargetEstado;
+  mandatoId?: string;
+  mandatoNombre?: string;
+  ultimaActividad?: string;
+  revenue?: number;
+  ebitda?: number;
+  interacciones?: Interaccion[];
+  datosFinancieros?: DatosFinancieros;
 }
 
 // ============================================
