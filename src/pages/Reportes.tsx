@@ -1,52 +1,118 @@
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, TrendingUp, Users, FileText } from "lucide-react";
+import { fetchMandatos, fetchClientes, fetchTargets } from "@/services/api";
+import type { Mandato } from "@/types";
 
 export default function Reportes() {
+  const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [totalClientes, setTotalClientes] = useState(0);
+  const [totalTargets, setTotalTargets] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    setLoading(true);
+    try {
+      const [mandatosData, clientesData, targetsData] = await Promise.all([
+        fetchMandatos(),
+        fetchClientes(),
+        fetchTargets(),
+      ]);
+      setMandatos(mandatosData);
+      setTotalClientes(clientesData.length);
+      setTotalTargets(targetsData.length);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mandatosActivos = mandatos.filter(
+    (m) => m.estado !== "Cerrado" && m.estado !== "Cancelado"
+  ).length;
+
+  const mandatosCerrados = mandatos.filter((m) => m.estado === "Cerrado").length;
+  const tasaConversion =
+    mandatos.length > 0
+      ? Math.round((mandatosCerrados / mandatos.length) * 100)
+      : 0;
+
+  const mandatosPorEstado = [
+    {
+      estado: "En progreso",
+      cantidad: mandatos.filter((m) => m.estado === "En progreso").length,
+      color: "bg-blue-500",
+    },
+    {
+      estado: "Negociación",
+      cantidad: mandatos.filter((m) => m.estado === "Negociación").length,
+      color: "bg-yellow-500",
+    },
+    {
+      estado: "Due Diligence",
+      cantidad: mandatos.filter((m) => m.estado === "Due Diligence").length,
+      color: "bg-purple-500",
+    },
+    {
+      estado: "Cerrado",
+      cantidad: mandatos.filter((m) => m.estado === "Cerrado").length,
+      color: "bg-green-500",
+    },
+  ];
+
   const stats = [
     {
       title: "Mandatos Activos",
-      value: "12",
-      change: "+3 este mes",
+      value: mandatosActivos.toString(),
+      change: `${mandatos.length} total`,
       icon: FileText,
-      color: "text-blue-600",
+      color: "text-primary",
     },
     {
       title: "Tasa de Conversión",
-      value: "68%",
-      change: "+5% vs mes anterior",
+      value: `${tasaConversion}%`,
+      change: `${mandatosCerrados} cerrados`,
       icon: TrendingUp,
       color: "text-green-600",
     },
     {
-      title: "Clientes Nuevos",
-      value: "8",
-      change: "+2 esta semana",
+      title: "Clientes Activos",
+      value: totalClientes.toString(),
+      change: "En sistema",
       icon: Users,
       color: "text-purple-600",
     },
     {
-      title: "Ciclo Medio",
-      value: "45 días",
-      change: "-3 días vs mes anterior",
+      title: "Empresas Target",
+      value: totalTargets.toString(),
+      change: "Prospección",
       icon: BarChart3,
       color: "text-orange-600",
     },
   ];
 
-  const mandatosPorEstado = [
-    { estado: "Prospección", cantidad: 5, color: "bg-blue-500" },
-    { estado: "Negociación", cantidad: 3, color: "bg-yellow-500" },
-    { estado: "Due Diligence", cantidad: 2, color: "bg-purple-500" },
-    { estado: "Cierre", cantidad: 2, color: "bg-green-500" },
-  ];
+  if (loading) {
+    return (
+      <div>
+        <PageHeader title="Reportes" description="Análisis y métricas del negocio" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="h-32 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <PageHeader
-        title="Reportes"
-        description="Análisis y métricas del negocio"
-      />
+      <PageHeader title="Reportes" description="Análisis y métricas del negocio" />
 
       <div className="space-y-6">
         {/* KPIs */}
@@ -61,9 +127,7 @@ export default function Reportes() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {stat.change}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
               </CardContent>
             </Card>
           ))}
@@ -88,7 +152,11 @@ export default function Reportes() {
                     <div
                       className={`${item.color} h-2 rounded-full transition-all`}
                       style={{
-                        width: `${(item.cantidad / 12) * 100}%`,
+                        width: `${
+                          mandatos.length > 0
+                            ? (item.cantidad / mandatos.length) * 100
+                            : 0
+                        }%`,
                       }}
                     />
                   </div>
@@ -98,20 +166,28 @@ export default function Reportes() {
           </CardContent>
         </Card>
 
-        {/* Conversión de Leads a Clientes */}
+        {/* Pipeline de Conversión */}
         <Card>
           <CardHeader>
             <CardTitle>Pipeline de Conversión</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               {[
-                { label: "Leads", value: 25, color: "bg-blue-500" },
-                { label: "Cualificados", value: 18, color: "bg-purple-500" },
-                { label: "Propuestas", value: 12, color: "bg-yellow-500" },
-                { label: "Clientes", value: 8, color: "bg-green-500" },
+                { label: "Targets", value: totalTargets, color: "bg-blue-500" },
+                {
+                  label: "En Progreso",
+                  value: mandatos.filter((m) => m.estado === "En progreso").length,
+                  color: "bg-purple-500",
+                },
+                {
+                  label: "Negociación",
+                  value: mandatos.filter((m) => m.estado === "Negociación").length,
+                  color: "bg-yellow-500",
+                },
+                { label: "Cerrados", value: mandatosCerrados, color: "bg-green-500" },
               ].map((stage, index) => (
-                <div key={stage.label} className="flex-1 text-center">
+                <div key={stage.label} className="flex-1 text-center relative">
                   <div className="flex flex-col items-center gap-2">
                     <div
                       className={`w-16 h-16 rounded-full ${stage.color} flex items-center justify-center text-white font-bold text-xl`}
@@ -119,10 +195,10 @@ export default function Reportes() {
                       {stage.value}
                     </div>
                     <span className="text-sm font-medium">{stage.label}</span>
-                    {index < 3 && (
-                      <div className="hidden md:block absolute w-full h-0.5 bg-muted top-8 left-1/2 -z-10" />
-                    )}
                   </div>
+                  {index < 3 && (
+                    <div className="hidden md:block absolute w-full h-0.5 bg-muted top-8 left-1/2 -z-10" />
+                  )}
                 </div>
               ))}
             </div>
