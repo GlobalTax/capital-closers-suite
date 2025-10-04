@@ -45,9 +45,11 @@ export const createMandato = async (data: Partial<Mandato>): Promise<ApiResponse
     empresa: data.empresa || "",
     cliente: data.cliente || "",
     clienteId: data.clienteId || "",
+    tipo: data.tipo || "venta",
     estado: data.estado || "En progreso",
     valor: data.valor || "€0",
     fecha: new Date().toISOString().split("T")[0],
+    ultimaActualizacion: new Date().toISOString().split("T")[0],
     ...data,
   };
   mockMandatos.push(newMandato);

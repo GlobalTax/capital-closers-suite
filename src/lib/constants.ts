@@ -5,6 +5,9 @@
 export const APP_NAME = "Capittal CRM";
 export const APP_VERSION = "1.0.0";
 
+// Tipos de Mandato
+export const MANDATO_TIPOS = ["compra", "venta"] as const;
+
 // Estados
 export const MANDATO_ESTADOS = [
   "En progreso",

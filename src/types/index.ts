@@ -9,6 +9,8 @@ export type MandatoEstado =
   | "Cerrado" 
   | "Cancelado";
 
+export type MandatoTipo = "compra" | "venta";
+
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
 
 export type TareaEstado = "pendiente" | "en-progreso" | "completada";
@@ -30,6 +32,7 @@ export interface Mandato {
   empresa: string;
   cliente: string;
   clienteId: string;
+  tipo: MandatoTipo;
   estado: MandatoEstado;
   valor: string;
   fecha: string;
@@ -39,6 +42,9 @@ export interface Mandato {
   responsable?: string;
   documentosCount?: number;
   actividadesCount?: number;
+  targetsCount?: number;
+  tareasAbiertas?: number;
+  ultimaActualizacion?: string;
 }
 
 // ============================================
