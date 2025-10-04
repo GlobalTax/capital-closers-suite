@@ -1,0 +1,249 @@
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface Column {
+  key: string;
+  label: string;
+  render?: (value: any, row: any) => React.ReactNode;
+  sortable?: boolean;
+  filterable?: boolean;
+}
+
+interface DataTableEnhancedProps {
+  columns: Column[];
+  data: any[];
+  onRowClick?: (row: any) => void;
+  loading?: boolean;
+  selectable?: boolean;
+  onSelectionChange?: (selected: any[]) => void;
+  pageSize?: number;
+}
+
+export function DataTableEnhanced({
+  columns,
+  data,
+  onRowClick,
+  loading = false,
+  selectable = false,
+  onSelectionChange,
+  pageSize = 10,
+}: DataTableEnhancedProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+
+  // Filtrar datos
+  let filteredData = data.filter((row) => {
+    return Object.entries(filters).every(([key, value]) => {
+      if (!value) return true;
+      const cellValue = String(row[key]).toLowerCase();
+      return cellValue.includes(value.toLowerCase());
+    });
+  });
+
+  // Ordenar datos
+  if (sortColumn) {
+    filteredData = [...filteredData].sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }
+
+  // Paginación
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedData = filteredData.slice(startIndex, startIndex + pageSize);
+
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection("asc");
+    }
+  };
+
+  const handleFilterChange = (columnKey: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [columnKey]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(new Set(paginatedData.map((_, idx) => startIndex + idx)));
+      onSelectionChange?.(filteredData);
+    } else {
+      setSelectedRows(new Set());
+      onSelectionChange?.([]);
+    }
+  };
+
+  const handleSelectRow = (index: number, checked: boolean) => {
+    const newSelected = new Set(selectedRows);
+    if (checked) {
+      newSelected.add(index);
+    } else {
+      newSelected.delete(index);
+    }
+    setSelectedRows(newSelected);
+    const selectedData = filteredData.filter((_, idx) => newSelected.has(idx));
+    onSelectionChange?.(selectedData);
+  };
+
+  const allSelected = paginatedData.length > 0 && paginatedData.every((_, idx) => selectedRows.has(startIndex + idx));
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                {selectable && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Seleccionar todo"
+                    />
+                  </TableHead>
+                )}
+                {columns.map((column) => (
+                  <TableHead key={column.key} className="font-semibold">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span>{column.label}</span>
+                        {column.sortable && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleSort(column.key)}
+                          >
+                            <ArrowUpDown className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {column.filterable && (
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                          <Input
+                            placeholder="Filtrar..."
+                            value={filters[column.key] || ""}
+                            onChange={(e) => handleFilterChange(column.key, e.target.value)}
+                            className="h-7 text-xs pl-7"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <TableRow key={idx}>
+                    {selectable && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-4" />
+                      </TableCell>
+                    )}
+                    {columns.map((column) => (
+                      <TableCell key={column.key}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : paginatedData.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + (selectable ? 1 : 0)}
+                    className="text-center text-muted-foreground py-8"
+                  >
+                    No hay datos disponibles
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedData.map((row, index) => {
+                  const actualIndex = startIndex + index;
+                  return (
+                    <TableRow
+                      key={actualIndex}
+                      className={onRowClick ? "cursor-pointer" : ""}
+                      onClick={() => !selectable && onRowClick?.(row)}
+                    >
+                      {selectable && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedRows.has(actualIndex)}
+                            onCheckedChange={(checked) => handleSelectRow(actualIndex, checked as boolean)}
+                            aria-label={`Seleccionar fila ${actualIndex + 1}`}
+                          />
+                        </TableCell>
+                      )}
+                      {columns.map((column) => (
+                        <TableCell key={column.key}>
+                          {column.render ? column.render(row[column.key], row) : row[column.key]}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {!loading && filteredData.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, filteredData.length)} de {filteredData.length} registros
+            {selectedRows.size > 0 && ` • ${selectedRows.size} seleccionados`}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
