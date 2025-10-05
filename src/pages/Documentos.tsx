@@ -30,20 +30,33 @@ export default function Documentos() {
   };
 
   const handleDownload = (doc: Documento) => {
-    toast.success(`Descargando ${doc.nombre}...`);
+    toast.success(`Descargando ${doc.file_name}...`);
   };
 
   const columns = [
-    { key: "nombre", label: "Nombre", sortable: true, filterable: true },
+    { key: "file_name", label: "Nombre", sortable: true, filterable: true },
     {
       key: "tipo",
       label: "Tipo",
       sortable: true,
       render: (value: string) => <Badge variant="outline">{value}</Badge>,
     },
-    { key: "mandato", label: "Mandato", sortable: true, filterable: true },
-    { key: "fecha", label: "Fecha", sortable: true },
-    { key: "tamano", label: "Tamaño" },
+    { key: "mandato_id", label: "Mandato", sortable: true, filterable: true },
+    { 
+      key: "created_at", 
+      label: "Fecha", 
+      sortable: true,
+      render: (value: string) => new Date(value).toLocaleDateString()
+    },
+    { 
+      key: "file_size_bytes", 
+      label: "Tamaño",
+      render: (value: number) => {
+        if (value < 1024) return value + " B";
+        if (value < 1024 * 1024) return (value / 1024).toFixed(1) + " KB";
+        return (value / (1024 * 1024)).toFixed(1) + " MB";
+      }
+    },
     {
       key: "id",
       label: "Acciones",

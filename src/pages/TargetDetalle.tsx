@@ -36,7 +36,7 @@ export default function TargetDetalle() {
         fetchDocumentos(),
       ]);
       setTarget(targetData);
-      setDocumentos(docsData.filter((d) => d.mandatoId === targetData?.mandatoId));
+      setDocumentos(docsData.filter((d) => d.mandato_id === targetData?.mandatoId));
     } catch (error) {
       console.error("Error cargando target:", error);
     } finally {
@@ -297,9 +297,13 @@ export default function TargetDetalle() {
                       className="flex items-center justify-between p-3 border rounded-lg"
                     >
                       <div>
-                        <p className="font-medium">{doc.nombre}</p>
+                        <p className="font-medium">{doc.file_name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {doc.tipo} • {doc.fecha} • {doc.tamano}
+                          {doc.tipo} • {new Date(doc.created_at).toLocaleDateString()} • {
+                            doc.file_size_bytes < 1024 ? doc.file_size_bytes + " B" :
+                            doc.file_size_bytes < 1024 * 1024 ? (doc.file_size_bytes / 1024).toFixed(1) + " KB" :
+                            (doc.file_size_bytes / (1024 * 1024)).toFixed(1) + " MB"
+                          }
                         </p>
                       </div>
                       <BadgeStatus status={doc.tipo as any} type="mandato" />

@@ -287,12 +287,14 @@ export const createDocumento = async (data: Partial<Documento>): Promise<ApiResp
   await delay();
   const newDocumento: Documento = {
     id: `DOC-${String(mockDocumentos.length + 1).padStart(3, "0")}`,
-    nombre: data.nombre || "",
-    tipo: data.tipo || "Contrato",
-    mandato: data.mandato || "",
-    mandatoId: data.mandatoId || "",
-    fecha: new Date().toISOString().split("T")[0],
-    tamano: data.tamano || "0 KB",
+    file_name: data.file_name || "documento.pdf",
+    tipo: data.tipo || "Otro",
+    mandato_id: data.mandato_id || "",
+    file_size_bytes: data.file_size_bytes || 0,
+    mime_type: data.mime_type || "application/pdf",
+    storage_path: data.storage_path || "",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     ...data,
   };
   mockDocumentos.push(newDocumento);
