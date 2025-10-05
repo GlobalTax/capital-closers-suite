@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp } from "lucide-react";
+import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getContactoById, deleteContacto, getContactoMandatos } from "@/services/contactos";
+import { fetchInteraccionesByContacto, type Interaccion } from "@/services/interacciones";
+import { getContactoDocumentos } from "@/services/documentos";
 import type { Contacto, Mandato } from "@/types";
+import { TimelineActividad } from "@/components/shared/TimelineActividad";
+import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawer";
@@ -21,6 +25,8 @@ export default function ContactoDetalle() {
   const navigate = useNavigate();
   const [contacto, setContacto] = useState<Contacto | null>(null);
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
+  const [documentos, setDocumentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -31,13 +37,17 @@ export default function ContactoDetalle() {
 
     setLoading(true);
     try {
-      const [contactoData, mandatosData] = await Promise.all([
+      const [contactoData, mandatosData, interaccionesData, documentosData] = await Promise.all([
         getContactoById(id),
         getContactoMandatos(id),
+        fetchInteraccionesByContacto(id),
+        getContactoDocumentos(id),
       ]);
 
       setContacto(contactoData);
       setMandatos(mandatosData || []);
+      setInteracciones(interaccionesData || []);
+      setDocumentos(documentosData || []);
     } catch (error) {
       console.error("Error cargando contacto:", error);
       toast.error("Error al cargar los datos del contacto");
@@ -237,6 +247,14 @@ export default function ContactoDetalle() {
           <TabsTrigger value="informacion">Información General</TabsTrigger>
           <TabsTrigger value="mandatos">
             Mandatos Relacionados ({mandatos.length})
+          </TabsTrigger>
+          <TabsTrigger value="actividad">
+            <Activity className="h-4 w-4 mr-2" />
+            Actividad ({interacciones.length})
+          </TabsTrigger>
+          <TabsTrigger value="documentos">
+            <FileText className="h-4 w-4 mr-2" />
+            Documentos ({documentos.length})
           </TabsTrigger>
         </TabsList>
 
@@ -456,6 +474,57 @@ export default function ContactoDetalle() {
               })}
             </div>
           )}
+        </TabsContent>
+
+        {/* Tab Actividad */}
+        <TabsContent value="actividad">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Timeline de Actividad</CardTitle>
+                <NuevaInteraccionDialog 
+                  contactoId={id} 
+                  onSuccess={cargarDatos}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <TimelineActividad interacciones={interacciones} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Documentos */}
+        <TabsContent value="documentos">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documentos Compartidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {documentos.length > 0 ? (
+                <div className="space-y-2">
+                  {documentos.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{doc.documento?.file_name || 'Documento'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Compartido {format(new Date(doc.fecha_compartido), "d MMM yyyy", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No hay documentos compartidos</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

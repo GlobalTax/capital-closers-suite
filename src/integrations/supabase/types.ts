@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountex_leads: {
+        Row: {
+          brevo_sent: boolean | null
+          brevo_sent_at: string | null
+          company: string
+          created_at: string
+          email: string
+          email_sent: boolean | null
+          email_sent_at: string | null
+          full_name: string
+          hubspot_sent: boolean | null
+          hubspot_sent_at: string | null
+          id: string
+          ip_address: unknown | null
+          message: string | null
+          phone: string | null
+          preferred_meeting_date: string | null
+          priority: string | null
+          processed_at: string | null
+          processed_by: string | null
+          referrer: string | null
+          sectors_of_interest: string | null
+          status: string | null
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          brevo_sent?: boolean | null
+          brevo_sent_at?: string | null
+          company: string
+          created_at?: string
+          email: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name: string
+          hubspot_sent?: boolean | null
+          hubspot_sent_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          message?: string | null
+          phone?: string | null
+          preferred_meeting_date?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          referrer?: string | null
+          sectors_of_interest?: string | null
+          status?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          brevo_sent?: boolean | null
+          brevo_sent_at?: string | null
+          company?: string
+          created_at?: string
+          email?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name?: string
+          hubspot_sent?: boolean | null
+          hubspot_sent_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          message?: string | null
+          phone?: string | null
+          preferred_meeting_date?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          referrer?: string | null
+          sectors_of_interest?: string | null
+          status?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       acquisition_leads: {
         Row: {
           acquisition_type: string | null
@@ -1518,6 +1605,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contacto_documentos: {
+        Row: {
+          compartido_por: string | null
+          contacto_id: string
+          created_at: string | null
+          documento_id: string
+          fecha_compartido: string | null
+          id: string
+          notas: string | null
+        }
+        Insert: {
+          compartido_por?: string | null
+          contacto_id: string
+          created_at?: string | null
+          documento_id: string
+          fecha_compartido?: string | null
+          id?: string
+          notas?: string | null
+        }
+        Update: {
+          compartido_por?: string | null
+          contacto_id?: string
+          created_at?: string | null
+          documento_id?: string
+          fecha_compartido?: string | null
+          id?: string
+          notas?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacto_documentos_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacto_documentos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contactos: {
         Row: {
           apellidos: string | null
@@ -1787,6 +1919,51 @@ export type Database = {
         }
         Relationships: []
       }
+      empresa_documentos: {
+        Row: {
+          compartido_por: string | null
+          created_at: string | null
+          documento_id: string
+          empresa_id: string
+          fecha_compartido: string | null
+          id: string
+          notas: string | null
+        }
+        Insert: {
+          compartido_por?: string | null
+          created_at?: string | null
+          documento_id: string
+          empresa_id: string
+          fecha_compartido?: string | null
+          id?: string
+          notas?: string | null
+        }
+        Update: {
+          compartido_por?: string | null
+          created_at?: string | null
+          documento_id?: string
+          empresa_id?: string
+          fecha_compartido?: string | null
+          id?: string
+          notas?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_documentos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           capital_circulante: number | null
@@ -2047,6 +2224,85 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      interacciones: {
+        Row: {
+          contacto_id: string | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          documentos_adjuntos: Json | null
+          duracion_minutos: number | null
+          empresa_id: string | null
+          fecha: string
+          fecha_siguiente_accion: string | null
+          id: string
+          mandato_id: string | null
+          resultado: string | null
+          siguiente_accion: string | null
+          tipo: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          contacto_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          documentos_adjuntos?: Json | null
+          duracion_minutos?: number | null
+          empresa_id?: string | null
+          fecha?: string
+          fecha_siguiente_accion?: string | null
+          id?: string
+          mandato_id?: string | null
+          resultado?: string | null
+          siguiente_accion?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          contacto_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          documentos_adjuntos?: Json | null
+          duracion_minutos?: number | null
+          empresa_id?: string | null
+          fecha?: string
+          fecha_siguiente_accion?: string | null
+          id?: string
+          mandato_id?: string | null
+          resultado?: string | null
+          siguiente_accion?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacciones_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       key_statistics: {
         Row: {

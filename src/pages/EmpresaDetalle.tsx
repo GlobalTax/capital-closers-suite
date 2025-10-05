@@ -10,9 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarEmpresaDrawer } from "@/components/empresas/EditarEmpresaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
-import { getEmpresaById, deleteEmpresa, getEmpresaMandatos } from "@/services/empresas";
-import type { Empresa, Mandato } from "@/types";
-import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase } from "lucide-react";
+import { getEmpresaById, deleteEmpresa, getEmpresaMandatos, getEmpresaContactos } from "@/services/empresas";
+import { fetchInteraccionesByEmpresa, type Interaccion } from "@/services/interacciones";
+import { getEmpresaDocumentos } from "@/services/documentos";
+import type { Empresa, Mandato, Contacto } from "@/types";
+import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus } from "lucide-react";
+import { TimelineActividad } from "@/components/shared/TimelineActividad";
+import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
@@ -22,23 +26,36 @@ export default function EmpresaDetalle() {
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [contactos, setContactos] = useState<Contacto[]>([]);
+  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
+  const [documentos, setDocumentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
-      cargarEmpresa();
-      cargarMandatos();
+      cargarTodo();
     }
   }, [id]);
 
-  const cargarEmpresa = async () => {
+  const cargarTodo = async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const data = await getEmpresaById(id);
-      setEmpresa(data);
+      const [empresaData, mandatosData, contactosData, interaccionesData, documentosData] = await Promise.all([
+        getEmpresaById(id),
+        getEmpresaMandatos(id),
+        getEmpresaContactos(id),
+        fetchInteraccionesByEmpresa(id),
+        getEmpresaDocumentos(id),
+      ]);
+      
+      setEmpresa(empresaData);
+      setMandatos(mandatosData);
+      setContactos(contactosData as any);
+      setInteracciones(interaccionesData || []);
+      setDocumentos(documentosData || []);
     } catch (error) {
       console.error("Error cargando empresa:", error);
       toast.error("Error al cargar la empresa");
@@ -47,15 +64,6 @@ export default function EmpresaDetalle() {
     }
   };
 
-  const cargarMandatos = async () => {
-    if (!id) return;
-    try {
-      const data = await getEmpresaMandatos(id);
-      setMandatos(data);
-    } catch (error) {
-      console.error("Error cargando mandatos:", error);
-    }
-  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -70,7 +78,7 @@ export default function EmpresaDetalle() {
   };
 
   const handleEmpresaActualizada = () => {
-    cargarEmpresa();
+    cargarTodo();
     setEditDrawerOpen(false);
   };
 
@@ -246,18 +254,30 @@ export default function EmpresaDetalle() {
       )}
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="general">
             <Building2 className="h-4 w-4 mr-2" />
-            Información General
+            General
           </TabsTrigger>
           <TabsTrigger value="financiero">
             <DollarSign className="h-4 w-4 mr-2" />
-            Datos Financieros
+            Financiero
+          </TabsTrigger>
+          <TabsTrigger value="contactos">
+            <User className="h-4 w-4 mr-2" />
+            Contactos ({contactos.length})
           </TabsTrigger>
           <TabsTrigger value="mandatos">
-            <FileText className="h-4 w-4 mr-2" />
+            <Briefcase className="h-4 w-4 mr-2" />
             Mandatos ({mandatos.length})
+          </TabsTrigger>
+          <TabsTrigger value="actividad">
+            <Activity className="h-4 w-4 mr-2" />
+            Actividad ({interacciones.length})
+          </TabsTrigger>
+          <TabsTrigger value="documentos">
+            <FileText className="h-4 w-4 mr-2" />
+            Documentos ({documentos.length})
           </TabsTrigger>
         </TabsList>
 
@@ -404,6 +424,84 @@ export default function EmpresaDetalle() {
           </Card>
         </TabsContent>
 
+        {/* Tab Contactos */}
+        <TabsContent value="contactos">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Contactos Asociados</CardTitle>
+                <Button size="sm" onClick={() => navigate(`/contactos/nuevo?empresaId=${id}`)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Añadir Contacto
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {contactos.length > 0 ? (
+                <div className="space-y-2">
+                  {contactos.map((contacto: Contacto) => (
+                    <div
+                      key={contacto.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
+                      onClick={() => navigate(`/contactos/${contacto.id}`)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="font-medium">{contacto.nombre} {contacto.apellidos}</p>
+                          <p className="text-sm text-muted-foreground">{contacto.cargo}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {contacto.email && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `mailto:${contacto.email}`;
+                            }}
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {contacto.telefono && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `tel:${contacto.telefono}`;
+                            }}
+                          >
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {contacto.linkedin && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(contacto.linkedin, '_blank');
+                            }}
+                          >
+                            <Linkedin className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No hay contactos asociados a esta empresa</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="mandatos">
           <Card>
             <CardHeader>
@@ -421,6 +519,57 @@ export default function EmpresaDetalle() {
                 <p className="text-muted-foreground text-center py-8">
                   No hay mandatos relacionados con esta empresa
                 </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Actividad */}
+        <TabsContent value="actividad">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Timeline de Actividad</CardTitle>
+                <NuevaInteraccionDialog 
+                  empresaId={id} 
+                  onSuccess={cargarTodo}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <TimelineActividad interacciones={interacciones} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Documentos */}
+        <TabsContent value="documentos">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documentos Compartidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {documentos.length > 0 ? (
+                <div className="space-y-2">
+                  {documentos.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{doc.documento?.file_name || 'Documento'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Compartido {format(new Date(doc.fecha_compartido), "d MMM yyyy", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No hay documentos compartidos</p>
+                </div>
               )}
             </CardContent>
           </Card>

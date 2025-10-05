@@ -80,6 +80,20 @@ export const getEmpresaMandatos = async (empresaId: string) => {
   return (data || []).map((item: any) => item.mandatos).filter(Boolean);
 };
 
+export const getEmpresaContactos = async (empresaId: string) => {
+  const { data, error } = await supabase
+    .from('contactos')
+    .select(`
+      *,
+      empresa_principal:empresas(*)
+    `)
+    .eq('empresa_principal_id', empresaId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+};
+
 // Alias for backward compatibility
 export const fetchTargets = fetchEmpresas;
 export const createTarget = createEmpresa;
