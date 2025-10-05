@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
+import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { fetchEmpresas } from "@/services/empresas";
 import type { Empresa } from "@/types";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     cargarEmpresas();
@@ -28,6 +30,11 @@ export default function Empresas() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEmpresaCreada = () => {
+    cargarEmpresas();
+    setDrawerOpen(false);
   };
 
   const columns = [
@@ -84,7 +91,7 @@ export default function Empresas() {
         title="Empresas"
         description="Base de datos de empresas y targets potenciales"
         actionLabel="Nueva Empresa"
-        onAction={() => toast.info("Función disponible próximamente")}
+        onAction={() => setDrawerOpen(true)}
       />
       
       <div className="mb-4 flex gap-2">
@@ -117,6 +124,12 @@ export default function Empresas() {
         loading={loading}
         onRowClick={(row) => navigate(`/empresas/${row.id}`)}
         pageSize={10}
+      />
+
+      <NuevoEmpresaDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onEmpresaCreada={handleEmpresaCreada}
       />
     </div>
   );

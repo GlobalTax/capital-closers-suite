@@ -59,6 +59,27 @@ export const deleteEmpresa = async (id: string) => {
   if (error) throw error;
 };
 
+export const getEmpresaMandatos = async (empresaId: string) => {
+  const { data, error } = await supabase
+    .from('mandato_empresas')
+    .select(`
+      mandato_id,
+      mandatos:mandato_id (
+        id,
+        tipo,
+        estado,
+        valor,
+        fecha_inicio,
+        fecha_cierre,
+        descripcion
+      )
+    `)
+    .eq('empresa_id', empresaId);
+  
+  if (error) throw error;
+  return (data || []).map((item: any) => item.mandatos).filter(Boolean);
+};
+
 // Alias for backward compatibility
 export const fetchTargets = fetchEmpresas;
 export const createTarget = createEmpresa;
