@@ -7,6 +7,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import Login from "./pages/auth/Login";
@@ -20,6 +21,7 @@ import Tareas from "./pages/Tareas";
 import Documentos from "./pages/Documentos";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
+import Perfil from "./pages/Perfil";
 
 const queryClient = new QueryClient();
 
@@ -41,10 +43,11 @@ function AppContent() {
         <Route path="/clientes/:id" element={<ProtectedRoute><AppLayout><ClienteDetalle /></AppLayout></ProtectedRoute>} />
         <Route path="/targets" element={<ProtectedRoute><AppLayout><EmpresasTarget /></AppLayout></ProtectedRoute>} />
         <Route path="/targets/:id" element={<ProtectedRoute><AppLayout><TargetDetalle /></AppLayout></ProtectedRoute>} />
-        <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
-        <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
-        <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
-        <Route path="*" element={<NotFound />} />
+          <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
+          <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
+          <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
@@ -53,13 +56,15 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

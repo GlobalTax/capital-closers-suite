@@ -8,6 +8,8 @@ import {
   BarChart3,
   LogOut,
   User,
+  Moon,
+  Sun,
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,8 +24,10 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
   { title: "Mandatos", url: "/mandatos", icon: FileText },
@@ -36,6 +40,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const { adminUser, logout } = useAuth();
+  const { theme, setTheme, actualTheme } = useTheme();
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -113,7 +118,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-center gap-3 px-2">
             <Avatar className="h-9 w-9">
               <AvatarFallback className="bg-primary text-primary-foreground text-sm">
@@ -124,11 +129,32 @@ export function AppSidebar() {
               <p className="text-sm font-medium text-sidebar-foreground truncate">
                 {adminUser?.full_name || 'Usuario'}
               </p>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleBadgeColor(adminUser?.role || '')}`}>
+              <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(adminUser?.role || '')}`}>
                 {getRoleLabel(adminUser?.role || '')}
-              </span>
+              </Badge>
             </div>
           </div>
+          
+          <NavLink to="/perfil">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <User className="h-4 w-4" />
+              Mi Perfil
+            </Button>
+          </NavLink>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme(actualTheme === 'dark' ? 'light' : 'dark')}
+            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            {actualTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {actualTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+          </Button>
           
           <Button
             variant="ghost"
