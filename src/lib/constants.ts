@@ -10,14 +10,14 @@ export const MANDATO_TIPOS = ["compra", "venta"] as const;
 
 // Estados
 export const MANDATO_ESTADOS = [
-  "En progreso",
-  "Negociación",
-  "Due Diligence",
-  "Cerrado",
-  "Cancelado",
+  "prospecto",
+  "activo",
+  "en_negociacion",
+  "cerrado",
+  "cancelado",
 ] as const;
 
-export const TAREA_ESTADOS = ["pendiente", "en-progreso", "completada"] as const;
+export const TAREA_ESTADOS = ["pendiente", "en_progreso", "completada", "cancelada"] as const;
 
 export const NIVEL_INTERES = ["Alto", "Medio", "Bajo"] as const;
 

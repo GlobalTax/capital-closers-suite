@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, TrendingUp, Users, FileText } from "lucide-react";
-import { fetchMandatos, fetchClientes, fetchTargets } from "@/services/api";
+import { fetchMandatos } from "@/services/mandatos";
+import { fetchContactos } from "@/services/contactos";
+import { fetchEmpresas } from "@/services/empresas";
 import type { Mandato } from "@/types";
 
 export default function Reportes() {
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
-  const [totalClientes, setTotalClientes] = useState(0);
+  const [totalContactos, setTotalContactos] = useState(0);
   const [totalTargets, setTotalTargets] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -18,13 +20,13 @@ export default function Reportes() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [mandatosData, clientesData, targetsData] = await Promise.all([
+      const [mandatosData, contactosData, targetsData] = await Promise.all([
         fetchMandatos(),
-        fetchClientes(),
-        fetchTargets(),
+        fetchContactos(),
+        fetchEmpresas(true),
       ]);
       setMandatos(mandatosData);
-      setTotalClientes(clientesData.length);
+      setTotalContactos(contactosData.length);
       setTotalTargets(targetsData.length);
     } catch (error) {
       console.error("Error cargando datos:", error);
@@ -34,10 +36,10 @@ export default function Reportes() {
   };
 
   const mandatosActivos = mandatos.filter(
-    (m) => m.estado !== "Cerrado" && m.estado !== "Cancelado"
+    (m) => m.estado !== "cerrado" && m.estado !== "cancelado"
   ).length;
 
-  const mandatosCerrados = mandatos.filter((m) => m.estado === "Cerrado").length;
+  const mandatosCerrados = mandatos.filter((m) => m.estado === "cerrado").length;
   const tasaConversion =
     mandatos.length > 0
       ? Math.round((mandatosCerrados / mandatos.length) * 100)
@@ -45,23 +47,23 @@ export default function Reportes() {
 
   const mandatosPorEstado = [
     {
-      estado: "En progreso",
-      cantidad: mandatos.filter((m) => m.estado === "En progreso").length,
+      estado: "Activo",
+      cantidad: mandatos.filter((m) => m.estado === "activo").length,
       color: "bg-blue-500",
     },
     {
-      estado: "Negociación",
-      cantidad: mandatos.filter((m) => m.estado === "Negociación").length,
+      estado: "En Negociación",
+      cantidad: mandatos.filter((m) => m.estado === "en_negociacion").length,
       color: "bg-yellow-500",
     },
     {
-      estado: "Due Diligence",
-      cantidad: mandatos.filter((m) => m.estado === "Due Diligence").length,
+      estado: "Prospecto",
+      cantidad: mandatos.filter((m) => m.estado === "prospecto").length,
       color: "bg-purple-500",
     },
     {
       estado: "Cerrado",
-      cantidad: mandatos.filter((m) => m.estado === "Cerrado").length,
+      cantidad: mandatos.filter((m) => m.estado === "cerrado").length,
       color: "bg-green-500",
     },
   ];
@@ -82,8 +84,8 @@ export default function Reportes() {
       color: "text-green-600",
     },
     {
-      title: "Clientes Activos",
-      value: totalClientes.toString(),
+      title: "Contactos Activos",
+      value: totalContactos.toString(),
       change: "En sistema",
       icon: Users,
       color: "text-purple-600",
@@ -176,13 +178,13 @@ export default function Reportes() {
               {[
                 { label: "Targets", value: totalTargets, color: "bg-blue-500" },
                 {
-                  label: "En Progreso",
-                  value: mandatos.filter((m) => m.estado === "En progreso").length,
+                  label: "Activo",
+                  value: mandatos.filter((m) => m.estado === "activo").length,
                   color: "bg-purple-500",
                 },
                 {
                   label: "Negociación",
-                  value: mandatos.filter((m) => m.estado === "Negociación").length,
+                  value: mandatos.filter((m) => m.estado === "en_negociacion").length,
                   color: "bg-yellow-500",
                 },
                 { label: "Cerrados", value: mandatosCerrados, color: "bg-green-500" },

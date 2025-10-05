@@ -12,9 +12,9 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
   const getVariant = (): "default" | "secondary" | "outline" | "destructive" => {
     if (type === "mandato") {
       const mandatoVariants: Record<MandatoEstado, "default" | "secondary" | "outline" | "destructive"> = {
-        "en_progreso": "default",
-        "negociacion": "secondary",
-        "due_diligence": "outline",
+        "prospecto": "outline",
+        "activo": "default",
+        "en_negociacion": "secondary",
         "cerrado": "default",
         "cancelado": "destructive",
       };
@@ -31,10 +31,11 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
     }
 
     if (type === "tarea") {
-      const tareaVariants: Record<TareaEstado, "default" | "secondary" | "outline"> = {
+      const tareaVariants: Record<TareaEstado, "default" | "secondary" | "outline" | "destructive"> = {
         "completada": "default",
         "en_progreso": "secondary",
         "pendiente": "outline",
+        "cancelada": "destructive",
       };
       return tareaVariants[status as TareaEstado] || "outline";
     }
@@ -67,9 +68,9 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
   const getDisplayText = () => {
     if (type === "mandato") {
       const mandatoTexts: Record<MandatoEstado, string> = {
-        "en_progreso": "En Progreso",
-        "negociacion": "Negociación",
-        "due_diligence": "Due Diligence",
+        "prospecto": "Prospecto",
+        "activo": "Activo",
+        "en_negociacion": "En Negociación",
         "cerrado": "Cerrado",
         "cancelado": "Cancelado",
       };
@@ -81,6 +82,7 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
         "completada": "Completada",
         "en_progreso": "En Progreso",
         "pendiente": "Pendiente",
+        "cancelada": "Cancelada",
       };
       return tareaTexts[status as TareaEstado] || status;
     }

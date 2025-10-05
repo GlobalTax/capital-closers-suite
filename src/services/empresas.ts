@@ -13,7 +13,7 @@ export const fetchEmpresas = async (esTarget?: boolean): Promise<Empresa[]> => {
   
   const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+  return (data || []) as any;
 };
 
 export const getEmpresaById = async (id: string): Promise<Empresa | null> => {
@@ -24,13 +24,13 @@ export const getEmpresaById = async (id: string): Promise<Empresa | null> => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const createEmpresa = async (empresa: Partial<Empresa>) => {
   const { data, error } = await supabase
     .from('empresas')
-    .insert(empresa)
+    .insert(empresa as any)
     .select()
     .single();
   
@@ -41,7 +41,7 @@ export const createEmpresa = async (empresa: Partial<Empresa>) => {
 export const updateEmpresa = async (id: string, empresa: Partial<Empresa>) => {
   const { data, error } = await supabase
     .from('empresas')
-    .update(empresa)
+    .update(empresa as any)
     .eq('id', id)
     .select()
     .single();
@@ -58,3 +58,9 @@ export const deleteEmpresa = async (id: string) => {
   
   if (error) throw error;
 };
+
+// Alias for backward compatibility
+export const fetchTargets = fetchEmpresas;
+export const createTarget = createEmpresa;
+export const updateTarget = updateEmpresa;
+export const deleteTarget = deleteEmpresa;

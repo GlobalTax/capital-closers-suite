@@ -8,7 +8,7 @@ export const fetchTareas = async (): Promise<Tarea[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return (data || []) as any;
 };
 
 export const getTareaById = async (id: string): Promise<Tarea | null> => {
@@ -19,13 +19,13 @@ export const getTareaById = async (id: string): Promise<Tarea | null> => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const createTarea = async (tarea: Partial<Tarea>) => {
   const { data, error } = await supabase
     .from('tareas')
-    .insert(tarea)
+    .insert(tarea as any)
     .select()
     .single();
   
@@ -36,7 +36,7 @@ export const createTarea = async (tarea: Partial<Tarea>) => {
 export const updateTarea = async (id: string, tarea: Partial<Tarea>) => {
   const { data, error } = await supabase
     .from('tareas')
-    .update(tarea)
+    .update(tarea as any)
     .eq('id', id)
     .select()
     .single();
