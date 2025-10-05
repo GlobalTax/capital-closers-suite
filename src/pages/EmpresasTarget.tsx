@@ -13,6 +13,7 @@ import type { EmpresaTarget, TargetEstado } from "@/types";
 import { toast } from "sonner";
 import { Download, X } from "lucide-react";
 import { TARGET_ESTADOS } from "@/lib/constants";
+import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 
 export default function EmpresasTarget() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function EmpresasTarget() {
   const [revenueMin, setRevenueMin] = useState("");
   const [revenueMax, setRevenueMax] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [openDrawer, setOpenDrawer] = useState(false);
 
   useEffect(() => {
     cargarEmpresas();
@@ -136,7 +138,13 @@ export default function EmpresasTarget() {
         title="Empresas Target"
         description="Empresas objetivo para adquisición o inversión"
         actionLabel="Nueva Empresa"
-        onAction={() => toast.info("Función disponible próximamente")}
+        onAction={() => setOpenDrawer(true)}
+      />
+
+      <NuevoTargetDrawer
+        open={openDrawer}
+        onOpenChange={setOpenDrawer}
+        onSuccess={cargarEmpresas}
       />
 
       <Toolbar
