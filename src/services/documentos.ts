@@ -8,29 +8,29 @@ export const fetchDocumentos = async (): Promise<Documento[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return (data || []) as any;
 };
 
 export const getDocumentoById = async (id: string): Promise<Documento | null> => {
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('documentos')
     .select('*')
     .eq('id', id)
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const createDocumento = async (documento: Partial<Documento>) => {
   const { data, error } = await supabase
     .from('documentos')
-    .insert(documento)
+    .insert(documento as any)
     .select()
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const deleteDocumento = async (id: string) => {

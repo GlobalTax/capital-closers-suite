@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle } from "lucide-react";
-import { fetchTareas, updateTarea, createTarea } from "@/services/api";
+import { fetchTareas, updateTarea, createTarea } from "@/services/tareas";
 import type { Tarea, TareaEstado } from "@/types";
 import { toast } from "sonner";
 import {
@@ -73,7 +73,7 @@ function TareaCard({ tarea }: TareaCardProps) {
       {...listeners}
       className={cn(
         "cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-        isPast(new Date(tarea.fechaVencimiento)) &&
+        isPast(new Date(tarea.fecha_vencimiento)) &&
           tarea.estado !== "completada" &&
           "border-destructive"
       )}
@@ -90,20 +90,15 @@ function TareaCard({ tarea }: TareaCardProps) {
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            <span>{tarea.fechaVencimiento}</span>
+            <span>{tarea.fecha_vencimiento}</span>
           </div>
-          {tarea.asignado && (
+          {tarea.asignado_a && (
             <div className="flex items-center gap-1">
               <User className="w-3 h-3" />
-              <span>{tarea.asignado}</span>
+              <span>{tarea.asignado_a}</span>
             </div>
           )}
         </div>
-        {tarea.mandatoNombre && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            {tarea.mandatoNombre}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -188,11 +183,11 @@ export default function Tareas() {
   };
 
   // Responsables únicos
-  const responsablesUnicos = Array.from(new Set(tareas.map((t) => t.asignado).filter(Boolean)));
+  const responsablesUnicos = Array.from(new Set(tareas.map((t) => t.asignado_a).filter(Boolean)));
   
   // Filtrado
   const tareasFiltradas = tareas.filter((t) => {
-    if (responsablesFiltro.length && !responsablesFiltro.includes(t.asignado || "")) return false;
+    if (responsablesFiltro.length && !responsablesFiltro.includes(t.asignado_a || "")) return false;
     if (estadosFiltro.length && !estadosFiltro.includes(t.estado)) return false;
     if (prioridadesFiltro.length && !prioridadesFiltro.includes(t.prioridad)) return false;
     return true;
@@ -204,7 +199,7 @@ export default function Tareas() {
   
   // Contador de tareas vencidas
   const tareasVencidas = tareas.filter(
-    (t) => isPast(new Date(t.fechaVencimiento)) && t.estado !== "completada"
+    (t) => isPast(new Date(t.fecha_vencimiento)) && t.estado !== "completada"
   );
   
   // Quick add handler
@@ -217,8 +212,8 @@ export default function Tareas() {
     try {
       await createTarea({
         titulo: quickAddData.titulo,
-        asignado: quickAddData.asignado,
-        fechaVencimiento: format(quickAddData.fechaVencimiento, "yyyy-MM-dd"),
+        asignado_a: quickAddData.asignado,
+        fecha_vencimiento: format(quickAddData.fechaVencimiento, "yyyy-MM-dd"),
         estado,
         prioridad: "media",
       });
@@ -375,7 +370,7 @@ export default function Tareas() {
               <SelectContent>
                 <SelectItem value="todos">Todos los estados</SelectItem>
                 <SelectItem value="pendiente">Pendiente</SelectItem>
-                <SelectItem value="en-progreso">En Progreso</SelectItem>
+                <SelectItem value="en_progreso">En Progreso</SelectItem>
                 <SelectItem value="completada">Completada</SelectItem>
               </SelectContent>
             </Select>
@@ -424,7 +419,7 @@ export default function Tareas() {
           columns={columnasTabla}
           data={tareasFiltradas}
           rowClassName={(row) =>
-            isPast(new Date(row.fechaVencimiento)) && row.estado !== "completada"
+            isPast(new Date(row.fecha_vencimiento)) && row.estado !== "completada"
               ? "bg-destructive/5"
               : ""
           }
@@ -442,11 +437,11 @@ export default function Tareas() {
             {(
               [
                 { id: "pendiente", label: "Pendiente" },
-                { id: "en-progreso", label: "En Progreso" },
+                { id: "en_progreso", label: "En Progreso" },
                 { id: "completada", label: "Completada" },
               ] as const
             ).map((columna) => {
-              const tareasColumna = getTareasPorEstado(columna.id);
+              const tareasColumna = getTareasPorEstado(columna.id as TareaEstado);
               return (
                 <SortableContext
                   key={columna.id}

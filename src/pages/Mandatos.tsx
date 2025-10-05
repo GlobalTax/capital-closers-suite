@@ -86,10 +86,10 @@ export default function Mandatos() {
 
   // Filtros combinados
   const mandatosFiltrados = mandatos.filter((mandato) => {
+    const empresaNombre = mandato.empresa_principal?.nombre || "";
     const matchSearch =
       searchQuery === "" ||
-      mandato.empresa.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mandato.cliente.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      empresaNombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mandato.id.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchEstado =
@@ -102,8 +102,12 @@ export default function Mandatos() {
 
   const columns = [
     { key: "id", label: "ID", sortable: true, filterable: true },
-    { key: "cliente", label: "Cliente", sortable: true, filterable: true },
-    { key: "empresa", label: "Empresa", sortable: true, filterable: true },
+    { 
+      key: "empresa_principal", 
+      label: "Cliente", 
+      sortable: true, 
+      render: (value: any) => value?.nombre || "Sin asignar"
+    },
     {
       key: "tipo",
       label: "Tipo",
@@ -123,25 +127,18 @@ export default function Mandatos() {
       ),
     },
     {
-      key: "targetsCount",
+      key: "empresas",
       label: "Targets",
-      sortable: true,
-      render: (value: number) => (
-        <span className="text-muted-foreground">{value || 0}</span>
+      sortable: false,
+      render: (value: any[]) => (
+        <span className="text-muted-foreground">{value?.length || 0}</span>
       ),
     },
     {
-      key: "tareasAbiertas",
-      label: "Tareas abiertas",
-      sortable: true,
-      render: (value: number) => (
-        <span className="font-medium">{value || 0}</span>
-      ),
-    },
-    {
-      key: "ultimaActualizacion",
+      key: "updated_at",
       label: "Última actualización",
       sortable: true,
+      render: (value: string) => new Date(value).toLocaleDateString('es-ES'),
     },
     {
       key: "actions",

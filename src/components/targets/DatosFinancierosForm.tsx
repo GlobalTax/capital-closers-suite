@@ -38,9 +38,12 @@ export function DatosFinancierosForm({
 
   const onSubmit = async (data: DatosFinancieros) => {
     try {
+      // Usar campos individuales en lugar de datos_financieros
       await updateEmpresa(targetId, {
-        datos_financieros: data,
-      });
+        facturacion: data.revenue,
+        ebitda: data.ebitda,
+        // Otros campos financieros se pueden añadir según la estructura de la tabla
+      } as any);
       toast.success("Datos financieros actualizados correctamente");
       onUpdate();
     } catch (error) {

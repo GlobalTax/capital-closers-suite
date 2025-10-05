@@ -54,23 +54,11 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
 
   const onSubmit = async (data: any) => {
     try {
-      const nuevaInteraccion: Interaccion = {
-        id: `INT-${Date.now()}`,
-        tipo: data.tipo,
-        titulo: data.titulo,
-        descripcion: data.descripcion,
-        fecha: new Date(data.fecha).toISOString(),
-        responsable: "Usuario Actual",
-      };
-
-      await updateEmpresa(targetId, {
-        interacciones: [...interacciones, nuevaInteraccion],
-      });
-
-      toast.success("Interacción registrada correctamente");
+      // TODO: Implementar tabla de interacciones separada
+      // Por ahora comentado hasta que se cree la tabla correspondiente
+      toast.info("Funcionalidad de interacciones disponible próximamente");
       setOpen(false);
       reset();
-      onUpdate();
     } catch (error) {
       toast.error("Error al registrar interacción");
     }

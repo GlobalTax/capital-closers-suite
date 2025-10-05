@@ -11,7 +11,7 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return (data || []) as any;
 };
 
 export const getContactoById = async (id: string): Promise<Contacto | null> => {
@@ -25,13 +25,13 @@ export const getContactoById = async (id: string): Promise<Contacto | null> => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const createContacto = async (contacto: Partial<Contacto>) => {
   const { data, error } = await supabase
     .from('contactos')
-    .insert(contacto)
+    .insert(contacto as any)
     .select(`
       *,
       empresa_principal:empresas(*)
@@ -39,7 +39,7 @@ export const createContacto = async (contacto: Partial<Contacto>) => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const updateContacto = async (id: string, contacto: Partial<Contacto>) => {

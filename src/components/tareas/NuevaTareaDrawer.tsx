@@ -89,7 +89,6 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
         fecha_vencimiento: format(values.fechaVencimiento, "yyyy-MM-dd"),
         estado: values.estado as TareaEstado,
         prioridad: values.prioridad as TareaPrioridad,
-        etiquetas: etiquetas.length > 0 ? etiquetas : [],
       });
 
       toast.success("Tarea creada exitosamente");

@@ -13,7 +13,7 @@ export const fetchMandatos = async (): Promise<Mandato[]> => {
     .order('created_at', { ascending: false });
   
   if (error) throw error;
-  return data || [];
+  return (data || []) as any;
 };
 
 export const getMandatoById = async (id: string): Promise<Mandato | null> => {
@@ -29,7 +29,7 @@ export const getMandatoById = async (id: string): Promise<Mandato | null> => {
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const createMandato = async (mandato: Partial<Mandato>) => {
@@ -96,7 +96,7 @@ export const addContactoToMandato = async (
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const removeContactoFromMandato = async (id: string) => {
@@ -142,7 +142,7 @@ export const addEmpresaToMandato = async (
     .single();
   
   if (error) throw error;
-  return data;
+  return data as any;
 };
 
 export const removeEmpresaFromMandato = async (id: string) => {

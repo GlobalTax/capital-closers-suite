@@ -104,8 +104,10 @@ export function NuevoMandatoDrawer({
       await createMandato({
         tipo: data.tipo,
         descripcion: data.descripcion,
-        estado: "en_progreso",
-        empresa_principal_id: null, // Assign later if needed
+        estado: "activo",
+        empresa_principal_id: data.clienteId,
+        valor: data.valor ? Number(data.valor) : 0,
+        prioridad: "media",
       });
 
       toast.success("Mandato creado exitosamente");

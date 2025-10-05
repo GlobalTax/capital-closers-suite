@@ -14,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getMandatoById, fetchActividades, fetchDocumentos, fetchTareas, updateMandato } from "@/services/api";
-import type { Mandato, Actividad, Documento, Tarea } from "@/types";
+import { getMandatoById, updateMandato } from "@/services/mandatos";
+import { fetchDocumentos } from "@/services/documentos";
+import { fetchTareas } from "@/services/tareas";
+import type { Mandato, Documento, Tarea } from "@/types";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { MANDATO_ESTADOS } from "@/lib/constants";
 import { toast } from "sonner";
@@ -28,12 +30,12 @@ import { FinancialKPICard } from "@/components/mandatos/FinancialKPICard";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { DocumentUploadZone } from "@/components/documentos/DocumentUploadZone";
 import { DocumentList } from "@/components/documentos/DocumentList";
+import { format } from "date-fns";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [mandato, setMandato] = useState<Mandato | null>(null);
-  const [actividades, setActividades] = useState<Actividad[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,17 +61,15 @@ export default function MandatoDetalle() {
 
     setLoading(true);
     try {
-      const [mandatoData, actividadesData, documentosData, tareasData] = await Promise.all([
+      const [mandatoData, documentosData, tareasData] = await Promise.all([
         getMandatoById(id),
-        fetchActividades(id),
         fetchDocumentos(),
         fetchTareas(),
       ]);
 
       setMandato(mandatoData);
-      setActividades(actividadesData);
       setDocumentos(documentosData.filter((d) => d.mandato_id === id));
-      setTareas(tareasData.filter((t) => t.mandatoId === id));
+      setTareas(tareasData.filter((t) => t.mandato_id === id));
     } catch (error) {
       console.error("Error cargando mandato:", error);
       toast.error("Error al cargar los datos del mandato");
@@ -87,20 +87,9 @@ export default function MandatoDetalle() {
 
     setUpdatingEstado(true);
     try {
-      const response = await updateMandato(id, { estado: nuevoEstado as any });
+      await updateMandato(id, { estado: nuevoEstado as any });
       setMandato({ ...mandato, estado: nuevoEstado as any });
-      toast.success(response.message || "Estado actualizado correctamente");
-      
-      // Mostrar info sobre tareas completadas
-      if (response.metadata?.tareasCompletadas > 0) {
-        toast.info(
-          `📋 ${response.metadata.tareasCompletadas} tarea${
-            response.metadata.tareasCompletadas !== 1 ? "s" : ""
-          } marcada${response.metadata.tareasCompletadas !== 1 ? "s" : ""} como completada${
-            response.metadata.tareasCompletadas !== 1 ? "s" : ""
-          }`
-        );
-      }
+      toast.success("Estado actualizado correctamente");
     } catch (error) {
       console.error("Error actualizando estado:", error);
       toast.error("Error al actualizar el estado");
@@ -123,6 +112,7 @@ export default function MandatoDetalle() {
   }
 
   const tareasAbiertas = tareas.filter((t) => t.estado !== "completada");
+  const targetsCount = mandato.empresas?.length || 0;
 
   return (
     <div className="space-y-6">
@@ -133,14 +123,14 @@ export default function MandatoDetalle() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-semibold">
-              {mandato.cliente} - {mandato.tipo === "venta" ? "Venta" : "Compra"}
+              {mandato.empresa_principal?.nombre || "Sin cliente"} - {mandato.tipo === "venta" ? "Venta" : "Compra"}
             </h1>
             <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"}>
               {mandato.tipo === "venta" ? "Venta" : "Compra"}
             </Badge>
           </div>
           <p className="text-muted-foreground mt-1">
-            {mandato.empresa} • ID: {mandato.id}
+            ID: {mandato.id}
           </p>
         </div>
         <Select
@@ -193,10 +183,9 @@ export default function MandatoDetalle() {
             <Euro className="w-4 h-4 mr-2" />
             Finanzas ({totals.transaccionesCount})
           </TabsTrigger>
-          <TabsTrigger value="targets">Targets ({mandato.targetsCount || 0})</TabsTrigger>
+          <TabsTrigger value="targets">Targets ({targetsCount})</TabsTrigger>
           <TabsTrigger value="tareas">Tareas ({tareas.length})</TabsTrigger>
           <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>
-          <TabsTrigger value="cronologia">Cronología ({actividades.length})</TabsTrigger>
         </TabsList>
 
         {/* Tab Resumen */}
@@ -210,7 +199,7 @@ export default function MandatoDetalle() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{mandato.valor}</p>
+                <p className="text-2xl font-semibold">{mandato.valor.toLocaleString('es-ES')} €</p>
               </CardContent>
             </Card>
             <Card>
@@ -220,7 +209,7 @@ export default function MandatoDetalle() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{mandato.targetsCount || 0}</p>
+                <p className="text-2xl font-semibold">{targetsCount}</p>
               </CardContent>
             </Card>
             <Card>
@@ -230,7 +219,7 @@ export default function MandatoDetalle() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{mandato.tareasAbiertas || 0}</p>
+                <p className="text-2xl font-semibold">{tareasAbiertas.length}</p>
               </CardContent>
             </Card>
             <Card>
@@ -240,7 +229,7 @@ export default function MandatoDetalle() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{mandato.documentosCount || 0}</p>
+                <p className="text-2xl font-semibold">{documentos.length}</p>
               </CardContent>
             </Card>
           </div>
@@ -253,11 +242,7 @@ export default function MandatoDetalle() {
             <CardContent className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Cliente</p>
-                <p className="font-medium">{mandato.cliente}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Empresa</p>
-                <p className="font-medium">{mandato.empresa}</p>
+                <p className="font-medium">{mandato.empresa_principal?.nombre || "Sin asignar"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tipo</p>
@@ -265,23 +250,19 @@ export default function MandatoDetalle() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Valor Estimado</p>
-                <p className="font-medium">{mandato.valor}</p>
+                <p className="font-medium">{mandato.valor.toLocaleString('es-ES')} €</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Fecha Inicio</p>
-                <p className="font-medium">{mandato.fecha}</p>
+                <p className="text-sm text-muted-foreground">Fecha Creación</p>
+                <p className="font-medium">{format(new Date(mandato.created_at), 'dd/MM/yyyy')}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Última Actualización</p>
-                <p className="font-medium">{mandato.ultimaActualizacion || "N/A"}</p>
+                <p className="font-medium">{format(new Date(mandato.updated_at || mandato.created_at), 'dd/MM/yyyy')}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Responsable</p>
-                <p className="font-medium">{mandato.responsable || "No asignado"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Sector</p>
-                <p className="font-medium">{mandato.sector || "N/A"}</p>
+                <p className="text-sm text-muted-foreground">Estado</p>
+                <BadgeStatus status={mandato.estado} type="mandato" />
               </div>
               {mandato.descripcion && (
                 <div className="col-span-2">
@@ -289,35 +270,6 @@ export default function MandatoDetalle() {
                   <p className="font-medium">{mandato.descripcion}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Mini Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actividad Reciente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {actividades.slice(0, 5).map((actividad) => (
-                  <div key={actividad.id} className="flex gap-3 pb-3 border-b last:border-0">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Activity className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{actividad.titulo}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {actividad.usuario} • {new Date(actividad.fecha).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {actividades.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No hay actividad reciente
-                  </p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -453,37 +405,15 @@ export default function MandatoDetalle() {
             <CardContent>
               <div className="space-y-2">
                 {tareas.map((tarea) => (
-                  <div
-                    key={tarea.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "w-2 h-2 rounded-full",
-                          tarea.estado === "completada" && "bg-green-500",
-                          tarea.estado === "en-progreso" && "bg-yellow-500",
-                          tarea.estado === "pendiente" && "bg-gray-400"
-                        )}
-                      />
-                      <div>
-                        <p className="font-medium text-sm">{tarea.titulo}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {tarea.asignado} • {tarea.fechaVencimiento}
-                        </p>
-                      </div>
+                  <div key={tarea.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium">{tarea.titulo}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {tarea.asignado_a && `Asignado a: ${tarea.asignado_a}`} • 
+                        Vence: {tarea.fecha_vencimiento}
+                      </p>
                     </div>
-                    <Badge
-                      variant={
-                        tarea.prioridad === "alta"
-                          ? "destructive"
-                          : tarea.prioridad === "media"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {tarea.prioridad}
-                    </Badge>
+                    <BadgeStatus status={tarea.estado} type="tarea" />
                   </div>
                 ))}
                 {tareas.length === 0 && (
@@ -497,67 +427,24 @@ export default function MandatoDetalle() {
         </TabsContent>
 
         {/* Tab Documentos */}
-        <TabsContent value="documentos" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Documentos Asociados</CardTitle>
-              <Button 
-                size="sm" 
-                onClick={() => setShowUploadZone(!showUploadZone)}
-                variant={showUploadZone ? "outline" : "default"}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {showUploadZone ? "Ocultar Zona de Subida" : "Subir Documento"}
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {showUploadZone && id && (
-                <DocumentUploadZone
-                  mandatoId={id}
-                  onSuccess={() => {
-                    cargarMandato();
-                    setShowUploadZone(false);
-                  }}
-                />
-              )}
-
-              {id && <DocumentList mandatoId={id} onUpdate={cargarMandato} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab Cronología */}
-        <TabsContent value="cronologia">
+        <TabsContent value="documentos">
           <Card>
             <CardHeader>
-              <CardTitle>Timeline de Actividad</CardTitle>
+              <CardTitle>Documentos del Mandato</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {actividades.map((actividad) => (
-                  <div key={actividad.id} className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Activity className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{actividad.titulo}</p>
-                      {actividad.descripcion && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {actividad.descripcion}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {actividad.usuario} • {new Date(actividad.fecha).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {actividades.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No hay actividad registrada
-                  </p>
-                )}
-              </div>
+              {showUploadZone && (
+                <div className="mb-4">
+                  <DocumentUploadZone
+                    mandatoId={id || ""}
+                    onSuccess={cargarMandato}
+                  />
+                </div>
+              )}
+              <DocumentList
+                mandatoId={id || ""}
+                onUpdate={cargarMandato}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -566,11 +453,7 @@ export default function MandatoDetalle() {
       <NuevoTargetDrawer
         open={openTargetDrawer}
         onOpenChange={setOpenTargetDrawer}
-        mandatoId={id}
-        onSuccess={() => {
-          cargarMandato();
-          toast.success("Target añadido al mandato");
-        }}
+        onSuccess={cargarMandato}
       />
     </div>
   );
