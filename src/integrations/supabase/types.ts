@@ -2288,6 +2288,72 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          is_system_task: boolean | null
+          lead_id: string
+          lead_type: string
+          notes: string | null
+          status: string
+          task_name: string
+          task_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_system_task?: boolean | null
+          lead_id: string
+          lead_type: string
+          notes?: string | null
+          status?: string
+          task_name: string
+          task_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_system_task?: boolean | null
+          lead_id?: string
+          lead_type?: string
+          notes?: string | null
+          status?: string
+          task_name?: string
+          task_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "lead_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       lead_valuation_initial: {
         Row: {
           assumptions: Json
@@ -2529,6 +2595,104 @@ export type Database = {
           status?: string
           updated_at?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      mandato_checklist_tasks: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          estado: string
+          fase: string
+          fecha_completada: string | null
+          fecha_limite: string | null
+          id: string
+          mandato_id: string
+          notas: string | null
+          orden: number
+          responsable: string | null
+          sistema: string | null
+          tarea: string
+          updated_at: string | null
+          url_relacionada: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          fase: string
+          fecha_completada?: string | null
+          fecha_limite?: string | null
+          id?: string
+          mandato_id: string
+          notas?: string | null
+          orden?: number
+          responsable?: string | null
+          sistema?: string | null
+          tarea: string
+          updated_at?: string | null
+          url_relacionada?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          fase?: string
+          fecha_completada?: string | null
+          fecha_limite?: string | null
+          id?: string
+          mandato_id?: string
+          notas?: string | null
+          orden?: number
+          responsable?: string | null
+          sistema?: string | null
+          tarea?: string
+          updated_at?: string | null
+          url_relacionada?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandato_checklist_templates: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          fase: string
+          id: string
+          orden: number
+          responsable: string | null
+          sistema: string | null
+          tarea: string
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          fase: string
+          id?: string
+          orden: number
+          responsable?: string | null
+          sistema?: string | null
+          tarea: string
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          fase?: string
+          id?: string
+          orden?: number
+          responsable?: string | null
+          sistema?: string | null
+          tarea?: string
         }
         Relationships: []
       }
@@ -3971,6 +4135,10 @@ export type Database = {
       }
       cleanup_old_tracking_events: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      copy_checklist_template_to_mandato: {
+        Args: { p_mandato_id: string }
         Returns: number
       }
       create_temporary_user: {

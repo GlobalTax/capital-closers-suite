@@ -35,6 +35,7 @@ import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifi
 import { InformacionFinancieraEmpresa } from "@/components/mandatos/InformacionFinancieraEmpresa";
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { EmpresasAsociadasCard } from "@/components/mandatos/EmpresasAsociadasCard";
+import { ChecklistMACard } from "@/components/mandatos/ChecklistMACard";
 import { format } from "date-fns";
 import { getPrioridadColor, calcularDuracion } from "@/lib/mandato-utils";
 
@@ -190,6 +191,12 @@ export default function MandatoDetalle() {
             Finanzas ({totals.transaccionesCount})
           </TabsTrigger>
           <TabsTrigger value="targets">Targets ({targetsCount})</TabsTrigger>
+          {mandato.tipo === "compra" && (
+            <TabsTrigger value="checklist">
+              <ListTodo className="w-4 h-4 mr-2" />
+              Checklist M&A
+            </TabsTrigger>
+          )}
           <TabsTrigger value="tareas">Tareas ({tareas.length})</TabsTrigger>
           <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>
         </TabsList>
@@ -435,6 +442,17 @@ export default function MandatoDetalle() {
             loading={loading}
           />
         </TabsContent>
+
+        {/* Tab Checklist M&A */}
+        {mandato.tipo === "compra" && (
+          <TabsContent value="checklist">
+            <ChecklistMACard
+              mandatoId={id || ""}
+              mandatoTipo={mandato.tipo}
+              loading={loading}
+            />
+          </TabsContent>
+        )}
 
         {/* Tab Tareas */}
         <TabsContent value="tareas">

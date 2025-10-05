@@ -278,3 +278,38 @@ export interface EmpresaTarget {
   interacciones?: Interaccion[];
   datosFinancieros?: DatosFinancieros;
 }
+
+// ============================================
+// CHECKLIST M&A
+// ============================================
+export type ChecklistFase = "1. Preparación" | "2. Marketing" | "3. Ofertas";
+export type ChecklistResponsable = "Dirección M&A" | "Analista" | "Asesor M&A" | "Marketing" | "Legal" | "Research" | "M&A Support";
+export type ChecklistSistema = "Brevo" | "CRM" | "Lovable.dev" | "DealSuite" | "ARX" | "Data Room" | "Supabase";
+export type ChecklistEstado = "⏳ Pendiente" | "🔄 En curso" | "✅ Completa";
+
+export interface MandatoChecklistTask {
+  id: string;
+  mandato_id: string;
+  fase: ChecklistFase;
+  tarea: string;
+  descripcion?: string;
+  responsable?: ChecklistResponsable;
+  sistema?: ChecklistSistema;
+  estado: ChecklistEstado;
+  fecha_limite?: string;
+  fecha_completada?: string;
+  url_relacionada?: string;
+  notas?: string;
+  orden: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChecklistFaseProgress {
+  fase: ChecklistFase;
+  total: number;
+  completadas: number;
+  enCurso: number;
+  pendientes: number;
+  porcentaje: number;
+}
