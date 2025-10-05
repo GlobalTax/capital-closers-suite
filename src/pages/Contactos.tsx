@@ -6,11 +6,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { fetchContactos } from "@/services/contactos";
 import type { Contacto } from "@/types";
 import { toast } from "sonner";
+import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 
 export default function Contactos() {
   const navigate = useNavigate();
   const [contactos, setContactos] = useState<Contacto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     cargarContactos();
@@ -61,19 +63,24 @@ export default function Contactos() {
   ];
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="Contactos"
-        description="Base de datos de contactos de clientes y prospectos"
+        title="Clientes"
+        description="Gestiona los contactos de tus clientes"
         actionLabel="Nuevo Contacto"
-        onAction={() => toast.info("Función disponible próximamente")}
+        onAction={() => setDrawerOpen(true)}
       />
       <DataTableEnhanced
         columns={columns}
         data={contactos}
         loading={loading}
         onRowClick={(row) => navigate(`/contactos/${row.id}`)}
-        pageSize={10}
+      />
+
+      <NuevoContactoDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onSuccess={cargarContactos}
       />
     </div>
   );

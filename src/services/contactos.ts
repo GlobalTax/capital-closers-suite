@@ -65,3 +65,19 @@ export const deleteContacto = async (id: string) => {
   
   if (error) throw error;
 };
+
+export const getContactoMandatos = async (contactoId: string) => {
+  const { data, error } = await supabase
+    .from('mandato_contactos')
+    .select(`
+      *,
+      mandato:mandatos(
+        *,
+        empresa_principal:empresas(*)
+      )
+    `)
+    .eq('contacto_id', contactoId);
+  
+  if (error) throw error;
+  return (data || []).map((mc: any) => mc.mandato);
+};

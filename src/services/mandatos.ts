@@ -165,3 +165,24 @@ export const updateMandatoEmpresa = async (id: string, updates: Partial<MandatoE
   if (error) throw error;
   return data;
 };
+
+// ============================================
+// CONSULTAS ESPECIALES
+// ============================================
+
+export const getMandatosByContacto = async (contactoId: string): Promise<Mandato[]> => {
+  const { data, error } = await supabase
+    .from('mandato_contactos')
+    .select(`
+      mandato:mandatos(
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      )
+    `)
+    .eq('contacto_id', contactoId);
+  
+  if (error) throw error;
+  return (data || []).map((mc: any) => mc.mandato).filter(Boolean) as Mandato[];
+};

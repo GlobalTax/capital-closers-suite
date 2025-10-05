@@ -14,6 +14,7 @@ import Login from "./pages/auth/Login";
 import Mandatos from "./pages/Mandatos";
 import MandatoDetalle from "./pages/MandatoDetalle";
 import Contactos from "./pages/Contactos";
+import ContactoDetalle from "./pages/ContactoDetalle";
 import Empresas from "./pages/Empresas";
 import Tareas from "./pages/Tareas";
 import Documentos from "./pages/Documentos";
@@ -37,6 +38,7 @@ function AppContent() {
         <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
         <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
         <Route path="/contactos" element={<ProtectedRoute><AppLayout><Contactos /></AppLayout></ProtectedRoute>} />
+        <Route path="/contactos/:id" element={<ProtectedRoute><AppLayout><ContactoDetalle /></AppLayout></ProtectedRoute>} />
         <Route path="/empresas" element={<ProtectedRoute><AppLayout><Empresas /></AppLayout></ProtectedRoute>} />
         <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
         <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
