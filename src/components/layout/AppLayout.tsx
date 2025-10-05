@@ -1,6 +1,7 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Topbar } from "./Topbar";
+import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
+      <ChangePasswordModal />
       <div className="flex min-h-screen w-full bg-muted/30">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
