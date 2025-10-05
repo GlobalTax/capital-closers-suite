@@ -12,7 +12,10 @@ import { EditarEmpresaDrawer } from "@/components/empresas/EditarEmpresaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { getEmpresaById, deleteEmpresa, getEmpresaMandatos } from "@/services/empresas";
 import type { Empresa, Mandato } from "@/types";
-import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User } from "lucide-react";
+import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Progress } from "@/components/ui/progress";
 
 export default function EmpresaDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -124,20 +127,32 @@ export default function EmpresaDetalle() {
     );
   }
 
+  const valorTotalMandatos = mandatos.reduce((sum, m) => sum + (m.valor || 0), 0);
+  const mandatosActivos = mandatos.filter(m => m.estado === 'activo' || m.estado === 'en_negociacion');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-semibold text-foreground">{empresa.nombre}</h1>
-          <p className="text-muted-foreground mt-1">
-            {empresa.sector + (empresa.subsector ? ` • ${empresa.subsector}` : "")}
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-semibold text-foreground">{empresa.nombre}</h1>
+              {empresa.es_target && (
+                <Badge variant="default" className="text-sm">
+                  🎯 Target {empresa.nivel_interes && `• ${empresa.nivel_interes} Interés`}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground mt-1">
+              {empresa.sector + (empresa.subsector ? ` • ${empresa.subsector}` : "")}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {empresa.sitio_web && (
             <Button variant="outline" size="sm" onClick={() => window.open(empresa.sitio_web, "_blank")}>
               <Globe className="h-4 w-4 mr-2" />
-              Sitio Web
+              Web
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setEditDrawerOpen(true)}>
@@ -149,6 +164,54 @@ export default function EmpresaDetalle() {
             Eliminar
           </Button>
         </div>
+      </div>
+
+      {/* Quick Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Mandatos Activos</p>
+                <p className="text-2xl font-bold">{mandatosActivos.length}</p>
+                {valorTotalMandatos > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total: €{(valorTotalMandatos / 1000000).toFixed(1)}M
+                  </p>
+                )}
+              </div>
+              <Briefcase className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Última Actividad</p>
+                <p className="text-lg font-semibold">
+                  {empresa.updated_at ? format(new Date(empresa.updated_at), "dd MMM yyyy", { locale: es }) : "-"}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Valor en Mandatos</p>
+                <p className="text-2xl font-bold">
+                  {valorTotalMandatos > 0 ? `€${(valorTotalMandatos / 1000000).toFixed(1)}M` : "-"}
+                </p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {empresa.es_target && (
@@ -260,7 +323,7 @@ export default function EmpresaDetalle() {
                 Información Financiera
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {empresa.revenue && (
                   <div>
@@ -302,6 +365,41 @@ export default function EmpresaDetalle() {
                   </div>
                 )}
               </div>
+
+              {/* Visualizaciones financieras */}
+              {empresa.margen_ebitda && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Margen EBITDA</p>
+                    <span className="text-sm font-semibold">{empresa.margen_ebitda.toFixed(1)}%</span>
+                  </div>
+                  <Progress 
+                    value={Math.min(empresa.margen_ebitda, 100)} 
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {empresa.margen_ebitda > 20 ? "🟢 Excelente" : empresa.margen_ebitda > 10 ? "🟡 Bueno" : "🔴 Bajo"}
+                  </p>
+                </div>
+              )}
+
+              {empresa.ebitda && empresa.deuda && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Ratio Deuda/EBITDA</p>
+                    <span className="text-sm font-semibold">
+                      {(empresa.deuda / empresa.ebitda).toFixed(1)}x
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(empresa.deuda / empresa.ebitda) < 3 
+                      ? "🟢 Bajo endeudamiento" 
+                      : (empresa.deuda / empresa.ebitda) < 5 
+                      ? "🟡 Endeudamiento moderado" 
+                      : "🔴 Alto endeudamiento"}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,12 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { fetchEmpresas } from "@/services/empresas";
 import type { Empresa } from "@/types";
 import { toast } from "sonner";
+import { Building2, Target, TrendingUp, Activity, Globe, Mail, Linkedin, Briefcase } from "lucide-react";
+import { format, isAfter, subDays } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function Empresas() {
   const navigate = useNavigate();
@@ -14,6 +19,22 @@ export default function Empresas() {
   const [loading, setLoading] = useState(true);
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // KPIs calculados
+  const kpis = useMemo(() => {
+    const total = empresas.length;
+    const targets = empresas.filter(e => e.es_target).length;
+    const facturacionPromedio = empresas.length > 0 
+      ? empresas.reduce((sum, e) => sum + (e.facturacion || 0), 0) / empresas.length 
+      : 0;
+    
+    return {
+      total,
+      targets,
+      targetPercentage: total > 0 ? ((targets / total) * 100).toFixed(0) : 0,
+      facturacionPromedio,
+    };
+  }, [empresas]);
 
   useEffect(() => {
     cargarEmpresas();
@@ -46,17 +67,21 @@ export default function Empresas() {
       render: (value: string, row: Empresa) => (
         <div>
           <p className="font-medium">{value}</p>
-          {row.es_target && (
-            <Badge variant="outline" className="mt-1">Target</Badge>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {row.es_target && (
+              <Badge variant="outline" className="text-xs">🎯 Target</Badge>
+            )}
+            {row.sector && (
+              <span className="text-xs text-muted-foreground">{row.sector}</span>
+            )}
+          </div>
         </div>
       ),
     },
-    { key: "sector", label: "Sector", sortable: true, filterable: true },
     { 
       key: "ubicacion", 
       label: "Ubicación",
-      render: (value: string) => value || "-"
+      render: (value: string) => <span className="text-sm">{value || "-"}</span>
     },
     {
       key: "facturacion",
@@ -71,6 +96,22 @@ export default function Empresas() {
       render: (value: number) => value || "-"
     },
     {
+      key: "updated_at",
+      label: "Última Actividad",
+      sortable: true,
+      render: (value: string) => {
+        if (!value) return "-";
+        const date = new Date(value);
+        const isRecent = isAfter(date, subDays(new Date(), 7));
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{format(date, "dd MMM", { locale: es })}</span>
+            {isRecent && <Badge variant="secondary" className="text-xs">Reciente</Badge>}
+          </div>
+        );
+      }
+    },
+    {
       key: "nivel_interes",
       label: "Interés",
       render: (value: string, row: Empresa) => {
@@ -83,6 +124,24 @@ export default function Empresas() {
         return <Badge variant={colors[value] as any}>{value}</Badge>;
       }
     },
+    {
+      key: "id",
+      label: "Acciones",
+      render: (_: any, row: Empresa) => (
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          {row.sitio_web && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(row.sitio_web, "_blank")}
+              title="Visitar web"
+            >
+              <Globe className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )
+    },
   ];
 
   return (
@@ -93,6 +152,58 @@ export default function Empresas() {
         actionLabel="Nueva Empresa"
         onAction={() => setDrawerOpen(true)}
       />
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Empresas</p>
+                <p className="text-2xl font-bold">{kpis.total}</p>
+              </div>
+              <Building2 className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Targets</p>
+                <p className="text-2xl font-bold">{kpis.targets}</p>
+                <p className="text-xs text-muted-foreground">{kpis.targetPercentage}% del total</p>
+              </div>
+              <Target className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Facturación Media</p>
+                <p className="text-2xl font-bold">€{(kpis.facturacionPromedio / 1000000).toFixed(1)}M</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Empresas Activas</p>
+                <p className="text-2xl font-bold">{empresas.filter(e => !e.es_target || (e.estado_target && e.estado_target !== 'rechazada')).length}</p>
+              </div>
+              <Activity className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       <div className="mb-4 flex gap-2">
         <Badge 
