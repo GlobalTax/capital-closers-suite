@@ -26,6 +26,8 @@ import { TransactionTable } from "@/components/mandatos/TransactionTable";
 import { CashFlowChart } from "@/components/mandatos/CashFlowChart";
 import { FinancialKPICard } from "@/components/mandatos/FinancialKPICard";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
+import { DocumentUploadZone } from "@/components/documentos/DocumentUploadZone";
+import { DocumentList } from "@/components/documentos/DocumentList";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -38,6 +40,7 @@ export default function MandatoDetalle() {
   const [updatingEstado, setUpdatingEstado] = useState(false);
   const [transactionSheetOpen, setTransactionSheetOpen] = useState(false);
   const [openTargetDrawer, setOpenTargetDrawer] = useState(false);
+  const [showUploadZone, setShowUploadZone] = useState(false);
   const [transactionFilters, setTransactionFilters] = useState<{
     dateRange: "7d" | "30d" | "all";
   }>({ dateRange: "all" });
@@ -65,7 +68,7 @@ export default function MandatoDetalle() {
 
       setMandato(mandatoData);
       setActividades(actividadesData);
-      setDocumentos(documentosData.filter((d) => d.mandatoId === id));
+      setDocumentos(documentosData.filter((d) => d.mandato_id === id));
       setTareas(tareasData.filter((t) => t.mandatoId === id));
     } catch (error) {
       console.error("Error cargando mandato:", error);
@@ -176,10 +179,10 @@ export default function MandatoDetalle() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => toast.info("Subir Documento - Disponible próximamente")}
+          onClick={() => setShowUploadZone(!showUploadZone)}
         >
           <Upload className="w-4 h-4 mr-2" />
-          Subir Documento
+          {showUploadZone ? "Ocultar" : "Subir Documento"}
         </Button>
       </div>
 
@@ -494,40 +497,31 @@ export default function MandatoDetalle() {
         </TabsContent>
 
         {/* Tab Documentos */}
-        <TabsContent value="documentos">
+        <TabsContent value="documentos" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Documentos Asociados</CardTitle>
-              <Button size="sm" onClick={() => toast.info("Disponible próximamente")}>
-                <Upload className="w-4 h-4 mr-2" />
-                Subir Documento
+              <Button 
+                size="sm" 
+                onClick={() => setShowUploadZone(!showUploadZone)}
+                variant={showUploadZone ? "outline" : "default"}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {showUploadZone ? "Ocultar Zona de Subida" : "Subir Documento"}
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {documentos.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-sm">{doc.nombre}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {doc.tamano} • {doc.fecha}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline">{doc.tipo}</Badge>
-                  </div>
-                ))}
-                {documentos.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No hay documentos asociados a este mandato
-                  </p>
-                )}
-              </div>
+            <CardContent className="space-y-6">
+              {showUploadZone && id && (
+                <DocumentUploadZone
+                  mandatoId={id}
+                  onSuccess={() => {
+                    cargarMandato();
+                    setShowUploadZone(false);
+                  }}
+                />
+              )}
+
+              {id && <DocumentList mandatoId={id} onUpdate={cargarMandato} />}
             </CardContent>
           </Card>
         </TabsContent>

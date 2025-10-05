@@ -176,14 +176,16 @@ export interface Tarea {
 // ============================================
 export interface Documento {
   id: string;
-  nombre: string;
-  tipo: DocumentoTipo;
-  mandato: string;
-  mandatoId: string;
-  fecha: string;
-  tamano: string;
-  url?: string;
-  uploadedBy?: string;
+  mandato_id: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  storage_path: string;
+  tipo: DocumentoTipo | "Otro";
+  descripcion?: string;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================

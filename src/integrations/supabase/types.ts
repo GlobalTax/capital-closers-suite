@@ -1146,6 +1146,8 @@ export type Database = {
           revenue: number | null
           source_project: string | null
           time_spent_seconds: number | null
+          token_expires_at: string | null
+          token_used_at: string | null
           unique_token: string | null
           user_agent: string | null
           user_id: string | null
@@ -1198,6 +1200,8 @@ export type Database = {
           revenue?: number | null
           source_project?: string | null
           time_spent_seconds?: number | null
+          token_expires_at?: string | null
+          token_used_at?: string | null
           unique_token?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -1250,6 +1254,8 @@ export type Database = {
           revenue?: number | null
           source_project?: string | null
           time_spent_seconds?: number | null
+          token_expires_at?: string | null
+          token_used_at?: string | null
           unique_token?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -2360,6 +2366,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_documentos: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          file_name: string
+          file_size_bytes: number
+          id: string
+          mandato_id: string
+          mime_type: string
+          storage_path: string
+          tipo: Database["public"]["Enums"]["documento_tipo"]
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          mandato_id: string
+          mime_type: string
+          storage_path: string
+          tipo?: Database["public"]["Enums"]["documento_tipo"]
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          mandato_id?: string
+          mime_type?: string
+          storage_path?: string
+          tipo?: Database["public"]["Enums"]["documento_tipo"]
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       mandato_transactions: {
         Row: {
           amount: number
@@ -2671,30 +2719,27 @@ export type Database = {
       }
       rate_limits: {
         Row: {
-          category: string
+          action: string
+          count: number
           created_at: string
           id: string
           identifier: string
-          request_count: number
-          updated_at: string
           window_start: string
         }
         Insert: {
-          category?: string
+          action: string
+          count?: number
           created_at?: string
           id?: string
           identifier: string
-          request_count?: number
-          updated_at?: string
           window_start?: string
         }
         Update: {
-          category?: string
+          action?: string
+          count?: number
           created_at?: string
           id?: string
           identifier?: string
-          request_count?: number
-          updated_at?: string
           window_start?: string
         }
         Relationships: []
@@ -2895,38 +2940,32 @@ export type Database = {
       }
       security_events: {
         Row: {
-          action_attempted: string | null
           created_at: string
           details: Json | null
           event_type: string
           id: string
           ip_address: unknown | null
-          severity: string
-          table_name: string | null
+          severity: string | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
-          action_attempted?: string | null
           created_at?: string
           details?: Json | null
           event_type: string
           id?: string
           ip_address?: unknown | null
-          severity?: string
-          table_name?: string | null
+          severity?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
-          action_attempted?: string | null
           created_at?: string
           details?: Json | null
           event_type?: string
           id?: string
           ip_address?: unknown | null
-          severity?: string
-          table_name?: string | null
+          severity?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -3520,11 +3559,18 @@ export type Database = {
         Returns: boolean
       }
       check_rate_limit: {
-        Args: {
-          identifier: string
-          max_requests?: number
-          window_minutes?: number
-        }
+        Args:
+          | {
+              _action: string
+              _identifier: string
+              _max_requests?: number
+              _window_minutes?: number
+            }
+          | {
+              identifier: string
+              max_requests?: number
+              window_minutes?: number
+            }
         Returns: boolean
       }
       check_rate_limit_enhanced: {
@@ -3620,6 +3666,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      is_admin_user: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       is_user_admin: {
         Args: { check_user_id: string }
         Returns: boolean
@@ -3656,14 +3706,16 @@ export type Database = {
         Returns: undefined
       }
       log_security_event: {
-        Args: {
-          p_action_attempted?: string
-          p_details?: Json
-          p_event_type: string
-          p_severity?: string
-          p_table_name?: string
-        }
-        Returns: undefined
+        Args:
+          | { _details?: Json; _event_type: string; _severity: string }
+          | {
+              p_action_attempted?: string
+              p_details?: Json
+              p_event_type: string
+              p_severity?: string
+              p_table_name?: string
+            }
+        Returns: string
       }
       log_security_violation: {
         Args: {
@@ -3719,9 +3771,20 @@ export type Database = {
         Args: { password_text: string }
         Returns: boolean
       }
+      validate_valuation_token: {
+        Args: { _token: string }
+        Returns: string
+      }
     }
     Enums: {
       admin_role: "super_admin" | "admin" | "editor" | "viewer"
+      documento_tipo:
+        | "Contrato"
+        | "NDA"
+        | "Due Diligence"
+        | "Financiero"
+        | "Legal"
+        | "Otro"
       proposal_status:
         | "draft"
         | "sent"
@@ -3874,6 +3937,14 @@ export const Constants = {
   public: {
     Enums: {
       admin_role: ["super_admin", "admin", "editor", "viewer"],
+      documento_tipo: [
+        "Contrato",
+        "NDA",
+        "Due Diligence",
+        "Financiero",
+        "Legal",
+        "Otro",
+      ],
       proposal_status: [
         "draft",
         "sent",
