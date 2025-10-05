@@ -70,10 +70,11 @@ type FormValues = z.infer<typeof formSchema>;
 interface NuevoTargetDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  mandatoId?: string;
 }
 
-export function NuevoTargetDrawer({ open, onOpenChange, onSuccess }: NuevoTargetDrawerProps) {
+export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: NuevoTargetDrawerProps) {
   const [loading, setLoading] = useState(false);
 
   const form = useForm<FormValues>({
@@ -110,12 +111,13 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess }: NuevoTarget
         email: values.email || undefined,
         telefono: values.telefono || undefined,
         sitioWeb: values.sitioWeb || undefined,
+        mandatoId: mandatoId,
       });
 
       toast.success("Empresa target creada exitosamente");
       form.reset();
       onOpenChange(false);
-      onSuccess();
+      onSuccess?.();
     } catch (error) {
       toast.error("Error al crear la empresa target");
       console.error(error);

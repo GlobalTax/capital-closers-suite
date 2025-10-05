@@ -25,6 +25,7 @@ import { TransactionForm } from "@/components/mandatos/TransactionForm";
 import { TransactionTable } from "@/components/mandatos/TransactionTable";
 import { CashFlowChart } from "@/components/mandatos/CashFlowChart";
 import { FinancialKPICard } from "@/components/mandatos/FinancialKPICard";
+import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -36,6 +37,7 @@ export default function MandatoDetalle() {
   const [loading, setLoading] = useState(true);
   const [updatingEstado, setUpdatingEstado] = useState(false);
   const [transactionSheetOpen, setTransactionSheetOpen] = useState(false);
+  const [openTargetDrawer, setOpenTargetDrawer] = useState(false);
   const [transactionFilters, setTransactionFilters] = useState<{
     dateRange: "7d" | "30d" | "all";
   }>({ dateRange: "all" });
@@ -49,32 +51,32 @@ export default function MandatoDetalle() {
     isCreating,
   } = useMandatoTransactions(id || "", transactionFilters);
 
+  const cargarMandato = async () => {
+    if (!id) return;
+
+    setLoading(true);
+    try {
+      const [mandatoData, actividadesData, documentosData, tareasData] = await Promise.all([
+        getMandatoById(id),
+        fetchActividades(id),
+        fetchDocumentos(),
+        fetchTareas(),
+      ]);
+
+      setMandato(mandatoData);
+      setActividades(actividadesData);
+      setDocumentos(documentosData.filter((d) => d.mandatoId === id));
+      setTareas(tareasData.filter((t) => t.mandatoId === id));
+    } catch (error) {
+      console.error("Error cargando mandato:", error);
+      toast.error("Error al cargar los datos del mandato");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const cargarDatos = async () => {
-      if (!id) return;
-
-      setLoading(true);
-      try {
-        const [mandatoData, actividadesData, documentosData, tareasData] = await Promise.all([
-          getMandatoById(id),
-          fetchActividades(id),
-          fetchDocumentos(),
-          fetchTareas(),
-        ]);
-
-        setMandato(mandatoData);
-        setActividades(actividadesData);
-        setDocumentos(documentosData.filter((d) => d.mandatoId === id));
-        setTareas(tareasData.filter((t) => t.mandatoId === id));
-      } catch (error) {
-        console.error("Error cargando mandato:", error);
-        toast.error("Error al cargar los datos del mandato");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarDatos();
+    cargarMandato();
   }, [id]);
 
   const handleEstadoChange = async (nuevoEstado: string) => {
@@ -160,7 +162,7 @@ export default function MandatoDetalle() {
       <div className="flex gap-2">
         <Button
           variant="outline"
-          onClick={() => toast.info("Añadir Target - Disponible próximamente")}
+          onClick={() => setOpenTargetDrawer(true)}
         >
           <Target className="w-4 h-4 mr-2" />
           Añadir Target
@@ -422,7 +424,7 @@ export default function MandatoDetalle() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Empresas Target</CardTitle>
-              <Button size="sm" onClick={() => toast.info("Disponible próximamente")}>
+              <Button size="sm" onClick={() => setOpenTargetDrawer(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Añadir Target
               </Button>
@@ -566,6 +568,16 @@ export default function MandatoDetalle() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <NuevoTargetDrawer
+        open={openTargetDrawer}
+        onOpenChange={setOpenTargetDrawer}
+        mandatoId={id}
+        onSuccess={() => {
+          cargarMandato();
+          toast.success("Target añadido al mandato");
+        }}
+      />
     </div>
   );
 }
