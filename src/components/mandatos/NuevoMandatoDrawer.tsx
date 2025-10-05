@@ -141,7 +141,7 @@ export function NuevoMandatoDrawer({
                   name="clienteId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cliente</FormLabel>
+                      <FormLabel>Contacto</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -149,7 +149,7 @@ export function NuevoMandatoDrawer({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un cliente" />
+                            <SelectValue placeholder="Selecciona un contacto" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-background">

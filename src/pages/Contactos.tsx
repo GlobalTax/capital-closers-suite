@@ -65,8 +65,8 @@ export default function Contactos() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Clientes"
-        description="Gestiona los contactos de tus clientes"
+        title="Contactos"
+        description="Gestiona tus contactos"
         actionLabel="Nuevo Contacto"
         onAction={() => setDrawerOpen(true)}
       />

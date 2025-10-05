@@ -78,7 +78,7 @@ export function CommandPalette() {
   return (
     <CommandDialog open={isCommandPaletteOpen} onOpenChange={closeCommandPalette}>
       <CommandInput
-        placeholder="Buscar mandatos, clientes, empresas..."
+        placeholder="Buscar mandatos, contactos, empresas..."
         value={query}
         onValueChange={setQuery}
       />
