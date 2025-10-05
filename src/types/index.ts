@@ -33,6 +33,38 @@ export type TargetEstado =
   | "oferta" 
   | "cerrada";
 
+export type TransactionType = 
+  | "ingreso" 
+  | "gasto" 
+  | "honorario" 
+  | "due_diligence" 
+  | "ajuste_valoracion" 
+  | "comision" 
+  | "otro";
+
+export type TransactionStatus = "pendiente" | "completada" | "cancelada";
+
+// ============================================
+// TRANSACCIÓN FINANCIERA
+// ============================================
+export interface MandatoTransaction {
+  id: string;
+  mandato_id: string;
+  transaction_type: TransactionType;
+  amount: number;
+  currency: string;
+  transaction_date: string;
+  description: string;
+  category?: string;
+  status: TransactionStatus;
+  payment_method?: string;
+  reference_number?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================
 // MANDATO
 // ============================================
@@ -54,6 +86,11 @@ export interface Mandato {
   targetsCount?: number;
   tareasAbiertas?: number;
   ultimaActualizacion?: string;
+  // Campos financieros
+  total_ingresos?: number;
+  total_gastos?: number;
+  balance_neto?: number;
+  transacciones_count?: number;
 }
 
 // ============================================

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Activity, Target, ListTodo, Upload, Plus } from "lucide-react";
+import { ArrowLeft, FileText, Activity, Target, ListTodo, Upload, Plus, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,11 @@ import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { MANDATO_ESTADOS } from "@/lib/constants";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useMandatoTransactions } from "@/hooks/useMandatoTransactions";
+import { TransactionForm } from "@/components/mandatos/TransactionForm";
+import { TransactionTable } from "@/components/mandatos/TransactionTable";
+import { CashFlowChart } from "@/components/mandatos/CashFlowChart";
+import { FinancialKPICard } from "@/components/mandatos/FinancialKPICard";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -29,6 +35,19 @@ export default function MandatoDetalle() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingEstado, setUpdatingEstado] = useState(false);
+  const [transactionSheetOpen, setTransactionSheetOpen] = useState(false);
+  const [transactionFilters, setTransactionFilters] = useState<{
+    dateRange: "7d" | "30d" | "all";
+  }>({ dateRange: "all" });
+
+  const {
+    transactions,
+    totals,
+    isLoading: transactionsLoading,
+    createTransaction,
+    deleteTransaction,
+    isCreating,
+  } = useMandatoTransactions(id || "", transactionFilters);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -165,6 +184,10 @@ export default function MandatoDetalle() {
       <Tabs defaultValue="resumen" className="w-full">
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <TabsTrigger value="finanzas">
+            <Euro className="w-4 h-4 mr-2" />
+            Finanzas ({totals.transaccionesCount})
+          </TabsTrigger>
           <TabsTrigger value="targets">Targets ({mandato.targetsCount || 0})</TabsTrigger>
           <TabsTrigger value="tareas">Tareas ({tareas.length})</TabsTrigger>
           <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>
@@ -290,6 +313,106 @@ export default function MandatoDetalle() {
                   </p>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab Finanzas */}
+        <TabsContent value="finanzas" className="space-y-4">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-4 gap-4">
+            <FinancialKPICard
+              title="Total Ingresos"
+              value={totals.totalIngresos}
+              variant="income"
+              loading={transactionsLoading}
+            />
+            <FinancialKPICard
+              title="Total Gastos"
+              value={totals.totalGastos}
+              variant="expense"
+              loading={transactionsLoading}
+            />
+            <FinancialKPICard
+              title="Balance Neto"
+              value={totals.balanceNeto}
+              variant="balance"
+              loading={transactionsLoading}
+            />
+            <FinancialKPICard
+              title="Nº Transacciones"
+              value={totals.transaccionesCount}
+              variant="count"
+              currency=""
+              loading={transactionsLoading}
+            />
+          </div>
+
+          {/* Cash Flow Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolución de Cash Flow</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CashFlowChart transactions={transactions} />
+            </CardContent>
+          </Card>
+
+          {/* Transactions Table with Filters */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Historial de Transacciones</CardTitle>
+              <div className="flex gap-2">
+                <Select
+                  value={transactionFilters.dateRange}
+                  onValueChange={(value: "7d" | "30d" | "all") =>
+                    setTransactionFilters({ ...transactionFilters, dateRange: value })
+                  }
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="7d">Últimos 7 días</SelectItem>
+                    <SelectItem value="30d">Últimos 30 días</SelectItem>
+                    <SelectItem value="all">Todo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Sheet open={transactionSheetOpen} onOpenChange={setTransactionSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nueva Transacción
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent className="overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Nueva Transacción Financiera</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">
+                      <TransactionForm
+                        mandatoId={id || ""}
+                        onSubmit={async (data) => {
+                          await createTransaction({
+                            ...data,
+                            transaction_date: data.transaction_date.toISOString().split("T")[0],
+                          } as any);
+                          setTransactionSheetOpen(false);
+                        }}
+                        onCancel={() => setTransactionSheetOpen(false)}
+                        loading={isCreating}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <TransactionTable
+                transactions={transactions}
+                onDelete={deleteTransaction}
+                loading={transactionsLoading}
+              />
             </CardContent>
           </Card>
         </TabsContent>

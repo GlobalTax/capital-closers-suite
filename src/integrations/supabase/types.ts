@@ -2360,6 +2360,68 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          id: string
+          mandato_id: string
+          notes: string | null
+          payment_method: string | null
+          reference_number: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description: string
+          id?: string
+          mandato_id: string
+          notes?: string | null
+          payment_method?: string | null
+          reference_number?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          id?: string
+          mandato_id?: string
+          notes?: string | null
+          payment_method?: string | null
+          reference_number?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          transaction_date?: string
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       market_reports: {
         Row: {
           category: string
@@ -3675,6 +3737,15 @@ export type Database = {
         | "planificacion_fiscal"
         | "reestructuraciones"
       service_type_enum: "vender" | "comprar" | "otros"
+      transaction_status: "pendiente" | "completada" | "cancelada"
+      transaction_type:
+        | "ingreso"
+        | "gasto"
+        | "honorario"
+        | "due_diligence"
+        | "ajuste_valoracion"
+        | "comision"
+        | "otro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3820,6 +3891,16 @@ export const Constants = {
         "reestructuraciones",
       ],
       service_type_enum: ["vender", "comprar", "otros"],
+      transaction_status: ["pendiente", "completada", "cancelada"],
+      transaction_type: [
+        "ingreso",
+        "gasto",
+        "honorario",
+        "due_diligence",
+        "ajuste_valoracion",
+        "comision",
+        "otro",
+      ],
     },
   },
 } as const
