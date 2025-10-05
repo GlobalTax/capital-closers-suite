@@ -8,7 +8,7 @@ export type TargetEstado = "pendiente" | "contactada" | "interesada" | "rechazad
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
 export type TareaPrioridad = "alta" | "media" | "baja" | "urgente";
 export type TareaEstado = "pendiente" | "en_progreso" | "completada" | "cancelada";
-export type DocumentoTipo = "Contrato" | "NDA" | "Informe" | "Presentación" | "Financiero" | "Legal" | "Otro";
+export type DocumentoTipo = "Contrato" | "NDA" | "Due Diligence" | "Financiero" | "Legal" | "Otro";
 export type TransactionType = "ingreso" | "gasto" | "honorario" | "due_diligence" | "ajuste_valoracion" | "comision" | "otro";
 export type TransactionStatus = "pendiente" | "completada" | "cancelada";
 export type ContactoRol = "vendedor" | "comprador" | "asesor" | "intermediario" | "otro";
@@ -179,6 +179,7 @@ export interface Documento {
   storage_path: string;
   tipo: DocumentoTipo;
   descripcion?: string;
+  tags?: string[];
   uploaded_by?: string;
   created_at: string;
   updated_at: string;

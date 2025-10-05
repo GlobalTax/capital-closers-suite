@@ -1663,8 +1663,10 @@ export type Database = {
           mandato_id: string | null
           mime_type: string
           storage_path: string
+          tags: string[] | null
           tipo: string | null
           updated_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1674,8 +1676,10 @@ export type Database = {
           mandato_id?: string | null
           mime_type: string
           storage_path: string
+          tags?: string[] | null
           tipo?: string | null
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1685,8 +1689,10 @@ export type Database = {
           mandato_id?: string | null
           mime_type?: string
           storage_path?: string
+          tags?: string[] | null
           tipo?: string | null
           updated_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -2354,13 +2360,17 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string | null
+          deliverable_url: string | null
           due_date: string | null
           id: string
+          is_automated: boolean | null
           is_system_task: boolean | null
           lead_id: string
           lead_type: string
           notes: string | null
+          responsible_system: string | null
           status: string
+          task_category: string | null
           task_name: string
           task_order: number
           updated_at: string | null
@@ -2370,13 +2380,17 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string | null
+          deliverable_url?: string | null
           due_date?: string | null
           id?: string
+          is_automated?: boolean | null
           is_system_task?: boolean | null
           lead_id: string
           lead_type: string
           notes?: string | null
+          responsible_system?: string | null
           status?: string
+          task_category?: string | null
           task_name: string
           task_order: number
           updated_at?: string | null
@@ -2386,13 +2400,17 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string | null
+          deliverable_url?: string | null
           due_date?: string | null
           id?: string
+          is_automated?: boolean | null
           is_system_task?: boolean | null
           lead_id?: string
           lead_type?: string
           notes?: string | null
+          responsible_system?: string | null
           status?: string
+          task_category?: string | null
           task_name?: string
           task_order?: number
           updated_at?: string | null
