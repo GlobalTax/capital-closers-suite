@@ -6,7 +6,7 @@ export type MandatoEstado = "prospecto" | "activo" | "en_negociacion" | "cerrado
 export type MandatoTipo = "compra" | "venta";
 export type TargetEstado = "pendiente" | "contactada" | "interesada" | "rechazada" | "en_dd" | "oferta" | "cerrada";
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
-export type TareaPrioridad = "alta" | "media" | "baja";
+export type TareaPrioridad = "alta" | "media" | "baja" | "urgente";
 export type TareaEstado = "pendiente" | "en_progreso" | "completada" | "cancelada";
 export type DocumentoTipo = "Contrato" | "NDA" | "Informe" | "Presentación" | "Financiero" | "Legal" | "Otro";
 export type TransactionType = "ingreso" | "gasto" | "honorario" | "due_diligence" | "ajuste_valoracion" | "comision" | "otro";
@@ -102,6 +102,19 @@ export interface Mandato {
   fecha_cierre?: string;
   descripcion?: string;
   prioridad?: TareaPrioridad;
+  
+  // Campos específicos de COMPRA
+  perfil_empresa_buscada?: string;
+  rango_inversion_min?: number;
+  rango_inversion_max?: number;
+  sectores_interes?: string[];
+  timeline_objetivo?: string;
+  
+  // Campos específicos de VENTA
+  valoracion_esperada?: number;
+  tipo_comprador_buscado?: string;
+  estado_negociacion?: string;
+  numero_ofertas_recibidas?: number;
   
   // Relaciones pobladas
   contactos?: MandatoContacto[];

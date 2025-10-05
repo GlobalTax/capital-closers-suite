@@ -30,7 +30,13 @@ import { FinancialKPICard } from "@/components/mandatos/FinancialKPICard";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { DocumentUploadZone } from "@/components/documentos/DocumentUploadZone";
 import { DocumentList } from "@/components/documentos/DocumentList";
+import { MandatoTimeline } from "@/components/mandatos/MandatoTimeline";
+import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifico";
+import { InformacionFinancieraEmpresa } from "@/components/mandatos/InformacionFinancieraEmpresa";
+import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
+import { EmpresasAsociadasCard } from "@/components/mandatos/EmpresasAsociadasCard";
 import { format } from "date-fns";
+import { getPrioridadColor, calcularDuracion } from "@/lib/mandato-utils";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -189,7 +195,7 @@ export default function MandatoDetalle() {
         </TabsList>
 
         {/* Tab Resumen */}
-        <TabsContent value="resumen" className="space-y-4">
+        <TabsContent value="resumen" className="space-y-6">
           {/* KPIs */}
           <div className="grid grid-cols-4 gap-4">
             <Card>
@@ -199,17 +205,17 @@ export default function MandatoDetalle() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{mandato.valor.toLocaleString('es-ES')} €</p>
+                <p className="text-2xl font-semibold">{mandato.valor?.toLocaleString('es-ES') || 0} €</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Targets
+                  Contactos
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{targetsCount}</p>
+                <p className="text-2xl font-semibold">{mandato.contactos?.length || 0}</p>
               </CardContent>
             </Card>
             <Card>
@@ -234,15 +240,33 @@ export default function MandatoDetalle() {
             </Card>
           </div>
 
+          {/* Timeline del Mandato */}
+          <MandatoTimeline 
+            fechaInicio={mandato.fecha_inicio}
+            fechaCierre={mandato.fecha_cierre}
+            estado={mandato.estado}
+          />
+
+          {/* Información Tipo-Específica */}
+          <MandatoTipoEspecifico mandato={mandato} />
+
           {/* Información General */}
           <Card>
             <CardHeader>
               <CardTitle>Detalles del Mandato</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Cliente</p>
                 <p className="font-medium">{mandato.empresa_principal?.nombre || "Sin asignar"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Sector</p>
+                <p className="font-medium">{mandato.empresa_principal?.sector || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ubicación</p>
+                <p className="font-medium">{mandato.empresa_principal?.ubicacion || "-"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tipo</p>
@@ -250,28 +274,57 @@ export default function MandatoDetalle() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Valor Estimado</p>
-                <p className="font-medium">{mandato.valor.toLocaleString('es-ES')} €</p>
+                <p className="font-medium">{mandato.valor?.toLocaleString('es-ES') || 0} €</p>
               </div>
+              {mandato.prioridad && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Prioridad</p>
+                  <Badge className={getPrioridadColor(mandato.prioridad)}>
+                    {mandato.prioridad}
+                  </Badge>
+                </div>
+              )}
+              {mandato.fecha_inicio && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha Inicio</p>
+                  <p className="font-medium">{format(new Date(mandato.fecha_inicio), 'dd/MM/yyyy')}</p>
+                </div>
+              )}
+              {mandato.fecha_cierre && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Fecha Cierre Objetivo</p>
+                  <p className="font-medium">{format(new Date(mandato.fecha_cierre), 'dd/MM/yyyy')}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Fecha Creación</p>
                 <p className="font-medium">{format(new Date(mandato.created_at), 'dd/MM/yyyy')}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Última Actualización</p>
-                <p className="font-medium">{format(new Date(mandato.updated_at || mandato.created_at), 'dd/MM/yyyy')}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Estado</p>
                 <BadgeStatus status={mandato.estado} type="mandato" />
               </div>
               {mandato.descripcion && (
-                <div className="col-span-2">
+                <div className="col-span-full">
                   <p className="text-sm text-muted-foreground">Descripción</p>
                   <p className="font-medium">{mandato.descripcion}</p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Información Financiera de la Empresa */}
+          <InformacionFinancieraEmpresa 
+            empresa={mandato.empresa_principal}
+            loading={loading}
+          />
+
+          {/* Contactos Clave */}
+          <ContactosClaveCard
+            contactos={mandato.contactos || []}
+            onAddContacto={() => toast.info("Añadir contacto - Disponible próximamente")}
+            loading={loading}
+          />
         </TabsContent>
 
         {/* Tab Finanzas */}
@@ -376,20 +429,11 @@ export default function MandatoDetalle() {
 
         {/* Tab Targets */}
         <TabsContent value="targets">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Empresas Target</CardTitle>
-              <Button size="sm" onClick={() => setOpenTargetDrawer(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Añadir Target
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Funcionalidad de targets disponible próximamente
-              </p>
-            </CardContent>
-          </Card>
+          <EmpresasAsociadasCard
+            empresas={mandato.empresas || []}
+            onAddEmpresa={() => setOpenTargetDrawer(true)}
+            loading={loading}
+          />
         </TabsContent>
 
         {/* Tab Tareas */}

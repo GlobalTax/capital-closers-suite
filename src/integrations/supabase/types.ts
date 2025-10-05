@@ -2726,39 +2726,66 @@ export type Database = {
           descripcion: string | null
           empresa_principal_id: string | null
           estado: string
+          estado_negociacion: string | null
           fecha_cierre: string | null
           fecha_inicio: string | null
           id: string
+          numero_ofertas_recibidas: number | null
+          perfil_empresa_buscada: string | null
           prioridad: string | null
+          rango_inversion_max: number | null
+          rango_inversion_min: number | null
+          sectores_interes: string[] | null
+          timeline_objetivo: string | null
           tipo: string
+          tipo_comprador_buscado: string | null
           updated_at: string | null
           valor: number | null
+          valoracion_esperada: number | null
         }
         Insert: {
           created_at?: string | null
           descripcion?: string | null
           empresa_principal_id?: string | null
           estado?: string
+          estado_negociacion?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
+          numero_ofertas_recibidas?: number | null
+          perfil_empresa_buscada?: string | null
           prioridad?: string | null
+          rango_inversion_max?: number | null
+          rango_inversion_min?: number | null
+          sectores_interes?: string[] | null
+          timeline_objetivo?: string | null
           tipo?: string
+          tipo_comprador_buscado?: string | null
           updated_at?: string | null
           valor?: number | null
+          valoracion_esperada?: number | null
         }
         Update: {
           created_at?: string | null
           descripcion?: string | null
           empresa_principal_id?: string | null
           estado?: string
+          estado_negociacion?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
+          numero_ofertas_recibidas?: number | null
+          perfil_empresa_buscada?: string | null
           prioridad?: string | null
+          rango_inversion_max?: number | null
+          rango_inversion_min?: number | null
+          sectores_interes?: string[] | null
+          timeline_objetivo?: string | null
           tipo?: string
+          tipo_comprador_buscado?: string | null
           updated_at?: string | null
           valor?: number | null
+          valoracion_esperada?: number | null
         }
         Relationships: [
           {

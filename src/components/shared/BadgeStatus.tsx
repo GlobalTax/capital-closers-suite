@@ -45,6 +45,7 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
         "alta": "destructive",
         "media": "secondary",
         "baja": "default",
+        "urgente": "destructive",
       };
       return prioridadVariants[status as TareaPrioridad] || "default";
     }
@@ -92,6 +93,7 @@ export function BadgeStatus({ status, type = "mandato" }: BadgeStatusProps) {
         "alta": "Alta",
         "media": "Media",
         "baja": "Baja",
+        "urgente": "Urgente",
       };
       return prioridadTexts[status as TareaPrioridad] || status;
     }
