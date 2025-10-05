@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
@@ -38,16 +38,25 @@ import {
 
 export default function Mandatos() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroTipo, setFiltroTipo] = useState<string>(searchParams.get("tipo") || "todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     cargarMandatos();
   }, []);
+
+  // Actualizar filtro cuando cambia el query param
+  useEffect(() => {
+    const tipoParam = searchParams.get("tipo");
+    if (tipoParam && (tipoParam === "compra" || tipoParam === "venta")) {
+      setFiltroTipo(tipoParam);
+    }
+  }, [searchParams]);
 
   const cargarMandatos = async () => {
     setLoading(true);
