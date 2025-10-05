@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { MandatoChecklistTask } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, ChevronDown, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { TaskFilesTree } from "./TaskFilesTree";
+import { useTaskFiles } from "@/hooks/useTaskFiles";
 
 interface ChecklistTaskRowProps {
   task: MandatoChecklistTask;
@@ -13,6 +17,9 @@ interface ChecklistTaskRowProps {
 }
 
 export function ChecklistTaskRow({ task, onEdit, onDelete, onStatusChange }: ChecklistTaskRowProps) {
+  const [showFiles, setShowFiles] = useState(false);
+  const { files, loading: filesLoading, uploading, uploadFile, deleteFile } = useTaskFiles(task.id);
+
   const getEstadoColor = (estado: MandatoChecklistTask["estado"]) => {
     switch (estado) {
       case "✅ Completa":
@@ -146,6 +153,33 @@ export function ChecklistTaskRow({ task, onEdit, onDelete, onStatusChange }: Che
           </Button>
         </div>
       )}
+
+      {/* Sección de archivos */}
+      <div className="mt-3 border-t pt-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowFiles(!showFiles)}
+          className="w-full justify-between hover:bg-accent/50"
+        >
+          <span className="flex items-center gap-2">
+            <Paperclip className="w-4 h-4" />
+            Archivos adjuntos ({files.length})
+          </span>
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showFiles && "rotate-180")} />
+        </Button>
+
+        {showFiles && (
+          <TaskFilesTree
+            taskId={task.id}
+            files={files}
+            onFileUpload={uploadFile}
+            onFileDelete={deleteFile}
+            loading={filesLoading}
+            uploading={uploading}
+          />
+        )}
+      </div>
     </div>
   );
 }

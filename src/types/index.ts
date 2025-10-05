@@ -313,3 +313,20 @@ export interface ChecklistFaseProgress {
   pendientes: number;
   porcentaje: number;
 }
+
+// Archivos del Checklist M&A
+export type FileCategory = "documento" | "imagen" | "hoja_calculo" | "presentacion" | "otro";
+
+export interface MandatoChecklistTaskFile {
+  id: string;
+  task_id: string;
+  file_name: string;
+  file_path: string;
+  file_size_bytes: number;
+  mime_type: string;
+  uploaded_by?: string;
+  description?: string;
+  file_category?: FileCategory;
+  created_at: string;
+  updated_at: string;
+}

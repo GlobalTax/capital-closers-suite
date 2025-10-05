@@ -837,6 +837,8 @@ export type Database = {
       }
       collaborator_applications: {
         Row: {
+          assigned_at: string | null
+          assigned_to: string | null
           company: string | null
           created_at: string
           email: string
@@ -851,14 +853,18 @@ export type Database = {
           hubspot_sent_at: string | null
           id: string
           ip_address: unknown | null
+          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           motivation: string | null
           phone: string
           profession: string
           status: string
+          status_updated_at: string | null
           updated_at: string
           user_agent: string | null
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
           company?: string | null
           created_at?: string
           email: string
@@ -873,14 +879,18 @@ export type Database = {
           hubspot_sent_at?: string | null
           id?: string
           ip_address?: unknown | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
           phone: string
           profession: string
           status?: string
+          status_updated_at?: string | null
           updated_at?: string
           user_agent?: string | null
         }
         Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
           company?: string | null
           created_at?: string
           email?: string
@@ -895,14 +905,24 @@ export type Database = {
           hubspot_sent_at?: string | null
           id?: string
           ip_address?: unknown | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
           phone?: string
           profession?: string
           status?: string
+          status_updated_at?: string | null
           updated_at?: string
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "collaborator_applications_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       company_acquisition_inquiries: {
         Row: {
@@ -1108,6 +1128,8 @@ export type Database = {
         Row: {
           activity_description: string | null
           adjustment_amount: number | null
+          assigned_at: string | null
+          assigned_to: string | null
           cif: string | null
           company_name: string
           competitive_advantage: string | null
@@ -1137,6 +1159,7 @@ export type Database = {
           is_deleted: boolean | null
           last_activity_at: string | null
           last_modified_field: string | null
+          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           location: string | null
           net_profit_margin: number | null
           ownership_participation: string | null
@@ -1145,6 +1168,7 @@ export type Database = {
           referrer: string | null
           revenue: number | null
           source_project: string | null
+          status_updated_at: string | null
           time_spent_seconds: number | null
           token_expires_at: string | null
           token_used_at: string | null
@@ -1162,6 +1186,8 @@ export type Database = {
         Insert: {
           activity_description?: string | null
           adjustment_amount?: number | null
+          assigned_at?: string | null
+          assigned_to?: string | null
           cif?: string | null
           company_name: string
           competitive_advantage?: string | null
@@ -1191,6 +1217,7 @@ export type Database = {
           is_deleted?: boolean | null
           last_activity_at?: string | null
           last_modified_field?: string | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
           ownership_participation?: string | null
@@ -1199,6 +1226,7 @@ export type Database = {
           referrer?: string | null
           revenue?: number | null
           source_project?: string | null
+          status_updated_at?: string | null
           time_spent_seconds?: number | null
           token_expires_at?: string | null
           token_used_at?: string | null
@@ -1216,6 +1244,8 @@ export type Database = {
         Update: {
           activity_description?: string | null
           adjustment_amount?: number | null
+          assigned_at?: string | null
+          assigned_to?: string | null
           cif?: string | null
           company_name?: string
           competitive_advantage?: string | null
@@ -1245,6 +1275,7 @@ export type Database = {
           is_deleted?: boolean | null
           last_activity_at?: string | null
           last_modified_field?: string | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
           ownership_participation?: string | null
@@ -1253,6 +1284,7 @@ export type Database = {
           referrer?: string | null
           revenue?: number | null
           source_project?: string | null
+          status_updated_at?: string | null
           time_spent_seconds?: number | null
           token_expires_at?: string | null
           token_used_at?: string | null
@@ -1267,10 +1299,20 @@ export type Database = {
           whatsapp_sent_at?: string | null
           years_of_operation?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_valuations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       contact_leads: {
         Row: {
+          assigned_at: string | null
+          assigned_to: string | null
           company: string
           company_size: string | null
           country: string | null
@@ -1287,15 +1329,19 @@ export type Database = {
           id: string
           investment_budget: string | null
           ip_address: unknown | null
+          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           phone: string | null
           referral: string | null
           sectors_of_interest: string | null
           service_type: Database["public"]["Enums"]["service_type_enum"] | null
           status: string
+          status_updated_at: string | null
           updated_at: string
           user_agent: string | null
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
           company: string
           company_size?: string | null
           country?: string | null
@@ -1312,15 +1358,19 @@ export type Database = {
           id?: string
           investment_budget?: string | null
           ip_address?: unknown | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           phone?: string | null
           referral?: string | null
           sectors_of_interest?: string | null
           service_type?: Database["public"]["Enums"]["service_type_enum"] | null
           status?: string
+          status_updated_at?: string | null
           updated_at?: string
           user_agent?: string | null
         }
         Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
           company?: string
           company_size?: string | null
           country?: string | null
@@ -1337,15 +1387,25 @@ export type Database = {
           id?: string
           investment_budget?: string | null
           ip_address?: unknown | null
+          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           phone?: string | null
           referral?: string | null
           sectors_of_interest?: string | null
           service_type?: Database["public"]["Enums"]["service_type_enum"] | null
           status?: string
+          status_updated_at?: string | null
           updated_at?: string
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contact_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       contact_lists: {
         Row: {
@@ -2597,6 +2657,56 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
+      }
+      mandato_checklist_task_files: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          file_category: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number
+          id: string
+          mime_type: string
+          task_id: string
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          file_category?: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number
+          id?: string
+          mime_type: string
+          task_id: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          file_category?: string | null
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number
+          id?: string
+          mime_type?: string
+          task_id?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_checklist_task_files_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_checklist_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mandato_checklist_tasks: {
         Row: {
@@ -4327,6 +4437,16 @@ export type Database = {
         | "Financiero"
         | "Legal"
         | "Otro"
+      lead_status:
+        | "nuevo"
+        | "contactando"
+        | "calificado"
+        | "propuesta_enviada"
+        | "negociacion"
+        | "en_espera"
+        | "ganado"
+        | "perdido"
+        | "archivado"
       proposal_status:
         | "draft"
         | "sent"
@@ -4486,6 +4606,17 @@ export const Constants = {
         "Financiero",
         "Legal",
         "Otro",
+      ],
+      lead_status: [
+        "nuevo",
+        "contactando",
+        "calificado",
+        "propuesta_enviada",
+        "negociacion",
+        "en_espera",
+        "ganado",
+        "perdido",
+        "archivado",
       ],
       proposal_status: [
         "draft",
