@@ -6,6 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
+import Login from "./pages/auth/Login";
 import Mandatos from "./pages/Mandatos";
 import MandatoDetalle from "./pages/MandatoDetalle";
 import Clientes from "./pages/Clientes";
@@ -23,18 +27,23 @@ function AppContent() {
   useKeyboardShortcuts();
   return (
     <>
+      <ChangePasswordModal />
       <CommandPalette />
       <Routes>
+        {/* Public routes */}
+        <Route path="/auth/login" element={<Login />} />
+
+        {/* Protected routes */}
         <Route path="/" element={<Navigate to="/mandatos" replace />} />
-        <Route path="/mandatos" element={<AppLayout><Mandatos /></AppLayout>} />
-        <Route path="/mandatos/:id" element={<AppLayout><MandatoDetalle /></AppLayout>} />
-        <Route path="/clientes" element={<AppLayout><Clientes /></AppLayout>} />
-        <Route path="/clientes/:id" element={<AppLayout><ClienteDetalle /></AppLayout>} />
-        <Route path="/targets" element={<AppLayout><EmpresasTarget /></AppLayout>} />
-        <Route path="/targets/:id" element={<AppLayout><TargetDetalle /></AppLayout>} />
-        <Route path="/tareas" element={<AppLayout><Tareas /></AppLayout>} />
-        <Route path="/documentos" element={<AppLayout><Documentos /></AppLayout>} />
-        <Route path="/reportes" element={<AppLayout><Reportes /></AppLayout>} />
+        <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
+        <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
+        <Route path="/clientes" element={<ProtectedRoute><AppLayout><Clientes /></AppLayout></ProtectedRoute>} />
+        <Route path="/clientes/:id" element={<ProtectedRoute><AppLayout><ClienteDetalle /></AppLayout></ProtectedRoute>} />
+        <Route path="/targets" element={<ProtectedRoute><AppLayout><EmpresasTarget /></AppLayout></ProtectedRoute>} />
+        <Route path="/targets/:id" element={<ProtectedRoute><AppLayout><TargetDetalle /></AppLayout></ProtectedRoute>} />
+        <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
+        <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
+        <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
@@ -47,7 +56,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

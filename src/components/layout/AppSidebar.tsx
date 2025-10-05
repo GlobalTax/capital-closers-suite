@@ -6,6 +6,8 @@ import {
   CheckSquare,
   FolderOpen,
   BarChart3,
+  LogOut,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -17,7 +19,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const menuItems = [
   { title: "Mandatos", url: "/mandatos", icon: FileText },
@@ -29,6 +35,38 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
+  const { adminUser, logout } = useAuth();
+
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'bg-purple-500/10 text-purple-500';
+      case 'admin': return 'bg-blue-500/10 text-blue-500';
+      case 'editor': return 'bg-green-500/10 text-green-500';
+      case 'viewer': return 'bg-gray-500/10 text-gray-500';
+      default: return 'bg-gray-500/10 text-gray-500';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      case 'editor': return 'Editor';
+      case 'viewer': return 'Visor';
+      default: return role;
+    }
+  };
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-6">
@@ -73,6 +111,36 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 px-2">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {getInitials(adminUser?.full_name || null)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {adminUser?.full_name || 'Usuario'}
+              </p>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleBadgeColor(adminUser?.role || '')}`}>
+                {getRoleLabel(adminUser?.role || '')}
+              </span>
+            </div>
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }
