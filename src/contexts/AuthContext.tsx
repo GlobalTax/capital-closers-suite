@@ -35,19 +35,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchAdminUser = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (error || !data) {
-      console.error('Error fetching admin user:', error);
+      if (error) {
+        console.error('Error fetching admin user:', error);
+        return null;
+      }
+
+      return data as AdminUser | null;
+    } catch (error) {
+      console.error('Exception fetching admin user:', error);
       return null;
     }
-
-    return data as AdminUser;
   };
 
   const updateLastLogin = async (userId: string) => {
@@ -65,31 +70,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchAdminUser(session.user.id).then(setAdminUser);
+    let timeoutId: NodeJS.Timeout;
+    
+    const initAuth = async () => {
+      try {
+        // Set a 10-second timeout
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Auth timeout')), 10000);
+        });
+
+        const sessionPromise = supabase.auth.getSession();
+        
+        const { data: { session } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+
+        clearTimeout(timeoutId);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const adminData = await fetchAdminUser(session.user.id);
+          setAdminUser(adminData);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+
+    initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          const adminData = await fetchAdminUser(session.user.id);
-          setAdminUser(adminData);
-          
-          if (event === 'SIGNED_IN') {
-            await updateLastLogin(session.user.id);
-          }
+          setTimeout(() => {
+            fetchAdminUser(session.user.id).then(adminData => {
+              setAdminUser(adminData);
+              
+              if (event === 'SIGNED_IN') {
+                updateLastLogin(session.user.id);
+              }
+            });
+          }, 0);
         } else {
           setAdminUser(null);
         }
@@ -98,7 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
