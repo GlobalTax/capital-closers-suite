@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Phone, Users, FileText, Plus, Calendar } from "lucide-react";
 import type { Interaccion } from "@/types";
-import { updateTarget } from "@/services/api";
+import { updateEmpresa } from "@/services/empresas";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 
@@ -63,9 +63,8 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
         responsable: "Usuario Actual",
       };
 
-      await updateTarget(targetId, {
+      await updateEmpresa(targetId, {
         interacciones: [...interacciones, nuevaInteraccion],
-        ultimaActividad: new Date().toISOString().split("T")[0],
       });
 
       toast.success("Interacción registrada correctamente");

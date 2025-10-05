@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUIStore } from "@/stores/useUIStore";
-import { searchGlobal } from "@/services/api";
+import { searchGlobal } from "@/services/search";
 import type { ResultadoBusqueda } from "@/types";
 import { useTheme } from "next-themes";
 
@@ -100,11 +100,11 @@ export function Topbar() {
             <DropdownMenuItem onClick={() => console.log("Nuevo mandato")}>
               Nuevo Mandato
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Nuevo cliente")}>
-              Nuevo Cliente
+            <DropdownMenuItem onClick={() => console.log("Nuevo contacto")}>
+              Nuevo Contacto
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Nueva empresa target")}>
-              Nueva Empresa Target
+            <DropdownMenuItem onClick={() => console.log("Nueva empresa")}>
+              Nueva Empresa
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => console.log("Nueva tarea")}>
               Nueva Tarea

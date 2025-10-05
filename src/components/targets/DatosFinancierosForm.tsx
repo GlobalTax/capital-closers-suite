@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { DatosFinancieros } from "@/types";
-import { updateTarget } from "@/services/api";
+import { updateEmpresa } from "@/services/empresas";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { useEffect } from "react";
@@ -38,10 +38,8 @@ export function DatosFinancierosForm({
 
   const onSubmit = async (data: DatosFinancieros) => {
     try {
-      await updateTarget(targetId, {
-        datosFinancieros: data,
-        revenue: data.revenue,
-        ebitda: data.ebitda,
+      await updateEmpresa(targetId, {
+        datos_financieros: data,
       });
       toast.success("Datos financieros actualizados correctamente");
       onUpdate();

@@ -32,7 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createTarea } from "@/services/api";
+import { createTarea } from "@/services/tareas";
 import { toast } from "sonner";
 import type { TareaEstado, TareaPrioridad } from "@/types";
 
@@ -44,7 +44,7 @@ const formSchema = z.object({
   fechaVencimiento: z.date({
     required_error: "Selecciona una fecha de vencimiento",
   }),
-  estado: z.enum(["pendiente", "en-progreso", "completada"] as const),
+  estado: z.enum(["pendiente", "en_progreso", "completada"] as const),
   prioridad: z.enum(["alta", "media", "baja"] as const),
   etiquetas: z.string().optional(),
 });
@@ -84,12 +84,12 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
       await createTarea({
         titulo: values.titulo,
         descripcion: values.descripcion,
-        mandatoId: values.mandatoId || undefined,
-        asignado: values.asignado,
-        fechaVencimiento: format(values.fechaVencimiento, "yyyy-MM-dd"),
+        mandato_id: values.mandatoId || null,
+        asignado_a: values.asignado,
+        fecha_vencimiento: format(values.fechaVencimiento, "yyyy-MM-dd"),
         estado: values.estado as TareaEstado,
         prioridad: values.prioridad as TareaPrioridad,
-        etiquetas: etiquetas.length > 0 ? etiquetas : undefined,
+        etiquetas: etiquetas.length > 0 ? etiquetas : [],
       });
 
       toast.success("Tarea creada exitosamente");
@@ -225,7 +225,7 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="pendiente">Pendiente</SelectItem>
-                          <SelectItem value="en-progreso">En Progreso</SelectItem>
+                          <SelectItem value="en_progreso">En Progreso</SelectItem>
                           <SelectItem value="completada">Completada</SelectItem>
                         </SelectContent>
                       </Select>

@@ -4,7 +4,7 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { fetchDocumentos } from "@/services/api";
+import { fetchDocumentos } from "@/services/documentos";
 import type { Documento } from "@/types";
 import { toast } from "sonner";
 

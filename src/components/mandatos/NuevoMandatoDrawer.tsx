@@ -31,8 +31,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { fetchClientes, createMandato } from "@/services/api";
-import type { Cliente } from "@/types";
+import { fetchContactos } from "@/services/contactos";
+import { createMandato } from "@/services/mandatos";
+import type { Contacto } from "@/types";
 import { Loader2 } from "lucide-react";
 
 const mandatoSchema = z.object({
@@ -61,7 +62,7 @@ export function NuevoMandatoDrawer({
   onOpenChange,
   onSuccess,
 }: NuevoMandatoDrawerProps) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<Contacto[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -85,11 +86,11 @@ export function NuevoMandatoDrawer({
   const cargarClientes = async () => {
     setLoadingClientes(true);
     try {
-      const data = await fetchClientes();
+      const data = await fetchContactos();
       setClientes(data);
     } catch (error) {
-      console.error("Error cargando clientes:", error);
-      toast.error("Error al cargar la lista de clientes");
+      console.error("Error cargando contactos:", error);
+      toast.error("Error al cargar la lista de contactos");
     } finally {
       setLoadingClientes(false);
     }
@@ -98,16 +99,13 @@ export function NuevoMandatoDrawer({
   const onSubmit = async (data: MandatoFormValues) => {
     setSubmitting(true);
     try {
-      const cliente = clientes.find((c) => c.id === data.clienteId);
+      const contacto = clientes.find((c) => c.id === data.clienteId);
       
       await createMandato({
-        empresa: data.empresa,
-        clienteId: data.clienteId,
-        cliente: cliente?.nombre || "",
         tipo: data.tipo,
-        valor: data.valor,
         descripcion: data.descripcion,
-        estado: "En progreso",
+        estado: "en_progreso",
+        empresa_principal_id: null, // Assign later if needed
       });
 
       toast.success("Mandato creado exitosamente");
@@ -153,9 +151,9 @@ export function NuevoMandatoDrawer({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-background">
-                          {clientes.map((cliente) => (
-                            <SelectItem key={cliente.id} value={cliente.id}>
-                              {cliente.nombre} - {cliente.empresa}
+                          {clientes.map((contacto) => (
+                            <SelectItem key={contacto.id} value={contacto.id}>
+                              {contacto.nombre} {contacto.apellidos}
                             </SelectItem>
                           ))}
                         </SelectContent>

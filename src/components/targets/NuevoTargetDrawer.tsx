@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { createTarget } from "@/services/api";
+import { createEmpresa } from "@/services/empresas";
 import { toast } from "sonner";
 import { TARGET_ESTADOS, NIVEL_INTERES } from "@/lib/constants";
 import type { NivelInteres, TargetEstado } from "@/types";
@@ -98,20 +98,12 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      await createTarget({
+      await createEmpresa({
         nombre: values.nombre,
         sector: values.sector,
-        facturacion: values.facturacion,
-        empleados: values.empleados,
-        ubicacion: values.ubicacion,
-        interes: values.interes as NivelInteres,
-        estado: values.estado as TargetEstado,
-        descripcion: values.descripcion || undefined,
-        contactoPrincipal: values.contactoPrincipal || undefined,
-        email: values.email || undefined,
-        telefono: values.telefono || undefined,
-        sitioWeb: values.sitioWeb || undefined,
-        mandatoId: mandatoId,
+        descripcion: values.descripcion,
+        es_target: true,
+        estado_target: values.estado as TargetEstado,
       });
 
       toast.success("Empresa target creada exitosamente");

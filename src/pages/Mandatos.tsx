@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchMandatos, deleteMandato } from "@/services/api";
+import { fetchMandatos, deleteMandato } from "@/services/mandatos";
 import { exportToCSV } from "@/lib/utils";
 import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
 import type { Mandato } from "@/types";
@@ -75,15 +75,10 @@ export default function Mandatos() {
   const handleExportCSV = () => {
     const exportData = mandatosFiltrados.map((m) => ({
       ID: m.id,
-      Cliente: m.cliente,
-      Empresa: m.empresa,
       Tipo: m.tipo,
       Estado: m.estado,
-      Valor: m.valor,
-      Targets: m.targetsCount || 0,
-      "Tareas Abiertas": m.tareasAbiertas || 0,
-      "Última Actualización": m.ultimaActualizacion || "",
-      Fecha: m.fecha,
+      Descripción: m.descripcion,
+      Fecha: m.created_at,
     }));
     exportToCSV(exportData, `mandatos-${new Date().toISOString().split("T")[0]}`);
     toast.success("Mandatos exportados a CSV");

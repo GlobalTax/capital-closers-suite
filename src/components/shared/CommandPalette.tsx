@@ -10,7 +10,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useUIStore } from "@/stores/useUIStore";
-import { searchGlobal } from "@/services/api";
+import { searchGlobal } from "@/services/search";
 import type { ResultadoBusqueda } from "@/types";
 import {
   FileText,
@@ -62,9 +62,9 @@ export function CommandPalette() {
     switch (tipo) {
       case "mandato":
         return FileText;
-      case "cliente":
+      case "contacto":
         return Users;
-      case "target":
+      case "empresa":
         return Building2;
       default:
         return FileText;
@@ -72,8 +72,8 @@ export function CommandPalette() {
   };
 
   const mandatosResults = resultados.filter((r) => r.tipo === "mandato");
-  const clientesResults = resultados.filter((r) => r.tipo === "cliente");
-  const targetsResults = resultados.filter((r) => r.tipo === "target");
+  const contactosResults = resultados.filter((r) => r.tipo === "contacto");
+  const empresasResults = resultados.filter((r) => r.tipo === "empresa");
 
   return (
     <CommandDialog open={isCommandPaletteOpen} onOpenChange={closeCommandPalette}>
@@ -94,13 +94,13 @@ export function CommandPalette() {
                 <FileText className="mr-2 h-4 w-4" />
                 <span>Mandatos</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => navigate("/clientes"))}>
+              <CommandItem onSelect={() => handleSelect(() => navigate("/contactos"))}>
                 <Users className="mr-2 h-4 w-4" />
-                <span>Clientes</span>
+                <span>Contactos</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => navigate("/targets"))}>
+              <CommandItem onSelect={() => handleSelect(() => navigate("/empresas"))}>
                 <Building2 className="mr-2 h-4 w-4" />
-                <span>Empresas Target</span>
+                <span>Empresas</span>
               </CommandItem>
               <CommandItem onSelect={() => handleSelect(() => navigate("/tareas"))}>
                 <ListTodo className="mr-2 h-4 w-4" />
@@ -123,13 +123,13 @@ export function CommandPalette() {
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Mandato</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => console.log("Nuevo cliente"))}>
+              <CommandItem onSelect={() => handleSelect(() => console.log("Nuevo contacto"))}>
                 <Plus className="mr-2 h-4 w-4" />
-                <span>Nuevo Cliente</span>
+                <span>Nuevo Contacto</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => console.log("Nuevo target"))}>
+              <CommandItem onSelect={() => handleSelect(() => console.log("Nueva empresa"))}>
                 <Plus className="mr-2 h-4 w-4" />
-                <span>Nueva Empresa Target</span>
+                <span>Nueva Empresa</span>
               </CommandItem>
             </CommandGroup>
           </>
@@ -161,10 +161,10 @@ export function CommandPalette() {
           </>
         )}
 
-        {clientesResults.length > 0 && (
+        {contactosResults.length > 0 && (
           <>
-            <CommandGroup heading="Clientes">
-              {clientesResults.map((resultado) => {
+            <CommandGroup heading="Contactos">
+              {contactosResults.map((resultado) => {
                 const Icon = getIconForType(resultado.tipo);
                 return (
                   <CommandItem
@@ -187,10 +187,10 @@ export function CommandPalette() {
           </>
         )}
 
-        {targetsResults.length > 0 && (
+        {empresasResults.length > 0 && (
           <>
-            <CommandGroup heading="Empresas Target">
-              {targetsResults.map((resultado) => {
+            <CommandGroup heading="Empresas">
+              {empresasResults.map((resultado) => {
                 const Icon = getIconForType(resultado.tipo);
                 return (
                   <CommandItem
