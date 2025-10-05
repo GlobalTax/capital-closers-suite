@@ -1458,6 +1458,59 @@ export type Database = {
         }
         Relationships: []
       }
+      contactos: {
+        Row: {
+          apellidos: string | null
+          avatar: string | null
+          cargo: string | null
+          created_at: string | null
+          email: string
+          empresa_principal_id: string | null
+          id: string
+          linkedin: string | null
+          nombre: string
+          notas: string | null
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          apellidos?: string | null
+          avatar?: string | null
+          cargo?: string | null
+          created_at?: string | null
+          email: string
+          empresa_principal_id?: string | null
+          id?: string
+          linkedin?: string | null
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          apellidos?: string | null
+          avatar?: string | null
+          cargo?: string | null
+          created_at?: string | null
+          email?: string
+          empresa_principal_id?: string | null
+          id?: string
+          linkedin?: string | null
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contactos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_analytics: {
         Row: {
           avg_time_on_page: number
@@ -1541,6 +1594,50 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_size_bytes: number
+          id: string
+          mandato_id: string | null
+          mime_type: string
+          storage_path: string
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          mandato_id?: string | null
+          mime_type: string
+          storage_path: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          mandato_id?: string | null
+          mime_type?: string
+          storage_path?: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_sequence_steps: {
         Row: {
           attachment_type: string | null
@@ -1620,6 +1717,75 @@ export type Database = {
           name?: string
           trigger_conditions?: Json | null
           trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      empresas: {
+        Row: {
+          capital_circulante: number | null
+          cif: string | null
+          created_at: string | null
+          descripcion: string | null
+          deuda: number | null
+          ebitda: number | null
+          empleados: number | null
+          es_target: boolean | null
+          estado_target: string | null
+          facturacion: number | null
+          id: string
+          margen_ebitda: number | null
+          nivel_interes: string | null
+          nombre: string
+          revenue: number | null
+          sector: string
+          sitio_web: string | null
+          subsector: string | null
+          ubicacion: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capital_circulante?: number | null
+          cif?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          deuda?: number | null
+          ebitda?: number | null
+          empleados?: number | null
+          es_target?: boolean | null
+          estado_target?: string | null
+          facturacion?: number | null
+          id?: string
+          margen_ebitda?: number | null
+          nivel_interes?: string | null
+          nombre: string
+          revenue?: number | null
+          sector: string
+          sitio_web?: string | null
+          subsector?: string | null
+          ubicacion?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capital_circulante?: number | null
+          cif?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          deuda?: number | null
+          ebitda?: number | null
+          empleados?: number | null
+          es_target?: boolean | null
+          estado_target?: string | null
+          facturacion?: number | null
+          id?: string
+          margen_ebitda?: number | null
+          nivel_interes?: string | null
+          nombre?: string
+          revenue?: number | null
+          sector?: string
+          sitio_web?: string | null
+          subsector?: string | null
+          ubicacion?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2366,6 +2532,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_contactos: {
+        Row: {
+          contacto_id: string
+          created_at: string | null
+          id: string
+          mandato_id: string
+          notas: string | null
+          rol: string
+        }
+        Insert: {
+          contacto_id: string
+          created_at?: string | null
+          id?: string
+          mandato_id: string
+          notas?: string | null
+          rol: string
+        }
+        Update: {
+          contacto_id?: string
+          created_at?: string | null
+          id?: string
+          mandato_id?: string
+          notas?: string | null
+          rol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_contactos_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_contactos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandato_documentos: {
         Row: {
           created_at: string | null
@@ -2407,6 +2615,48 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: []
+      }
+      mandato_empresas: {
+        Row: {
+          created_at: string | null
+          empresa_id: string
+          id: string
+          mandato_id: string
+          notas: string | null
+          rol: string
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          mandato_id: string
+          notas?: string | null
+          rol: string
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          mandato_id?: string
+          notas?: string | null
+          rol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_empresas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_empresas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mandato_transactions: {
         Row: {
@@ -2467,6 +2717,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      mandatos: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          empresa_principal_id: string | null
+          estado: string
+          fecha_cierre: string | null
+          fecha_inicio: string | null
+          id: string
+          prioridad: string | null
+          tipo: string
+          updated_at: string | null
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          empresa_principal_id?: string | null
+          estado?: string
+          fecha_cierre?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          prioridad?: string | null
+          tipo?: string
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          empresa_principal_id?: string | null
+          estado?: string
+          fecha_cierre?: string | null
+          fecha_inicio?: string | null
+          id?: string
+          prioridad?: string | null
+          tipo?: string
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandatos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3051,6 +3351,53 @@ export type Database = {
           utm_term?: string | null
         }
         Relationships: []
+      }
+      tareas: {
+        Row: {
+          asignado_a: string | null
+          created_at: string | null
+          descripcion: string | null
+          estado: string | null
+          fecha_vencimiento: string | null
+          id: string
+          mandato_id: string | null
+          prioridad: string | null
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          asignado_a?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          mandato_id?: string | null
+          prioridad?: string | null
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          asignado_a?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          mandato_id?: string | null
+          prioridad?: string | null
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tareas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {

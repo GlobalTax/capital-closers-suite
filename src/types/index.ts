@@ -2,47 +2,120 @@
 // TYPES & INTERFACES - Capittal CRM Cierre
 // ============================================
 
-export type MandatoEstado = 
-  | "En progreso" 
-  | "Negociación" 
-  | "Due Diligence" 
-  | "Cerrado" 
-  | "Cancelado";
-
+export type MandatoEstado = "prospecto" | "activo" | "en_negociacion" | "cerrado" | "cancelado";
 export type MandatoTipo = "compra" | "venta";
-
+export type TargetEstado = "pendiente" | "contactada" | "interesada" | "rechazada" | "en_dd" | "oferta" | "cerrada";
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
-
-export type TareaEstado = "pendiente" | "en-progreso" | "completada";
-
 export type TareaPrioridad = "alta" | "media" | "baja";
-
-export type DocumentoTipo = 
-  | "Contrato" 
-  | "NDA" 
-  | "Due Diligence" 
-  | "Financiero" 
-  | "Legal";
-
-export type TargetEstado = 
-  | "pendiente" 
-  | "contactada" 
-  | "interesada" 
-  | "rechazada" 
-  | "en_dd" 
-  | "oferta" 
-  | "cerrada";
-
-export type TransactionType = 
-  | "ingreso" 
-  | "gasto" 
-  | "honorario" 
-  | "due_diligence" 
-  | "ajuste_valoracion" 
-  | "comision" 
-  | "otro";
-
+export type TareaEstado = "pendiente" | "en_progreso" | "completada" | "cancelada";
+export type DocumentoTipo = "Contrato" | "NDA" | "Informe" | "Presentación" | "Financiero" | "Legal" | "Otro";
+export type TransactionType = "ingreso" | "gasto" | "honorario" | "due_diligence" | "ajuste_valoracion" | "comision" | "otro";
 export type TransactionStatus = "pendiente" | "completada" | "cancelada";
+export type ContactoRol = "vendedor" | "comprador" | "asesor" | "intermediario" | "otro";
+export type EmpresaRol = "vendedora" | "compradora" | "competidora" | "comparable" | "target" | "otro";
+
+// ============================================
+// EMPRESA (unifica clientes.empresa + empresas_target)
+// ============================================
+export interface Empresa {
+  id: string;
+  nombre: string;
+  cif?: string;
+  sector: string;
+  subsector?: string;
+  ubicacion?: string;
+  facturacion?: number;
+  empleados?: number;
+  sitio_web?: string;
+  descripcion?: string;
+  
+  // Datos financieros
+  revenue?: number;
+  ebitda?: number;
+  margen_ebitda?: number;
+  deuda?: number;
+  capital_circulante?: number;
+  
+  // Si es target
+  es_target: boolean;
+  estado_target?: TargetEstado;
+  nivel_interes?: NivelInteres;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// CONTACTO (antes Cliente)
+// ============================================
+export interface Contacto {
+  id: string;
+  nombre: string;
+  apellidos?: string;
+  email: string;
+  telefono?: string;
+  cargo?: string;
+  empresa_principal_id?: string;
+  empresa_principal?: Empresa;
+  linkedin?: string;
+  notas?: string;
+  avatar?: string;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// RELACIONES MANDATO
+// ============================================
+export interface MandatoContacto {
+  id: string;
+  mandato_id: string;
+  contacto_id: string;
+  contacto?: Contacto;
+  rol: ContactoRol;
+  notas?: string;
+  created_at: string;
+}
+
+export interface MandatoEmpresa {
+  id: string;
+  mandato_id: string;
+  empresa_id: string;
+  empresa?: Empresa;
+  rol: EmpresaRol;
+  notas?: string;
+  created_at: string;
+}
+
+// ============================================
+// MANDATO
+// ============================================
+export interface Mandato {
+  id: string;
+  tipo: MandatoTipo;
+  empresa_principal_id?: string;
+  empresa_principal?: Empresa;
+  estado: MandatoEstado;
+  valor?: number;
+  fecha_inicio?: string;
+  fecha_cierre?: string;
+  descripcion?: string;
+  prioridad?: TareaPrioridad;
+  
+  // Relaciones pobladas
+  contactos?: MandatoContacto[];
+  empresas?: MandatoEmpresa[];
+  
+  // Resumen financiero
+  total_ingresos?: number;
+  total_gastos?: number;
+  balance_neto?: number;
+  transacciones_count?: number;
+  
+  created_at: string;
+  updated_at: string;
+}
 
 // ============================================
 // TRANSACCIÓN FINANCIERA
@@ -66,52 +139,40 @@ export interface MandatoTransaction {
 }
 
 // ============================================
-// MANDATO
+// TAREA
 // ============================================
-export interface Mandato {
+export interface Tarea {
   id: string;
-  empresa: string;
-  cliente: string;
-  clienteId: string;
-  tipo: MandatoTipo;
-  estado: MandatoEstado;
-  valor: string;
-  fecha: string;
+  mandato_id?: string;
+  titulo: string;
   descripcion?: string;
-  sector?: string;
-  ubicacion?: string;
-  responsable?: string;
-  documentosCount?: number;
-  actividadesCount?: number;
-  targetsCount?: number;
-  tareasAbiertas?: number;
-  ultimaActualizacion?: string;
-  // Campos financieros
-  total_ingresos?: number;
-  total_gastos?: number;
-  balance_neto?: number;
-  transacciones_count?: number;
+  estado: TareaEstado;
+  prioridad: TareaPrioridad;
+  asignado_a?: string;
+  fecha_vencimiento?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================
-// CLIENTE
+// DOCUMENTO
 // ============================================
-export interface Cliente {
+export interface Documento {
   id: string;
-  nombre: string;
-  empresa: string;
-  email: string;
-  telefono: string;
-  mandatos: number;
-  estado: "Activo" | "Inactivo";
-  avatar?: string;
-  cargo?: string;
-  notas?: string;
-  fechaRegistro?: string;
+  mandato_id?: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  storage_path: string;
+  tipo: DocumentoTipo;
+  descripcion?: string;
+  uploaded_by?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================
-// EMPRESA TARGET
+// INTERACCIONES Y DATOS FINANCIEROS (para targets)
 // ============================================
 export interface Interaccion {
   id: string;
@@ -131,63 +192,6 @@ export interface DatosFinancieros {
   notas?: string;
 }
 
-export interface EmpresaTarget {
-  id: string;
-  nombre: string;
-  sector: string;
-  facturacion: string;
-  empleados: number;
-  ubicacion: string;
-  interes: NivelInteres;
-  descripcion?: string;
-  contactoPrincipal?: string;
-  email?: string;
-  telefono?: string;
-  sitioWeb?: string;
-  fechaProspeccion?: string;
-  estado?: TargetEstado;
-  mandatoId?: string;
-  mandatoNombre?: string;
-  ultimaActividad?: string;
-  revenue?: number;
-  ebitda?: number;
-  interacciones?: Interaccion[];
-  datosFinancieros?: DatosFinancieros;
-}
-
-// ============================================
-// TAREA
-// ============================================
-export interface Tarea {
-  id: string;
-  titulo: string;
-  descripcion?: string;
-  estado: TareaEstado;
-  prioridad: TareaPrioridad;
-  fechaVencimiento: string;
-  asignado?: string;
-  mandatoId?: string;
-  mandatoNombre?: string;
-  etiquetas?: string[];
-}
-
-// ============================================
-// DOCUMENTO
-// ============================================
-export interface Documento {
-  id: string;
-  mandato_id: string;
-  file_name: string;
-  file_size_bytes: number;
-  mime_type: string;
-  storage_path: string;
-  tipo: DocumentoTipo | "Otro";
-  descripcion?: string;
-  uploaded_by?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // ============================================
 // ACTIVIDAD (Timeline)
 // ============================================
@@ -205,7 +209,7 @@ export interface Actividad {
 // BÚSQUEDA GLOBAL
 // ============================================
 export interface ResultadoBusqueda {
-  tipo: "mandato" | "cliente" | "target";
+  tipo: "mandato" | "contacto" | "empresa";
   id: string;
   titulo: string;
   subtitulo?: string;
@@ -228,4 +232,36 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+// ============================================
+// DEPRECATED TYPES (mantener temporalmente para compatibilidad)
+// ============================================
+export interface Cliente {
+  id: string;
+  nombre: string;
+  empresa: string;
+  email: string;
+  telefono: string;
+  mandatos: number;
+  estado: "Activo" | "Inactivo";
+  avatar?: string;
+  cargo?: string;
+  notas?: string;
+}
+
+export interface EmpresaTarget {
+  id: string;
+  nombre: string;
+  sector: string;
+  facturacion: string;
+  empleados: number;
+  ubicacion: string;
+  interes: NivelInteres;
+  estado?: TargetEstado;
+  mandatoId?: string;
+  revenue?: number;
+  ebitda?: number;
+  interacciones?: Interaccion[];
+  datosFinancieros?: DatosFinancieros;
 }
