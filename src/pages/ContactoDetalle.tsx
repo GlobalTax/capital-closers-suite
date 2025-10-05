@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase } from "lucide-react";
+import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawer";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function ContactoDetalle() {
   const { id } = useParams();
@@ -143,24 +145,91 @@ export default function ContactoDetalle() {
         </div>
       </div>
 
-      {/* Botones de acción rápida */}
-      <div className="flex gap-2">
+      {/* Botones de acción rápida mejorados */}
+      <div className="flex flex-wrap gap-2">
         {contacto.email && (
           <Button variant="outline" asChild>
             <a href={`mailto:${contacto.email}`}>
               <Mail className="w-4 h-4 mr-2" />
-              Enviar Email
+              Email
             </a>
           </Button>
+        )}
+        {contacto.telefono && (
+          <>
+            <Button variant="outline" asChild>
+              <a href={`tel:${contacto.telefono}`}>
+                <Phone className="w-4 h-4 mr-2" />
+                Llamar
+              </a>
+            </Button>
+            <Button variant="outline" asChild>
+              <a href={`https://wa.me/${contacto.telefono.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                WhatsApp
+              </a>
+            </Button>
+          </>
         )}
         {contacto.linkedin && (
           <Button variant="outline" asChild>
             <a href={contacto.linkedin} target="_blank" rel="noopener noreferrer">
               <Linkedin className="w-4 h-4 mr-2" />
-              Ver LinkedIn
+              LinkedIn
             </a>
           </Button>
         )}
+      </div>
+
+      {/* Métricas rápidas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Mandatos</p>
+                <p className="text-2xl font-bold">{mandatos.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Última actividad</p>
+                <p className="text-sm font-medium">
+                  {contacto.updated_at 
+                    ? format(new Date(contacto.updated_at), "d MMM yyyy", { locale: es })
+                    : "Sin actividad"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <Banknote className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Valor en mandatos</p>
+                <p className="text-2xl font-bold">
+                  {mandatos.reduce((sum, m) => sum + (m.valor || 0), 0).toLocaleString("es-ES")} €
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="informacion" className="w-full">
@@ -247,66 +316,144 @@ export default function ContactoDetalle() {
           )}
         </TabsContent>
 
-        {/* Tab Mandatos */}
+        {/* Tab Mandatos mejorado */}
         <TabsContent value="mandatos">
           {mandatos.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Este contacto no está asociado a ningún mandato
-                </p>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                    <Briefcase className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">
+                    Este contacto no está asociado a ningún mandato
+                  </p>
+                </div>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4">
-              {mandatos.map((mandato) => (
-                <Card
-                  key={mandato.id}
-                  className="cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => navigate(`/mandatos/${mandato.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-xl">
-                          {mandato.empresa_principal?.nombre || "Sin cliente"}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {mandato.descripcion}
-                        </p>
+              {mandatos.map((mandato) => {
+                // Buscar el rol del contacto en este mandato
+                const contactoRol = mandato.contactos?.find(mc => mc.contacto_id === id);
+                
+                return (
+                  <Card
+                    key={mandato.id}
+                    className="cursor-pointer hover:border-primary transition-colors hover:shadow-md"
+                    onClick={() => navigate(`/mandatos/${mandato.id}`)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl">
+                              {mandato.empresa_principal?.nombre || "Sin cliente"}
+                            </CardTitle>
+                            {contactoRol && (
+                              <Badge variant="outline" className="text-xs">
+                                {contactoRol.rol}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {mandato.descripcion}
+                          </p>
+                          {contactoRol?.notas && (
+                            <p className="text-xs text-muted-foreground mt-2 italic">
+                              📝 {contactoRol.notas}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"}>
+                            {mandato.tipo === "venta" ? "🏷️ Venta" : "🛒 Compra"}
+                          </Badge>
+                          <BadgeStatus status={mandato.estado} type="mandato" />
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"}>
-                          {mandato.tipo === "venta" ? "Venta" : "Compra"}
-                        </Badge>
-                        <BadgeStatus status={mandato.estado} type="mandato" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-muted-foreground text-xs">Valor Estimado</p>
+                            <p className="font-semibold">
+                              {mandato.valor?.toLocaleString("es-ES") || 0} €
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {mandato.empresa_principal?.sector && (
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground text-xs">Sector</p>
+                              <p className="font-medium">{mandato.empresa_principal.sector}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {mandato.fecha_inicio && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground text-xs">Inicio</p>
+                              <p className="font-medium">
+                                {format(new Date(mandato.fecha_inicio), "MMM yyyy", { locale: es })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {mandato.prioridad && (
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-muted-foreground text-xs">Prioridad</p>
+                              <Badge 
+                                variant={
+                                  mandato.prioridad === "alta" ? "destructive" : 
+                                  mandato.prioridad === "media" ? "default" : 
+                                  "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {mandato.prioridad}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Valor Estimado</p>
-                        <p className="font-medium">
-                          {mandato.valor?.toLocaleString("es-ES") || 0} €
-                        </p>
-                      </div>
-                      {mandato.empresa_principal?.sector && (
-                        <div>
-                          <p className="text-muted-foreground">Sector</p>
-                          <p className="font-medium">{mandato.empresa_principal.sector}</p>
+                      
+                      {/* Métricas adicionales si están disponibles */}
+                      {(mandato.total_ingresos || mandato.total_gastos) && (
+                        <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">Ingresos</p>
+                            <p className="font-semibold text-green-600">
+                              {mandato.total_ingresos?.toLocaleString("es-ES") || 0} €
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Gastos</p>
+                            <p className="font-semibold text-red-600">
+                              {mandato.total_gastos?.toLocaleString("es-ES") || 0} €
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Balance</p>
+                            <p className="font-semibold">
+                              {mandato.balance_neto?.toLocaleString("es-ES") || 0} €
+                            </p>
+                          </div>
                         </div>
                       )}
-                      {mandato.prioridad && (
-                        <div>
-                          <p className="text-muted-foreground">Prioridad</p>
-                          <Badge variant="outline">{mandato.prioridad}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
