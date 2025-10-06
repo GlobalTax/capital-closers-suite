@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,14 @@ import type { TimeEntryWorkType, MandatoChecklistTask } from "@/types";
 interface TimeTrackingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mandatoId: string;
-  tasks: MandatoChecklistTask[];
+  mandatoId?: string;
+  tasks?: MandatoChecklistTask[];
   defaultTaskId?: string;
   onSuccess?: () => void;
 }
 
 interface FormData {
+  mandato_id: string;
   task_id: string;
   start_date: string;
   start_time: string;
@@ -32,6 +34,12 @@ interface FormData {
   work_type: TimeEntryWorkType;
   is_billable: boolean;
   notes?: string;
+}
+
+interface Mandato {
+  id: string;
+  descripcion: string;
+  tipo: string;
 }
 
 const WORK_TYPES: TimeEntryWorkType[] = [
@@ -49,13 +57,18 @@ export function TimeTrackingDialog({
   open,
   onOpenChange,
   mandatoId,
-  tasks,
+  tasks: propTasks,
   defaultTaskId,
   onSuccess
 }: TimeTrackingDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [tasks, setTasks] = useState<MandatoChecklistTask[]>(propTasks || []);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
+      mandato_id: mandatoId || '',
       task_id: defaultTaskId || '',
       start_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: format(new Date(), 'HH:mm'),
@@ -65,6 +78,54 @@ export function TimeTrackingDialog({
       is_billable: true
     }
   });
+
+  const selectedMandatoId = watch('mandato_id');
+
+  useEffect(() => {
+    if (!mandatoId && open) {
+      loadMandatos();
+    }
+  }, [open, mandatoId]);
+
+  useEffect(() => {
+    if (selectedMandatoId && !mandatoId) {
+      loadTasksForMandato(selectedMandatoId);
+    }
+  }, [selectedMandatoId, mandatoId]);
+
+  const loadMandatos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mandatos')
+        .select('id, descripcion, tipo')
+        .eq('estado', 'activo')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMandatos(data || []);
+    } catch (error) {
+      console.error('Error loading mandatos:', error);
+    }
+  };
+
+  const loadTasksForMandato = async (mandatoId: string) => {
+    try {
+      setLoadingTasks(true);
+      const { data, error } = await supabase
+        .from('mandato_checklist_tasks')
+        .select('*')
+        .eq('mandato_id', mandatoId)
+        .order('orden');
+
+      if (error) throw error;
+      setTasks(data as any || []);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      setTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -90,7 +151,7 @@ export function TimeTrackingDialog({
 
       await createTimeEntry({
         task_id: data.task_id,
-        mandato_id: mandatoId,
+        mandato_id: data.mandato_id || mandatoId!,
         user_id: user.id,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime?.toISOString(),
@@ -131,14 +192,46 @@ export function TimeTrackingDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {!mandatoId && (
+            <div>
+              <Label htmlFor="mandato_id">Mandato *</Label>
+              <Select
+                value={watch('mandato_id')}
+                onValueChange={(value) => {
+                  setValue('mandato_id', value);
+                  setValue('task_id', ''); // Reset task when mandato changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un mandato" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mandatos.map((mandato) => (
+                    <SelectItem key={mandato.id} value={mandato.id}>
+                      {mandato.descripcion || `Mandato ${mandato.tipo}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.mandato_id && (
+                <p className="text-sm text-destructive mt-1">Selecciona un mandato</p>
+              )}
+            </div>
+          )}
+
           <div>
             <Label htmlFor="task_id">Tarea *</Label>
             <Select
               value={watch('task_id')}
               onValueChange={(value) => setValue('task_id', value)}
+              disabled={!mandatoId && !selectedMandatoId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona una tarea" />
+                <SelectValue placeholder={
+                  loadingTasks ? "Cargando tareas..." :
+                  !mandatoId && !selectedMandatoId ? "Primero selecciona un mandato" :
+                  "Selecciona una tarea"
+                } />
               </SelectTrigger>
               <SelectContent>
                 {tasks.map((task) => (

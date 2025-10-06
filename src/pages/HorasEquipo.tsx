@@ -3,6 +3,9 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { TeamTimeStats } from "@/components/mandatos/TeamTimeStats";
 import { TimeFilters } from "@/components/mandatos/TimeFilters";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
+import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
+import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
+import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllTimeEntries, getAllTimeStats } from "@/services/timeTracking";
@@ -127,6 +130,13 @@ export default function HorasEquipo() {
         showUserFilter={true}
       />
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HoursByWeekChart entries={timeEntries} weeks={4} />
+        <HoursByTypeChart entries={timeEntries} />
+      </div>
+
+      <HoursTrendChart entries={timeEntries} weeks={8} />
+
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Registros de Tiempo del Equipo</h3>
         {loading ? (
@@ -139,6 +149,8 @@ export default function HorasEquipo() {
             currentUserId={user?.id || ''}
             isAdmin={true}
             onRefresh={handleRefresh}
+            showMandato={true}
+            pageSize={20}
           />
         )}
       </div>

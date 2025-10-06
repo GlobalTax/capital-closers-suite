@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Pencil, Trash2, Check, X, Clock } from "lucide-react";
+import { Trash2, Check, X, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,17 +27,28 @@ interface TimeEntriesTableProps {
   currentUserId: string;
   isAdmin: boolean;
   onRefresh: () => void;
+  showMandato?: boolean;
+  pageSize?: number;
 }
 
 export function TimeEntriesTable({
   entries,
   currentUserId,
   isAdmin,
-  onRefresh
+  onRefresh,
+  showMandato = false,
+  pageSize = 20
 }: TimeEntriesTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(entries.length / pageSize);
+  const paginatedEntries = entries.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const formatDuration = (minutes?: number) => {
     if (!minutes) return '-';
@@ -152,6 +164,7 @@ export function TimeEntriesTable({
           <TableHeader>
             <TableRow>
               <TableHead>Usuario</TableHead>
+              {showMandato && <TableHead>Mandato</TableHead>}
               <TableHead>Tarea</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Duración</TableHead>
@@ -161,9 +174,28 @@ export function TimeEntriesTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {entries.map((entry) => (
+            {paginatedEntries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell>{entry.user?.full_name || 'Usuario'}</TableCell>
+                {showMandato && (
+                  <TableCell>
+                    {entry.mandato ? (
+                      <Link 
+                        to={`/mandatos/${entry.mandato.id}`}
+                        className="hover:underline"
+                      >
+                        <div className="max-w-xs truncate font-medium">
+                          {entry.mandato.descripcion || `Mandato ${entry.mandato.tipo}`}
+                        </div>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {entry.mandato.estado}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="max-w-xs truncate" title={entry.task?.tarea}>
                     {entry.task?.tarea || 'Tarea'}
@@ -234,6 +266,37 @@ export function TimeEntriesTable({
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-2 py-4">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, entries.length)} de {entries.length} registros
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <div className="text-sm">
+              Página {currentPage} de {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Siguiente
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

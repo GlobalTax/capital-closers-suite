@@ -1,55 +1,82 @@
-import { useState } from "react";
-import { Clock, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Clock } from "lucide-react";
+import type { TimeEntry } from "@/types";
 
 interface TaskTimeWidgetProps {
-  taskId: string;
-  totalHours: number;
-  entryCount: number;
-  onAddTime: () => void;
+  entries: TimeEntry[];
 }
 
-export function TaskTimeWidget({
-  taskId,
-  totalHours,
-  entryCount,
-  onAddTime
-}: TaskTimeWidgetProps) {
-  return (
-    <TooltipProvider>
-      <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-1">
-              <Clock className="h-3 w-3" />
-              {totalHours.toFixed(1)}h
-              {entryCount > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({entryCount})
-                </span>
-              )}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{entryCount} registro{entryCount !== 1 ? 's' : ''} de tiempo</p>
-            <p className="text-xs text-muted-foreground">
-              Total: {totalHours.toFixed(2)} horas
-            </p>
-          </TooltipContent>
-        </Tooltip>
+export function TaskTimeWidget({ entries }: TaskTimeWidgetProps) {
+  const taskHours: Record<string, { task: string; fase: string; minutes: number; count: number }> = {};
+  
+  entries.forEach(entry => {
+    const taskId = entry.task?.id || 'unknown';
+    if (!taskHours[taskId]) {
+      taskHours[taskId] = {
+        task: entry.task?.tarea || 'Tarea desconocida',
+        fase: entry.task?.fase || 'Sin fase',
+        minutes: 0,
+        count: 0
+      };
+    }
+    taskHours[taskId].minutes += entry.duration_minutes || 0;
+    taskHours[taskId].count += 1;
+  });
 
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-6 w-6 p-0"
-          onClick={onAddTime}
-          title="Registrar tiempo"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-    </TooltipProvider>
+  const topTasks = Object.values(taskHours)
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, 5);
+
+  const formatHours = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h ${mins}m`;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Top 5 Tareas con Más Tiempo
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {topTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No hay datos disponibles
+            </p>
+          ) : (
+            topTasks.map((task, index) => (
+              <div 
+                key={index} 
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-sm line-clamp-1">
+                    {task.task}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      {task.fase}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {task.count} registro{task.count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right ml-4">
+                  <div className="font-semibold text-primary">
+                    {formatHours(task.minutes)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -7,6 +7,10 @@ import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilters } from "@/components/mandatos/TimeFilters";
+import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
+import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
+import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
+import { TaskTimeWidget } from "@/components/mandatos/TaskTimeWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyTimeStats, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
@@ -134,12 +138,42 @@ export default function MisHoras() {
 
       <TimeFilters filters={filters} onChange={setFilters} mandatos={mandatos} showUserFilter={false} />
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Mis Registros de Tiempo</h3>
-        {loading ? <div className="text-center py-8 text-muted-foreground">Cargando registros...</div> : <TimeEntriesTable entries={timeEntries} currentUserId={currentUserId} isAdmin={isAdmin} onRefresh={loadMyTimeData} />}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HoursByWeekChart entries={allEntries} weeks={4} />
+        <HoursByTypeChart entries={allEntries} />
       </div>
 
-      <TimeTrackingDialog open={dialogOpen} onOpenChange={setDialogOpen} mandatoId="" tasks={availableTasks} onSuccess={() => { setDialogOpen(false); loadMyTimeData(); }} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <HoursTrendChart entries={allEntries} weeks={8} />
+        </div>
+        <TaskTimeWidget entries={allEntries} />
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Mis Registros de Tiempo</h3>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Cargando registros...</div>
+        ) : (
+          <TimeEntriesTable 
+            entries={timeEntries} 
+            currentUserId={currentUserId} 
+            isAdmin={isAdmin} 
+            onRefresh={loadMyTimeData}
+            showMandato={true}
+            pageSize={20}
+          />
+        )}
+      </div>
+
+      <TimeTrackingDialog 
+        open={dialogOpen} 
+        onOpenChange={setDialogOpen} 
+        onSuccess={() => { 
+          setDialogOpen(false); 
+          loadMyTimeData(); 
+        }} 
+      />
     </div>
   );
 }
