@@ -22,6 +22,7 @@ import Documentos from "./pages/Documentos";
 import Reportes from "./pages/Reportes";
 import NotFound from "./pages/NotFound";
 import Perfil from "./pages/Perfil";
+import MisHoras from "./pages/MisHoras";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ function AppContent() {
         <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
         <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
+        <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

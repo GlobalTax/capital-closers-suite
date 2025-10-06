@@ -12,6 +12,7 @@ import {
   Sun,
   ShoppingCart,
   TrendingUp,
+  Clock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ const mandatosItems = [
 ];
 
 const otherMenuItems = [
+  { title: "Mis Horas", url: "/mis-horas", icon: Clock },
   { title: "Contactos", url: "/contactos", icon: Users },
   { title: "Empresas Target", url: "/empresas", icon: Building2 },
   { title: "Tareas", url: "/tareas", icon: CheckSquare },
