@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { fetchEmpresas } from "@/services/empresas";
+import { supabase } from "@/integrations/supabase/client";
 import type { Empresa } from "@/types";
 import { toast } from "sonner";
 import { Building2, Target, TrendingUp, Activity, Globe, Mail, Linkedin, Briefcase } from "lucide-react";
@@ -19,6 +20,7 @@ export default function Empresas() {
   const [loading, setLoading] = useState(true);
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
 
   // KPIs calculados
   const kpis = useMemo(() => {
@@ -45,6 +47,29 @@ export default function Empresas() {
     try {
       const data = await fetchEmpresas(filtroTarget);
       setEmpresas(data);
+      
+      // Cargar contadores de interacciones del último mes
+      const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+      const { data: interacciones } = await supabase
+        .from('interacciones')
+        .select('empresa_id, siguiente_accion, fecha_siguiente_accion')
+        .gte('fecha', thirtyDaysAgo);
+      
+      if (interacciones) {
+        const counts: Record<string, { total: number; pendientes: number }> = {};
+        interacciones.forEach((int) => {
+          if (int.empresa_id) {
+            if (!counts[int.empresa_id]) {
+              counts[int.empresa_id] = { total: 0, pendientes: 0 };
+            }
+            counts[int.empresa_id].total++;
+            if (int.siguiente_accion && int.fecha_siguiente_accion) {
+              counts[int.empresa_id].pendientes++;
+            }
+          }
+        });
+        setInteraccionesCounts(counts);
+      }
     } catch (error) {
       console.error("Error cargando empresas:", error);
       toast.error("Error al cargar las empresas");
@@ -99,14 +124,31 @@ export default function Empresas() {
       key: "updated_at",
       label: "Última Actividad",
       sortable: true,
-      render: (value: string) => {
+      render: (value: string, row: Empresa) => {
         if (!value) return "-";
         const date = new Date(value);
         const isRecent = isAfter(date, subDays(new Date(), 7));
+        const interaccionesData = interaccionesCounts[row.id];
+        
         return (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{format(date, "dd MMM", { locale: es })}</span>
-            {isRecent && <Badge variant="secondary" className="text-xs">Reciente</Badge>}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{format(date, "dd MMM", { locale: es })}</span>
+              {isRecent && <Badge variant="secondary" className="text-xs">Reciente</Badge>}
+            </div>
+            {interaccionesData && interaccionesData.total > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Activity className="h-3 w-3" />
+                  {interaccionesData.total} interacción{interaccionesData.total !== 1 ? 'es' : ''} (30d)
+                </Badge>
+                {interaccionesData.pendientes > 0 && (
+                  <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
+                    ⏰ {interaccionesData.pendientes} pendiente{interaccionesData.pendientes !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         );
       }

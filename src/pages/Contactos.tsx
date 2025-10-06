@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { fetchContactos } from "@/services/contactos";
+import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -19,6 +20,7 @@ export default function Contactos() {
   const [contactos, setContactos] = useState<Contacto[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
 
   useEffect(() => {
     cargarContactos();
@@ -29,6 +31,29 @@ export default function Contactos() {
     try {
       const data = await fetchContactos();
       setContactos(data);
+      
+      // Cargar contadores de interacciones del último mes
+      const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+      const { data: interacciones } = await supabase
+        .from('interacciones')
+        .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
+        .gte('fecha', thirtyDaysAgo);
+      
+      if (interacciones) {
+        const counts: Record<string, { total: number; pendientes: number }> = {};
+        interacciones.forEach((int) => {
+          if (int.contacto_id) {
+            if (!counts[int.contacto_id]) {
+              counts[int.contacto_id] = { total: 0, pendientes: 0 };
+            }
+            counts[int.contacto_id].total++;
+            if (int.siguiente_accion && int.fecha_siguiente_accion) {
+              counts[int.contacto_id].pendientes++;
+            }
+          }
+        });
+        setInteraccionesCounts(counts);
+      }
     } catch (error) {
       console.error("Error cargando contactos:", error);
       toast.error("Error al cargar los contactos");
@@ -102,13 +127,30 @@ export default function Contactos() {
         if (!row.updated_at) return <span className="text-muted-foreground">-</span>;
         
         const isRecent = isAfter(new Date(row.updated_at), subDays(new Date(), 7));
+        const interaccionesData = interaccionesCounts[row.id];
+        
         return (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">
-              {format(new Date(row.updated_at), "d MMM yyyy", { locale: es })}
-            </span>
-            {isRecent && (
-              <Badge variant="secondary" className="text-xs">Reciente</Badge>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">
+                {format(new Date(row.updated_at), "d MMM yyyy", { locale: es })}
+              </span>
+              {isRecent && (
+                <Badge variant="secondary" className="text-xs">Reciente</Badge>
+              )}
+            </div>
+            {interaccionesData && interaccionesData.total > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Activity className="h-3 w-3" />
+                  {interaccionesData.total} interacción{interaccionesData.total !== 1 ? 'es' : ''} (30d)
+                </Badge>
+                {interaccionesData.pendientes > 0 && (
+                  <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
+                    ⏰ {interaccionesData.pendientes} pendiente{interaccionesData.pendientes !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
         );
