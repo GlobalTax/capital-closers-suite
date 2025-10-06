@@ -281,6 +281,66 @@ export interface EmpresaTarget {
 }
 
 // ============================================
+// TIME TRACKING
+// ============================================
+export type TimeEntryWorkType = 
+  | 'Análisis' 
+  | 'Reunión' 
+  | 'Due Diligence' 
+  | 'Documentación' 
+  | 'Negociación' 
+  | 'Marketing' 
+  | 'Research' 
+  | 'Otro';
+
+export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+
+export interface TimeEntry {
+  id: string;
+  task_id: string;
+  mandato_id: string;
+  user_id: string;
+  
+  start_time: string;
+  end_time?: string;
+  duration_minutes?: number;
+  
+  description: string;
+  work_type: TimeEntryWorkType;
+  is_billable: boolean;
+  status: TimeEntryStatus;
+  notes?: string;
+  rejection_reason?: string;
+  
+  approved_by?: string;
+  approved_at?: string;
+  
+  created_at: string;
+  updated_at: string;
+  
+  // Joined data
+  user?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  task?: {
+    id: string;
+    tarea: string;
+    fase: ChecklistFase;
+  };
+}
+
+export interface TimeStats {
+  total_hours: number;
+  billable_hours: number;
+  total_entries: number;
+  hours_by_phase: { fase: string; hours: number }[];
+  hours_by_user: { user_id: string; user_name: string; hours: number }[];
+  hours_by_type: { work_type: string; hours: number }[];
+}
+
+// ============================================
 // CHECKLIST M&A
 // ============================================
 export type ChecklistFase = "1. Preparación" | "2. Marketing" | "3. Ofertas";

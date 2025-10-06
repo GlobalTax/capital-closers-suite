@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Activity, Target, ListTodo, Upload, Plus, Euro } from "lucide-react";
+import { ArrowLeft, FileText, Activity, Target, ListTodo, Upload, Plus, Euro, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +36,15 @@ import { InformacionFinancieraEmpresa } from "@/components/mandatos/InformacionF
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { EmpresasAsociadasCard } from "@/components/mandatos/EmpresasAsociadasCard";
 import { ChecklistMACard } from "@/components/mandatos/ChecklistMACard";
+import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
+import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
+import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
+import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
+import { useChecklistTasks } from "@/hooks/useChecklistTasks";
+import type { TimeEntry, TimeStats } from "@/types";
 import { format } from "date-fns";
 import { getPrioridadColor, calcularDuracion } from "@/lib/mandato-utils";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -53,6 +60,16 @@ export default function MandatoDetalle() {
   const [transactionFilters, setTransactionFilters] = useState<{
     dateRange: "7d" | "30d" | "all";
   }>({ dateRange: "all" });
+  
+  // Time tracking states
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
+  const [timeDialogOpen, setTimeDialogOpen] = useState(false);
+  const [timeLoading, setTimeLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  const { tasks: checklistTasks } = useChecklistTasks(id);
 
   const {
     transactions,
@@ -87,7 +104,43 @@ export default function MandatoDetalle() {
 
   useEffect(() => {
     cargarMandato();
+    loadTimeData();
+    loadCurrentUser();
   }, [id]);
+  
+  const loadCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
+      
+      // Check if user is admin
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      setIsAdmin(adminData?.role === 'super_admin' || adminData?.role === 'admin');
+    }
+  };
+  
+  const loadTimeData = async () => {
+    if (!id) return;
+    
+    setTimeLoading(true);
+    try {
+      const [entries, stats] = await Promise.all([
+        fetchTimeEntries(id),
+        getTimeStats(id)
+      ]);
+      setTimeEntries(entries);
+      setTimeStats(stats);
+    } catch (error) {
+      console.error("Error loading time data:", error);
+    } finally {
+      setTimeLoading(false);
+    }
+  };
 
   const handleEstadoChange = async (nuevoEstado: string) => {
     if (!mandato || !id) return;
@@ -454,6 +507,35 @@ export default function MandatoDetalle() {
           </TabsContent>
         )}
 
+        {/* Tab Time Tracking */}
+        <TabsContent value="time" className="space-y-6">
+          {timeStats && <TimeTrackingStats stats={timeStats} />}
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Registros de Tiempo</CardTitle>
+              <Button onClick={() => setTimeDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Registrar Tiempo
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {timeLoading ? (
+                <p className="text-center text-muted-foreground py-8">
+                  Cargando registros...
+                </p>
+              ) : (
+                <TimeEntriesTable
+                  entries={timeEntries}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                  onRefresh={loadTimeData}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Tab Tareas */}
         <TabsContent value="tareas">
           <Card>
@@ -516,6 +598,14 @@ export default function MandatoDetalle() {
         open={openTargetDrawer}
         onOpenChange={setOpenTargetDrawer}
         onSuccess={cargarMandato}
+      />
+      
+      <TimeTrackingDialog
+        open={timeDialogOpen}
+        onOpenChange={setTimeDialogOpen}
+        mandatoId={id || ""}
+        tasks={checklistTasks}
+        onSuccess={loadTimeData}
       />
     </div>
   );
