@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Bell, Settings, Plus, LogOut, User, Moon, Sun } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,8 +23,45 @@ export function Topbar() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { globalSearchQuery, setGlobalSearchQuery } = useUIStore();
+  const { user, adminUser, logout } = useAuth();
   const [showResults, setShowResults] = useState(false);
   const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
+
+  // Generate initials from user data
+  const getInitials = () => {
+    if (adminUser?.full_name) {
+      return adminUser.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  const getUserName = () => {
+    return adminUser?.full_name || user?.email || "Usuario";
+  };
+
+  const getUserRole = () => {
+    if (!adminUser?.role) return "Usuario";
+    const roleMap: Record<string, string> = {
+      super_admin: "Super Admin",
+      admin: "Admin",
+      manager: "Manager",
+      editor: "Editor",
+    };
+    return roleMap[adminUser.role] || "Usuario";
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate("/auth/login");
+  };
 
   useEffect(() => {
     const buscar = async () => {
@@ -124,23 +162,23 @@ export function Topbar() {
               <Avatar className="w-8 h-8">
                 <AvatarImage src="" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  JD
+                  {getInitials()}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium">Juan Díaz</p>
-                <p className="text-xs text-muted-foreground">Admin</p>
+                <p className="text-sm font-medium">{getUserName()}</p>
+                <p className="text-xs text-muted-foreground">{getUserRole()}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => console.log("Perfil")}>
+            <DropdownMenuItem onClick={() => navigate("/perfil")}>
               <User className="mr-2 h-4 w-4" />
               <span>Perfil</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Configuración")}>
+            <DropdownMenuItem onClick={() => navigate("/perfil")}>
               <Settings className="mr-2 h-4 w-4" />
               <span>Configuración</span>
             </DropdownMenuItem>
@@ -154,7 +192,7 @@ export function Topbar() {
               <span>{theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => console.log("Cerrar sesión")}>
+            <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Cerrar Sesión</span>
             </DropdownMenuItem>
