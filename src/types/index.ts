@@ -329,6 +329,7 @@ export interface TimeEntry {
     tarea: string;
     fase: ChecklistFase;
   };
+  mandato?: MandatoInfo;
 }
 
 export interface TimeStats {
@@ -390,4 +391,47 @@ export interface MandatoChecklistTaskFile {
   file_category?: FileCategory;
   created_at: string;
   updated_at: string;
+}
+
+// ============================================
+// TEAM TIME TRACKING (Super Admin)
+// ============================================
+export interface TeamStats {
+  total_hours: number;
+  billable_hours: number;
+  active_users: number;
+  average_hours_per_user: number;
+  total_entries: number;
+  hours_by_user: {
+    user_id: string;
+    user_name: string;
+    hours: number;
+    billable_hours: number;
+  }[];
+  hours_by_mandato: {
+    mandato_id: string;
+    mandato_name: string;
+    hours: number;
+  }[];
+  hours_by_type: {
+    work_type: string;
+    hours: number;
+  }[];
+}
+
+export interface TimeFilterState {
+  startDate: Date;
+  endDate: Date;
+  userId: string | 'all';
+  mandatoId: string | 'all';
+  status: TimeEntryStatus | 'all';
+  workType: TimeEntryWorkType | 'all' | 'Otro';
+  onlyBillable: boolean;
+}
+
+export interface MandatoInfo {
+  id: string;
+  descripcion: string;
+  tipo: MandatoTipo;
+  estado: MandatoEstado;
 }

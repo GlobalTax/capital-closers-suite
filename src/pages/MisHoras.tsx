@@ -1,43 +1,51 @@
-import { useState, useEffect } from "react";
-import { Clock, Play, Square, TrendingUp, Calendar, Filter } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
-import { 
-  fetchTimeEntries, 
-  getTimeStats, 
-  getMyActiveTimer,
-  startTimer,
-  stopTimer 
-} from "@/services/timeTracking";
+import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
+import { TimeFilters } from "@/components/mandatos/TimeFilters";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import type { TimeEntry, TimeStats } from "@/types";
+import { fetchMyTimeEntries, getMyTimeStats, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
+import { toast } from "sonner";
+import type { TimeEntry, TimeStats, MandatoChecklistTask, TimeFilterState } from "@/types";
+import { startOfWeek, startOfMonth, endOfDay, differenceInDays, isToday, isThisWeek } from "date-fns";
 
 export default function MisHoras() {
-  const { toast } = useToast();
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
+  const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
+  const [stats, setStats] = useState<TimeStats | null>(null);
   const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [availableTasks, setAvailableTasks] = useState<any[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [availableTasks, setAvailableTasks] = useState<MandatoChecklistTask[]>([]);
+  const [currentUserId, setCurrentUserId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [mandatos, setMandatos] = useState<{ id: string; name: string }[]>([]);
+  const [filters, setFilters] = useState<TimeFilterState>({
+    startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
+    endDate: endOfDay(new Date()),
+    userId: 'all',
+    mandatoId: 'all',
+    status: 'all',
+    workType: 'Otro',
+    onlyBillable: false
+  });
+
+  useEffect(() => {
+    loadMyTimeData();
+  }, [filters]);
 
   const loadMyTimeData = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) return;
-
+      
       setCurrentUserId(user.id);
 
-      // Check if admin
       const { data: adminUser } = await supabase
         .from('admin_users')
         .select('role')
@@ -46,32 +54,44 @@ export default function MisHoras() {
       
       setIsAdmin(adminUser?.role === 'admin' || adminUser?.role === 'super_admin');
 
-      // Load all my time entries (no mandato filter)
-      const entries = await fetchTimeEntries(undefined as any, { userId: user.id });
+      const entries = await fetchMyTimeEntries(user.id, {
+        startDate: filters.startDate.toISOString(),
+        endDate: filters.endDate.toISOString(),
+        mandatoId: filters.mandatoId !== 'all' ? filters.mandatoId : undefined,
+        status: filters.status !== 'all' ? filters.status : undefined
+      });
       setTimeEntries(entries);
 
-      // Load my stats
-      const stats = await getTimeStats(undefined as any);
-      setTimeStats(stats);
+      const allUserEntries = await fetchMyTimeEntries(user.id, { status: 'approved' });
+      setAllEntries(allUserEntries);
 
-      // Check for active timer
+      const userStats = await getMyTimeStats(user.id);
+      setStats(userStats);
+
       const timer = await getMyActiveTimer();
       setActiveTimer(timer);
 
-      // Load available tasks from all my mandatos
-      const { data: tasks } = await supabase
-        .from('mandato_checklist_tasks')
-        .select('*, mandatos(descripcion)')
+      const { data: mandatosData } = await supabase
+        .from('mandatos')
+        .select('id, descripcion, tipo')
         .order('created_at', { ascending: false });
       
-      setAvailableTasks(tasks || []);
-    } catch (error) {
-      console.error('Error loading time data:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos de tiempo",
-        variant: "destructive",
-      });
+      if (mandatosData) {
+        setMandatos(mandatosData.map((m) => ({
+          id: m.id,
+          name: m.descripcion || `Mandato ${m.tipo}`
+        })));
+      }
+
+      const { data: tasks } = await supabase
+        .from('mandato_checklist_tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      setAvailableTasks((tasks || []) as MandatoChecklistTask[]);
+    } catch (error: any) {
+      console.error("Error loading my time data:", error);
+      toast.error("Error al cargar tus horas");
     } finally {
       setLoading(false);
     }
@@ -79,150 +99,47 @@ export default function MisHoras() {
 
   const handleStopTimer = async () => {
     if (!activeTimer) return;
-    
     try {
       await stopTimer(activeTimer.id);
-      toast({
-        title: "Timer detenido",
-        description: "El tiempo ha sido registrado",
-      });
-      loadMyTimeData();
+      toast.success("Timer detenido");
+      await loadMyTimeData();
     } catch (error) {
-      console.error('Error stopping timer:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo detener el timer",
-        variant: "destructive",
-      });
+      toast.error("Error al detener timer");
     }
   };
 
-  useEffect(() => {
-    loadMyTimeData();
-  }, []);
-
-  const todayHours = timeStats?.total_hours || 0;
-  const thisWeekHours = timeStats?.total_hours || 0;
-  const billablePercentage = timeStats?.total_hours 
-    ? ((timeStats.billable_hours / timeStats.total_hours) * 100).toFixed(0)
-    : 0;
+  const todayHours = allEntries.filter(e => isToday(new Date(e.start_time))).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
+  const thisWeekHours = allEntries.filter(e => isThisWeek(new Date(e.start_time), { weekStartsOn: 1 })).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
+  const thisMonthStart = startOfMonth(new Date());
+  const thisMonthHours = allEntries.filter(e => new Date(e.start_time) >= thisMonthStart).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
+  const billableHours = allEntries.filter(e => e.is_billable).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
+  const workingDays = Math.max(differenceInDays(new Date(), thisMonthStart) + 1, 1);
+  const averageDailyHours = thisMonthHours / workingDays;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-semibold text-foreground">Mis Horas</h1>
-          <p className="text-muted-foreground mt-1">Gestiona y visualiza tu tiempo de trabajo</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Clock className="mr-2 h-4 w-4" />
-          Registrar Tiempo
-        </Button>
+      <div className="flex items-center justify-between">
+        <PageHeader title="Mis Horas" description="Gestiona tu tiempo dedicado a mandatos" />
+        <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Registrar Tiempo</Button>
       </div>
 
-      {/* Active Timer Widget */}
-      {activeTimer && (
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                Timer Activo
-              </div>
-              <Button onClick={handleStopTimer} variant="destructive" size="sm">
-                <Square className="mr-2 h-4 w-4" />
-                Detener
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">{activeTimer.description}</p>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{activeTimer.work_type}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  Iniciado: {new Date(activeTimer.start_time).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas Hoy</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayHours.toFixed(1)}h</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Esta Semana</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{thisWeekHours.toFixed(1)}h</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas Facturables</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(timeStats?.billable_hours || 0).toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {billablePercentage}% del total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Promedio Diario</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {((timeStats?.total_hours || 0) / 30).toFixed(1)}h
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Hoy</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{todayHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Aprobadas hoy</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Esta Semana</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{thisWeekHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Últimos 7 días</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Facturables</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{billableHours.toFixed(1)}h</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Promedio Diario</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{averageDailyHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Este mes</p></CardContent></Card>
       </div>
 
-      {/* Time Entries Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mis Registros de Tiempo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Cargando...</p>
-          ) : (
-            <TimeEntriesTable 
-              entries={timeEntries} 
-              currentUserId={currentUserId}
-              isAdmin={isAdmin}
-              onRefresh={loadMyTimeData}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <TimeFilters filters={filters} onChange={setFilters} mandatos={mandatos} showUserFilter={false} />
 
-      <TimeTrackingDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        mandatoId="" 
-        tasks={availableTasks}
-        onSuccess={loadMyTimeData}
-      />
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Mis Registros de Tiempo</h3>
+        {loading ? <div className="text-center py-8 text-muted-foreground">Cargando registros...</div> : <TimeEntriesTable entries={timeEntries} currentUserId={currentUserId} isAdmin={isAdmin} onRefresh={loadMyTimeData} />}
+      </div>
+
+      <TimeTrackingDialog open={dialogOpen} onOpenChange={setDialogOpen} mandatoId="" tasks={availableTasks} onSuccess={() => { setDialogOpen(false); loadMyTimeData(); }} />
     </div>
   );
 }
