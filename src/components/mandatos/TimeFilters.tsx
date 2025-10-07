@@ -118,7 +118,7 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
             <div className="space-y-2">
               <Label>Mandato</Label>
               <Select
-                value={filters.mandatoId}
+                value={filters.mandatoId || 'all'}
                 onValueChange={(value) => onChange({ ...filters, mandatoId: value })}
               >
                 <SelectTrigger>

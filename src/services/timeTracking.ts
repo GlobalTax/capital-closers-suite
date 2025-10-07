@@ -1,6 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeEntry, TimeEntryWorkType, TimeEntryStatus, TimeStats, TeamStats, MandatoInfo } from "@/types";
 
+// Helper to validate UUID
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 // ============================================
 // FETCH TIME ENTRIES (with optional mandatoId)
 // ============================================
@@ -111,7 +117,11 @@ export const fetchMyTimeEntries = async (
   if (filters?.endDate) {
     query = query.lte('start_time', filters.endDate);
   }
-  if (filters?.mandatoId && filters.mandatoId !== 'all') {
+  // Sanitize mandatoId filter
+  if (filters?.mandatoId && 
+      filters.mandatoId !== 'all' && 
+      filters.mandatoId !== 'undefined' &&
+      isValidUUID(filters.mandatoId)) {
     query = query.eq('mandato_id', filters.mandatoId);
   }
   if (filters?.status && filters.status !== 'draft') {
@@ -177,10 +187,18 @@ export const fetchAllTimeEntries = async (
   if (filters?.endDate) {
     query = query.lte('start_time', filters.endDate);
   }
-  if (filters?.userId && filters.userId !== 'all') {
+  // Sanitize userId filter
+  if (filters?.userId && 
+      filters.userId !== 'all' && 
+      filters.userId !== 'undefined' &&
+      isValidUUID(filters.userId)) {
     query = query.eq('user_id', filters.userId);
   }
-  if (filters?.mandatoId && filters.mandatoId !== 'all') {
+  // Sanitize mandatoId filter
+  if (filters?.mandatoId && 
+      filters.mandatoId !== 'all' && 
+      filters.mandatoId !== 'undefined' &&
+      isValidUUID(filters.mandatoId)) {
     query = query.eq('mandato_id', filters.mandatoId);
   }
   if (filters?.status && filters.status !== 'draft') {

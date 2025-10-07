@@ -58,10 +58,17 @@ export default function MisHoras() {
       
       setIsAdmin(adminUser?.role === 'admin' || adminUser?.role === 'super_admin');
 
+      // Sanitize mandatoId filter
+      const sanitizedMandatoId = filters.mandatoId && 
+                                  filters.mandatoId !== 'all' && 
+                                  filters.mandatoId !== 'undefined'
+        ? filters.mandatoId 
+        : undefined;
+
       const entries = await fetchMyTimeEntries(user.id, {
         startDate: filters.startDate.toISOString(),
         endDate: filters.endDate.toISOString(),
-        mandatoId: filters.mandatoId !== 'all' ? filters.mandatoId : undefined,
+        mandatoId: sanitizedMandatoId,
         status: filters.status !== 'all' ? filters.status : undefined
       });
       setTimeEntries(entries);

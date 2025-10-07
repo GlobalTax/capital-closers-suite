@@ -131,6 +131,25 @@ export function TimeTrackingDialog({
     try {
       setLoading(true);
       
+      // Validate required fields
+      if (!data.mandato_id) {
+        toast({
+          title: "Error",
+          description: "Debes seleccionar un mandato",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!data.task_id) {
+        toast({
+          title: "Error",
+          description: "Debes seleccionar una tarea",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const startDateTime = new Date(`${data.start_date}T${data.start_time}`);
       const endDateTime = data.end_time 
         ? new Date(`${data.end_date}T${data.end_time}`)
@@ -151,7 +170,7 @@ export function TimeTrackingDialog({
 
       await createTimeEntry({
         task_id: data.task_id,
-        mandato_id: data.mandato_id || mandatoId!,
+        mandato_id: data.mandato_id,
         user_id: user.id,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime?.toISOString(),
@@ -189,6 +208,9 @@ export function TimeTrackingDialog({
             <Clock className="h-5 w-5" />
             Registrar Tiempo
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Registra el tiempo trabajado en una tarea específica
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
