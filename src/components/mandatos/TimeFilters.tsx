@@ -126,6 +126,13 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los mandatos</SelectItem>
+                  {/* Trabajo General M&A - Internal Mandate */}
+                  <SelectItem 
+                    value="00000000-0000-0000-0000-000000000001"
+                    className="font-semibold border-b"
+                  >
+                    🏢 Trabajo General M&A
+                  </SelectItem>
                   {mandatos.map((mandato) => (
                     <SelectItem key={mandato.id} value={mandato.id}>
                       {mandato.name}

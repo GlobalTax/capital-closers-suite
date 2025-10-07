@@ -228,6 +228,14 @@ export function TimeTrackingDialog({
                   <SelectValue placeholder="Selecciona un mandato" />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* Trabajo General M&A - Internal Mandate */}
+                  <SelectItem 
+                    key="00000000-0000-0000-0000-000000000001" 
+                    value="00000000-0000-0000-0000-000000000001"
+                    className="font-semibold border-b"
+                  >
+                    🏢 Trabajo General M&A
+                  </SelectItem>
                   {mandatos.map((mandato) => (
                     <SelectItem key={mandato.id} value={mandato.id}>
                       {mandato.descripcion || `Mandato ${mandato.tipo}`}
