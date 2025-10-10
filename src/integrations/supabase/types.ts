@@ -415,6 +415,51 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          changed_fields: string[] | null
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       banner_events: {
         Row: {
           banner_id: string
@@ -2390,6 +2435,373 @@ export type Database = {
           },
         ]
       }
+      job_application_activities: {
+        Row: {
+          activity_type: string
+          application_id: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+        }
+        Insert: {
+          activity_type: string
+          application_id: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+        }
+        Update: {
+          activity_type?: string
+          application_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_application_activities_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_activities_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      job_applications: {
+        Row: {
+          additional_documents_urls: string[] | null
+          availability: string | null
+          cover_letter: string | null
+          created_at: string
+          current_company: string | null
+          current_location: string | null
+          current_position: string | null
+          cv_url: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
+          education_level: string | null
+          email: string
+          expected_salary_max: number | null
+          expected_salary_min: number | null
+          full_name: string
+          id: string
+          interview_scheduled_at: string | null
+          ip_address: unknown | null
+          is_deleted: boolean | null
+          job_post_id: string
+          linkedin_url: string | null
+          notes: string | null
+          phone: string | null
+          portfolio_url: string | null
+          rating: number | null
+          referrer: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          willing_to_relocate: boolean | null
+          years_of_experience: number | null
+        }
+        Insert: {
+          additional_documents_urls?: string[] | null
+          availability?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          current_company?: string | null
+          current_location?: string | null
+          current_position?: string | null
+          cv_url?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          education_level?: string | null
+          email: string
+          expected_salary_max?: number | null
+          expected_salary_min?: number | null
+          full_name: string
+          id?: string
+          interview_scheduled_at?: string | null
+          ip_address?: unknown | null
+          is_deleted?: boolean | null
+          job_post_id: string
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          portfolio_url?: string | null
+          rating?: number | null
+          referrer?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          willing_to_relocate?: boolean | null
+          years_of_experience?: number | null
+        }
+        Update: {
+          additional_documents_urls?: string[] | null
+          availability?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          current_company?: string | null
+          current_location?: string | null
+          current_position?: string | null
+          cv_url?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          education_level?: string | null
+          email?: string
+          expected_salary_max?: number | null
+          expected_salary_min?: number | null
+          full_name?: string
+          id?: string
+          interview_scheduled_at?: string | null
+          ip_address?: unknown | null
+          is_deleted?: boolean | null
+          job_post_id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          portfolio_url?: string | null
+          rating?: number | null
+          referrer?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          willing_to_relocate?: boolean | null
+          years_of_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_applications_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      job_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      job_posts: {
+        Row: {
+          application_count: number | null
+          application_email: string | null
+          application_method: string
+          application_url: string | null
+          benefits: string[] | null
+          category_id: string | null
+          closes_at: string | null
+          company_name: string
+          contract_type: string
+          created_at: string
+          created_by: string | null
+          description: string
+          display_locations: string[] | null
+          employment_type: string
+          experience_level: string | null
+          featured_image_url: string | null
+          id: string
+          is_featured: boolean | null
+          is_hybrid: boolean | null
+          is_remote: boolean | null
+          is_salary_visible: boolean | null
+          is_urgent: boolean | null
+          location: string
+          meta_description: string | null
+          meta_title: string | null
+          published_at: string | null
+          required_languages: string[] | null
+          requirements: string[] | null
+          responsibilities: string[] | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
+          sector: string | null
+          short_description: string
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          application_count?: number | null
+          application_email?: string | null
+          application_method?: string
+          application_url?: string | null
+          benefits?: string[] | null
+          category_id?: string | null
+          closes_at?: string | null
+          company_name?: string
+          contract_type: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          display_locations?: string[] | null
+          employment_type: string
+          experience_level?: string | null
+          featured_image_url?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_hybrid?: boolean | null
+          is_remote?: boolean | null
+          is_salary_visible?: boolean | null
+          is_urgent?: boolean | null
+          location: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          required_languages?: string[] | null
+          requirements?: string[] | null
+          responsibilities?: string[] | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
+          sector?: string | null
+          short_description: string
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          application_count?: number | null
+          application_email?: string | null
+          application_method?: string
+          application_url?: string | null
+          benefits?: string[] | null
+          category_id?: string | null
+          closes_at?: string | null
+          company_name?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          display_locations?: string[] | null
+          employment_type?: string
+          experience_level?: string | null
+          featured_image_url?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_hybrid?: boolean | null
+          is_remote?: boolean | null
+          is_salary_visible?: boolean | null
+          is_urgent?: boolean | null
+          location?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          required_languages?: string[] | null
+          requirements?: string[] | null
+          responsibilities?: string[] | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
+          sector?: string | null
+          short_description?: string
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "job_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_posts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       key_statistics: {
         Row: {
           display_locations: string[] | null
@@ -4192,33 +4604,45 @@ export type Database = {
           bio: string | null
           created_at: string
           display_order: number | null
+          email: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
+          linkedin_url: string | null
           name: string
+          phone: string | null
           position: string | null
+          section: string | null
           updated_at: string
         }
         Insert: {
           bio?: string | null
           created_at?: string
           display_order?: number | null
+          email?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          linkedin_url?: string | null
           name: string
+          phone?: string | null
           position?: string | null
+          section?: string | null
           updated_at?: string
         }
         Update: {
           bio?: string | null
           created_at?: string
           display_order?: number | null
+          email?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          linkedin_url?: string | null
           name?: string
+          phone?: string | null
           position?: string | null
+          section?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4769,6 +5193,10 @@ export type Database = {
       check_user_admin_role: {
         Args: { check_user_id: string }
         Returns: string
+      }
+      cleanup_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       cleanup_old_tracking_events: {
         Args: Record<PropertyKey, never>

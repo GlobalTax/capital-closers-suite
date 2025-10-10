@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   TrendingUp,
   Clock,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,6 +49,7 @@ const otherMenuItems = [
 
 const superAdminItems = [
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
+  { title: "Audit Logs", url: "/audit-logs", icon: Shield },
 ];
 
 export function AppSidebar() {
