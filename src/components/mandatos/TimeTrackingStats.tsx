@@ -1,5 +1,6 @@
-import { Clock, TrendingUp, DollarSign, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ColorfulFinancialKPI } from "@/components/empresas/ColorfulFinancialKPI";
+import { Clock, DollarSign, TrendingUp, Users } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import type { TimeStats } from "@/types";
 
 interface TimeTrackingStatsProps {
@@ -7,67 +8,58 @@ interface TimeTrackingStatsProps {
 }
 
 export function TimeTrackingStats({ stats }: TimeTrackingStatsProps) {
+  const billablePercentage = stats.total_hours > 0 
+    ? (stats.billable_hours / stats.total_hours) * 100 
+    : 0;
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Horas</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.total_hours.toFixed(1)}h
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {stats.total_entries} registros
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <ColorfulFinancialKPI
+          label="Total Horas"
+          value={`${stats.total_hours.toFixed(1)}h`}
+          subtitle={`${stats.total_entries} registros`}
+          icon={Clock}
+          colorScheme="blue"
+        />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Horas Facturables</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.billable_hours.toFixed(1)}h
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {((stats.billable_hours / stats.total_hours) * 100).toFixed(0)}% del total
-          </p>
-        </CardContent>
-      </Card>
+        <ColorfulFinancialKPI
+          label="Horas Facturables"
+          value={`${stats.billable_hours.toFixed(1)}h`}
+          subtitle={`${billablePercentage.toFixed(0)}% del total`}
+          icon={DollarSign}
+          colorScheme="green"
+        />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Promedio por Día</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {(stats.total_hours / 7).toFixed(1)}h
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Últimos 7 días
-          </p>
-        </CardContent>
-      </Card>
+        <ColorfulFinancialKPI
+          label="Promedio por Día"
+          value={`${(stats.total_hours / 7).toFixed(1)}h`}
+          subtitle="Últimos 7 días"
+          icon={TrendingUp}
+          colorScheme="purple"
+        />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Colaboradores</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {stats.hours_by_user.length}
+        <ColorfulFinancialKPI
+          label="Colaboradores"
+          value={stats.hours_by_user.length.toString()}
+          subtitle="Trabajando en este mandato"
+          icon={Users}
+          colorScheme="orange"
+        />
+      </div>
+
+      {/* Progress bar para porcentaje facturable */}
+      {stats.total_hours > 0 && (
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium">Porcentaje Facturable</span>
+            <span className="text-sm font-bold text-green-600">
+              {billablePercentage.toFixed(1)}%
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Trabajando en este mandato
-          </p>
-        </CardContent>
-      </Card>
+          <Progress value={billablePercentage} className="h-2" />
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ interface ColorfulFinancialKPIProps {
   value: string;
   subtitle?: string;
   icon: LucideIcon;
-  colorScheme: 'green' | 'purple' | 'blue' | 'yellow' | 'orange';
+  colorScheme: 'green' | 'purple' | 'blue' | 'yellow' | 'orange' | 'red';
 }
 
 const colorSchemes = {
@@ -35,6 +35,11 @@ const colorSchemes = {
     bg: 'bg-orange-50',
     text: 'text-orange-600',
     icon: 'text-orange-500',
+  },
+  red: {
+    bg: 'bg-red-50',
+    text: 'text-red-600',
+    icon: 'text-red-500',
   },
 };
 

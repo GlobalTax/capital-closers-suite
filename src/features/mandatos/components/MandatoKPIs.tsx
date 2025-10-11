@@ -1,79 +1,73 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ColorfulFinancialKPI } from "@/components/empresas/ColorfulFinancialKPI";
+import { TrendingUp, DollarSign, Building2, Calendar, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import type { Mandato } from "@/types";
-import { Calendar, DollarSign, Building2, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { formatCurrency } from "@/lib/mandato-utils";
 
 interface MandatoKPIsProps {
   mandato: Mandato;
 }
 
 export function MandatoKPIs({ mandato }: MandatoKPIsProps) {
-  const getBadgeVariant = (estado: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      prospecto: "secondary",
-      activo: "default",
-      en_negociacion: "outline",
-      cerrado: "default",
-      cancelado: "destructive",
+  const getEstadoConfig = (estado: string) => {
+    const configs: Record<string, { color: 'green' | 'orange' | 'red' | 'blue' | 'yellow'; icon: any; label: string }> = {
+      prospecto: { color: 'yellow', icon: AlertCircle, label: 'Prospecto' },
+      activo: { color: 'green', icon: CheckCircle, label: 'Activo' },
+      en_negociacion: { color: 'orange', icon: AlertCircle, label: 'En Negociación' },
+      cerrado: { color: 'blue', icon: CheckCircle, label: 'Cerrado' },
+      cancelado: { color: 'red', icon: XCircle, label: 'Cancelado' },
     };
-    return variants[estado] || "default";
+    return configs[estado] || configs.activo;
   };
 
+  const estadoConfig = getEstadoConfig(mandato.estado);
+
+  // Calcular días restantes
+  const diasRestantes = mandato.fecha_cierre 
+    ? Math.ceil((new Date(mandato.fecha_cierre).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const fechaCierreColor = diasRestantes && diasRestantes < 30 ? 'orange' : 'blue';
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Estado</CardTitle>
-          <Badge variant={getBadgeVariant(mandato.estado)}>
-            {mandato.estado}
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground">
-            Tipo: {mandato.tipo === "compra" ? "Compra" : "Venta"}
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <ColorfulFinancialKPI
+        label="Estado"
+        value={estadoConfig.label}
+        subtitle={`Tipo: ${mandato.tipo === 'compra' ? 'Compra' : 'Venta'}`}
+        icon={estadoConfig.icon}
+        colorScheme={estadoConfig.color}
+      />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            {mandato.valor ? `€${mandato.valor.toLocaleString()}` : "N/A"}
-          </div>
-        </CardContent>
-      </Card>
+      <ColorfulFinancialKPI
+        label="Valor"
+        value={formatCurrency(mandato.valor)}
+        icon={DollarSign}
+        colorScheme="purple"
+      />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Empresa</CardTitle>
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm font-medium">
-            {mandato.empresa_principal?.nombre || "N/A"}
-          </p>
-        </CardContent>
-      </Card>
+      <ColorfulFinancialKPI
+        label="Empresa"
+        value={mandato.empresa_principal?.nombre || "Sin asignar"}
+        subtitle={mandato.empresa_principal?.sector}
+        icon={Building2}
+        colorScheme="blue"
+      />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Fecha Cierre</CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">
-            {mandato.fecha_cierre
-              ? format(new Date(mandato.fecha_cierre), "dd MMM yyyy", { locale: es })
-              : "Sin definir"}
-          </p>
-        </CardContent>
-      </Card>
+      <ColorfulFinancialKPI
+        label="Fecha Cierre"
+        value={
+          mandato.fecha_cierre
+            ? new Date(mandato.fecha_cierre).toLocaleDateString("es-ES", { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+              })
+            : "Sin definir"
+        }
+        subtitle={diasRestantes && diasRestantes > 0 ? `Faltan ${diasRestantes} días` : undefined}
+        icon={Calendar}
+        colorScheme={fechaCierreColor}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { MandatoTimeline } from "@/components/mandatos/MandatoTimeline";
+import { ColorfulMandatoTimeline } from "@/components/mandatos/ColorfulMandatoTimeline";
 import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifico";
 import { InformacionFinancieraEmpresa } from "@/components/mandatos/InformacionFinancieraEmpresa";
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
@@ -12,7 +12,7 @@ interface ResumenTabProps {
 export function ResumenTab({ mandato, onAddContacto }: ResumenTabProps) {
   return (
     <div className="space-y-6">
-      <MandatoTimeline
+      <ColorfulMandatoTimeline
         fechaInicio={mandato.fecha_inicio}
         fechaCierre={mandato.fecha_cierre}
         estado={mandato.estado}
