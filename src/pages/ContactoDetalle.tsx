@@ -330,8 +330,9 @@ export default function ContactoDetalle() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirmar={handleDelete}
-        title="Eliminar contacto"
-        description="¿Estás seguro de que deseas eliminar este contacto? Esta acción no se puede deshacer."
+        titulo="Eliminar contacto"
+        descripcion="¿Estás seguro de que deseas eliminar este contacto? Esta acción no se puede deshacer."
+        variant="destructive"
       />
 
       {contacto && (
