@@ -33,16 +33,9 @@ interface BrevoDeal {
 }
 
 // Mapear estado del mandato a etapa de deal en Brevo
-// IMPORTANTE: Actualizar estos valores con las fases exactas de tu pipeline de Brevo
+// Todos los deals nuevos se crean en "Fase 1" independientemente del estado interno
 function mapEstadoToBrevoStage(estado: string): string {
-  const mapping: Record<string, string> = {
-    'prospecto': 'Lead Venta / Gestión Venta',     // Fase inicial
-    'activo': 'Propuesta aceptada',                 // Propuesta aceptada
-    'en_negociacion': 'Negociación',                // En negociación
-    'cerrado': 'Cerrado Ganado',                    // Deal ganado
-    'cancelado': 'Cerrado Perdido'                  // Deal perdido
-  };
-  return mapping[estado] || 'Lead Venta / Gestión Venta';
+  return 'Fase 1';
 }
 
 // Validar email
