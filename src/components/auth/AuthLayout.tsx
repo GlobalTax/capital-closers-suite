@@ -6,14 +6,14 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-card border border-border rounded-2xl shadow-lg p-8 space-y-6">
+        <div className="bg-card border border-border rounded-lg shadow-sm p-8 space-y-6">
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {title}
             </h1>
-            <p className="text-sm text-muted-foreground" style={{ letterSpacing: '-0.06em' }}>
+            <p className="text-sm text-muted-foreground">
               {description}
             </p>
           </div>

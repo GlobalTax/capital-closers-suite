@@ -11,11 +11,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <ChangePasswordModal />
-      <div className="flex min-h-screen w-full bg-muted/30">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <Topbar />
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-8">
             {children}
           </main>
         </div>

@@ -7,6 +7,7 @@ export default {
   theme: {
     fontFamily: {
       sans: [
+        'ABC Diatype',
         'Inter',
         '-apple-system',
         'BlinkMacSystemFont',

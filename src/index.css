@@ -2,65 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ABC Diatype Font */
+@font-face {
+  font-family: 'ABC Diatype';
+  src: url('/fonts/abc-diatype-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Apollo.io Inspired Design System */
 
 @layer base {
   :root {
-    /* Professional CRM Design System - Affinity Inspired */
-    --background: 0 0% 100%;
-    --foreground: 215 25% 15%;
+    /* Apollo.io Style - Clean and Minimal */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 0 0% 10%;
 
-    /* Primary: Professional Black */
+    /* Primary: Dark Professional */
     --primary: 0 0% 10%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 0 0% 20%;
 
-    /* Secondary: Neutral Gray */
-    --secondary: 215 16% 47%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Subtle Gray */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
 
-    /* Muted: Light Gray Backgrounds */
-    --muted: 210 20% 98%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted: Very Light Gray */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Accent: Success Green */
-    --accent: 142 76% 36%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Subtle Hover State */
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 10%;
 
-    /* Destructive: Alert Red */
-    --destructive: 0 84% 60%;
+    /* Destructive: Clean Red */
+    --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    /* Borders & Inputs - Subtle */
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
     --ring: 0 0% 10%;
 
-    /* Border Radius */
-    --radius: 0.5rem;
+    /* Border Radius - Conservative */
+    --radius: 0.375rem;
 
-    /* Sidebar - Clean Light Professional */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 215 25% 15%;
+    /* Sidebar - Apollo Style */
+    --sidebar-background: 0 0% 97%;
+    --sidebar-foreground: 0 0% 10%;
     --sidebar-primary: 0 0% 10%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 98%;
+    --sidebar-accent: 0 0% 94%;
     --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 214 32% 91%;
+    --sidebar-border: 0 0% 90%;
     --sidebar-ring: 0 0% 10%;
 
-    /* Additional Design Tokens */
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
+    /* Apollo Semantic Colors */
+    --success: 142 71% 45%;
+    --warning: 25 95% 53%;
     --info: 199 89% 48%;
+    
+    /* Apollo Badge Colors */
+    --badge-critical: 0 85% 60%;
+    --badge-important: 25 95% 53%;
+    --badge-excellent: 142 71% 45%;
+    --badge-neutral: 0 0% 60%;
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
