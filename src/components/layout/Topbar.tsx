@@ -144,7 +144,7 @@ export function Topbar() {
               <span className="hidden sm:inline">Nuevo</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent side="left" align="start">
             <DropdownMenuItem onClick={() => setMandatoDrawerOpen(true)}>
               <Briefcase className="mr-2 h-4 w-4" />
               Nuevo Mandato
