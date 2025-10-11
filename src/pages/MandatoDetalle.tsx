@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, Target, ListTodo, Clock, Building2, DollarSign, BarChart3 } from "lucide-react";
+import { FileText, Target, ListTodo, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { useMandatoDetalle } from "@/hooks/useMandatoDetalle";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +17,6 @@ import { DocumentosTab } from "@/features/mandatos/tabs/DocumentosTab";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
-import { MandatoActionsPanel } from "@/components/mandatos/MandatoActionsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import type { TimeEntry, TimeStats } from "@/types";
@@ -70,102 +68,112 @@ export default function MandatoDetalle() {
   if (!mandato) return <div>Mandato no encontrado</div>;
 
   return (
-    <div className="p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-          <MandatoHeader mandato={mandato} onDelete={handleEliminar} />
-          <MandatoKPIs mandato={mandato} />
+    <div className="space-y-6">
+      <MandatoHeader
+        mandato={mandato}
+        onDelete={handleEliminar}
+      />
 
-          <Tabs defaultValue="resumen" className="w-full">
-            <TabsList className="bg-muted/50 p-1">
-              <TabsTrigger value="resumen" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600 rounded-b-none">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Resumen
-              </TabsTrigger>
-              <TabsTrigger value="finanzas" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-green-600 rounded-b-none">
-                <DollarSign className="w-5 h-5 mr-2" />
-                Finanzas
-              </TabsTrigger>
-              <TabsTrigger value="targets" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-b-none">
-                <Building2 className="w-5 h-5 mr-2" />
-                Empresas
-                {targetsCount > 0 && <Badge variant="secondary" className="ml-2">{targetsCount}</Badge>}
-              </TabsTrigger>
-              {mandato.tipo === "compra" && (
-                <TabsTrigger value="checklist" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-b-none">
-                  <ListTodo className="w-5 h-5 mr-2" />
-                  Checklist
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="documentos" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-gray-600 rounded-b-none">
-                <FileText className="w-5 h-5 mr-2" />
-                Documentos
-                {documentos.length > 0 && <Badge variant="secondary" className="ml-2">{documentos.length}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="horas" className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-b-none">
-                <Clock className="w-5 h-5 mr-2" />
-                Horas
-              </TabsTrigger>
-            </TabsList>
+      <MandatoKPIs mandato={mandato} />
 
-            <TabsContent value="resumen">
-              <ResumenTab mandato={mandato} onAddContacto={() => setOpenContactoDrawer(true)} />
-            </TabsContent>
+      <Tabs defaultValue="resumen" className="w-full">
+        <TabsList>
+          <TabsTrigger value="resumen">
+            <FileText className="w-4 h-4 mr-2" />
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger value="finanzas">
+            <Target className="w-4 h-4 mr-2" />
+            Finanzas
+          </TabsTrigger>
+          <TabsTrigger value="targets">
+            Targets ({targetsCount})
+          </TabsTrigger>
+          {mandato.tipo === "compra" && (
+            <TabsTrigger value="checklist">
+              <ListTodo className="w-4 h-4 mr-2" />
+              Checklist M&A
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="documentos">
+            <FileText className="w-4 h-4 mr-2" />
+            Documentos ({documentos.length})
+          </TabsTrigger>
+          <TabsTrigger value="horas">
+            <Clock className="w-4 h-4 mr-2" />
+            Horas
+          </TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="finanzas">
-              <FinanzasTab mandatoId={id!} />
-            </TabsContent>
-
-            <TabsContent value="targets">
-              <TargetsTab mandato={mandato} onRefresh={refetch} />
-            </TabsContent>
-
-            {mandato.tipo === "compra" && (
-              <TabsContent value="checklist">
-                <ChecklistTab mandato={mandato} />
-              </TabsContent>
-            )}
-
-            <TabsContent value="documentos">
-              <DocumentosTab mandatoId={id!} documentos={documentos} onRefresh={refetchDocumentos} />
-            </TabsContent>
-
-            <TabsContent value="horas" className="space-y-6">
-              <div className="flex justify-end">
-                <Button onClick={() => setTimeDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Registrar Tiempo
-                </Button>
-              </div>
-              {timeStats && <TimeTrackingStats stats={timeStats} />}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Entradas de Tiempo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <TimeEntriesTable entries={timeEntries} currentUserId={user?.id || ''} isAdmin={isAdmin} onRefresh={loadTimeEntries} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <div className="lg:col-span-1">
-          <MandatoActionsPanel
-            onRegistrarTiempo={() => setTimeDialogOpen(true)}
-            onCrearTarea={() => {}}
-            onSubirDocumento={() => {}}
-            onAñadirEmpresa={() => {}}
-            onProgramarReunion={() => {}}
-            onVerTimeline={() => {}}
-            onEditar={() => {}}
-            onEliminar={handleEliminar}
+        <TabsContent value="resumen">
+          <ResumenTab
+            mandato={mandato}
+            onAddContacto={() => setOpenContactoDrawer(true)}
           />
-        </div>
-      </div>
+        </TabsContent>
 
-      <NuevoContactoDrawer open={openContactoDrawer} onOpenChange={setOpenContactoDrawer} onSuccess={refetch} mandatoId={id} />
-      <TimeTrackingDialog open={timeDialogOpen} onOpenChange={setTimeDialogOpen} mandatoId={id!} onSuccess={loadTimeEntries} />
+        <TabsContent value="finanzas">
+          <FinanzasTab mandatoId={id!} />
+        </TabsContent>
+
+        <TabsContent value="targets">
+          <TargetsTab mandato={mandato} onRefresh={refetch} />
+        </TabsContent>
+
+        {mandato.tipo === "compra" && (
+          <TabsContent value="checklist">
+            <ChecklistTab mandato={mandato} />
+          </TabsContent>
+        )}
+
+        <TabsContent value="documentos">
+          <DocumentosTab
+            mandatoId={id!}
+            documentos={documentos}
+            onRefresh={refetchDocumentos}
+          />
+        </TabsContent>
+
+        <TabsContent value="horas" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Registro de Horas</h3>
+            <Button onClick={() => setTimeDialogOpen(true)}>
+              <Clock className="w-4 h-4 mr-2" />
+              Registrar Tiempo
+            </Button>
+          </div>
+
+          {timeStats && <TimeTrackingStats stats={timeStats} />}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Entradas de Tiempo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TimeEntriesTable
+                entries={timeEntries}
+                currentUserId={user?.id || ''}
+                isAdmin={isAdmin}
+                onRefresh={loadTimeEntries}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <NuevoContactoDrawer
+        open={openContactoDrawer}
+        onOpenChange={setOpenContactoDrawer}
+        onSuccess={refetch}
+        mandatoId={id}
+      />
+
+      <TimeTrackingDialog
+        open={timeDialogOpen}
+        onOpenChange={setTimeDialogOpen}
+        mandatoId={id!}
+        onSuccess={loadTimeEntries}
+      />
     </div>
   );
 }
