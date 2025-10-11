@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { findOrCreateEmpresa, findMandato } from "./entityLinker";
 import { validateMandatoRow } from "./validator";
+import { normalizeMandatoRow } from "./columnNormalizer";
 import type { ImportConfig, ImportResult } from "@/hooks/useImportacion";
 
 export const importMandato = async (
@@ -13,16 +14,18 @@ export const importMandato = async (
   config: ImportConfig,
   importLogId: string
 ): Promise<ImportResult> => {
-  const name = row.titulo || row.nombre || row.deal_name || `Mandato ${rowIndex + 1}`;
+  // Normalizar la fila primero (mapeo flexible de columnas)
+  const normalizedRow = normalizeMandatoRow(row);
+  const name = normalizedRow.titulo || `Mandato ${rowIndex + 1}`;
 
   try {
-    // 1. Validar datos
-    const validation = validateMandatoRow(row);
+    // 1. Validar datos normalizados
+    const validation = validateMandatoRow(normalizedRow);
     if (!validation.isValid) {
       return {
         name,
         status: 'error',
-        message: validation.errors.map(e => e.message).join('; '),
+        message: `Fila ${rowIndex + 1}: ${validation.errors.map(e => e.message).join('; ')}`,
         rowIndex
       };
     }
@@ -30,18 +33,17 @@ export const importMandato = async (
     // 2. Crear o encontrar empresa
     const empresa = await findOrCreateEmpresa(
       {
-        nombre: row.empresa_nombre || row.company_name || 'Sin nombre',
-        cif: row.empresa_cif || row.cif,
-        sector: row.sector || row.industry || 'Sin clasificar',
-        sitio_web: row.sitio_web || row.website
+        nombre: normalizedRow.empresa_nombre || 'Sin nombre',
+        cif: normalizedRow.empresa_cif,
+        sector: normalizedRow.sector || 'Sin clasificar',
+        sitio_web: normalizedRow.sitio_web
       },
       importLogId
     );
 
-    // 3. Verificar si el mandato ya existe
+    // 3. Verificar si el mandato ya existe (por título + empresa)
     const existingMandato = await findMandato({
-      brevo_id: row.brevo_id || row.deal_id,
-      titulo: row.titulo || row.deal_name,
+      titulo: normalizedRow.titulo,
       empresa_id: empresa.id
     });
 
@@ -50,46 +52,21 @@ export const importMandato = async (
         return {
           name,
           status: 'skipped',
-          message: 'Mandato duplicado (omitido)',
-          rowIndex
-        };
-      } else if (config.estrategiaDuplicados === 'update') {
-        // Actualizar mandato existente
-        const { error } = await supabase
-          .from('mandatos')
-          .update({
-            tipo: (row.tipo || row.type || 'venta').toLowerCase(),
-            estado: (row.estado || row.status || 'prospecto').toLowerCase(),
-            valor: parseFloat(row.valor || row.value || row.amount || '0') || null,
-            descripcion: row.descripcion || row.description || row.titulo || name,
-            fecha_inicio: row.fecha_inicio || row.start_date || null,
-            brevo_id: row.brevo_id || row.deal_id || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingMandato.entity.id);
-
-        if (error) throw error;
-
-        return {
-          name,
-          status: 'success',
-          message: 'Mandato actualizado',
+          message: `⏭️ Ya existe '${name}' para ${empresa.nombre}`,
           rowIndex
         };
       }
-      // create_new: continuar con la creación
+      // create_new: permitir duplicados
     }
 
     // 4. Crear nuevo mandato
     const mandatoData: any = {
-      tipo: (row.tipo || row.type || 'venta').toLowerCase(),
+      tipo: normalizedRow.tipo || 'venta',
       empresa_principal_id: empresa.id,
-      estado: (row.estado || row.status || 'prospecto').toLowerCase(),
-      valor: parseFloat(row.valor || row.value || row.amount || '0') || null,
-      descripcion: row.descripcion || row.description || row.titulo || name,
-      fecha_inicio: row.fecha_inicio || row.start_date || null,
-      fecha_cierre: row.fecha_cierre || row.close_date || null,
-      brevo_id: row.brevo_id || row.deal_id || null,
+      estado: normalizedRow.estado || 'prospecto',
+      valor: normalizedRow.valor ? parseFloat(normalizedRow.valor) : null,
+      descripcion: normalizedRow.descripcion || normalizedRow.titulo || name,
+      fecha_inicio: normalizedRow.fecha_inicio || null,
       import_log_id: importLogId
     };
 

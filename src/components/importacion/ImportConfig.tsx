@@ -13,9 +13,9 @@ export const ImportConfigComponent = ({ config, onChange }: ImportConfigProps) =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>⚙️ Configuración de Importación</CardTitle>
+        <CardTitle>⚙️ Configuración</CardTitle>
         <CardDescription>
-          Personaliza cómo se procesarán los datos
+          Opciones de importación
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -23,7 +23,7 @@ export const ImportConfigComponent = ({ config, onChange }: ImportConfigProps) =
           <div className="space-y-0.5">
             <Label htmlFor="auto-create">Crear empresas automáticamente</Label>
             <p className="text-sm text-muted-foreground">
-              Si una empresa no existe, crearla durante la importación
+              Si la empresa no existe, se creará durante la importación
             </p>
           </div>
           <Switch
@@ -35,40 +35,11 @@ export const ImportConfigComponent = ({ config, onChange }: ImportConfigProps) =
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="validate-cif">Validar formato CIF</Label>
-            <p className="text-sm text-muted-foreground">
-              Verificar que los CIFs tengan formato válido español
-            </p>
-          </div>
-          <Switch
-            id="validate-cif"
-            checked={config.validarCIF}
-            onCheckedChange={(checked) =>
-              onChange({ ...config, validarCIF: checked })
-            }
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="sync-brevo">Sincronizar con Brevo</Label>
-            <p className="text-sm text-muted-foreground">
-              Enviar contactos a Brevo automáticamente
-            </p>
-          </div>
-          <Switch
-            id="sync-brevo"
-            checked={config.sincronizarBrevo}
-            onCheckedChange={(checked) =>
-              onChange({ ...config, sincronizarBrevo: checked })
-            }
-          />
-        </div>
-
         <div className="space-y-3">
           <Label>Estrategia para duplicados</Label>
+          <p className="text-sm text-muted-foreground">
+            Qué hacer si ya existe una oportunidad con el mismo título y empresa
+          </p>
           <RadioGroup
             value={config.estrategiaDuplicados}
             onValueChange={(value) =>
@@ -78,19 +49,13 @@ export const ImportConfigComponent = ({ config, onChange }: ImportConfigProps) =
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="skip" id="skip" />
               <Label htmlFor="skip" className="font-normal cursor-pointer">
-                <span className="font-medium">Omitir</span> - No importar registros duplicados
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="update" id="update" />
-              <Label htmlFor="update" className="font-normal cursor-pointer">
-                <span className="font-medium">Actualizar</span> - Sobrescribir datos existentes
+                <span className="font-medium">Omitir duplicados</span> - No importar si ya existe
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="create_new" id="create_new" />
               <Label htmlFor="create_new" className="font-normal cursor-pointer">
-                <span className="font-medium">Crear nuevo</span> - Permitir duplicados
+                <span className="font-medium">Permitir duplicados</span> - Crear siempre
               </Label>
             </div>
           </RadioGroup>

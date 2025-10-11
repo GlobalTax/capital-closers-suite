@@ -1,0 +1,4 @@
+titulo,tipo,empresa_nombre,sector,valor,estado,fecha_inicio,descripcion
+Venta Empresa Tecnología,venta,TechCorp SL,Tecnología,500000,prospecto,2024-01-15,Cliente interesado en venta de participación mayoritaria
+Compra Fábrica Textil,compra,Textiles SA,Manufactura,300000,en_negociacion,2024-02-01,Adquisición de activos productivos
+Venta Startup Fintech,venta,FinPay Digital,Fintech,450000,prospecto,2024-03-10,Plataforma de pagos digitales con 5000 usuarios activos

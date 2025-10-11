@@ -155,17 +155,18 @@ export default function ImportarDatos() {
 
   const downloadTemplate = (type: ImportType) => {
     const templates = {
-      mandatos: `titulo,tipo,empresa_nombre,empresa_cif,sector,valor,estado,descripcion,fecha_inicio
-"Venta ACME SL",venta,"ACME SL",B12345678,Tecnología,500000,prospecto,"Venta de empresa tecnológica",2024-01-01
-"Compra Servicios XYZ",compra,"XYZ Corp",B87654321,Servicios,300000,activo,"Adquisición de empresa de servicios",2024-02-01`,
+      mandatos: `titulo,tipo,empresa_nombre,sector,valor,estado,fecha_inicio,descripcion
+Venta Empresa Tecnología,venta,TechCorp SL,Tecnología,500000,prospecto,2024-01-15,Cliente interesado en venta de participación mayoritaria
+Compra Fábrica Textil,compra,Textiles SA,Manufactura,300000,en_negociacion,2024-02-01,Adquisición de activos productivos
+Venta Startup Fintech,venta,FinPay Digital,Fintech,450000,prospecto,2024-03-10,Plataforma de pagos digitales con 5000 usuarios activos`,
       
-      contactos: `nombre,apellidos,email,telefono,cargo,empresa_nombre,empresa_cif,linkedin,notas
-Juan,García,juan@empresa.com,+34600000000,Director,"ACME SL",B12345678,https://linkedin.com/in/juan,Cliente prioritario
-María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linkedin.com/in/maria,Contacto caliente`,
+      contactos: `nombre,apellidos,email,telefono,cargo,empresa_nombre,linkedin
+Juan,García,juan@empresa.com,+34600000000,Director Comercial,TechCorp SL,https://linkedin.com/in/juan
+María,López,maria@xyz.com,+34600000001,CEO,Textiles SA,https://linkedin.com/in/maria`,
       
-      empresas: `nombre,cif,sector,subsector,ubicacion,facturacion,empleados,sitio_web
-"ACME SL",B12345678,Tecnología,"Software",Madrid,1000000,50,https://acme.com
-"XYZ Corp",B87654321,Servicios,Consultoría,Barcelona,500000,25,https://xyz.com`
+      empresas: `nombre,cif,sector,ubicacion,facturacion,empleados
+TechCorp SL,B12345678,Tecnología,Madrid,1000000,50
+Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
     };
 
     const content = templates[type];
@@ -182,8 +183,8 @@ María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linked
     document.body.removeChild(link);
 
     toast({
-      title: "📥 Plantilla descargada",
-      description: `plantilla_${type}.csv`,
+      title: "✅ Plantilla descargada",
+      description: `Completa el archivo plantilla_${type}.csv y súbelo aquí`,
     });
   };
 
@@ -194,9 +195,9 @@ María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linked
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">📤 Importación Masiva de Datos</h1>
+          <h1 className="text-3xl font-bold">📤 Importar Oportunidades</h1>
           <p className="text-muted-foreground mt-2">
-            Importa mandatos, contactos y empresas desde archivos CSV
+            Importa oportunidades comerciales desde archivos CSV
           </p>
         </div>
         
@@ -224,7 +225,7 @@ María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linked
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>1️⃣ Seleccionar Archivo CSV</span>
+                <span>1️⃣ Subir Archivo CSV</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -236,7 +237,7 @@ María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linked
                 </Button>
               </CardTitle>
               <CardDescription>
-                Arrastra un archivo CSV o haz clic para seleccionar (máximo 5MB)
+                Descarga la plantilla, complétala y súbela aquí (máximo 5MB)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -263,10 +264,22 @@ María,López,maria@xyz.com,+34600000001,CEO,"XYZ Corp",B87654321,https://linked
               </div>
 
               {parsedData && (
-                <Alert className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    ✅ Archivo cargado: {parsedData.rows.length} filas detectadas
+                <Alert className="mt-4 border-green-500/50 bg-green-500/10">
+                  <AlertCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">
+                    ✅ Archivo cargado: <strong>{parsedData.rows.length} oportunidades</strong> detectadas
+                    {totalErrors > 0 && ` · ${totalErrors} con errores que deben corregirse`}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {!parsedData && (
+                <Alert className="mt-4 border-blue-500/50 bg-blue-500/10">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-300">
+                    <strong>📝 Columnas requeridas:</strong> titulo, tipo (venta/compra), empresa_nombre
+                    <br />
+                    <strong>💡 Tip:</strong> El validador acepta variaciones como "nombre", "company", etc.
                   </AlertDescription>
                 </Alert>
               )}

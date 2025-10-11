@@ -19,6 +19,33 @@ const PHONE_E164_REGEX = /^\+?[1-9]\d{1,14}$/;
 const CIF_REGEX = /^[A-Z]\d{8}$/;
 const URL_REGEX = /^https?:\/\/.+/;
 
+// Mapeo flexible de nombres de columnas
+const columnAliases: Record<string, string[]> = {
+  titulo: ['titulo', 'título', 'name', 'nombre', 'oportunidad', 'deal_name', 'deal'],
+  tipo: ['tipo', 'type', 'deal_type', 'transaction_type'],
+  empresa_nombre: ['empresa_nombre', 'empresa', 'company', 'company_name', 'cliente', 'client'],
+  empresa_cif: ['empresa_cif', 'cif', 'tax_id', 'vat'],
+  valor: ['valor', 'value', 'amount', 'importe', 'price'],
+  estado: ['estado', 'status', 'phase', 'fase', 'stage'],
+  fecha_inicio: ['fecha_inicio', 'fecha', 'start_date', 'date', 'created'],
+  descripcion: ['descripcion', 'descripción', 'description', 'notes', 'notas']
+};
+
+// Función para encontrar el valor de una columna usando aliases
+const getColumnValue = (row: Record<string, string>, field: string): string | undefined => {
+  const aliases = columnAliases[field] || [field];
+  
+  for (const alias of aliases) {
+    // Buscar ignorando mayúsculas/minúsculas
+    const key = Object.keys(row).find(k => k.toLowerCase() === alias.toLowerCase());
+    if (key && row[key]) {
+      return row[key].trim();
+    }
+  }
+  
+  return undefined;
+};
+
 export const validateEmail = (email: string): boolean => {
   return EMAIL_REGEX.test(email);
 };
@@ -49,58 +76,78 @@ export const validateNumber = (numStr: string): boolean => {
   return !isNaN(parseFloat(numStr));
 };
 
-// Validación de mandatos
+// Validación de mandatos con mapeo flexible de columnas
 export const validateMandatoRow = (row: Record<string, string>): ValidationResult => {
   const errors: ValidationError[] = [];
 
-  // Campos requeridos
-  if (!row.titulo || row.titulo.trim().length < 2) {
+  // Obtener valores usando aliases
+  const titulo = getColumnValue(row, 'titulo');
+  const tipo = getColumnValue(row, 'tipo');
+  const empresaNombre = getColumnValue(row, 'empresa_nombre');
+  const empresaCif = getColumnValue(row, 'empresa_cif');
+  const valor = getColumnValue(row, 'valor');
+  const fechaInicio = getColumnValue(row, 'fecha_inicio');
+  const estado = getColumnValue(row, 'estado');
+
+  // Campos requeridos con mensajes más claros
+  if (!titulo || titulo.length < 2) {
     errors.push({
       field: 'titulo',
-      message: 'El título es requerido (mínimo 2 caracteres)',
+      message: '❌ Falta la columna "titulo" o está vacía. Sugerencia: usa columnas como "titulo", "nombre" o "deal_name"',
       severity: 'error'
     });
   }
 
-  if (!row.tipo || !['compra', 'venta'].includes(row.tipo.toLowerCase())) {
+  if (!tipo || !['compra', 'venta'].includes(tipo.toLowerCase())) {
     errors.push({
       field: 'tipo',
-      message: 'El tipo debe ser "compra" o "venta"',
+      message: '❌ El tipo debe ser "venta" o "compra" (mayúsculas/minúsculas no importan)',
       severity: 'error'
     });
   }
 
-  if (!row.empresa_nombre || row.empresa_nombre.trim().length < 2) {
+  if (!empresaNombre || empresaNombre.length < 2) {
     errors.push({
       field: 'empresa_nombre',
-      message: 'El nombre de empresa es requerido',
+      message: '❌ Falta el nombre de la empresa. Sugerencia: usa columnas como "empresa_nombre", "empresa" o "company"',
       severity: 'error'
     });
   }
 
-  // Validación de CIF si existe
-  if (row.empresa_cif && !validateCIF(row.empresa_cif)) {
+  // Validaciones opcionales pero útiles
+  if (empresaCif && !validateCIF(empresaCif)) {
     errors.push({
       field: 'empresa_cif',
-      message: 'El CIF debe tener formato válido (ej: B12345678)',
+      message: '⚠️ El CIF no tiene formato válido (ej: B12345678). Se importará igualmente.',
       severity: 'warning'
     });
   }
 
-  // Validación de valores numéricos
-  if (row.valor && !validateNumber(row.valor)) {
+  if (valor) {
+    const valorNum = parseFloat(valor.replace(/[^0-9.-]/g, ''));
+    if (isNaN(valorNum) || valorNum < 0) {
+      errors.push({
+        field: 'valor',
+        message: '❌ El valor debe ser un número positivo',
+        severity: 'error'
+      });
+    }
+  }
+
+  if (fechaInicio && !validateDate(fechaInicio)) {
     errors.push({
-      field: 'valor',
-      message: 'El valor debe ser un número válido',
-      severity: 'error'
+      field: 'fecha_inicio',
+      message: '⚠️ La fecha no es válida. Formato recomendado: YYYY-MM-DD (ej: 2024-01-15)',
+      severity: 'warning'
     });
   }
 
-  // Validación de fechas
-  if (row.fecha_inicio && !validateDate(row.fecha_inicio)) {
+  // Validar estado si existe
+  const estadosValidos = ['prospecto', 'en_negociacion', 'ganado', 'perdido', 'cancelado'];
+  if (estado && !estadosValidos.includes(estado.toLowerCase().replace(/\s+/g, '_'))) {
     errors.push({
-      field: 'fecha_inicio',
-      message: 'La fecha de inicio no es válida',
+      field: 'estado',
+      message: `⚠️ Estado no reconocido. Válidos: ${estadosValidos.join(', ')}. Se usará "prospecto" por defecto.`,
       severity: 'warning'
     });
   }
