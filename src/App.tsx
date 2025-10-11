@@ -25,6 +25,7 @@ import Perfil from "./pages/Perfil";
 import MisHoras from "./pages/MisHoras";
 import HorasEquipo from "./pages/HorasEquipo";
 import AuditLogs from "./pages/AuditLogs";
+import ImportarMandatos from "./pages/ImportarMandatos";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ function AppContent() {
         <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
         <Route path="/horas-equipo" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><HorasEquipo /></AppLayout></ProtectedRoute>} />
         <Route path="/audit-logs" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><AuditLogs /></AppLayout></ProtectedRoute>} />
+        <Route path="/importar-mandatos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarMandatos /></AppLayout></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
