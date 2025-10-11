@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Clock,
   Shield,
+  Upload,
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,6 +49,7 @@ const otherMenuItems = [
 ];
 
 const superAdminItems = [
+  { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },
 ];
