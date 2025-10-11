@@ -1,51 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle } from "lucide-react";
-import { fetchTareas, updateTarea, createTarea } from "@/services/tareas";
+import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
 import type { Tarea, TareaEstado } from "@/types";
 import { toast } from "sonner";
 import {
   DndContext,
   DragEndEvent,
-  DragOverlay,
   DragStartEvent,
+  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DataTableEnhanced, Column } from "@/components/shared/DataTableEnhanced";
-import { BadgeStatus } from "@/components/shared/BadgeStatus";
-import { Toolbar } from "@/components/shared/Toolbar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format, isPast } from "date-fns";
-import { cn } from "@/lib/utils";
 import { NuevaTareaDrawer } from "@/components/tareas/NuevaTareaDrawer";
+import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TareaCardProps {
   tarea: Tarea;
+  isDragging?: boolean;
 }
 
-function TareaCard({ tarea }: TareaCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: tarea.id });
+function TareaCard({ tarea, isDragging = false }: TareaCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: tarea.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -53,74 +43,68 @@ function TareaCard({ tarea }: TareaCardProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const getPrioridadVariant = (prioridad: string) => {
-    if (prioridad === "alta") return "destructive";
-    if (prioridad === "media") return "default";
-    return "secondary";
+  const getPriorityColor = (prioridad: string) => {
+    switch (prioridad) {
+      case "urgente": return "destructive";
+      case "alta": return "default";
+      case "media": return "secondary";
+      case "baja": return "outline";
+      default: return "secondary";
+    }
   };
 
-  const getPrioridadLabel = (prioridad: string) => {
-    if (prioridad === "alta") return "Alta";
-    if (prioridad === "media") return "Media";
-    return "Baja";
-  };
+  const isOverdue = tarea.fecha_vencimiento && new Date(tarea.fecha_vencimiento) < new Date();
 
   return (
-    <Card
+    <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={cn(
-        "cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-        isPast(new Date(tarea.fecha_vencimiento)) &&
-          tarea.estado !== "completada" &&
-          "border-destructive"
-      )}
+      className={`p-3 bg-card border rounded-lg cursor-move hover:shadow-md transition-shadow ${
+        isOverdue && tarea.estado !== "completada" ? "border-destructive" : ""
+      }`}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-medium">{tarea.titulo}</CardTitle>
-          <Badge variant={getPrioridadVariant(tarea.prioridad)} className="text-xs">
-            {getPrioridadLabel(tarea.prioridad)}
+      <h4 className="font-medium text-sm mb-2">{tarea.titulo}</h4>
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        {tarea.prioridad && (
+          <Badge variant={getPriorityColor(tarea.prioridad)} className="text-xs">
+            {tarea.prioridad}
           </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pb-4">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        )}
+        {tarea.fecha_vencimiento && (
           <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>{tarea.fecha_vencimiento}</span>
+            <Calendar className="h-3 w-3" />
+            <span>{format(new Date(tarea.fecha_vencimiento), "dd MMM", { locale: es })}</span>
           </div>
-          {tarea.asignado_a && (
-            <div className="flex items-center gap-1">
-              <User className="w-3 h-3" />
-              <span>{tarea.asignado_a}</span>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+        {tarea.asignado_a && (
+          <div className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            <span>{tarea.asignado_a}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export default function Tareas() {
-  const [tareas, setTareas] = useState<Tarea[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTarea, setActiveTarea] = useState<Tarea | null>(null);
+  const { data: tareas = [], isLoading, refetch } = useTareas();
+  const updateMutation = useUpdateTarea();
+  const createMutation = useCreateTarea();
+
+  const [filtroResponsable, setFiltroResponsable] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<TareaEstado | "">("");
+  const [filtroPrioridad, setFiltroPrioridad] = useState<string>("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("kanban");
-  
-  // Filtros
-  const [responsablesFiltro, setResponsablesFiltro] = useState<string[]>([]);
-  const [estadosFiltro, setEstadosFiltro] = useState<TareaEstado[]>([]);
-  const [prioridadesFiltro, setPrioridadesFiltro] = useState<string[]>([]);
-  
-  // Quick add state
-  const [showQuickAdd, setShowQuickAdd] = useState<TareaEstado | null>(null);
-  const [quickAddData, setQuickAddData] = useState({ titulo: "", asignado: "", fechaVencimiento: new Date() });
-  
-  // Drawer state
-  const [showNuevaTareaDrawer, setShowNuevaTareaDrawer] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [nuevasTareas, setNuevasTareas] = useState<{ [key: string]: string }>({
+    pendiente: "",
+    en_progreso: "",
+    completada: "",
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -130,31 +114,13 @@ export default function Tareas() {
     })
   );
 
-  useEffect(() => {
-    cargarTareas();
-  }, []);
-
-  const cargarTareas = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchTareas();
-      setTareas(data);
-    } catch (error) {
-      console.error("Error cargando tareas:", error);
-      toast.error("Error al cargar las tareas");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDragStart = (event: DragStartEvent) => {
-    const tarea = tareas.find((t) => t.id === event.active.id);
-    setActiveTarea(tarea || null);
+    setActiveDragId(event.active.id as string);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveTarea(null);
+    setActiveDragId(null);
 
     if (!over) return;
 
@@ -164,138 +130,122 @@ export default function Tareas() {
     const tarea = tareas.find((t) => t.id === tareaId);
     if (!tarea || tarea.estado === nuevoEstado) return;
 
-    // Optimistic update
-    setTareas((prev) =>
-      prev.map((t) => (t.id === tareaId ? { ...t, estado: nuevoEstado } : t))
-    );
-
     try {
-      await updateTarea(tareaId, { estado: nuevoEstado });
-      toast.success("Tarea actualizada");
+      await updateMutation.mutateAsync({
+        id: tareaId,
+        data: { estado: nuevoEstado },
+      });
+      refetch();
     } catch (error) {
-      console.error("Error actualizando tarea:", error);
-      toast.error("Error al actualizar la tarea");
-      // Revertir cambio
-      setTareas((prev) =>
-        prev.map((t) => (t.id === tareaId ? tarea : t))
-      );
+      console.error("Error al actualizar tarea:", error);
     }
   };
 
-  // Responsables únicos
-  const responsablesUnicos = Array.from(new Set(tareas.map((t) => t.asignado_a).filter(Boolean)));
-  
-  // Filtrado
-  const tareasFiltradas = tareas.filter((t) => {
-    if (responsablesFiltro.length && !responsablesFiltro.includes(t.asignado_a || "")) return false;
-    if (estadosFiltro.length && !estadosFiltro.includes(t.estado)) return false;
-    if (prioridadesFiltro.length && !prioridadesFiltro.includes(t.prioridad)) return false;
-    return true;
-  });
-  
-  const getTareasPorEstado = (estado: TareaEstado) => {
-    return tareasFiltradas.filter((t) => t.estado === estado);
-  };
-  
-  // Contador de tareas vencidas
-  const tareasVencidas = tareas.filter(
-    (t) => isPast(new Date(t.fecha_vencimiento)) && t.estado !== "completada"
-  );
-  
-  // Quick add handler
   const handleQuickAdd = async (estado: TareaEstado) => {
-    if (!quickAddData.titulo.trim() || !quickAddData.asignado) {
-      toast.error("Complete todos los campos obligatorios");
-      return;
-    }
-    
+    const titulo = nuevasTareas[estado].trim();
+    if (!titulo) return;
+
     try {
-      await createTarea({
-        titulo: quickAddData.titulo,
-        asignado_a: quickAddData.asignado,
-        fecha_vencimiento: format(quickAddData.fechaVencimiento, "yyyy-MM-dd"),
+      await createMutation.mutateAsync({
+        titulo,
         estado,
         prioridad: "media",
       });
-      
-      toast.success("Tarea creada");
-      setShowQuickAdd(null);
-      setQuickAddData({ titulo: "", asignado: "", fechaVencimiento: new Date() });
-      cargarTareas();
+      setNuevasTareas((prev) => ({ ...prev, [estado]: "" }));
+      refetch();
     } catch (error) {
-      toast.error("Error al crear la tarea");
+      console.error("Error al crear tarea:", error);
     }
   };
-  
-  const limpiarFiltros = () => {
-    setResponsablesFiltro([]);
-    setEstadosFiltro([]);
-    setPrioridadesFiltro([]);
+
+  const tareasFiltradas = tareas.filter((tarea) => {
+    if (filtroResponsable && tarea.asignado_a !== filtroResponsable) return false;
+    if (filtroEstado && tarea.estado !== filtroEstado) return false;
+    if (filtroPrioridad && tarea.prioridad !== filtroPrioridad) return false;
+    return true;
+  });
+
+  const responsablesUnicos = Array.from(new Set(tareas.map((t) => t.asignado_a).filter(Boolean)));
+  const prioridadesUnicas = Array.from(new Set(tareas.map((t) => t.prioridad).filter(Boolean)));
+
+  const tareasPorEstado = {
+    pendiente: tareasFiltradas.filter((t) => t.estado === "pendiente"),
+    en_progreso: tareasFiltradas.filter((t) => t.estado === "en_progreso"),
+    completada: tareasFiltradas.filter((t) => t.estado === "completada"),
   };
 
-  // Columnas para vista tabla
-  const columnasTabla: Column<Tarea>[] = [
+  const columnasTabla = [
     {
       key: "titulo",
-      label: "Título",
-      sortable: true,
-    },
-    {
-      key: "mandatoNombre",
-      label: "Mandato",
-      render: (value) => value || "-",
-    },
-    {
-      key: "asignado",
-      label: "Responsable",
-      render: (value) => value || "Sin asignar",
-    },
-    {
-      key: "fechaVencimiento",
-      label: "Vencimiento",
-      sortable: true,
-      render: (value, row) => {
-        const isOverdue = isPast(new Date(value)) && row.estado !== "completada";
-        return (
-          <div className="flex items-center gap-2">
-            {isOverdue && <AlertCircle className="w-4 h-4 text-destructive" />}
-            <span className={cn(isOverdue && "text-destructive font-medium")}>{value}</span>
-          </div>
-        );
-      },
+      label: "Tarea",
+      render: (value: string, row: Tarea) => (
+        <div>
+          <div className="font-medium">{value}</div>
+          {row.descripcion && <div className="text-sm text-muted-foreground">{row.descripcion}</div>}
+        </div>
+      ),
     },
     {
       key: "estado",
       label: "Estado",
-      render: (value) => <BadgeStatus status={value} type="tarea" />,
+      render: (value: string) => {
+        const estadoLabels = {
+          pendiente: { label: "Pendiente", variant: "secondary" as const },
+          en_progreso: { label: "En Progreso", variant: "default" as const },
+          completada: { label: "Completada", variant: "outline" as const },
+        };
+        const estado = estadoLabels[value as TareaEstado] || estadoLabels.pendiente;
+        return <Badge variant={estado.variant}>{estado.label}</Badge>;
+      },
     },
     {
       key: "prioridad",
       label: "Prioridad",
-      render: (value) => (
-        <Badge
-          variant={
-            value === "alta" ? "destructive" : value === "media" ? "default" : "secondary"
-          }
-        >
-          {value === "alta" ? "Alta" : value === "media" ? "Media" : "Baja"}
-        </Badge>
-      ),
+      render: (value: string) => {
+        const prioridadColors = {
+          urgente: "destructive" as const,
+          alta: "default" as const,
+          media: "secondary" as const,
+          baja: "outline" as const,
+        };
+        return <Badge variant={prioridadColors[value as keyof typeof prioridadColors] || "secondary"}>{value}</Badge>;
+      },
+    },
+    {
+      key: "asignado_a",
+      label: "Responsable",
+      render: (value: string) => value || "Sin asignar",
+    },
+    {
+      key: "fecha_vencimiento",
+      label: "Vencimiento",
+      render: (value: string) => {
+        if (!value) return "Sin fecha";
+        const fecha = new Date(value);
+        const isOverdue = fecha < new Date();
+        return (
+          <span className={isOverdue ? "text-destructive font-medium" : ""}>
+            {format(fecha, "dd/MM/yyyy", { locale: es })}
+          </span>
+        );
+      },
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div>
-        <PageHeader
-          title="Tareas"
-          description="Gestión de tareas y actividades del equipo"
-          actionLabel="Nueva Tarea"
-          onAction={() => setShowNuevaTareaDrawer(true)}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-6">
+        <PageHeader title="Tareas" description="Gestiona las tareas del equipo" />
+        <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-32 animate-pulse" />
+            <Card key={i} className="p-4">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((j) => (
+                  <Skeleton key={j} className="h-20 w-full" />
+                ))}
+              </div>
+            </Card>
           ))}
         </div>
       </div>
@@ -303,261 +253,203 @@ export default function Tareas() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Tareas</h1>
-          <p className="text-muted-foreground mt-1">
-            Gestión de tareas y actividades del equipo
-          </p>
+          <h1 className="text-3xl font-semibold">Tareas</h1>
+          <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex border rounded-lg p-1">
+        <Button onClick={() => setDrawerOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nueva Tarea
+        </Button>
+      </div>
+
+      {/* Filtros y Vista Toggle */}
+      <Card className="p-4">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            {/* Filtro Responsable */}
+            {responsablesUnicos.length > 0 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Responsable:</span>
+                <div className="flex gap-1">
+                  <Badge
+                    variant={filtroResponsable === "" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setFiltroResponsable("")}
+                  >
+                    Todos
+                  </Badge>
+                  {responsablesUnicos.map((responsable) => (
+                    <Badge
+                      key={responsable}
+                      variant={filtroResponsable === responsable ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => setFiltroResponsable(responsable!)}
+                    >
+                      {responsable}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Filtro Estado */}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-muted-foreground">Estado:</span>
+              <div className="flex gap-1">
+                <Badge
+                  variant={filtroEstado === "" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFiltroEstado("")}
+                >
+                  Todos
+                </Badge>
+                <Badge
+                  variant={filtroEstado === "pendiente" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFiltroEstado("pendiente")}
+                >
+                  Pendiente
+                </Badge>
+                <Badge
+                  variant={filtroEstado === "en_progreso" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFiltroEstado("en_progreso")}
+                >
+                  En Progreso
+                </Badge>
+                <Badge
+                  variant={filtroEstado === "completada" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFiltroEstado("completada")}
+                >
+                  Completada
+                </Badge>
+              </div>
+            </div>
+
+            {/* Filtro Prioridad */}
+            {prioridadesUnicas.length > 0 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Prioridad:</span>
+                <div className="flex gap-1">
+                  <Badge
+                    variant={filtroPrioridad === "" ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setFiltroPrioridad("")}
+                  >
+                    Todas
+                  </Badge>
+                  {prioridadesUnicas.map((prioridad) => (
+                    <Badge
+                      key={prioridad}
+                      variant={filtroPrioridad === prioridad ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => setFiltroPrioridad(prioridad!)}
+                    >
+                      {prioridad}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Toggle Vista */}
+          <div className="flex gap-2">
             <Button
-              variant={vistaActual === "tabla" ? "secondary" : "ghost"}
+              variant={vistaActual === "tabla" ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaActual("tabla")}
             >
-              <TableIcon className="w-4 h-4" />
+              <TableIcon className="h-4 w-4 mr-2" />
+              Tabla
             </Button>
             <Button
-              variant={vistaActual === "kanban" ? "secondary" : "ghost"}
+              variant={vistaActual === "kanban" ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaActual("kanban")}
             >
-              <Columns className="w-4 h-4" />
+              <Columns className="h-4 w-4 mr-2" />
+              Kanban
             </Button>
           </div>
-          <Button onClick={() => setShowNuevaTareaDrawer(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nueva Tarea
-          </Button>
         </div>
-      </div>
-
-      {/* Toolbar con filtros */}
-      <Toolbar
-        filtros={
-          <>
-            <Select
-              value={responsablesFiltro[0] || "todos"}
-              onValueChange={(value) =>
-                setResponsablesFiltro(value === "todos" ? [] : [value])
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Responsable" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los responsables</SelectItem>
-                {responsablesUnicos.map((responsable) => (
-                  <SelectItem key={responsable} value={responsable}>
-                    {responsable}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={estadosFiltro[0] || "todos"}
-              onValueChange={(value) =>
-                setEstadosFiltro(value === "todos" ? [] : [value as TareaEstado])
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="pendiente">Pendiente</SelectItem>
-                <SelectItem value="en_progreso">En Progreso</SelectItem>
-                <SelectItem value="completada">Completada</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={prioridadesFiltro[0] || "todos"}
-              onValueChange={(value) =>
-                setPrioridadesFiltro(value === "todos" ? [] : [value])
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Prioridad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas las prioridades</SelectItem>
-                <SelectItem value="alta">Alta</SelectItem>
-                <SelectItem value="media">Media</SelectItem>
-                <SelectItem value="baja">Baja</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {tareasVencidas.length > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertCircle className="w-3 h-3" />
-                {tareasVencidas.length} vencida{tareasVencidas.length !== 1 ? "s" : ""}
-              </Badge>
-            )}
-          </>
-        }
-        acciones={
-          <>
-            {(responsablesFiltro.length > 0 ||
-              estadosFiltro.length > 0 ||
-              prioridadesFiltro.length > 0) && (
-              <Button variant="outline" size="sm" onClick={limpiarFiltros}>
-                Limpiar filtros
-              </Button>
-            )}
-          </>
-        }
-      />
+      </Card>
 
       {/* Vista Tabla */}
       {vistaActual === "tabla" && (
         <DataTableEnhanced
-          columns={columnasTabla}
           data={tareasFiltradas}
-          rowClassName={(row) =>
-            isPast(new Date(row.fecha_vencimiento)) && row.estado !== "completada"
-              ? "bg-destructive/5"
-              : ""
-          }
+          columns={columnasTabla}
         />
       )}
 
       {/* Vista Kanban */}
       {vistaActual === "kanban" && (
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(
-              [
-                { id: "pendiente", label: "Pendiente" },
-                { id: "en_progreso", label: "En Progreso" },
-                { id: "completada", label: "Completada" },
-              ] as const
-            ).map((columna) => {
-              const tareasColumna = getTareasPorEstado(columna.id as TareaEstado);
-              return (
-                <SortableContext
-                  key={columna.id}
-                  id={columna.id}
-                  items={tareasColumna.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-lg">{columna.label}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{tareasColumna.length}</Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setShowQuickAdd(columna.id);
-                            setQuickAddData({
-                              titulo: "",
-                              asignado: "",
-                              fechaVencimiento: new Date(),
-                            });
-                          }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-3 min-h-[400px] p-2 rounded-lg border-2 border-dashed border-muted">
-                      {/* Quick Add Form */}
-                      {showQuickAdd === columna.id && (
-                        <Card className="p-3 border-primary">
-                          <div className="space-y-2">
-                            <Input
-                              placeholder="Título de la tarea"
-                              value={quickAddData.titulo}
-                              onChange={(e) =>
-                                setQuickAddData({ ...quickAddData, titulo: e.target.value })
-                              }
-                            />
-                            <Select
-                              value={quickAddData.asignado}
-                              onValueChange={(value) =>
-                                setQuickAddData({ ...quickAddData, asignado: value })
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Responsable" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Juan Díaz">Juan Díaz</SelectItem>
-                                <SelectItem value="Ana Martínez">Ana Martínez</SelectItem>
-                                <SelectItem value="Pedro López">Pedro López</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start">
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  {format(quickAddData.fechaVencimiento, "PPP")}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={quickAddData.fechaVencimiento}
-                                  onSelect={(date) =>
-                                    date &&
-                                    setQuickAddData({ ...quickAddData, fechaVencimiento: date })
-                                  }
-                                  initialFocus
-                                  className="pointer-events-auto"
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => handleQuickAdd(columna.id)}
-                              >
-                                Crear
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setShowQuickAdd(null)}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(["pendiente", "en_progreso", "completada"] as TareaEstado[]).map((estado) => (
+              <SortableContext key={estado} items={tareasPorEstado[estado].map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                <Card className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold">
+                      {estado === "pendiente" ? "Pendiente" : estado === "en_progreso" ? "En Progreso" : "Completada"}
+                    </h3>
+                    <Badge variant="secondary">{tareasPorEstado[estado].length}</Badge>
+                  </div>
 
-                      {tareasColumna.map((tarea) => (
-                        <TareaCard key={tarea.id} tarea={tarea} />
-                      ))}
+                  {/* Quick Add */}
+                  <div className="mb-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="+ Añadir tarea rápida"
+                        value={nuevasTareas[estado]}
+                        onChange={(e) => setNuevasTareas((prev) => ({ ...prev, [estado]: e.target.value }))}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") handleQuickAdd(estado);
+                        }}
+                        className="text-sm"
+                      />
+                      {nuevasTareas[estado] && (
+                        <Button size="sm" variant="ghost" onClick={() => setNuevasTareas((prev) => ({ ...prev, [estado]: "" }))}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </SortableContext>
-              );
-            })}
+
+                  <div className="space-y-2 min-h-[200px]">
+                    {tareasPorEstado[estado].map((tarea) => (
+                      <TareaCard key={tarea.id} tarea={tarea} />
+                    ))}
+                    {tareasPorEstado[estado].length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        No hay tareas en esta columna
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </SortableContext>
+            ))}
           </div>
 
           <DragOverlay>
-            {activeTarea ? <TareaCard tarea={activeTarea} /> : null}
+            {activeDragId ? <TareaCard tarea={tareas.find((t) => t.id === activeDragId)!} isDragging /> : null}
           </DragOverlay>
         </DndContext>
       )}
 
-      {/* Drawer Nueva Tarea */}
       <NuevaTareaDrawer
-        open={showNuevaTareaDrawer}
-        onOpenChange={setShowNuevaTareaDrawer}
-        onSuccess={cargarTareas}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onSuccess={() => {
+          setDrawerOpen(false);
+          refetch();
+        }}
       />
     </div>
   );

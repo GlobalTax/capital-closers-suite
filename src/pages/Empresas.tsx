@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
@@ -6,18 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
-import { fetchEmpresas } from "@/services/empresas";
+import { useEmpresas } from "@/hooks/queries/useEmpresas";
 import { supabase } from "@/integrations/supabase/client";
 import type { Empresa } from "@/types";
-import { toast } from "sonner";
-import { Building2, Target, TrendingUp, Activity, Globe, Mail, Linkedin, Briefcase } from "lucide-react";
+import { Building2, Target, TrendingUp, Activity, Globe } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Empresas() {
   const navigate = useNavigate();
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: empresas = [], isLoading } = useEmpresas();
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
@@ -38,50 +37,10 @@ export default function Empresas() {
     };
   }, [empresas]);
 
-  useEffect(() => {
-    cargarEmpresas();
-  }, [filtroTarget]);
-
-  const cargarEmpresas = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchEmpresas(filtroTarget);
-      setEmpresas(data);
-      
-      // Cargar contadores de interacciones del último mes
-      const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
-      const { data: interacciones } = await supabase
-        .from('interacciones')
-        .select('empresa_id, siguiente_accion, fecha_siguiente_accion')
-        .gte('fecha', thirtyDaysAgo);
-      
-      if (interacciones) {
-        const counts: Record<string, { total: number; pendientes: number }> = {};
-        interacciones.forEach((int) => {
-          if (int.empresa_id) {
-            if (!counts[int.empresa_id]) {
-              counts[int.empresa_id] = { total: 0, pendientes: 0 };
-            }
-            counts[int.empresa_id].total++;
-            if (int.siguiente_accion && int.fecha_siguiente_accion) {
-              counts[int.empresa_id].pendientes++;
-            }
-          }
-        });
-        setInteraccionesCounts(counts);
-      }
-    } catch (error) {
-      console.error("Error cargando empresas:", error);
-      toast.error("Error al cargar las empresas");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmpresaCreada = () => {
-    cargarEmpresas();
-    setDrawerOpen(false);
-  };
+  const empresasFiltradas = useMemo(() => {
+    if (filtroTarget === undefined) return empresas;
+    return empresas.filter(e => e.es_target === filtroTarget);
+  }, [empresas, filtroTarget]);
 
   const columns = [
     {
@@ -158,18 +117,18 @@ export default function Empresas() {
       label: "Interés",
       render: (value: string, row: Empresa) => {
         if (!row.es_target || !value) return "-";
-        const colors: Record<string, string> = {
+        const colors: Record<string, any> = {
           Alto: "destructive",
           Medio: "default",
           Bajo: "secondary"
         };
-        return <Badge variant={colors[value] as any}>{value}</Badge>;
+        return <Badge variant={colors[value]}>{value}</Badge>;
       }
     },
     {
       key: "id",
       label: "Acciones",
-      render: (_: any, row: Empresa) => (
+      render: (_: string, row: Empresa) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {row.sitio_web && (
             <Button
@@ -185,6 +144,24 @@ export default function Empresas() {
       )
     },
   ];
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Empresas" description="Base de datos de empresas y targets potenciales" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -273,8 +250,8 @@ export default function Empresas() {
 
       <DataTableEnhanced
         columns={columns}
-        data={empresas}
-        loading={loading}
+        data={empresasFiltradas}
+        loading={isLoading}
         onRowClick={(row) => navigate(`/empresas/${row.id}`)}
         pageSize={10}
       />
@@ -282,7 +259,7 @@ export default function Empresas() {
       <NuevoEmpresaDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onEmpresaCreada={handleEmpresaCreada}
+        onEmpresaCreada={() => setDrawerOpen(false)}
       />
     </div>
   );

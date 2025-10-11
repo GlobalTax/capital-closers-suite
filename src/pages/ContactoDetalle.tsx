@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getContactoById, deleteContacto, getContactoMandatos } from "@/services/contactos";
-import { fetchInteraccionesByContacto, type Interaccion } from "@/services/interacciones";
-import { getContactoDocumentos } from "@/services/documentos";
+import { useContacto, useDeleteContacto } from "@/hooks/queries/useContactos";
+import { useContactoMandatos } from "@/hooks/queries/useContactosMandatos";
+import { useContactoInteracciones } from "@/hooks/queries/useInteracciones";
+import { useContactoDocumentos } from "@/hooks/queries/useDocumentos";
 import type { Contacto, Mandato } from "@/types";
+import type { Interaccion } from "@/services/interacciones";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
-import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawer";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
@@ -23,57 +24,24 @@ import { es } from "date-fns/locale";
 export default function ContactoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [contacto, setContacto] = useState<Contacto | null>(null);
-  const [mandatos, setMandatos] = useState<Mandato[]>([]);
-  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
-  const [documentos, setDocumentos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
-  const cargarDatos = async () => {
-    if (!id) return;
+  const { data: contacto, isLoading: loadingContacto } = useContacto(id);
+  const { data: mandatos = [], isLoading: loadingMandatos } = useContactoMandatos(id);
+  const { data: interacciones = [], isLoading: loadingInteracciones } = useContactoInteracciones(id);
+  const { data: documentos = [], isLoading: loadingDocumentos } = useContactoDocumentos(id);
+  const deleteMutation = useDeleteContacto();
 
-    setLoading(true);
-    try {
-      const [contactoData, mandatosData, interaccionesData, documentosData] = await Promise.all([
-        getContactoById(id),
-        getContactoMandatos(id),
-        fetchInteraccionesByContacto(id),
-        getContactoDocumentos(id),
-      ]);
-
-      setContacto(contactoData);
-      setMandatos(mandatosData || []);
-      setInteracciones(interaccionesData || []);
-      setDocumentos(documentosData || []);
-    } catch (error) {
-      console.error("Error cargando contacto:", error);
-      toast.error("Error al cargar los datos del contacto");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    cargarDatos();
-  }, [id]);
+  const loading = loadingContacto || loadingMandatos || loadingInteracciones || loadingDocumentos;
 
   const handleDelete = async () => {
     if (!id) return;
-
-    setDeleting(true);
     try {
-      await deleteContacto(id);
-      toast.success("Contacto eliminado correctamente");
+      await deleteMutation.mutateAsync(id);
       navigate("/contactos");
     } catch (error) {
-      console.error("Error eliminando contacto:", error);
-      toast.error("Error al eliminar el contacto");
-    } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
+      // Error ya manejado por el hook
     }
   };
 
@@ -102,391 +70,224 @@ export default function ContactoDetalle() {
     );
   }
 
+  const valorTotalMandatos = mandatos.reduce((sum, m) => sum + (m.valor || 0), 0);
+  const ultimaInteraccion = interacciones[0];
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/contactos")}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1 flex items-start gap-4">
-          <Avatar className="w-20 h-20">
-            <AvatarImage src={contacto.avatar} />
-            <AvatarFallback className="text-2xl">
-              {getInitials(contacto.nombre, contacto.apellidos)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-3xl font-semibold">
-              {contacto.nombre} {contacto.apellidos}
-            </h1>
-            {contacto.cargo && (
-              <p className="text-muted-foreground mt-1 flex items-center gap-2">
-                <Briefcase className="w-4 h-4" />
-                {contacto.cargo}
-                {contacto.empresa_principal && (
-                  <>
-                    <span>en</span>
-                    <button
-                      onClick={() => navigate(`/empresas/${contacto.empresa_principal?.id}`)}
-                      className="text-primary hover:underline"
-                    >
-                      {contacto.empresa_principal.nombre}
-                    </button>
-                  </>
-                )}
-              </p>
-            )}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/contactos")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{contacto.nombre} {contacto.apellidos}</h1>
+            <p className="text-muted-foreground">
+              {contacto.cargo && `${contacto.cargo} `}
+              {contacto.empresa_principal && `en ${contacto.empresa_principal.nombre}`}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditDrawerOpen(true)}>
-            <Edit className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={() => setEditDrawerOpen(true)}>
+            <Edit className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
+          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
             Eliminar
           </Button>
         </div>
       </div>
 
-      {/* Botones de acción rápida mejorados */}
-      <div className="flex flex-wrap gap-2">
-        {contacto.email && (
-          <Button variant="outline" asChild>
-            <a href={`mailto:${contacto.email}`}>
-              <Mail className="w-4 h-4 mr-2" />
-              Email
-            </a>
-          </Button>
-        )}
-        {contacto.telefono && (
-          <>
-            <Button variant="outline" asChild>
-              <a href={`tel:${contacto.telefono}`}>
-                <Phone className="w-4 h-4 mr-2" />
-                Llamar
-              </a>
-            </Button>
-            <Button variant="outline" asChild>
-              <a href={`https://wa.me/${contacto.telefono.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                WhatsApp
-              </a>
-            </Button>
-          </>
-        )}
-        {contacto.linkedin && (
-          <Button variant="outline" asChild>
-            <a href={contacto.linkedin} target="_blank" rel="noopener noreferrer">
-              <Linkedin className="w-4 h-4 mr-2" />
-              LinkedIn
-            </a>
-          </Button>
-        )}
-      </div>
+      {/* Avatar y Contacto Rápido */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-24 w-24">
+              {contacto.avatar && <AvatarImage src={contacto.avatar} />}
+              <AvatarFallback className="text-2xl">{getInitials(contacto.nombre, contacto.apellidos)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {contacto.email && (
+                  <Button variant="outline" size="sm" onClick={() => window.open(`mailto:${contacto.email}`)}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email
+                  </Button>
+                )}
+                {contacto.telefono && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => window.open(`tel:${contacto.telefono}`)}>
+                      <Phone className="h-4 w-4 mr-2" />
+                      Llamar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => window.open(`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`)}>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      WhatsApp
+                    </Button>
+                  </>
+                )}
+                {contacto.linkedin && (
+                  <Button variant="outline" size="sm" onClick={() => window.open(contacto.linkedin!, '_blank')}>
+                    <Linkedin className="h-4 w-4 mr-2" />
+                    LinkedIn
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Métricas rápidas */}
+      {/* Métricas Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Briefcase className="h-5 w-5 text-primary" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Mandatos</p>
                 <p className="text-2xl font-bold">{mandatos.length}</p>
               </div>
+              <Briefcase className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-secondary-foreground" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Última actividad</p>
-                <p className="text-sm font-medium">
-                  {contacto.updated_at 
-                    ? format(new Date(contacto.updated_at), "d MMM yyyy", { locale: es })
-                    : "Sin actividad"}
+                <p className="text-sm text-muted-foreground">Última Actividad</p>
+                <p className="text-lg font-semibold">
+                  {ultimaInteraccion ? format(new Date(ultimaInteraccion.fecha), "dd MMM yyyy", { locale: es }) : "Sin actividad"}
                 </p>
               </div>
+              <Clock className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Banknote className="h-5 w-5 text-green-500" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Valor en mandatos</p>
-                <p className="text-2xl font-bold">
-                  {mandatos.reduce((sum, m) => sum + (m.valor || 0), 0).toLocaleString("es-ES")} €
-                </p>
+                <p className="text-sm text-muted-foreground">Valor Total</p>
+                <p className="text-2xl font-bold">€{(valorTotalMandatos / 1000000).toFixed(1)}M</p>
               </div>
+              <Banknote className="h-8 w-8 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="informacion" className="w-full">
-        <TabsList>
-          <TabsTrigger value="informacion">Información General</TabsTrigger>
-          <TabsTrigger value="mandatos">
-            Mandatos Relacionados ({mandatos.length})
-          </TabsTrigger>
-          <TabsTrigger value="actividad">
-            <Activity className="h-4 w-4 mr-2" />
-            Actividad ({interacciones.length})
-          </TabsTrigger>
-          <TabsTrigger value="documentos">
-            <FileText className="h-4 w-4 mr-2" />
-            Documentos ({documentos.length})
-          </TabsTrigger>
+      {/* Tabs */}
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general">Información General</TabsTrigger>
+          <TabsTrigger value="mandatos">Mandatos ({mandatos.length})</TabsTrigger>
+          <TabsTrigger value="actividad">Actividad ({interacciones.length})</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos ({documentos.length})</TabsTrigger>
         </TabsList>
 
-        {/* Tab Información */}
-        <TabsContent value="informacion" className="space-y-6">
+        {/* Tab: Información General */}
+        <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle>Datos de Contacto</CardTitle>
+              <CardTitle>Datos del Contacto</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              {contacto.email && (
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
-                  <a
-                    href={`mailto:${contacto.email}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {contacto.email}
-                  </a>
+                  <p className="font-medium">{contacto.email || "-"}</p>
                 </div>
-              )}
-              {contacto.telefono && (
                 <div>
                   <p className="text-sm text-muted-foreground">Teléfono</p>
-                  <a
-                    href={`tel:${contacto.telefono}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {contacto.telefono}
-                  </a>
+                  <p className="font-medium">{contacto.telefono || "-"}</p>
                 </div>
-              )}
-              {contacto.cargo && (
                 <div>
                   <p className="text-sm text-muted-foreground">Cargo</p>
-                  <p className="font-medium">{contacto.cargo}</p>
+                  <p className="font-medium">{contacto.cargo || "-"}</p>
                 </div>
-              )}
-              {contacto.empresa_principal && (
                 <div>
                   <p className="text-sm text-muted-foreground">Empresa</p>
-                  <button
-                    onClick={() => navigate(`/empresas/${contacto.empresa_principal?.id}`)}
-                    className="font-medium text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Building2 className="w-4 h-4" />
-                    {contacto.empresa_principal.nombre}
-                  </button>
+                  <p className="font-medium">
+                    {contacto.empresa_principal ? (
+                      <span
+                        className="text-primary cursor-pointer hover:underline"
+                        onClick={() => navigate(`/empresas/${contacto.empresa_principal_id}`)}
+                      >
+                        {contacto.empresa_principal.nombre}
+                      </span>
+                    ) : "-"}
+                  </p>
                 </div>
-              )}
-              {contacto.linkedin && (
                 <div>
                   <p className="text-sm text-muted-foreground">LinkedIn</p>
-                  <a
-                    href={contacto.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Linkedin className="w-4 h-4" />
-                    Ver perfil
-                  </a>
+                  <p className="font-medium">
+                    {contacto.linkedin ? (
+                      <a href={contacto.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        Ver perfil
+                      </a>
+                    ) : "-"}
+                  </p>
+                </div>
+              </div>
+              {contacto.notas && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Notas</p>
+                  <p className="text-sm bg-muted p-3 rounded-md">{contacto.notas}</p>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {contacto.notas && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{contacto.notas}</p>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
-        {/* Tab Mandatos mejorado */}
+        {/* Tab: Mandatos */}
         <TabsContent value="mandatos">
-          {mandatos.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                    <Briefcase className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">
-                    Este contacto no está asociado a ningún mandato
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {mandatos.map((mandato) => {
-                // Buscar el rol del contacto en este mandato
-                const contactoRol = mandato.contactos?.find(mc => mc.contacto_id === id);
-                
-                return (
-                  <Card
-                    key={mandato.id}
-                    className="cursor-pointer hover:border-primary transition-colors hover:shadow-md"
-                    onClick={() => navigate(`/mandatos/${mandato.id}`)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-xl">
-                              {mandato.empresa_principal?.nombre || "Sin cliente"}
-                            </CardTitle>
-                            {contactoRol && (
-                              <Badge variant="outline" className="text-xs">
-                                {contactoRol.rol}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {mandato.descripcion}
-                          </p>
-                          {contactoRol?.notas && (
-                            <p className="text-xs text-muted-foreground mt-2 italic">
-                              📝 {contactoRol.notas}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"}>
-                            {mandato.tipo === "venta" ? "🏷️ Venta" : "🛒 Compra"}
-                          </Badge>
-                          <BadgeStatus status={mandato.estado} type="mandato" />
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Banknote className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-muted-foreground text-xs">Valor Estimado</p>
-                            <p className="font-semibold">
-                              {mandato.valor?.toLocaleString("es-ES") || 0} €
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {mandato.empresa_principal?.sector && (
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-muted-foreground text-xs">Sector</p>
-                              <p className="font-medium">{mandato.empresa_principal.sector}</p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {mandato.fecha_inicio && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-muted-foreground text-xs">Inicio</p>
-                              <p className="font-medium">
-                                {format(new Date(mandato.fecha_inicio), "MMM yyyy", { locale: es })}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {mandato.prioridad && (
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-muted-foreground text-xs">Prioridad</p>
-                              <Badge 
-                                variant={
-                                  mandato.prioridad === "alta" ? "destructive" : 
-                                  mandato.prioridad === "media" ? "default" : 
-                                  "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {mandato.prioridad}
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Métricas adicionales si están disponibles */}
-                      {(mandato.total_ingresos || mandato.total_gastos) && (
-                        <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-xs">
-                          <div>
-                            <p className="text-muted-foreground">Ingresos</p>
-                            <p className="font-semibold text-green-600">
-                              {mandato.total_ingresos?.toLocaleString("es-ES") || 0} €
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Gastos</p>
-                            <p className="font-semibold text-red-600">
-                              {mandato.total_gastos?.toLocaleString("es-ES") || 0} €
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Balance</p>
-                            <p className="font-semibold">
-                              {mandato.balance_neto?.toLocaleString("es-ES") || 0} €
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Tab Actividad */}
-        <TabsContent value="actividad">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Timeline de Actividad</CardTitle>
-                <NuevaInteraccionDialog 
-                  contactoId={id} 
-                  onSuccess={cargarDatos}
-                />
+              <CardTitle>Mandatos Asociados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {mandatos.map((mandato) => (
+                  <div
+                    key={mandato.id}
+                    className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => navigate(`/mandatos/${mandato.id}`)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{mandato.tipo === "compra" ? "Compra" : "Venta"}</h4>
+                          <Badge>{mandato.estado}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{mandato.descripcion || "Sin descripción"}</p>
+                      </div>
+                      <div className="text-right">
+                        {mandato.valor && <p className="font-semibold">€{(mandato.valor / 1000000).toFixed(1)}M</p>}
+                        {mandato.fecha_inicio && (
+                          <p className="text-sm text-muted-foreground">{format(new Date(mandato.fecha_inicio), "dd/MM/yyyy")}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {mandatos.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No hay mandatos asociados</p>
+                )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Actividad */}
+        <TabsContent value="actividad">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Timeline de Interacciones</CardTitle>
+              <NuevaInteraccionDialog contactoId={id} />
             </CardHeader>
             <CardContent>
               <TimelineActividad interacciones={interacciones} />
@@ -494,35 +295,31 @@ export default function ContactoDetalle() {
           </Card>
         </TabsContent>
 
-        {/* Tab Documentos */}
+        {/* Tab: Documentos */}
         <TabsContent value="documentos">
           <Card>
             <CardHeader>
               <CardTitle>Documentos Compartidos</CardTitle>
             </CardHeader>
             <CardContent>
-              {documentos.length > 0 ? (
-                <div className="space-y-2">
-                  {documentos.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{doc.documento?.file_name || 'Documento'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Compartido {format(new Date(doc.fecha_compartido), "d MMM yyyy", { locale: es })}
-                          </p>
-                        </div>
+              <div className="space-y-2">
+                {documentos.map((doc: any) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">{doc.documento?.file_name || "Documento"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Compartido el {format(new Date(doc.created_at), "dd MMM yyyy", { locale: es })}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No hay documentos compartidos</p>
-                </div>
-              )}
+                  </div>
+                ))}
+                {documentos.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">No hay documentos compartidos</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -533,17 +330,18 @@ export default function ContactoDetalle() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirmar={handleDelete}
-        titulo="¿Eliminar contacto?"
-        descripcion={`¿Estás seguro de que deseas eliminar a ${contacto.nombre} ${contacto.apellidos}? Esta acción no se puede deshacer.`}
-        variant="destructive"
+        title="Eliminar contacto"
+        description="¿Estás seguro de que deseas eliminar este contacto? Esta acción no se puede deshacer."
       />
 
-      <EditarContactoDrawer
-        open={editDrawerOpen}
-        onOpenChange={setEditDrawerOpen}
-        contacto={contacto}
-        onSuccess={cargarDatos}
-      />
+      {contacto && (
+        <EditarContactoDrawer
+          open={editDrawerOpen}
+          onOpenChange={setEditDrawerOpen}
+          contacto={contacto}
+          onSuccess={() => setEditDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 }

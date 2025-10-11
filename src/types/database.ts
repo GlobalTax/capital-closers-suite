@@ -51,5 +51,11 @@ export type MandatoUpdate = Database['public']['Tables']['mandatos']['Update'];
 export type EmpresaUpdate = Database['public']['Tables']['empresas']['Update'];
 export type ContactoUpdate = Database['public']['Tables']['contactos']['Update'];
 export type DocumentoUpdate = Database['public']['Tables']['documentos']['Update'];
+
+// Tipos extendidos para mayor type safety
+export type SupabaseQuery<T> = {
+  data: T | null;
+  error: any | null;
+};
 export type TareaUpdate = Database['public']['Tables']['tareas']['Update'];
 export type InteraccionUpdate = Database['public']['Tables']['interacciones']['Update'];

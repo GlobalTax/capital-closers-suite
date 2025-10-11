@@ -13,7 +13,7 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
    * Ejecuta una query de Supabase con manejo de errores
    */
   protected async query<R>(
-    fn: () => Promise<{ data: R | null; error: PostgrestError | null }>
+    fn: () => Promise<{ data: R | null; error: any | null }>
   ): Promise<R> {
     try {
       const { data, error } = await fn();

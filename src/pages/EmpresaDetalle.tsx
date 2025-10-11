@@ -12,7 +12,7 @@ import { EditarEmpresaDrawer } from "@/components/empresas/EditarEmpresaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { getEmpresaById, deleteEmpresa, getEmpresaMandatos, getEmpresaContactos } from "@/services/empresas";
 import { fetchInteraccionesByEmpresa, type Interaccion } from "@/services/interacciones";
-import { getEmpresaDocumentos } from "@/services/documentos";
+import { getEmpresaDocumentos } from "@/services/documentos.service";
 import type { Empresa, Mandato, Contacto } from "@/types";
 import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus } from "lucide-react";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";

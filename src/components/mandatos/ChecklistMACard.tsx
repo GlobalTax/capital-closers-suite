@@ -8,7 +8,7 @@ import { ChecklistTaskRow } from "./ChecklistTaskRow";
 import { ChecklistTaskDrawer } from "./ChecklistTaskDrawer";
 import { useChecklistTasks } from "@/hooks/useChecklistTasks";
 import type { MandatoChecklistTask, ChecklistFase } from "@/types";
-import { updateChecklistTask, deleteChecklistTask, copyTemplateToMandato } from "@/services/checklist";
+import { updateChecklistTask, deleteChecklistTask, copyTemplateToMandato } from "@/services/checklist.service";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";

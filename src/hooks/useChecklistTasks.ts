@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchChecklistTasks, calculateFaseProgress } from "@/services/checklist";
+import { fetchChecklistTasks, calculateFaseProgress } from "@/services/checklist.service";
 import type { MandatoChecklistTask, ChecklistFaseProgress } from "@/types";
 import { toast } from "@/hooks/use-toast";
 

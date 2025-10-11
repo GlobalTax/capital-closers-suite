@@ -32,7 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createTarea } from "@/services/tareas";
+import { createTarea } from "@/services/tareas.service";
 import { toast } from "sonner";
 import type { TareaEstado, TareaPrioridad } from "@/types";
 

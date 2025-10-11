@@ -6,7 +6,7 @@ import {
   deleteDocumento,
   getContactoDocumentos,
   getEmpresaDocumentos
-} from "@/services/documentos";
+} from "@/services/documentos.service";
 import { toast } from "sonner";
 import { handleError } from "@/lib/error-handler";
 import type { Documento } from "@/types";

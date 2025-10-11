@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchTareas, getTareaById, createTarea, updateTarea, deleteTarea } from "@/services/tareas";
+import { fetchTareas, getTareaById, createTarea, updateTarea, deleteTarea } from "@/services/tareas.service";
 import { toast } from "sonner";
 import { handleError } from "@/lib/error-handler";
 import type { Tarea } from "@/types";
