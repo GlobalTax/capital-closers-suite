@@ -43,7 +43,7 @@ const mandatosItems = [
 const otherMenuItems = [
   { title: "Mis Horas", url: "/mis-horas", icon: Clock },
   { title: "Contactos", url: "/contactos", icon: Users },
-  { title: "Empresas Target", url: "/empresas", icon: Building2 },
+  { title: "Empresas", url: "/empresas", icon: Building2 },
   { title: "Tareas", url: "/tareas", icon: CheckSquare },
   { title: "Documentos", url: "/documentos", icon: FolderOpen },
   { title: "Reportes", url: "/reportes", icon: BarChart3 },

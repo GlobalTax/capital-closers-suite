@@ -80,7 +80,7 @@ export function MandatoCard({ mandato }: MandatoCardProps) {
           
           <div className="flex items-center gap-1">
             <Building2 className="w-3 h-3" />
-            <span>{mandato.empresas?.length || 0} targets</span>
+            <span>{mandato.empresas?.length || 0} empresas</span>
           </div>
 
           <div className="flex items-center gap-1">

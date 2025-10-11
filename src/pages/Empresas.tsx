@@ -9,7 +9,7 @@ import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { useEmpresas } from "@/hooks/queries/useEmpresas";
 import { supabase } from "@/integrations/supabase/client";
 import type { Empresa } from "@/types";
-import { Building2, Target, TrendingUp, Activity, Globe } from "lucide-react";
+import { Building2, Star, TrendingUp, Activity, Globe } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,7 +53,7 @@ export default function Empresas() {
           <p className="font-medium">{value}</p>
           <div className="flex items-center gap-2 mt-1">
             {row.es_target && (
-              <Badge variant="outline" className="text-xs">🎯 Target</Badge>
+              <Badge variant="outline" className="text-xs">⭐ Prioritaria</Badge>
             )}
             {row.sector && (
               <span className="text-xs text-muted-foreground">{row.sector}</span>
@@ -148,7 +148,7 @@ export default function Empresas() {
   if (isLoading) {
     return (
       <div>
-        <PageHeader title="Empresas" description="Base de datos de empresas y targets potenciales" />
+        <PageHeader title="Empresas" description="Base de datos de empresas de interés" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {[1, 2, 3, 4].map(i => (
             <Card key={i}>
@@ -167,7 +167,7 @@ export default function Empresas() {
     <div>
       <PageHeader
         title="Empresas"
-        description="Base de datos de empresas y targets potenciales"
+        description="Base de datos de empresas de interés"
         actionLabel="Nueva Empresa"
         onAction={() => setDrawerOpen(true)}
       />
@@ -190,11 +190,11 @@ export default function Empresas() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Targets</p>
+                <p className="text-sm font-medium text-muted-foreground">Prioritarias</p>
                 <p className="text-2xl font-bold">{kpis.targets}</p>
                 <p className="text-xs text-muted-foreground">{kpis.targetPercentage}% del total</p>
               </div>
-              <Target className="h-8 w-8 text-primary" />
+              <Star className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -237,14 +237,14 @@ export default function Empresas() {
           className="cursor-pointer"
           onClick={() => setFiltroTarget(true)}
         >
-          Targets
+          Prioritarias
         </Badge>
         <Badge 
           variant={filtroTarget === false ? "default" : "outline"}
           className="cursor-pointer"
           onClick={() => setFiltroTarget(false)}
         >
-          No Targets
+          Otras
         </Badge>
       </div>
 

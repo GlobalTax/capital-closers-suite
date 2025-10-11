@@ -300,11 +300,11 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
                   control={form.control}
                   name="es_target"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between space-y-0 p-4 border rounded-lg">
+                  <FormItem className="flex items-center justify-between space-y-0 p-4 border rounded-lg">
                       <div>
-                        <FormLabel>Empresa Target</FormLabel>
+                        <FormLabel>Empresa Prioritaria</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Marcar como target de adquisición
+                          Marcar como empresa de interés prioritaria
                         </p>
                       </div>
                       <FormControl>
@@ -347,7 +347,7 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
                       name="estado_target"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Estado Target</FormLabel>
+                          <FormLabel>Estado de Seguimiento</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
