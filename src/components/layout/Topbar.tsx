@@ -1,11 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, Plus, LogOut, User, Moon, Sun } from "lucide-react";
+import { Search, Bell, Settings, Plus, LogOut, User, Moon, Sun, Briefcase, Users, Building2, CheckSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+
+// Lazy load drawers para optimizar rendimiento
+const NuevoMandatoDrawer = lazy(() => import("@/components/mandatos/NuevoMandatoDrawer").then(m => ({ default: m.NuevoMandatoDrawer })));
+const NuevoContactoDrawer = lazy(() => import("@/components/contactos/NuevoContactoDrawer").then(m => ({ default: m.NuevoContactoDrawer })));
+const NuevoEmpresaDrawer = lazy(() => import("@/components/empresas/NuevoEmpresaDrawer").then(m => ({ default: m.NuevoEmpresaDrawer })));
+const NuevaTareaDrawer = lazy(() => import("@/components/tareas/NuevaTareaDrawer").then(m => ({ default: m.NuevaTareaDrawer })));
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +32,10 @@ export function Topbar() {
   const { user, adminUser, logout } = useAuth();
   const [showResults, setShowResults] = useState(false);
   const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
+  const [mandatoDrawerOpen, setMandatoDrawerOpen] = useState(false);
+  const [contactoDrawerOpen, setContactoDrawerOpen] = useState(false);
+  const [empresaDrawerOpen, setEmpresaDrawerOpen] = useState(false);
+  const [tareaDrawerOpen, setTareaDrawerOpen] = useState(false);
 
   // Generate initials from user data
   const getInitials = () => {
@@ -135,16 +145,20 @@ export function Topbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => console.log("Nuevo mandato")}>
+            <DropdownMenuItem onClick={() => setMandatoDrawerOpen(true)}>
+              <Briefcase className="mr-2 h-4 w-4" />
               Nuevo Mandato
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Nuevo contacto")}>
+            <DropdownMenuItem onClick={() => setContactoDrawerOpen(true)}>
+              <User className="mr-2 h-4 w-4" />
               Nuevo Contacto
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Nueva empresa")}>
+            <DropdownMenuItem onClick={() => setEmpresaDrawerOpen(true)}>
+              <Building2 className="mr-2 h-4 w-4" />
               Nueva Empresa
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log("Nueva tarea")}>
+            <DropdownMenuItem onClick={() => setTareaDrawerOpen(true)}>
+              <CheckSquare className="mr-2 h-4 w-4" />
               Nueva Tarea
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -199,6 +213,53 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Importar los drawers necesarios solo cuando se abren */}
+      <Suspense fallback={null}>
+        {mandatoDrawerOpen && (
+          <NuevoMandatoDrawer
+            open={mandatoDrawerOpen}
+            onOpenChange={setMandatoDrawerOpen}
+            onSuccess={() => {
+              setMandatoDrawerOpen(false);
+              navigate('/mandatos');
+            }}
+          />
+        )}
+
+        {contactoDrawerOpen && (
+          <NuevoContactoDrawer
+            open={contactoDrawerOpen}
+            onOpenChange={setContactoDrawerOpen}
+            onSuccess={() => {
+              setContactoDrawerOpen(false);
+              navigate('/contactos');
+            }}
+          />
+        )}
+
+        {empresaDrawerOpen && (
+          <NuevoEmpresaDrawer
+            open={empresaDrawerOpen}
+            onOpenChange={setEmpresaDrawerOpen}
+            onEmpresaCreada={() => {
+              setEmpresaDrawerOpen(false);
+              navigate('/empresas');
+            }}
+          />
+        )}
+
+        {tareaDrawerOpen && (
+          <NuevaTareaDrawer
+            open={tareaDrawerOpen}
+            onOpenChange={setTareaDrawerOpen}
+            onSuccess={() => {
+              setTareaDrawerOpen(false);
+              navigate('/tareas');
+            }}
+          />
+        )}
+      </Suspense>
     </header>
   );
 }
