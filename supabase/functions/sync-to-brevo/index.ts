@@ -33,15 +33,16 @@ interface BrevoDeal {
 }
 
 // Mapear estado del mandato a etapa de deal en Brevo
+// IMPORTANTE: Actualizar estos valores con las fases exactas de tu pipeline de Brevo
 function mapEstadoToBrevoStage(estado: string): string {
   const mapping: Record<string, string> = {
-    'prospecto': 'Prospecting',
-    'activo': 'Qualification',
-    'en_negociacion': 'Proposal',
-    'cerrado': 'Won',
-    'cancelado': 'Lost'
+    'prospecto': 'Lead Venta / Gestión Venta',     // Fase inicial
+    'activo': 'Propuesta aceptada',                 // Propuesta aceptada
+    'en_negociacion': 'Negociación',                // En negociación
+    'cerrado': 'Cerrado Ganado',                    // Deal ganado
+    'cancelado': 'Cerrado Perdido'                  // Deal perdido
   };
-  return mapping[estado] || 'Prospecting';
+  return mapping[estado] || 'Lead Venta / Gestión Venta';
 }
 
 // Validar email
@@ -241,16 +242,22 @@ async function createDealInBrevo(mandatoData: any, empresaId: string, supabase: 
     .eq('sync_status', 'success')
     .single();
 
+  // Generar ID corto (primeros 8 caracteres del UUID)
+  const shortId = mandatoData.id.substring(0, 8).toUpperCase();
+  const tipoTexto = mandatoData.tipo === 'compra' ? 'Compra' : 'Venta';
+  
   const brevoDeal: BrevoDeal = {
-    name: `${mandatoData.tipo || 'Venta'} - ${empresa.nombre}`,
+    name: `${shortId} - ${empresa.nombre} - Proceso de ${tipoTexto}`,
     attributes: {
-      deal_value: mandatoData.valor || 0,
+      deal_value: mandatoData.valor || mandatoData.valoracion_esperada || 0,
       deal_stage: mapEstadoToBrevoStage(mandatoData.estado),
       tipo_mandato: mandatoData.tipo || '',
       fecha_inicio: mandatoData.fecha_inicio || '',
       fecha_cierre_prevista: mandatoData.fecha_cierre || '',
       descripcion: mandatoData.descripcion || '',
-      valoracion_esperada: mandatoData.valoracion_esperada?.toString() || ''
+      valoracion_esperada: mandatoData.valoracion_esperada?.toString() || '',
+      mandato_id: mandatoData.id,
+      numero_mandato: shortId
     },
     linkedContactsIds: contactEmails,
     linkedCompaniesIds: empresaLog?.brevo_id ? [empresaLog.brevo_id] : []
