@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,13 @@ const ImportarMandatos = () => {
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<ImportResult[]>([]);
   const { toast } = useToast();
+
+  // Auto-ejecutar importación al montar el componente
+  useEffect(() => {
+    if (results.length === 0 && !importing) {
+      importarMandatos();
+    }
+  }, []);
 
   const parseCSVLine = (line: string): string[] => {
     const result: string[] = [];
@@ -213,18 +220,15 @@ const ImportarMandatos = () => {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Este proceso creará los mandatos en tu base de datos y los vinculará con las empresas correspondientes.
-              Las empresas que no existan serán creadas automáticamente.
+              {importing ? (
+                "Importando mandatos automáticamente..."
+              ) : results.length > 0 ? (
+                `✅ Importación completada: ${results.filter(r => r.status === 'success').length} exitosos, ${results.filter(r => r.status === 'error').length} errores, ${results.filter(r => r.status === 'skipped').length} omitidos`
+              ) : (
+                "Iniciando importación automática..."
+              )}
             </AlertDescription>
           </Alert>
-
-          <Button 
-            onClick={importarMandatos} 
-            disabled={importing}
-            className="w-full"
-          >
-            {importing ? "Importando..." : "Iniciar Importación"}
-          </Button>
 
           {results.length > 0 && (
             <div className="space-y-2">
