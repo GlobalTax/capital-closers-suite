@@ -743,6 +743,45 @@ export type Database = {
         }
         Relationships: []
       }
+      brevo_sync_log: {
+        Row: {
+          brevo_id: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          last_sync_at: string | null
+          sync_attempts: number | null
+          sync_error: string | null
+          sync_status: string
+          updated_at: string | null
+        }
+        Insert: {
+          brevo_id?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_sync_at?: string | null
+          sync_attempts?: number | null
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          brevo_id?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_sync_at?: string | null
+          sync_attempts?: number | null
+          sync_error?: string | null
+          sync_status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       business_metrics: {
         Row: {
           avg_deal_size: number
