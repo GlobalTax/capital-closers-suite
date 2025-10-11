@@ -32,6 +32,7 @@ const HorasEquipo = lazy(() => import("./pages/HorasEquipo"));
 const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const ImportarMandatos = lazy(() => import("./pages/ImportarMandatos"));
 const ImportarDatos = lazy(() => import("./pages/ImportarDatos"));
+const Usuarios = lazy(() => import("./pages/Usuarios"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
           <Route path="/horas-equipo" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><HorasEquipo /></AppLayout></ProtectedRoute>} />
           <Route path="/audit-logs" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><AuditLogs /></AppLayout></ProtectedRoute>} />
+          <Route path="/usuarios" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><Usuarios /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-mandatos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarMandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-datos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarDatos /></AppLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

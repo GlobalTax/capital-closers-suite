@@ -2774,6 +2774,89 @@ export type Database = {
         }
         Relationships: []
       }
+      job_post_templates: {
+        Row: {
+          benefits_template: string[] | null
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          default_contract_type: string | null
+          default_employment_type: string | null
+          default_experience_level: string | null
+          default_is_hybrid: boolean | null
+          default_is_remote: boolean | null
+          default_location: string | null
+          default_sector: string | null
+          description: string | null
+          description_template: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          requirements_template: string[] | null
+          responsibilities_template: string[] | null
+          short_description_template: string | null
+          times_used: number | null
+          title_template: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          benefits_template?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_contract_type?: string | null
+          default_employment_type?: string | null
+          default_experience_level?: string | null
+          default_is_hybrid?: boolean | null
+          default_is_remote?: boolean | null
+          default_location?: string | null
+          default_sector?: string | null
+          description?: string | null
+          description_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          requirements_template?: string[] | null
+          responsibilities_template?: string[] | null
+          short_description_template?: string | null
+          times_used?: number | null
+          title_template?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          benefits_template?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_contract_type?: string | null
+          default_employment_type?: string | null
+          default_experience_level?: string | null
+          default_is_hybrid?: boolean | null
+          default_is_remote?: boolean | null
+          default_location?: string | null
+          default_sector?: string | null
+          description?: string | null
+          description_template?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          requirements_template?: string[] | null
+          responsibilities_template?: string[] | null
+          short_description_template?: string | null
+          times_used?: number | null
+          title_template?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_post_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       job_posts: {
         Row: {
           application_count: number | null
@@ -5366,6 +5449,14 @@ export type Database = {
         Returns: number
       }
       create_temporary_user: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_role?: Database["public"]["Enums"]["admin_role"]
+        }
+        Returns: Json
+      }
+      create_temporary_user_enhanced: {
         Args: {
           p_email: string
           p_full_name: string

@@ -15,6 +15,7 @@ import {
   Clock,
   Shield,
   Upload,
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +50,7 @@ const otherMenuItems = [
 ];
 
 const superAdminItems = [
+  { title: "Usuarios", url: "/usuarios", icon: UserCog },
   { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },
