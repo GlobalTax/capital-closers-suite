@@ -38,9 +38,12 @@ import {
   Table as TableIcon,
   Columns,
   Plus,
+  Settings,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useKanbanConfig } from "@/hooks/useKanbanConfig";
+import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
 
 function KanbanColumn({ 
   id, 
@@ -96,6 +99,9 @@ export default function Mandatos() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+
+  const { fases } = useKanbanConfig();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -346,6 +352,17 @@ export default function Mandatos() {
               <Columns className="w-4 h-4" />
             </Button>
           </div>
+          {vistaActual === "kanban" && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setConfigDialogOpen(true)}
+              className="gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Configurar Fases
+            </Button>
+          )}
           <Button onClick={() => setDrawerOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
             Nuevo Mandato
@@ -422,20 +439,14 @@ export default function Mandatos() {
           onDragEnd={handleDragEnd}
         >
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {[
-              { id: "prospecto", label: "Prospecto", color: "bg-slate-100 dark:bg-slate-800" },
-              { id: "activo", label: "Activo", color: "bg-blue-50 dark:bg-blue-950" },
-              { id: "en_negociacion", label: "En Negociación", color: "bg-amber-50 dark:bg-amber-950" },
-              { id: "cerrado", label: "Cerrado", color: "bg-green-50 dark:bg-green-950" },
-              { id: "cancelado", label: "Cancelado", color: "bg-red-50 dark:bg-red-950" },
-            ].map((columna) => {
-              const mandatosColumna = getMandatosPorEstado(columna.id as MandatoEstado);
+            {fases.map((fase) => {
+              const mandatosColumna = getMandatosPorEstado(fase.fase_id as MandatoEstado);
               return (
                 <KanbanColumn
-                  key={columna.id}
-                  id={columna.id}
-                  label={columna.label}
-                  color={columna.color}
+                  key={fase.id}
+                  id={fase.fase_id}
+                  label={fase.label}
+                  color={fase.color}
                   mandatos={mandatosColumna}
                 />
               );
@@ -452,6 +463,11 @@ export default function Mandatos() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={cargarMandatos}
+      />
+
+      <KanbanConfigDialog
+        open={configDialogOpen}
+        onOpenChange={setConfigDialogOpen}
       />
     </div>
   );

@@ -3732,6 +3732,39 @@ export type Database = {
           },
         ]
       }
+      mandato_kanban_config: {
+        Row: {
+          activo: boolean | null
+          color: string
+          created_at: string | null
+          fase_id: string
+          id: string
+          label: string
+          orden: number
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          color: string
+          created_at?: string | null
+          fase_id: string
+          id?: string
+          label: string
+          orden: number
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          color?: string
+          created_at?: string | null
+          fase_id?: string
+          id?: string
+          label?: string
+          orden?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mandato_time_entries: {
         Row: {
           approved_at: string | null
@@ -5364,6 +5397,10 @@ export type Database = {
       show_trgm: {
         Args: { "": string }
         Returns: string[]
+      }
+      update_kanban_order: {
+        Args: { updates: Json }
+        Returns: undefined
       }
       validate_data_access_security: {
         Args: Record<PropertyKey, never>
