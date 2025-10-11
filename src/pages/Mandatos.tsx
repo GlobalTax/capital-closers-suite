@@ -6,6 +6,7 @@ import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { Toolbar } from "@/components/shared/Toolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
+import { MandatoCard } from "@/components/mandatos/MandatoCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,10 +23,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchMandatos, deleteMandato } from "@/services/mandatos";
-import { exportToCSV } from "@/lib/utils";
+import { fetchMandatos, deleteMandato, updateMandato } from "@/services/mandatos";
+import { exportToCSV, cn } from "@/lib/utils";
 import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
-import type { Mandato } from "@/types";
+import type { Mandato, MandatoEstado } from "@/types";
 import { toast } from "sonner";
 import {
   Search,
@@ -34,7 +35,12 @@ import {
   FileText,
   Pencil,
   Trash2,
+  Table as TableIcon,
+  Columns,
+  Plus,
 } from "lucide-react";
+import { DndContext, DragEndEvent, DragStartEvent, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 export default function Mandatos() {
   const navigate = useNavigate();
@@ -45,6 +51,14 @@ export default function Mandatos() {
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>(searchParams.get("tipo") || "todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
+  const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 }
+    })
+  );
 
   useEffect(() => {
     cargarMandatos();
@@ -91,6 +105,36 @@ export default function Mandatos() {
     }));
     exportToCSV(exportData, `mandatos-${new Date().toISOString().split("T")[0]}`);
     toast.success("Mandatos exportados a CSV");
+  };
+
+  const getMandatosPorEstado = (estado: MandatoEstado) => {
+    return mandatosFiltrados.filter((m) => m.estado === estado);
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const mandato = mandatos.find((m) => m.id === event.active.id);
+    setMandatoArrastrado(mandato || null);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setMandatoArrastrado(null);
+
+    if (!over) return;
+
+    const mandatoId = active.id as string;
+    const nuevoEstado = over.id as MandatoEstado;
+
+    const mandato = mandatos.find((m) => m.id === mandatoId);
+    if (!mandato || mandato.estado === nuevoEstado) return;
+
+    try {
+      await updateMandato(mandatoId, { estado: nuevoEstado });
+      toast.success(`Mandato movido a ${nuevoEstado}`);
+      cargarMandatos();
+    } catch (error) {
+      toast.error("Error al actualizar el mandato");
+    }
   };
 
   // Filtros combinados
@@ -235,12 +279,36 @@ export default function Mandatos() {
 
   return (
     <div>
-      <PageHeader
-        title="Mandatos"
-        description="Gestiona todos los mandatos de venta activos"
-        actionLabel="Nuevo Mandato"
-        onAction={() => setDrawerOpen(true)}
-      />
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-semibold text-foreground">Mandatos</h1>
+          <p className="text-muted-foreground mt-1">
+            Gestiona todos los mandatos de compra y venta
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex border rounded-lg p-1">
+            <Button
+              variant={vistaActual === "tabla" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setVistaActual("tabla")}
+            >
+              <TableIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={vistaActual === "kanban" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setVistaActual("kanban")}
+            >
+              <Columns className="w-4 h-4" />
+            </Button>
+          </div>
+          <Button onClick={() => setDrawerOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nuevo Mandato
+          </Button>
+        </div>
+      </div>
 
       <Toolbar
         filtros={
@@ -292,13 +360,62 @@ export default function Mandatos() {
         }
       />
 
-      <DataTableEnhanced
-        columns={columns}
-        data={mandatosFiltrados}
-        loading={false}
-        onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
-        pageSize={10}
-      />
+      {/* Vista Tabla */}
+      {vistaActual === "tabla" && (
+        <DataTableEnhanced
+          columns={columns}
+          data={mandatosFiltrados}
+          loading={false}
+          onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
+          pageSize={10}
+        />
+      )}
+
+      {/* Vista Kanban */}
+      {vistaActual === "kanban" && (
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {[
+              { id: "prospecto", label: "Prospecto", color: "bg-slate-100 dark:bg-slate-800" },
+              { id: "activo", label: "Activo", color: "bg-blue-50 dark:bg-blue-950" },
+              { id: "en_negociacion", label: "En Negociación", color: "bg-amber-50 dark:bg-amber-950" },
+              { id: "cerrado", label: "Cerrado", color: "bg-green-50 dark:bg-green-950" },
+              { id: "cancelado", label: "Cancelado", color: "bg-red-50 dark:bg-red-950" },
+            ].map((columna) => {
+              const mandatosColumna = getMandatosPorEstado(columna.id as MandatoEstado);
+              return (
+                <SortableContext
+                  key={columna.id}
+                  id={columna.id}
+                  items={mandatosColumna.map((m) => m.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm uppercase text-muted-foreground">
+                        {columna.label}
+                      </h3>
+                      <Badge variant="outline">{mandatosColumna.length}</Badge>
+                    </div>
+                    <div className={cn(
+                      "space-y-2 min-h-[500px] p-3 rounded-lg border-2 border-dashed",
+                      columna.color
+                    )}>
+                      {mandatosColumna.map((mandato) => (
+                        <MandatoCard key={mandato.id} mandato={mandato} />
+                      ))}
+                    </div>
+                  </div>
+                </SortableContext>
+              );
+            })}
+          </div>
+        </DndContext>
+      )}
 
       <NuevoMandatoDrawer
         open={drawerOpen}
