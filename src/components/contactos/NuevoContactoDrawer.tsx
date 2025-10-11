@@ -153,7 +153,7 @@ export function NuevoContactoDrawer({
       <DrawerContent>
         <div className="mx-auto w-full max-w-2xl max-h-[85vh] overflow-y-auto">
           <DrawerHeader>
-            <DrawerTitle>Nuevo Contacto</DrawerTitle>
+            <DrawerTitle>Crear Nuevo Contacto</DrawerTitle>
             <DrawerDescription>
               Crea un nuevo contacto en el sistema
             </DrawerDescription>

@@ -3,17 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Mail, Phone, Building2, StickyNote } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UserPlus, Mail, Phone, Building2, StickyNote, ChevronDown, Users } from "lucide-react";
 import { MandatoContacto } from "@/types";
 import { getRolColor } from "@/lib/mandato-utils";
 
 interface ContactosClaveCardProps {
   contactos: MandatoContacto[];
   onAddContacto: () => void;
+  onAsociarContacto: () => void;
   loading?: boolean;
 }
 
-export function ContactosClaveCard({ contactos, onAddContacto, loading }: ContactosClaveCardProps) {
+export function ContactosClaveCard({ contactos, onAddContacto, onAsociarContacto, loading }: ContactosClaveCardProps) {
   if (loading) {
     return (
       <Card>
@@ -44,10 +51,25 @@ export function ContactosClaveCard({ contactos, onAddContacto, loading }: Contac
           <UserPlus className="h-5 w-5" />
           Contactos Clave
         </CardTitle>
-        <Button onClick={onAddContacto} size="sm">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Añadir Contacto
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Añadir Contacto
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={onAddContacto}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Crear Nuevo Contacto
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onAsociarContacto}>
+              <Users className="h-4 w-4 mr-2" />
+              Asociar Contacto Existente
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardHeader>
       <CardContent>
         {contactos.length === 0 ? (
@@ -56,9 +78,16 @@ export function ContactosClaveCard({ contactos, onAddContacto, loading }: Contac
             <p className="text-sm text-muted-foreground mb-4">
               No hay contactos asociados a este mandato
             </p>
-            <Button onClick={onAddContacto} variant="outline" size="sm">
-              Añadir primer contacto
-            </Button>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={onAddContacto} variant="outline" size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Crear Nuevo
+              </Button>
+              <Button onClick={onAsociarContacto} variant="outline" size="sm">
+                <Users className="h-4 w-4 mr-2" />
+                Asociar Existente
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

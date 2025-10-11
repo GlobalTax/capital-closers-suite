@@ -137,18 +137,52 @@ export const deleteContacto = async (id: string) => {
   }
 };
 
-export const getContactoMandatos = async (contactoId: string) => {
-  const { data, error } = await supabase
-    .from('mandato_contactos')
-    .select(`
-      *,
-      mandato:mandatos(
+export const getContactoMandatos = async (contactoId: string): Promise<any[]> => {
+  if (!contactoId || !isValidUUID(contactoId)) {
+    throw new DatabaseError('ID de contacto inválido', { contactoId });
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('mandato_contactos')
+      .select(`
+        *,
+        mandato:mandatos(*, empresa_principal:empresas(*))
+      `)
+      .eq('contacto_id', contactoId);
+    
+    if (error) throw new DatabaseError('Error al obtener mandatos del contacto', { supabaseError: error });
+    return data || [];
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al obtener mandatos');
+  }
+};
+
+export const searchContactos = async (query: string): Promise<Contacto[]> => {
+  try {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    
+    const { data, error } = await supabase
+      .from('contactos')
+      .select(`
         *,
         empresa_principal:empresas(*)
-      )
-    `)
-    .eq('contacto_id', contactoId);
-  
-  if (error) throw error;
-  return (data || []).map((mc: any) => mc.mandato);
+      `)
+      .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm}`)
+      .order('nombre', { ascending: true })
+      .limit(20);
+    
+    if (error) {
+      throw new DatabaseError('Error al buscar contactos', {
+        supabaseError: error,
+        table: 'contactos',
+      });
+    }
+    
+    return (data || []) as Contacto[];
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al buscar contactos');
+  }
 };

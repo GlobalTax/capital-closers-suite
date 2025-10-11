@@ -4,6 +4,7 @@ import { FileText, Target, ListTodo, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
+import { AsociarContactoDialog } from "@/components/contactos/AsociarContactoDialog";
 import { useMandatoDetalle } from "@/hooks/useMandatoDetalle";
 import { useAuth } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
@@ -26,6 +27,7 @@ export default function MandatoDetalle() {
   const { id } = useParams();
   const { user, adminUser } = useAuth();
   const [openContactoDrawer, setOpenContactoDrawer] = useState(false);
+  const [openAsociarDialog, setOpenAsociarDialog] = useState(false);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
@@ -109,6 +111,7 @@ export default function MandatoDetalle() {
           <ResumenTab
             mandato={mandato}
             onAddContacto={() => setOpenContactoDrawer(true)}
+            onAsociarContacto={() => setOpenAsociarDialog(true)}
           />
         </TabsContent>
 
@@ -166,6 +169,13 @@ export default function MandatoDetalle() {
         onOpenChange={setOpenContactoDrawer}
         onSuccess={refetch}
         mandatoId={id}
+      />
+
+      <AsociarContactoDialog
+        open={openAsociarDialog}
+        onOpenChange={setOpenAsociarDialog}
+        mandatoId={id!}
+        onSuccess={refetch}
       />
 
       <TimeTrackingDialog

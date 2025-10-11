@@ -7,9 +7,10 @@ import type { Mandato } from "@/types";
 interface ResumenTabProps {
   mandato: Mandato;
   onAddContacto: () => void;
+  onAsociarContacto: () => void;
 }
 
-export function ResumenTab({ mandato, onAddContacto }: ResumenTabProps) {
+export function ResumenTab({ mandato, onAddContacto, onAsociarContacto }: ResumenTabProps) {
   return (
     <div className="space-y-6">
       <MandatoTimeline
@@ -27,6 +28,7 @@ export function ResumenTab({ mandato, onAddContacto }: ResumenTabProps) {
       <ContactosClaveCard
         contactos={mandato.contactos || []}
         onAddContacto={onAddContacto}
+        onAsociarContacto={onAsociarContacto}
       />
     </div>
   );
