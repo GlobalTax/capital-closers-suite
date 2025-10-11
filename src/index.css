@@ -18,10 +18,10 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    /* Primary: Professional Indigo Blue */
-    --primary: 221 83% 53%;
+    /* Primary: Professional Black */
+    --primary: 0 0% 10%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 221 83% 45%;
+    --primary-hover: 0 0% 20%;
 
     /* Secondary: Neutral Gray */
     --secondary: 215 16% 47%;
@@ -42,7 +42,7 @@ All colors MUST be HSL.
     /* Borders & Inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 0 0% 10%;
 
     /* Border Radius */
     --radius: 0.5rem;
@@ -50,12 +50,12 @@ All colors MUST be HSL.
     /* Sidebar - Clean Light Professional */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 215 25% 15%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary: 0 0% 10%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 20% 98%;
-    --sidebar-accent-foreground: 221 83% 53%;
+    --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-ring: 0 0% 10%;
 
     /* Additional Design Tokens */
     --success: 142 76% 36%;
@@ -82,8 +82,8 @@ All colors MUST be HSL.
     --popover: 215 28% 20%;
     --popover-foreground: 215 20% 95%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 90%;
+    --primary-foreground: 0 0% 10%;
 
     --secondary: 215 28% 25%;
     --secondary-foreground: 215 20% 95%;
@@ -99,16 +99,16 @@ All colors MUST be HSL.
 
     --border: 215 28% 25%;
     --input: 215 28% 25%;
-    --ring: 221 83% 53%;
+    --ring: 0 0% 90%;
 
     --sidebar-background: 215 28% 20%;
     --sidebar-foreground: 215 20% 95%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 90%;
+    --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 215 28% 25%;
-    --sidebar-accent-foreground: 221 83% 53%;
+    --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 215 28% 25%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-ring: 0 0% 90%;
   }
 }
 
