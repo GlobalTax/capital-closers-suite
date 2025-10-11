@@ -39,8 +39,51 @@ import {
   Columns,
   Plus,
 } from "lucide-react";
-import { DndContext, DragEndEvent, DragStartEvent, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+
+function KanbanColumn({ 
+  id, 
+  label, 
+  color, 
+  mandatos 
+}: { 
+  id: string; 
+  label: string; 
+  color: string; 
+  mandatos: Mandato[] 
+}) {
+  const { setNodeRef } = useDroppable({ id });
+  
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm uppercase text-muted-foreground">
+          {label}
+        </h3>
+        <Badge variant="outline">{mandatos.length}</Badge>
+      </div>
+      
+      <SortableContext
+        id={id}
+        items={mandatos.map((m) => m.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div 
+          ref={setNodeRef}
+          className={cn(
+            "space-y-2 min-h-[500px] p-3 rounded-lg border-2 border-dashed transition-colors",
+            color
+          )}
+        >
+          {mandatos.map((mandato) => (
+            <MandatoCard key={mandato.id} mandato={mandato} />
+          ))}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
 
 export default function Mandatos() {
   const navigate = useNavigate();
@@ -56,7 +99,7 @@ export default function Mandatos() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 }
+      activationConstraint: { distance: 8 }
     })
   );
 
@@ -388,32 +431,20 @@ export default function Mandatos() {
             ].map((columna) => {
               const mandatosColumna = getMandatosPorEstado(columna.id as MandatoEstado);
               return (
-                <SortableContext
+                <KanbanColumn
                   key={columna.id}
                   id={columna.id}
-                  items={mandatosColumna.map((m) => m.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm uppercase text-muted-foreground">
-                        {columna.label}
-                      </h3>
-                      <Badge variant="outline">{mandatosColumna.length}</Badge>
-                    </div>
-                    <div className={cn(
-                      "space-y-2 min-h-[500px] p-3 rounded-lg border-2 border-dashed",
-                      columna.color
-                    )}>
-                      {mandatosColumna.map((mandato) => (
-                        <MandatoCard key={mandato.id} mandato={mandato} />
-                      ))}
-                    </div>
-                  </div>
-                </SortableContext>
+                  label={columna.label}
+                  color={columna.color}
+                  mandatos={mandatosColumna}
+                />
               );
             })}
           </div>
+          
+          <DragOverlay>
+            {mandatoArrastrado ? <MandatoCard mandato={mandatoArrastrado} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
 
