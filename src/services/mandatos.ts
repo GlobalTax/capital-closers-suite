@@ -1,77 +1,148 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Mandato, MandatoContacto, MandatoEmpresa, ContactoRol, EmpresaRol } from "@/types";
+import { DatabaseError } from "@/lib/error-handler";
+import { isValidUUID } from "@/lib/validation/regex";
 
 export const fetchMandatos = async (): Promise<Mandato[]> => {
-  const { data, error } = await supabase
-    .from('mandatos')
-    .select(`
-      *,
-      empresa_principal:empresas(*),
-      contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
-      empresas:mandato_empresas(*, empresa:empresas(*))
-    `)
-    .order('created_at', { ascending: false });
-  
-  if (error) throw error;
-  return (data || []) as any;
+  try {
+    const { data, error } = await supabase
+      .from('mandatos')
+      .select(`
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      throw new DatabaseError('Error al obtener mandatos', {
+        supabaseError: error,
+        table: 'mandatos',
+      });
+    }
+    
+    return (data || []) as Mandato[];
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al obtener mandatos');
+  }
 };
 
 export const getMandatoById = async (id: string): Promise<Mandato | null> => {
-  const { data, error } = await supabase
-    .from('mandatos')
-    .select(`
-      *,
-      empresa_principal:empresas(*),
-      contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
-      empresas:mandato_empresas(*, empresa:empresas(*))
-    `)
-    .eq('id', id)
-    .single();
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de mandato inválido', { id });
+  }
   
-  if (error) throw error;
-  return data as any;
+  try {
+    const { data, error } = await supabase
+      .from('mandatos')
+      .select(`
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      throw new DatabaseError('Error al obtener mandato', {
+        supabaseError: error,
+        table: 'mandatos',
+        id,
+      });
+    }
+    
+    return data as Mandato;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al obtener mandato');
+  }
 };
 
 export const createMandato = async (mandato: Partial<Mandato>) => {
-  const { data, error } = await supabase
-    .from('mandatos')
-    .insert(mandato)
-    .select(`
-      *,
-      empresa_principal:empresas(*),
-      contactos:mandato_contactos(*, contacto:contactos(*)),
-      empresas:mandato_empresas(*, empresa:empresas(*))
-    `)
-    .single();
-  
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('mandatos')
+      .insert(mandato)
+      .select(`
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*)),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      `)
+      .single();
+    
+    if (error) {
+      throw new DatabaseError('Error al crear mandato', {
+        supabaseError: error,
+        table: 'mandatos',
+      });
+    }
+    
+    return data as Mandato;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al crear mandato');
+  }
 };
 
 export const updateMandato = async (id: string, mandato: Partial<Mandato>) => {
-  const { data, error } = await supabase
-    .from('mandatos')
-    .update(mandato)
-    .eq('id', id)
-    .select(`
-      *,
-      empresa_principal:empresas(*),
-      contactos:mandato_contactos(*, contacto:contactos(*)),
-      empresas:mandato_empresas(*, empresa:empresas(*))
-    `)
-    .single();
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de mandato inválido', { id });
+  }
   
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('mandatos')
+      .update(mandato)
+      .eq('id', id)
+      .select(`
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*)),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      `)
+      .single();
+    
+    if (error) {
+      throw new DatabaseError('Error al actualizar mandato', {
+        supabaseError: error,
+        table: 'mandatos',
+        id,
+      });
+    }
+    
+    return data as Mandato;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al actualizar mandato');
+  }
 };
 
 export const deleteMandato = async (id: string) => {
-  const { error } = await supabase
-    .from('mandatos')
-    .delete()
-    .eq('id', id);
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de mandato inválido', { id });
+  }
   
-  if (error) throw error;
+  try {
+    const { error } = await supabase
+      .from('mandatos')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      throw new DatabaseError('Error al eliminar mandato', {
+        supabaseError: error,
+        table: 'mandatos',
+        id,
+      });
+    }
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al eliminar mandato');
+  }
 };
 
 // ============================================
@@ -84,19 +155,37 @@ export const addContactoToMandato = async (
   rol: ContactoRol,
   notas?: string
 ): Promise<MandatoContacto> => {
-  const { data, error } = await supabase
-    .from('mandato_contactos')
-    .insert({ 
-      mandato_id: mandatoId, 
-      contacto_id: contactoId, 
-      rol, 
-      notas 
-    })
-    .select('*, contacto:contactos(*, empresa_principal:empresas(*))')
-    .single();
+  if (!mandatoId || !isValidUUID(mandatoId)) {
+    throw new DatabaseError('ID de mandato inválido', { mandatoId });
+  }
+  if (!contactoId || !isValidUUID(contactoId)) {
+    throw new DatabaseError('ID de contacto inválido', { contactoId });
+  }
   
-  if (error) throw error;
-  return data as any;
+  try {
+    const { data, error } = await supabase
+      .from('mandato_contactos')
+      .insert({ 
+        mandato_id: mandatoId, 
+        contacto_id: contactoId, 
+        rol, 
+        notas 
+      })
+      .select('*, contacto:contactos(*, empresa_principal:empresas(*))')
+      .single();
+    
+    if (error) {
+      throw new DatabaseError('Error al vincular contacto al mandato', {
+        supabaseError: error,
+        table: 'mandato_contactos',
+      });
+    }
+    
+    return data as MandatoContacto;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al vincular contacto');
+  }
 };
 
 export const removeContactoFromMandato = async (id: string) => {

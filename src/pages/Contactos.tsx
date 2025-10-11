@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { fetchContactos } from "@/services/contactos";
 import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { toast } from "sonner";
@@ -14,30 +13,30 @@ import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer"
 import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { useContactos } from "@/hooks/queries/useContactos";
+import { handleError } from "@/lib/error-handler";
+import { PageSkeleton } from "@/components/shared/LoadingStates";
 
 export default function Contactos() {
   const navigate = useNavigate();
-  const [contactos, setContactos] = useState<Contacto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: contactos = [], isLoading, refetch } = useContactos();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
 
   useEffect(() => {
-    cargarContactos();
-  }, []);
+    cargarInteracciones();
+  }, [contactos]);
 
-  const cargarContactos = async () => {
-    setLoading(true);
+  const cargarInteracciones = async () => {
     try {
-      const data = await fetchContactos();
-      setContactos(data);
-      
       // Cargar contadores de interacciones del último mes
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
-      const { data: interacciones } = await supabase
+      const { data: interacciones, error } = await supabase
         .from('interacciones')
         .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
         .gte('fecha', thirtyDaysAgo);
+      
+      if (error) throw error;
       
       if (interacciones) {
         const counts: Record<string, { total: number; pendientes: number }> = {};
@@ -55,10 +54,7 @@ export default function Contactos() {
         setInteraccionesCounts(counts);
       }
     } catch (error) {
-      console.error("Error cargando contactos:", error);
-      toast.error("Error al cargar los contactos");
-    } finally {
-      setLoading(false);
+      handleError(error, 'Carga de interacciones');
     }
   };
 
@@ -266,14 +262,14 @@ export default function Contactos() {
       <DataTableEnhanced
         columns={columns}
         data={contactos}
-        loading={loading}
+        loading={isLoading}
         onRowClick={(row) => navigate(`/contactos/${row.id}`)}
       />
 
       <NuevoContactoDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onSuccess={cargarContactos}
+        onSuccess={refetch}
       />
     </div>
   );
