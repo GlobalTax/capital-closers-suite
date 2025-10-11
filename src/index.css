@@ -75,6 +75,27 @@
     --badge-excellent: 142 71% 45%;
     --badge-neutral: 0 0% 60%;
 
+    /* Apollo Color Scheme - Vivid colors for KPIs and highlights */
+    --apollo-green: 142 71% 45%;
+    --apollo-green-light: 142 71% 97%;
+    --apollo-green-bg: 142 71% 95%;
+    
+    --apollo-purple: 262 83% 58%;
+    --apollo-purple-light: 262 83% 97%;
+    --apollo-purple-bg: 262 83% 95%;
+    
+    --apollo-blue: 213 94% 68%;
+    --apollo-blue-light: 213 94% 97%;
+    --apollo-blue-bg: 213 94% 95%;
+    
+    --apollo-yellow: 45 93% 58%;
+    --apollo-yellow-light: 45 93% 97%;
+    --apollo-yellow-bg: 45 93% 95%;
+    
+    --apollo-orange: 25 95% 53%;
+    --apollo-orange-light: 25 95% 97%;
+    --apollo-orange-bg: 25 95% 95%;
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
