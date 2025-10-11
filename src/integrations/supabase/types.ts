@@ -1803,6 +1803,7 @@ export type Database = {
           email: string
           empresa_principal_id: string | null
           id: string
+          import_log_id: string | null
           linkedin: string | null
           nombre: string
           notas: string | null
@@ -1817,6 +1818,7 @@ export type Database = {
           email: string
           empresa_principal_id?: string | null
           id?: string
+          import_log_id?: string | null
           linkedin?: string | null
           nombre: string
           notas?: string | null
@@ -1831,6 +1833,7 @@ export type Database = {
           email?: string
           empresa_principal_id?: string | null
           id?: string
+          import_log_id?: string | null
           linkedin?: string | null
           nombre?: string
           notas?: string | null
@@ -1843,6 +1846,13 @@ export type Database = {
             columns: ["empresa_principal_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contactos_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
             referencedColumns: ["id"]
           },
         ]
@@ -2128,6 +2138,7 @@ export type Database = {
           estado_target: string | null
           facturacion: number | null
           id: string
+          import_log_id: string | null
           margen_ebitda: number | null
           nivel_interes: string | null
           nombre: string
@@ -2150,6 +2161,7 @@ export type Database = {
           estado_target?: string | null
           facturacion?: number | null
           id?: string
+          import_log_id?: string | null
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre: string
@@ -2172,6 +2184,7 @@ export type Database = {
           estado_target?: string | null
           facturacion?: number | null
           id?: string
+          import_log_id?: string | null
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre?: string
@@ -2182,7 +2195,15 @@ export type Database = {
           ubicacion?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "empresas_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fee_templates: {
         Row: {
@@ -2387,6 +2408,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      import_logs: {
+        Row: {
+          completed_at: string | null
+          config: Json | null
+          created_at: string
+          errors: Json | null
+          failed: number
+          file_name: string | null
+          id: string
+          import_type: string
+          imported_by: string | null
+          skipped: number
+          status: string
+          successful: number
+          total_records: number
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string
+          errors?: Json | null
+          failed?: number
+          file_name?: string | null
+          id?: string
+          import_type: string
+          imported_by?: string | null
+          skipped?: number
+          status?: string
+          successful?: number
+          total_records?: number
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string
+          errors?: Json | null
+          failed?: number
+          file_name?: string | null
+          id?: string
+          import_type?: string
+          imported_by?: string | null
+          skipped?: number
+          status?: string
+          successful?: number
+          total_records?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_logs_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       interacciones: {
         Row: {
@@ -3966,6 +4043,7 @@ export type Database = {
           fecha_cierre: string | null
           fecha_inicio: string | null
           id: string
+          import_log_id: string | null
           numero_ofertas_recibidas: number | null
           perfil_empresa_buscada: string | null
           prioridad: string | null
@@ -3989,6 +4067,7 @@ export type Database = {
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
+          import_log_id?: string | null
           numero_ofertas_recibidas?: number | null
           perfil_empresa_buscada?: string | null
           prioridad?: string | null
@@ -4012,6 +4091,7 @@ export type Database = {
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
+          import_log_id?: string | null
           numero_ofertas_recibidas?: number | null
           perfil_empresa_buscada?: string | null
           prioridad?: string | null
@@ -4031,6 +4111,13 @@ export type Database = {
             columns: ["empresa_principal_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
             referencedColumns: ["id"]
           },
         ]
@@ -5424,6 +5511,10 @@ export type Database = {
       reject_user_registration: {
         Args: { reason?: string; request_id: string }
         Returns: boolean
+      }
+      rollback_import: {
+        Args: { p_import_log_id: string }
+        Returns: Json
       }
       set_limit: {
         Args: { "": number }
