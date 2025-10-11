@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,10 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarEmpresaDrawer } from "@/components/empresas/EditarEmpresaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
-import { getEmpresaById, deleteEmpresa, getEmpresaMandatos, getEmpresaContactos } from "@/services/empresas";
-import { fetchInteraccionesByEmpresa, type Interaccion } from "@/services/interacciones";
-import { getEmpresaDocumentos } from "@/services/documentos.service";
-import type { Empresa, Mandato, Contacto } from "@/types";
+import { useEmpresa, useDeleteEmpresa } from "@/hooks/queries/useEmpresas";
+import { useEmpresaMandatos, useEmpresaContactos } from "@/hooks/queries/useEmpresaMandatos";
+import { useEmpresaInteracciones } from "@/hooks/queries/useInteracciones";
+import { useEmpresaDocumentos } from "@/hooks/queries/useDocumentos";
+import type { Mandato, Contacto } from "@/types";
 import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus } from "lucide-react";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
@@ -24,61 +24,32 @@ import { Progress } from "@/components/ui/progress";
 export default function EmpresaDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [mandatos, setMandatos] = useState<Mandato[]>([]);
-  const [contactos, setContactos] = useState<Contacto[]>([]);
-  const [interacciones, setInteracciones] = useState<Interaccion[]>([]);
-  const [documentos, setDocumentos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // React Query hooks
+  const { data: empresa, isLoading: loadingEmpresa, refetch: refetchEmpresa } = useEmpresa(id);
+  const { data: mandatos = [], isLoading: loadingMandatos } = useEmpresaMandatos(id);
+  const { data: contactos = [], isLoading: loadingContactos } = useEmpresaContactos(id);
+  const { data: interacciones = [], isLoading: loadingInteracciones } = useEmpresaInteracciones(id);
+  const { data: documentos = [], isLoading: loadingDocumentos } = useEmpresaDocumentos(id);
+  
+  const { mutate: deleteEmpresaMutation } = useDeleteEmpresa();
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  
+  const loading = loadingEmpresa || loadingMandatos || loadingContactos;
 
-  useEffect(() => {
-    if (id) {
-      cargarTodo();
-    }
-  }, [id]);
-
-  const cargarTodo = async () => {
+  const handleDelete = () => {
     if (!id) return;
-    setLoading(true);
-    try {
-      const [empresaData, mandatosData, contactosData, interaccionesData, documentosData] = await Promise.all([
-        getEmpresaById(id),
-        getEmpresaMandatos(id),
-        getEmpresaContactos(id),
-        fetchInteraccionesByEmpresa(id),
-        getEmpresaDocumentos(id),
-      ]);
-      
-      setEmpresa(empresaData);
-      setMandatos(mandatosData);
-      setContactos(contactosData as any);
-      setInteracciones(interaccionesData || []);
-      setDocumentos(documentosData || []);
-    } catch (error) {
-      console.error("Error cargando empresa:", error);
-      toast.error("Error al cargar la empresa");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  const handleDelete = async () => {
-    if (!id) return;
-    try {
-      await deleteEmpresa(id);
-      toast.success("Empresa eliminada correctamente");
-      navigate("/empresas");
-    } catch (error) {
-      console.error("Error eliminando empresa:", error);
-      toast.error("Error al eliminar la empresa");
-    }
+    deleteEmpresaMutation(id, {
+      onSuccess: () => {
+        navigate("/empresas");
+      }
+    });
   };
 
   const handleEmpresaActualizada = () => {
-    cargarTodo();
+    refetchEmpresa();
     setEditDrawerOpen(false);
   };
 
@@ -439,7 +410,7 @@ export default function EmpresaDetalle() {
             <CardContent>
               {contactos.length > 0 ? (
                 <div className="space-y-2">
-                  {contactos.map((contacto: Contacto) => (
+                  {contactos.map((contacto) => (
                     <div
                       key={contacto.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer"
@@ -532,7 +503,7 @@ export default function EmpresaDetalle() {
                 <CardTitle>Timeline de Actividad</CardTitle>
                 <NuevaInteraccionDialog 
                   empresaId={id} 
-                  onSuccess={cargarTodo}
+                  onSuccess={() => {}}
                 />
               </div>
             </CardHeader>

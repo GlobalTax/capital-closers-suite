@@ -7,6 +7,7 @@ import {
   getContactoDocumentos,
   getEmpresaDocumentos
 } from "@/services/documentos.service";
+import { deleteFile } from "@/services/uploads";
 import { toast } from "sonner";
 import { handleError } from "@/lib/error-handler";
 import type { Documento } from "@/types";
@@ -46,6 +47,22 @@ export function useEmpresaDocumentos(empresaId: string | undefined) {
   });
 }
 
+export function useDeleteDocumento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, storagePath }: { id: string; storagePath: string }) => 
+      deleteFile(id, storagePath),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documentos'] });
+      toast.success("Documento eliminado correctamente");
+    },
+    onError: (error) => {
+      handleError(error, "Error al eliminar documento");
+    },
+  });
+}
+
 export function useCreateDocumento() {
   const queryClient = useQueryClient();
 
@@ -61,17 +78,3 @@ export function useCreateDocumento() {
   });
 }
 
-export function useDeleteDocumento() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteDocumento,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documentos'] });
-      toast.success("Documento eliminado exitosamente");
-    },
-    onError: (error) => {
-      handleError(error, "Error al eliminar documento");
-    },
-  });
-}

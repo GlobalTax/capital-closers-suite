@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
@@ -6,42 +6,25 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Download, Trash2, FileText, File, Image as ImageIcon } from "lucide-react";
 import { UploadDialog } from "@/components/documentos/UploadDialog";
-import { listUserFiles, getSignedUrl, deleteFile, downloadFile } from "@/services/uploads";
+import { useDocumentos, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
+import { downloadFile } from "@/services/uploads";
 import type { Documento } from "@/types";
-import { toast } from "sonner";
+import { handleError } from "@/lib/error-handler";
 
 export default function Documentos() {
-  const [documentos, setDocumentos] = useState<Documento[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: documentos = [], isLoading: loading, refetch } = useDocumentos();
+  const { mutate: deleteDoc, isPending: isDeleting } = useDeleteDocumento();
+  
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; doc?: Documento }>({ open: false });
   const [downloading, setDownloading] = useState<string | null>(null);
-
-  useEffect(() => {
-    cargarDocumentos();
-  }, []);
-
-  const cargarDocumentos = async () => {
-    setLoading(true);
-    try {
-      const data = await listUserFiles();
-      setDocumentos(data);
-    } catch (error) {
-      console.error("Error cargando documentos:", error);
-      toast.error("Error al cargar los documentos");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDownload = async (doc: Documento) => {
     setDownloading(doc.id);
     try {
       await downloadFile(doc.storage_path, doc.file_name);
-      toast.success(`Descargando ${doc.file_name}...`);
     } catch (error) {
-      console.error("Error downloading file:", error);
-      toast.error("Error al descargar el archivo");
+      handleError(error, "Error al descargar el archivo");
     } finally {
       setDownloading(null);
     }
@@ -51,20 +34,15 @@ export default function Documentos() {
     setDeleteConfirm({ open: true, doc });
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     const doc = deleteConfirm.doc;
     if (!doc) return;
-
-    try {
-      await deleteFile(doc.id, doc.storage_path);
-      toast.success("Documento eliminado correctamente");
-      cargarDocumentos();
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      toast.error("Error al eliminar el documento");
-    } finally {
-      setDeleteConfirm({ open: false });
-    }
+    
+    deleteDoc({ id: doc.id, storagePath: doc.storage_path }, {
+      onSuccess: () => {
+        setDeleteConfirm({ open: false });
+      }
+    });
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -167,7 +145,7 @@ export default function Documentos() {
       <UploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
-        onSuccess={cargarDocumentos}
+        onSuccess={() => refetch()}
       />
 
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm({ open })}>

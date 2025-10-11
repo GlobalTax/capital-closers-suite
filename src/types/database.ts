@@ -52,6 +52,22 @@ export type EmpresaUpdate = Database['public']['Tables']['empresas']['Update'];
 export type ContactoUpdate = Database['public']['Tables']['contactos']['Update'];
 export type DocumentoUpdate = Database['public']['Tables']['documentos']['Update'];
 
+// Tipos con relaciones para Empresas
+export type EmpresaWithRelations = EmpresaRow & {
+  contactos: ContactoRow[];
+  mandatos: MandatoRow[];
+};
+
+// Tipos para DataTable genérico
+export interface TableRecord {
+  id: string;
+  [key: string]: any;
+}
+
+// Tipos para queries Supabase type-safe
+export type SupabaseTableName = keyof Database['public']['Tables'];
+export type SupabaseRow<T extends SupabaseTableName> = Database['public']['Tables'][T]['Row'];
+
 // Tipos extendidos para mayor type safety
 export type SupabaseQuery<T> = {
   data: T | null;

@@ -13,8 +13,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { TableRecord } from "@/types/database";
 
-export interface Column<T = any> {
+export interface Column<T extends TableRecord = TableRecord> {
   key: string;
   label: string;
   render?: (value: any, row: T) => React.ReactNode;
@@ -22,7 +23,7 @@ export interface Column<T = any> {
   filterable?: boolean;
 }
 
-interface DataTableEnhancedProps<T = any> {
+interface DataTableEnhancedProps<T extends TableRecord = TableRecord> {
   columns: Column<T>[];
   data: T[];
   onRowClick?: (row: T) => void;
@@ -34,7 +35,7 @@ interface DataTableEnhancedProps<T = any> {
   rowClassName?: (row: T) => string;
 }
 
-export function DataTableEnhanced<T = any>({
+export function DataTableEnhanced<T extends TableRecord = TableRecord>({
   columns,
   data,
   onRowClick,
@@ -54,7 +55,7 @@ export function DataTableEnhanced<T = any>({
   let filteredData = data.filter((row) => {
     return Object.entries(filters).every(([key, value]) => {
       if (!value) return true;
-      const cellValue = String(row[key]).toLowerCase();
+      const cellValue = String((row as any)[key]).toLowerCase();
       return cellValue.includes(value.toLowerCase());
     });
   });
@@ -62,8 +63,8 @@ export function DataTableEnhanced<T = any>({
   // Ordenar datos
   if (sortColumn) {
     filteredData = [...filteredData].sort((a, b) => {
-      const aVal = a[sortColumn];
-      const bVal = b[sortColumn];
+      const aVal = (a as any)[sortColumn];
+      const bVal = (b as any)[sortColumn];
       const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -90,10 +91,10 @@ export function DataTableEnhanced<T = any>({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = paginatedData.map((row) => (row as any).id);
+      const allIds = paginatedData.map((row) => row.id);
       onSelectionChange?.([...new Set([...externalSelectedRows, ...allIds])]);
     } else {
-      const pageIds = new Set(paginatedData.map((row) => (row as any).id));
+      const pageIds = new Set(paginatedData.map((row) => row.id));
       onSelectionChange?.(externalSelectedRows.filter((id) => !pageIds.has(id)));
     }
   };
@@ -107,7 +108,7 @@ export function DataTableEnhanced<T = any>({
   };
 
   const allSelected =
-    paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes((row as any).id));
+    paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes(row.id));
 
   return (
     <div className="space-y-4">
@@ -184,7 +185,7 @@ export function DataTableEnhanced<T = any>({
                 </TableRow>
               ) : (
                 paginatedData.map((row) => {
-                  const rowId = (row as any).id;
+                  const rowId = row.id;
                   const isSelected = externalSelectedRows.includes(rowId);
                   const customClass = rowClassName ? rowClassName(row) : "";
                   return (
@@ -207,7 +208,7 @@ export function DataTableEnhanced<T = any>({
                       )}
                       {columns.map((column) => (
                         <TableCell key={column.key}>
-                          {column.render ? column.render((row as any)[column.key], row) : (row as any)[column.key]}
+                          {column.render ? column.render((row as any)[column.key], row) : String((row as any)[column.key] ?? '')}
                         </TableCell>
                       ))}
                     </TableRow>

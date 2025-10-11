@@ -63,7 +63,7 @@ class EmpresaService extends BaseService<Empresa> {
    */
   async getMandatos(empresaId: string) {
     const { data, error } = await supabase
-      .from('mandato_empresas' as any)
+      .from('mandato_empresas')
       .select(`
         mandato_id,
         mandatos:mandato_id (
@@ -91,13 +91,10 @@ class EmpresaService extends BaseService<Empresa> {
   /**
    * Obtener contactos de una empresa
    */
-  async getContactos(empresaId: string) {
+  async getContactos(empresaId: string): Promise<any[]> {
     const { data, error } = await supabase
-      .from('contactos' as any)
-      .select(`
-        *,
-        empresa_principal:empresas(*)
-      `)
+      .from('contactos')
+      .select('*')
       .eq('empresa_principal_id', empresaId)
       .order('created_at', { ascending: false });
 
