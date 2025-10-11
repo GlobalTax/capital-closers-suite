@@ -45,6 +45,7 @@ import type { TimeEntry, TimeStats } from "@/types";
 import { format } from "date-fns";
 import { getPrioridadColor, calcularDuracion } from "@/lib/mandato-utils";
 import { supabase } from "@/integrations/supabase/client";
+import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 
 export default function MandatoDetalle() {
   const { id } = useParams();
@@ -56,6 +57,7 @@ export default function MandatoDetalle() {
   const [updatingEstado, setUpdatingEstado] = useState(false);
   const [transactionSheetOpen, setTransactionSheetOpen] = useState(false);
   const [openTargetDrawer, setOpenTargetDrawer] = useState(false);
+  const [openContactoDrawer, setOpenContactoDrawer] = useState(false);
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [transactionFilters, setTransactionFilters] = useState<{
     dateRange: "7d" | "30d" | "all";
@@ -156,6 +158,11 @@ export default function MandatoDetalle() {
     } finally {
       setUpdatingEstado(false);
     }
+  };
+
+  const handleContactoCreated = async () => {
+    await cargarMandato();
+    toast.success("Contacto añadido al mandato exitosamente");
   };
 
   if (loading) {
@@ -382,7 +389,7 @@ export default function MandatoDetalle() {
           {/* Contactos Clave */}
           <ContactosClaveCard
             contactos={mandato.contactos || []}
-            onAddContacto={() => toast.info("Añadir contacto - Disponible próximamente")}
+            onAddContacto={() => setOpenContactoDrawer(true)}
             loading={loading}
           />
         </TabsContent>
@@ -598,6 +605,13 @@ export default function MandatoDetalle() {
         open={openTargetDrawer}
         onOpenChange={setOpenTargetDrawer}
         onSuccess={cargarMandato}
+      />
+
+      <NuevoContactoDrawer
+        open={openContactoDrawer}
+        onOpenChange={setOpenContactoDrawer}
+        onSuccess={handleContactoCreated}
+        mandatoId={id}
       />
       
       <TimeTrackingDialog

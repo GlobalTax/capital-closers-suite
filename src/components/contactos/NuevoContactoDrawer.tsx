@@ -32,7 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fetchEmpresas } from "@/services/empresas";
 import { createContacto } from "@/services/contactos";
-import type { Empresa } from "@/types";
+import { addContactoToMandato } from "@/services/mandatos";
+import type { Empresa, ContactoRol } from "@/types";
 import { Loader2 } from "lucide-react";
 
 const contactoSchema = z.object({
@@ -53,6 +54,8 @@ const contactoSchema = z.object({
       "Debe ser una URL válida de LinkedIn"
     ),
   notas: z.string().optional(),
+  rol: z.enum(['vendedor', 'comprador', 'asesor', 'intermediario', 'otro'] as const).optional(),
+  notas_mandato: z.string().optional(),
 });
 
 type ContactoFormValues = z.infer<typeof contactoSchema>;
@@ -61,12 +64,14 @@ interface NuevoContactoDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  mandatoId?: string;
 }
 
 export function NuevoContactoDrawer({
   open,
   onOpenChange,
   onSuccess,
+  mandatoId,
 }: NuevoContactoDrawerProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
@@ -108,7 +113,7 @@ export function NuevoContactoDrawer({
   const onSubmit = async (data: ContactoFormValues) => {
     setSubmitting(true);
     try {
-      await createContacto({
+      const nuevoContacto = await createContacto({
         nombre: data.nombre,
         apellidos: data.apellidos || undefined,
         email: data.email,
@@ -119,7 +124,19 @@ export function NuevoContactoDrawer({
         notas: data.notas || undefined,
       });
 
-      toast.success("Contacto creado exitosamente");
+      // Si hay mandatoId, vincular el contacto al mandato
+      if (mandatoId && data.rol) {
+        await addContactoToMandato(
+          mandatoId,
+          nuevoContacto.id,
+          data.rol,
+          data.notas_mandato || undefined
+        );
+        toast.success("Contacto añadido al mandato exitosamente");
+      } else {
+        toast.success("Contacto creado exitosamente");
+      }
+
       form.reset();
       onOpenChange(false);
       onSuccess?.();
@@ -289,6 +306,60 @@ export function NuevoContactoDrawer({
                     </FormItem>
                   )}
                 />
+
+                {mandatoId && (
+                  <>
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-medium mb-4">Relación con el mandato</h4>
+                      
+                      <FormField
+                        control={form.control}
+                        name="rol"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Rol en el mandato *</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un rol" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-background">
+                                <SelectItem value="vendedor">Vendedor</SelectItem>
+                                <SelectItem value="comprador">Comprador</SelectItem>
+                                <SelectItem value="asesor">Asesor</SelectItem>
+                                <SelectItem value="intermediario">Intermediario</SelectItem>
+                                <SelectItem value="otro">Otro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="notas_mandato"
+                        render={({ field }) => (
+                          <FormItem className="mt-4">
+                            <FormLabel>Notas sobre su rol</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Información específica sobre su participación en este mandato..."
+                                className="min-h-[80px]"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <DrawerFooter className="px-0">
                   <Button type="submit" disabled={submitting}>
