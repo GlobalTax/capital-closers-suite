@@ -8,26 +8,26 @@ import type { LucideIcon } from "lucide-react";
 interface TVColumnProps {
   title: string;
   leads: UnifiedLead[];
-  color: 'yellow' | 'blue' | 'green' | 'purple' | 'orange' | 'emerald';
+  color: 'slate' | 'zinc' | 'neutral' | 'stone' | 'gray' | 'emerald';
   icon: LucideIcon;
 }
 
 const headerColorClasses = {
-  yellow: 'bg-yellow-100 border-yellow-500 dark:bg-yellow-900/20',
-  blue: 'bg-blue-100 border-blue-500 dark:bg-blue-900/20',
-  green: 'bg-green-100 border-green-500 dark:bg-green-900/20',
-  purple: 'bg-purple-100 border-purple-500 dark:bg-purple-900/20',
-  orange: 'bg-orange-100 border-orange-500 dark:bg-orange-900/20',
-  emerald: 'bg-emerald-100 border-emerald-600 dark:bg-emerald-900/20'
+  slate: 'bg-slate-50 border-slate-200 dark:bg-slate-900/10 dark:border-slate-800',
+  zinc: 'bg-zinc-50 border-zinc-200 dark:bg-zinc-900/10 dark:border-zinc-800',
+  neutral: 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/10 dark:border-neutral-800',
+  stone: 'bg-stone-50 border-stone-200 dark:bg-stone-900/10 dark:border-stone-800',
+  gray: 'bg-gray-50 border-gray-200 dark:bg-gray-900/10 dark:border-gray-800',
+  emerald: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800'
 };
 
 const iconColorClasses = {
-  yellow: 'text-yellow-600 dark:text-yellow-400',
-  blue: 'text-blue-600 dark:text-blue-400',
-  green: 'text-green-600 dark:text-green-400',
-  purple: 'text-purple-600 dark:text-purple-400',
-  orange: 'text-orange-600 dark:text-orange-400',
-  emerald: 'text-emerald-600 dark:text-emerald-400'
+  slate: 'text-slate-700 dark:text-slate-300',
+  zinc: 'text-zinc-700 dark:text-zinc-300',
+  neutral: 'text-neutral-700 dark:text-neutral-300',
+  stone: 'text-stone-700 dark:text-stone-300',
+  gray: 'text-gray-700 dark:text-gray-300',
+  emerald: 'text-emerald-700 dark:text-emerald-300'
 };
 
 export function TVColumn({ title, leads, color, icon: Icon }: TVColumnProps) {
@@ -35,9 +35,9 @@ export function TVColumn({ title, leads, color, icon: Icon }: TVColumnProps) {
   const isSaturated = leads.length > 10;
 
   return (
-    <div className="flex flex-col h-full bg-card rounded-lg shadow-xl border-2 border-border overflow-hidden">
+    <div className="flex flex-col h-full bg-card rounded-lg shadow-md border border-border overflow-hidden">
       {/* Header */}
-      <div className={`${headerColorClasses[color]} p-4 border-b-2 border-border`}>
+      <div className={`${headerColorClasses[color]} p-4 border-b border-border`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <Icon className={`w-8 h-8 ${iconColorClasses[color]}`} />

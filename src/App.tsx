@@ -35,6 +35,7 @@ const ImportarDatos = lazy(() => import("./pages/ImportarDatos"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const DashboardTV = lazy(() => import("./pages/DashboardTV"));
 const GestionLeads = lazy(() => import("./pages/GestionLeads"));
+const ConfigurarDashboardTV = lazy(() => import("./pages/ConfigurarDashboardTV"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -64,8 +65,9 @@ function AppContent() {
           <Route path="/usuarios" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><Usuarios /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-mandatos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarMandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-datos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarDatos /></AppLayout></ProtectedRoute>} />
-          <Route path="/dashboard-tv" element={<ProtectedRoute><DashboardTV /></ProtectedRoute>} />
-          <Route path="/gestion-leads" element={<ProtectedRoute requiredRole="admin"><AppLayout><GestionLeads /></AppLayout></ProtectedRoute>} />
+            <Route path="/dashboard-tv" element={<ProtectedRoute><DashboardTV /></ProtectedRoute>} />
+            <Route path="/dashboard-tv/configurar" element={<ProtectedRoute requiredRole="admin"><ConfigurarDashboardTV /></ProtectedRoute>} />
+            <Route path="/gestion-leads" element={<ProtectedRoute requiredRole="admin"><AppLayout><GestionLeads /></AppLayout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

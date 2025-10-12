@@ -5042,6 +5042,45 @@ export type Database = {
         }
         Relationships: []
       }
+      tv_dashboard_fase_mapping: {
+        Row: {
+          activo: boolean
+          color: string
+          columna_tv: string
+          created_at: string
+          fase_id: string
+          fase_tipo: string
+          icono: string
+          id: string
+          orden: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          color: string
+          columna_tv: string
+          created_at?: string
+          fase_id: string
+          fase_tipo: string
+          icono: string
+          id?: string
+          orden: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          color?: string
+          columna_tv?: string
+          created_at?: string
+          fase_id?: string
+          fase_tipo?: string
+          icono?: string
+          id?: string
+          orden?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_dashboard_layouts: {
         Row: {
           created_at: string

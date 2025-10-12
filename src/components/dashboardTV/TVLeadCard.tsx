@@ -6,30 +6,30 @@ interface TVLeadCardProps {
 }
 
 const colorClasses = {
-  purple: 'bg-purple-100 border-purple-500 dark:bg-purple-900/20',
-  blue: 'bg-blue-100 border-blue-500 dark:bg-blue-900/20',
-  green: 'bg-green-100 border-green-500 dark:bg-green-900/20',
-  orange: 'bg-orange-100 border-orange-500 dark:bg-orange-900/20',
-  red: 'bg-red-100 border-red-500 dark:bg-red-900/20',
-  emerald: 'bg-emerald-100 border-emerald-600 dark:bg-emerald-900/20'
+  purple: 'bg-purple-50 border-purple-300 dark:bg-purple-900/10 dark:border-purple-700',
+  blue: 'bg-blue-50 border-blue-300 dark:bg-blue-900/10 dark:border-blue-700',
+  green: 'bg-green-50 border-green-300 dark:bg-green-900/10 dark:border-green-700',
+  orange: 'bg-orange-50 border-orange-300 dark:bg-orange-900/10 dark:border-orange-700',
+  red: 'bg-red-50 border-red-300 dark:bg-red-900/10 dark:border-red-700',
+  emerald: 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/10 dark:border-emerald-700'
 };
 
 const badgeColorClasses = {
-  purple: 'bg-purple-500 text-white',
-  blue: 'bg-blue-500 text-white',
-  green: 'bg-green-500 text-white',
-  orange: 'bg-orange-500 text-white',
-  red: 'bg-red-500 text-white',
-  emerald: 'bg-emerald-600 text-white'
+  purple: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
+  blue: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
+  green: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-800',
+  orange: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 border border-orange-200 dark:border-orange-800',
+  red: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border border-red-200 dark:border-red-800',
+  emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
 };
 
 const iconBgClasses = {
-  purple: 'bg-purple-500',
-  blue: 'bg-blue-500',
-  green: 'bg-green-500',
-  orange: 'bg-orange-500',
-  red: 'bg-red-500',
-  emerald: 'bg-emerald-600'
+  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
 };
 
 const tipoLabels = {
@@ -45,9 +45,9 @@ export function TVLeadCard({ lead }: TVLeadCardProps) {
   return (
     <div 
       className={`
-        min-h-[140px] p-4 rounded-lg border-l-4 
+        min-h-[140px] p-4 rounded-lg border-l-2 
         ${colorClasses[lead.colorScheme]} 
-        hover:shadow-lg transition-all duration-300
+        hover:shadow-md transition-all duration-300
         animate-fade-in
       `}
     >
@@ -67,7 +67,7 @@ export function TVLeadCard({ lead }: TVLeadCardProps) {
       <div className="flex gap-4">
         {/* Icono circular */}
         <div className={`flex-shrink-0 w-14 h-14 rounded-full ${iconBgClasses[lead.colorScheme]} flex items-center justify-center`}>
-          <IconComponent className="w-7 h-7 text-white" />
+          <IconComponent className="w-7 h-7" />
         </div>
 
         {/* Info */}
