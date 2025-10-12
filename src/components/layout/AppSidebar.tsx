@@ -16,6 +16,8 @@ import {
   Shield,
   Upload,
   UserCog,
+  Monitor,
+  Target,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +43,7 @@ const mandatosItems = [
 ];
 
 const otherMenuItems = [
+  { title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
   { title: "Mis Horas", url: "/mis-horas", icon: Clock },
   { title: "Contactos", url: "/contactos", icon: Users },
   { title: "Empresas", url: "/empresas", icon: Building2 },
@@ -51,6 +54,7 @@ const otherMenuItems = [
 
 const superAdminItems = [
   { title: "Usuarios", url: "/usuarios", icon: UserCog },
+  { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
   { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },
