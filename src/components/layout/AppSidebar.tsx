@@ -19,6 +19,7 @@ import {
   Monitor,
   Target,
   Settings,
+  ExternalLink,
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,6 +64,10 @@ const superAdminItems = [
   { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },
+];
+
+const platformItems = [
+  { title: "AdminWeb", url: "https://capittal.es/admin/login", icon: ExternalLink, external: true },
 ];
 
 export function AppSidebar() {
@@ -165,6 +170,32 @@ export function AppSidebar() {
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
                     </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs font-medium px-3">
+            Plataformas
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {platformItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                      <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
