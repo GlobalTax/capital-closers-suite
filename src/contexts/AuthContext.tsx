@@ -226,6 +226,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('admin_users')
           .update({ needs_credentials: false })
           .eq('user_id', user.id);
+        
+        // Update local state BEFORE logout to prevent modal from reopening
+        setAdminUser(prev => prev ? { ...prev, needs_credentials: false } : null);
       }
 
       // Logout to force re-login with new password
