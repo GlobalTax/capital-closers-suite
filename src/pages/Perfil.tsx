@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +31,7 @@ export default function Perfil() {
   const { adminUser, updatePassword } = useAuth();
   const { theme, setTheme, actualTheme } = useTheme();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -89,7 +91,7 @@ export default function Perfil() {
 
     setIsChangingPassword(true);
     
-    const { error } = await updatePassword(newPassword);
+    const { error, requiresReauth } = await updatePassword(currentPassword, newPassword);
     
     if (error) {
       toast({
@@ -97,17 +99,19 @@ export default function Perfil() {
         description: error.message,
         variant: 'destructive',
       });
+      setIsChangingPassword(false);
     } else {
       toast({
         title: '✓ Contraseña actualizada',
-        description: 'Tu contraseña ha sido cambiada exitosamente',
+        description: 'Por seguridad, debes iniciar sesión nuevamente con tu nueva contraseña',
       });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      
+      if (requiresReauth) {
+        setTimeout(() => {
+          navigate('/auth/login');
+        }, 2000);
+      }
     }
-    
-    setIsChangingPassword(false);
   };
 
   const formatDate = (date: string | null) => {

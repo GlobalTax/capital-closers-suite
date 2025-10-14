@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Lock, CheckCircle2, XCircle } from 'lucide-react';
 
 export function ChangePasswordModal() {
-  const { adminUser, updatePassword } = useAuth();
+  const { adminUser, setInitialPassword } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,13 +47,13 @@ export function ChangePasswordModal() {
 
     setIsLoading(true);
 
-    const { error } = await updatePassword(newPassword);
+    const { error } = await setInitialPassword(newPassword);
 
     if (error) {
       toast.error(error.message);
       setIsLoading(false);
     } else {
-      toast.success('Contraseña actualizada correctamente');
+      toast.success('Contraseña configurada. Por favor inicia sesión nuevamente.');
     }
   };
 

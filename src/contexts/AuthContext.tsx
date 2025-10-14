@@ -22,7 +22,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error: Error | null }>;
   logout: () => Promise<void>;
-  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<{ error: Error | null; requiresReauth: boolean }>;
+  setInitialPassword: (newPassword: string) => Promise<{ error: Error | null }>;
   refreshAdminUser: () => Promise<void>;
 }
 
@@ -174,7 +175,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAdminUser(null);
   };
 
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      if (!user?.email) {
+        throw new Error('No hay usuario autenticado');
+      }
+
+      // Re-authenticate with current password to verify it
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error('La contraseña actual es incorrecta');
+      }
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) throw updateError;
+
+      // Update needs_credentials flag
+      await supabase
+        .from('admin_users')
+        .update({ needs_credentials: false })
+        .eq('user_id', user.id);
+
+      // Force logout to require re-authentication with new password
+      await supabase.auth.signOut();
+      
+      return { error: null, requiresReauth: true };
+    } catch (error) {
+      return { error: error as Error, requiresReauth: false };
+    }
+  };
+
+  const setInitialPassword = async (newPassword: string) => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
@@ -182,16 +221,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // Update needs_credentials flag
       if (user) {
         await supabase
           .from('admin_users')
           .update({ needs_credentials: false })
           .eq('user_id', user.id);
-        
-        await refreshAdminUser();
       }
 
+      // Logout to force re-login with new password
+      await supabase.auth.signOut();
+      
       return { error: null };
     } catch (error) {
       return { error: error as Error };
@@ -208,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         updatePassword,
+        setInitialPassword,
         refreshAdminUser,
       }}
     >
