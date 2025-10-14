@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { useAdminUsers, useDeactivateAdminUser, useReactivateAdminUser } from "@/hooks/queries/useAdminUsers";
+import { useAdminUsers, useDeactivateAdminUser, useReactivateAdminUser, useResendAdminCredentials } from "@/hooks/queries/useAdminUsers";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, UserCheck, UserX, Edit } from "lucide-react";
+import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { NuevoUsuarioDialog } from "@/components/usuarios/NuevoUsuarioDialog";
 import { EditarUsuarioDialog } from "@/components/usuarios/EditarUsuarioDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { ReenviarCredencialesDialog } from "@/components/usuarios/ReenviarCredencialesDialog";
 import {
   Table,
   TableBody,
@@ -26,10 +27,12 @@ export default function Usuarios() {
   const { data: usuarios = [], isLoading } = useAdminUsers();
   const { mutate: deactivateUser } = useDeactivateAdminUser();
   const { mutate: reactivateUser } = useReactivateAdminUser();
+  const { mutate: resendCredentials, isPending: isResending } = useResendAdminCredentials();
 
   const [nuevoDialogOpen, setNuevoDialogOpen] = useState(false);
   const [editarDialog, setEditarDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user?: any }>({ open: false });
+  const [resendDialog, setResendDialog] = useState<{ open: boolean; user?: any }>({ open: false });
 
   const isSuperAdmin = adminUser?.role === 'super_admin';
 
@@ -63,6 +66,14 @@ export default function Usuarios() {
 
   const handleReactivate = (user: any) => {
     reactivateUser(user.user_id);
+  };
+
+  const handleResendCredentials = () => {
+    if (resendDialog.user) {
+      resendCredentials(resendDialog.user.user_id, {
+        onSuccess: () => setResendDialog({ open: false }),
+      });
+    }
   };
 
   if (isLoading) {
@@ -160,6 +171,16 @@ export default function Usuarios() {
                     <div className="flex justify-end gap-2">
                       {isSuperAdmin && (
                         <>
+                          {user.needs_credentials && !user.last_login && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setResendDialog({ open: true, user })}
+                              title="Reenviar invitación"
+                            >
+                              <MailWarning className="h-4 w-4 text-warning" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -214,6 +235,17 @@ export default function Usuarios() {
         descripcion={`¿Estás seguro de desactivar a ${deactivateDialog.user?.full_name}? El usuario no podrá iniciar sesión.`}
         variant="destructive"
       />
+
+      {resendDialog.user && (
+        <ReenviarCredencialesDialog
+          open={resendDialog.open}
+          onOpenChange={(open) => setResendDialog({ open, user: resendDialog.user })}
+          userName={resendDialog.user.full_name}
+          userEmail={resendDialog.user.email}
+          onConfirm={handleResendCredentials}
+          isLoading={isResending}
+        />
+      )}
     </div>
   );
 }

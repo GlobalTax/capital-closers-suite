@@ -84,3 +84,22 @@ export function useReactivateAdminUser() {
     },
   });
 }
+
+export function useResendAdminCredentials() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminUsersService.resendCredentials(userId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin_users'] });
+      toast.success(`Credenciales reenviadas a: ${result.email}`);
+      toast.info(`Nueva contraseña temporal: ${result.temporary_password}`, {
+        duration: 15000,
+        description: 'Guarda esta contraseña, no se volverá a mostrar.',
+      });
+    },
+    onError: (error) => {
+      handleError(error, 'Error al reenviar credenciales');
+    },
+  });
+}

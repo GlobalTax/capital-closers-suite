@@ -143,6 +143,37 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
       return [];
     }
   }
+
+  /**
+   * Reenviar credenciales temporales a un usuario
+   */
+  async resendCredentials(userId: string): Promise<{
+    user_id: string;
+    email: string;
+    temporary_password: string;
+    message: string;
+  }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
+      const response = await supabase.functions.invoke('resend-admin-credentials', {
+        body: { user_id: userId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Error al reenviar credenciales');
+      }
+
+      return response.data;
+    } catch (error) {
+      handleError(error, 'Error al reenviar credenciales');
+      throw error;
+    }
+  }
 }
 
 export const adminUsersService = new AdminUsersService();
