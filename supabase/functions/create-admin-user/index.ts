@@ -63,9 +63,103 @@ serve(async (req) => {
     // Generar contraseña temporal segura (20 caracteres)
     const tempPassword = generateSecurePassword()
 
-    console.log(`Creating user with email: ${email}`)
+    console.log(`Processing user creation for: ${email}`)
 
-    // 1. Crear usuario en auth.users usando Admin API
+    // 1. Verificar si el email ya existe en auth.users
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const authUser = existingUsers?.users?.find(u => u.email === email)
+
+    if (authUser) {
+      console.log(`User ${email} already exists in auth.users, checking admin_users...`)
+      
+      // El usuario existe en auth.users, verificar si tiene registro en admin_users
+      const { data: adminUser } = await supabaseAdmin
+        .from('admin_users')
+        .select('user_id')
+        .eq('email', email)
+        .single()
+
+      if (adminUser) {
+        // Usuario ya existe completamente en ambas tablas
+        console.log(`User ${email} already exists in both tables`)
+        return new Response(
+          JSON.stringify({ error: 'Este email ya está registrado como usuario administrador' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Usuario huérfano: existe en auth.users pero no en admin_users
+      console.log(`Orphan user detected: ${email}, linking to admin_users...`)
+
+      // Resetear contraseña del usuario existente y confirmar email
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        authUser.id,
+        {
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name,
+            needs_credentials: true
+          }
+        }
+      )
+
+      if (updateError) {
+        console.error('Error updating orphan user:', updateError)
+        return new Response(
+          JSON.stringify({ error: `Error al actualizar usuario: ${updateError.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Crear registro en admin_users con el user_id existente
+      const { error: dbError } = await supabaseAdmin
+        .from('admin_users')
+        .insert({
+          user_id: authUser.id,
+          email,
+          full_name,
+          role,
+          is_active: true,
+          needs_credentials: true
+        })
+
+      if (dbError) {
+        console.error('Error linking orphan user to admin_users:', dbError)
+        return new Response(
+          JSON.stringify({ error: `Error al vincular usuario: ${dbError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Log de auditoría para usuario huérfano vinculado
+      await supabaseAdmin
+        .from('admin_audit_log')
+        .insert({
+          admin_user_id: callingUser.id,
+          action_type: 'CREATE',
+          target_user_id: authUser.id,
+          target_user_email: email,
+          new_values: { email, full_name, role, note: 'Orphan user linked and repaired' }
+        })
+
+      console.log(`Orphan user linked successfully: ${email}`)
+
+      return new Response(
+        JSON.stringify({
+          user_id: authUser.id,
+          email,
+          temporary_password: tempPassword,
+          message: `Usuario vinculado exitosamente (usuario huérfano reparado).`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Usuario no existe en auth.users, proceder con creación normal
+    console.log(`Creating new user in auth.users: ${email}`)
+
+    // 2. Crear usuario en auth.users usando Admin API
     const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: tempPassword,
@@ -86,7 +180,7 @@ serve(async (req) => {
 
     console.log(`User created in auth.users with id: ${newUser.user.id}`)
 
-    // 2. Crear registro en admin_users con el user_id real
+    // 3. Crear registro en admin_users con el user_id real
     const { error: dbError } = await supabaseAdmin
       .from('admin_users')
       .insert({
@@ -111,7 +205,7 @@ serve(async (req) => {
 
     console.log(`User record created in admin_users`)
 
-    // 3. Log de auditoría
+    // 4. Log de auditoría
     await supabaseAdmin
       .from('admin_audit_log')
       .insert({
