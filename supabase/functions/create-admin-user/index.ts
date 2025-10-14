@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend@2.0.0'
+import { Resend } from 'https://esm.sh/resend@2.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -246,7 +246,7 @@ serve(async (req) => {
                     <tr>
                       <td style="padding: 40px;">
                         <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                          Hola <strong>${fullName}</strong>,
+                          Hola <strong>${full_name}</strong>,
                         </p>
                         <p style="margin: 0 0 20px; color: #555555; font-size: 15px; line-height: 1.6;">
                           Se ha creado tu cuenta de acceso al sistema Capittal. A continuación encontrarás tus credenciales de acceso:
