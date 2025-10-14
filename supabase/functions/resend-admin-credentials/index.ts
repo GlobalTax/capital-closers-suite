@@ -1,9 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { Resend } from 'npm:resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -140,6 +143,122 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Enviar email con credenciales
+    try {
+      const loginUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://tuapp.lovableproject.com'}`;
+      
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Credenciales de Acceso - Capittal</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Bienvenido a Capittal</h1>
+                      </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 40px;">
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Hola <strong>${targetUser.full_name}</strong>,
+                        </p>
+                        
+                        <p style="margin: 0 0 20px; color: #555555; font-size: 15px; line-height: 1.6;">
+                          Se han generado nuevas credenciales de acceso para tu cuenta. Utiliza los siguientes datos para iniciar sesión:
+                        </p>
+                        
+                        <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                          <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            📧 Email
+                          </p>
+                          <p style="margin: 0 0 20px; color: #667eea; font-size: 16px; font-weight: 500;">
+                            ${targetUser.email}
+                          </p>
+                          
+                          <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            🔑 Contraseña Temporal
+                          </p>
+                          <p style="margin: 0; background-color: #ffffff; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 20px; font-weight: 600; color: #667eea; letter-spacing: 2px; border: 2px dashed #667eea;">
+                            ${temporaryPassword}
+                          </p>
+                        </div>
+                        
+                        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;">
+                          <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
+                            <strong>⚠️ Importante:</strong> Por seguridad, deberás cambiar esta contraseña en tu primer inicio de sesión.
+                          </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 35px 0;">
+                          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+                            Acceder al Sistema
+                          </a>
+                        </div>
+                        
+                        <p style="margin: 30px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Si tienes alguna pregunta o problema para acceder, no dudes en contactar con el equipo de soporte.
+                        </p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 30px 40px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
+                        <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5; text-align: center;">
+                          Este es un correo automático, por favor no respondas a este mensaje.<br>
+                          © ${new Date().getFullYear()} Capittal. Todos los derechos reservados.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const { data: emailData, error: emailError } = await resend.emails.send({
+        from: 'Capittal <onboarding@resend.dev>',
+        to: [targetUser.email],
+        subject: '🔑 Tus nuevas credenciales de acceso - Capittal',
+        html: emailHtml,
+      });
+
+      if (emailError) {
+        console.error('Email send error:', emailError);
+        // No fallar la petición si el email falla, pero logear el error
+        await supabaseAdmin
+          .from('admin_audit_log')
+          .insert({
+            admin_user_id: user.id,
+            action_type: 'EMAIL_SEND_FAILED',
+            target_user_id: user_id,
+            target_user_email: targetUser.email,
+            new_values: {
+              error: emailError.message,
+              timestamp: new Date().toISOString()
+            }
+          });
+      } else {
+        console.log(`Email sent successfully to ${targetUser.email}:`, emailData);
+      }
+    } catch (emailError) {
+      console.error('Email exception:', emailError);
+      // Continuar aunque falle el email
+    }
+
     // Actualizar timestamp de credentials_sent_at
     await supabaseAdmin
       .from('admin_users')
@@ -167,7 +286,7 @@ Deno.serve(async (req) => {
         user_id: user_id,
         email: targetUser.email,
         temporary_password: temporaryPassword,
-        message: 'Credenciales reenviadas correctamente'
+        message: 'Credenciales reenviadas correctamente y email enviado'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

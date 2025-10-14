@@ -1,10 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Resend } from 'npm:resend@2.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -218,12 +221,103 @@ serve(async (req) => {
 
     console.log(`User created successfully: ${email}`)
 
+    // Enviar email de bienvenida con credenciales
+    try {
+      const loginUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://tuapp.lovableproject.com'}`;
+      
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bienvenido a Capittal</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">¡Bienvenido a Capittal!</h1>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 40px;">
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Hola <strong>${fullName}</strong>,
+                        </p>
+                        <p style="margin: 0 0 20px; color: #555555; font-size: 15px; line-height: 1.6;">
+                          Se ha creado tu cuenta de acceso al sistema Capittal. A continuación encontrarás tus credenciales de acceso:
+                        </p>
+                        <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                          <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            📧 Email
+                          </p>
+                          <p style="margin: 0 0 20px; color: #667eea; font-size: 16px; font-weight: 500;">
+                            ${email}
+                          </p>
+                          <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                            🔑 Contraseña Temporal
+                          </p>
+                          <p style="margin: 0; background-color: #ffffff; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 20px; font-weight: 600; color: #667eea; letter-spacing: 2px; border: 2px dashed #667eea;">
+                            ${tempPassword}
+                          </p>
+                        </div>
+                        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;">
+                          <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
+                            <strong>⚠️ Importante:</strong> Por seguridad, deberás cambiar esta contraseña en tu primer inicio de sesión.
+                          </p>
+                        </div>
+                        <div style="text-align: center; margin: 35px 0;">
+                          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+                            Acceder al Sistema
+                          </a>
+                        </div>
+                        <p style="margin: 30px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Si tienes alguna pregunta, no dudes en contactar con el equipo de soporte.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 30px 40px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
+                        <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5; text-align: center;">
+                          Este es un correo automático, por favor no respondas a este mensaje.<br>
+                          © ${new Date().getFullYear()} Capittal. Todos los derechos reservados.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const { error: emailError } = await resend.emails.send({
+        from: 'Capittal <onboarding@resend.dev>',
+        to: [email],
+        subject: '🎉 Bienvenido a Capittal - Tus credenciales de acceso',
+        html: emailHtml,
+      });
+
+      if (emailError) {
+        console.error('Email send error:', emailError);
+      } else {
+        console.log(`Welcome email sent to ${email}`);
+      }
+    } catch (emailError) {
+      console.error('Email exception:', emailError);
+    }
+
     return new Response(
       JSON.stringify({
         user_id: newUser.user.id,
         email,
         temporary_password: tempPassword,
-        message: `Usuario creado exitosamente. Contraseña temporal generada.`
+        message: `Usuario creado exitosamente y email de bienvenida enviado.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
