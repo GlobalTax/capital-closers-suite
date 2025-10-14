@@ -37,7 +37,7 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
   }
 
   /**
-   * Crear usuario temporal con contraseña autogenerada
+   * Crear usuario temporal con contraseña autogenerada usando Edge Function
    */
   async createTemporaryUser(data: CreateAdminUserDto): Promise<{
     user_id: string;
@@ -46,20 +46,25 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
     message: string;
   }> {
     try {
-      const { data: result, error } = await supabase.rpc('create_temporary_user_enhanced', {
-        p_email: data.email,
-        p_full_name: data.full_name,
-        p_role: data.role,
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
+      const response = await supabase.functions.invoke('create-admin-user', {
+        body: {
+          email: data.email,
+          full_name: data.full_name,
+          role: data.role,
+        },
       });
 
-      if (error) throw error;
-      
-      return result as unknown as {
-        user_id: string;
-        email: string;
-        temporary_password: string;
-        message: string;
-      };
+      if (response.error) {
+        throw new Error(response.error.message || 'Error al crear usuario');
+      }
+
+      return response.data;
     } catch (error) {
       handleError(error, 'Error al crear usuario temporal');
       throw error;
