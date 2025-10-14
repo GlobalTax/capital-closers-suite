@@ -239,14 +239,23 @@ serve(async (req) => {
 })
 
 function generateSecurePassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*'
-  let password = ''
-  const array = new Uint8Array(20)
-  crypto.getRandomValues(array)
+  // Generar contraseña simple: 8 caracteres con mayúsculas y números
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const lowercase = 'abcdefghijkmnpqrstuvwxyz'
+  const numbers = '23456789'
   
-  for (let i = 0; i < 20; i++) {
-    password += chars[array[i] % chars.length]
+  let password = ''
+  
+  // Asegurar al menos 1 mayúscula, 1 minúscula, 1 número
+  password += uppercase[Math.floor(Math.random() * uppercase.length)]
+  password += numbers[Math.floor(Math.random() * numbers.length)]
+  
+  // Completar hasta 8 caracteres con letras y números
+  const allChars = uppercase + lowercase + numbers
+  for (let i = 2; i < 8; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)]
   }
   
-  return password
+  // Mezclar caracteres
+  return password.split('').sort(() => Math.random() - 0.5).join('')
 }

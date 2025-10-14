@@ -16,17 +16,16 @@ export function ChangePasswordModal() {
   const open = adminUser?.needs_credentials === true;
 
   const validatePassword = (pwd: string) => {
-    const hasMinLength = pwd.length >= 12;
+    const hasMinLength = pwd.length >= 8;
     const hasUpperCase = /[A-Z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
-    const hasSpecialChar = /[^A-Za-z0-9]/.test(pwd);
 
     return {
       hasMinLength,
       hasUpperCase,
       hasNumber,
-      hasSpecialChar,
-      isValid: hasMinLength && hasUpperCase && hasNumber && hasSpecialChar,
+      hasSpecialChar: true, // Ya no requerido
+      isValid: hasMinLength && hasUpperCase && hasNumber,
     };
   };
 
@@ -115,10 +114,9 @@ export function ChangePasswordModal() {
 
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm font-medium text-foreground">Requisitos de contraseña:</p>
-            <ValidationItem isValid={validation.hasMinLength} text="Mínimo 12 caracteres" />
+            <ValidationItem isValid={validation.hasMinLength} text="Mínimo 8 caracteres" />
             <ValidationItem isValid={validation.hasUpperCase} text="Al menos una mayúscula" />
             <ValidationItem isValid={validation.hasNumber} text="Al menos un número" />
-            <ValidationItem isValid={validation.hasSpecialChar} text="Al menos un carácter especial" />
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading || !validation.isValid}>
