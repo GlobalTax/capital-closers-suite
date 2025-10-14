@@ -26,6 +26,22 @@ serve(async (req) => {
     // Verificar que el usuario que llama es super_admin
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
+    
+    // Cliente impersonado con el JWT del usuario para que auth.uid() funcione en triggers
+    const supabaseAsUser = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: { 
+          headers: { Authorization: `Bearer ${token}` } 
+        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+    
     const { data: { user: callingUser } } = await supabaseAdmin.auth.getUser(token)
 
     if (!callingUser) {
@@ -113,7 +129,8 @@ serve(async (req) => {
       }
 
       // Crear registro en admin_users con el user_id existente
-      const { error: dbError } = await supabaseAdmin
+      // Usar supabaseAsUser para que auth.uid() esté disponible en triggers
+      const { error: dbError } = await supabaseAsUser
         .from('admin_users')
         .insert({
           user_id: authUser.id,
@@ -132,16 +149,7 @@ serve(async (req) => {
         )
       }
 
-      // Log de auditoría para usuario huérfano vinculado
-      await supabaseAdmin
-        .from('admin_audit_log')
-        .insert({
-          admin_user_id: callingUser.id,
-          action_type: 'CREATE',
-          target_user_id: authUser.id,
-          target_user_email: email,
-          new_values: { email, full_name, role, note: 'Orphan user linked and repaired' }
-        })
+      // El trigger de admin_users ya creó el audit log automáticamente
 
       console.log(`Orphan user linked successfully: ${email}`)
 
@@ -181,7 +189,8 @@ serve(async (req) => {
     console.log(`User created in auth.users with id: ${newUser.user.id}`)
 
     // 3. Crear registro en admin_users con el user_id real
-    const { error: dbError } = await supabaseAdmin
+    // Usar supabaseAsUser para que auth.uid() esté disponible en triggers
+    const { error: dbError } = await supabaseAsUser
       .from('admin_users')
       .insert({
         user_id: newUser.user.id,
@@ -205,16 +214,7 @@ serve(async (req) => {
 
     console.log(`User record created in admin_users`)
 
-    // 4. Log de auditoría
-    await supabaseAdmin
-      .from('admin_audit_log')
-      .insert({
-        admin_user_id: callingUser.id,
-        action_type: 'CREATE',
-        target_user_id: newUser.user.id,
-        target_user_email: email,
-        new_values: { email, full_name, role }
-      })
+    // El trigger de admin_users ya creó el audit log automáticamente
 
     console.log(`User created successfully: ${email}`)
 
