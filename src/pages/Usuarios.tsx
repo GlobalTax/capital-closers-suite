@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning } from "lucide-react";
+import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { NuevoUsuarioDialog } from "@/components/usuarios/NuevoUsuarioDialog";
+import { InviteUserDialog } from "@/components/usuarios/InviteUserDialog";
 import { EditarUsuarioDialog } from "@/components/usuarios/EditarUsuarioDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReenviarCredencialesDialog } from "@/components/usuarios/ReenviarCredencialesDialog";
@@ -30,6 +31,7 @@ export default function Usuarios() {
   const { mutate: resendCredentials, isPending: isResending } = useResendAdminCredentials();
 
   const [nuevoDialogOpen, setNuevoDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [editarDialog, setEditarDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [resendDialog, setResendDialog] = useState<{ open: boolean; user?: any }>({ open: false });
@@ -217,6 +219,7 @@ export default function Usuarios() {
         </CardContent>
       </Card>
 
+      <InviteUserDialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen} />
       <NuevoUsuarioDialog open={nuevoDialogOpen} onOpenChange={setNuevoDialogOpen} />
 
       {editarDialog.user && (

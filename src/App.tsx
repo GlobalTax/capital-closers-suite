@@ -16,6 +16,7 @@ import { queryClient } from "@/lib/query-client";
 
 // Lazy load de páginas para mejorar performance inicial
 const Login = lazy(() => import("./pages/auth/Login"));
+const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
 const Mandatos = lazy(() => import("./pages/Mandatos"));
 const MandatoDetalle = lazy(() => import("./pages/MandatoDetalle"));
 const Contactos = lazy(() => import("./pages/Contactos"));
@@ -46,6 +47,7 @@ function AppContent() {
         <Routes>
           {/* Public routes */}
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/accept-invitation" element={<AcceptInvitation />} />
 
           {/* Protected routes */}
           <Route path="/" element={<Navigate to="/mandatos" replace />} />
