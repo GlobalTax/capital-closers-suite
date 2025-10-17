@@ -103,17 +103,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generar nueva contraseña temporal usando función SQL mejorada
-    const { data: temporaryPassword, error: passwordError } = await supabaseAdmin.rpc(
+    // Generar nueva contraseña temporal usando función SQL con fallback
+    let temporaryPassword: string | null = null;
+    const { data: rpcPassword, error: passwordError } = await supabaseAdmin.rpc(
       'generate_secure_temp_password'
     ) as { data: string | null; error: any };
 
-    if (passwordError || !temporaryPassword) {
-      console.error('Error generating password:', passwordError);
-      return new Response(
-        JSON.stringify({ error: 'Error al generar nueva contraseña' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!passwordError && rpcPassword) {
+      temporaryPassword = rpcPassword;
+    } else {
+      console.log('RPC generate_secure_temp_password falló, usando fallback:', passwordError?.message);
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+      const arr = new Uint32Array(20);
+      crypto.getRandomValues(arr);
+      temporaryPassword = Array.from(arr, n => chars[n % chars.length]).join('') + '1!';
     }
 
     // Actualizar contraseña en Supabase Auth

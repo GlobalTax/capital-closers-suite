@@ -79,17 +79,20 @@ serve(async (req) => {
       )
     }
 
-    // Generar contraseña temporal segura usando función SQL
-    const { data: tempPassword, error: passwordError } = await supabaseAdmin.rpc(
+    // Generar contraseña temporal segura usando función SQL con fallback
+    let tempPassword: string | null = null;
+    const { data: rpcPassword, error: passwordError } = await supabaseAdmin.rpc(
       'generate_secure_temp_password'
     ) as { data: string | null; error: any };
-    
-    if (passwordError || !tempPassword) {
-      console.error('Error generating password:', passwordError);
-      return new Response(
-        JSON.stringify({ error: 'Error al generar contraseña temporal' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+    if (!passwordError && rpcPassword) {
+      tempPassword = rpcPassword;
+    } else {
+      console.log('RPC generate_secure_temp_password falló, usando fallback:', passwordError?.message);
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+      const arr = new Uint32Array(20);
+      crypto.getRandomValues(arr);
+      tempPassword = Array.from(arr, n => chars[n % chars.length]).join('') + '1!';
     }
 
     console.log(`Processing user creation for: ${email}`)
