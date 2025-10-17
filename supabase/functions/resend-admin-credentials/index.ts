@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
     // Enviar email con credenciales
     try {
-      const loginUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://fwhqtzkkvnjkazhaficj.lovableproject.com'}/auth/login`;
+      const loginUrl = 'https://fwhqtzkkvnjkazhaficj.lovableproject.com/auth/login';
       
       const emailHtml = `
         <!DOCTYPE html>
