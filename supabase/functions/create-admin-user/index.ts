@@ -236,7 +236,7 @@ serve(async (req) => {
 
     // Enviar email de bienvenida con credenciales
     try {
-      const loginUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://tuapp.lovableproject.com'}`;
+      const loginUrl = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovableproject.com') || 'https://fwhqtzkkvnjkazhaficj.lovableproject.com'}/auth/login`;
       
       const emailHtml = `
         <!DOCTYPE html>
