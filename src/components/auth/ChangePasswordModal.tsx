@@ -6,6 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Lock, CheckCircle2, XCircle } from 'lucide-react';
+import { 
+  setInitialPasswordSchema, 
+  getPasswordValidationErrors,
+  calculatePasswordStrength 
+} from '@/lib/validation/auth-schemas';
 
 export function ChangePasswordModal() {
   const { adminUser, setInitialPassword } = useAuth();
@@ -15,32 +20,22 @@ export function ChangePasswordModal() {
 
   const open = adminUser?.needs_credentials === true;
 
-  const validatePassword = (pwd: string) => {
-    const hasMinLength = pwd.length >= 8;
-    const hasUpperCase = /[A-Z]/.test(pwd);
-    const hasNumber = /[0-9]/.test(pwd);
-
-    return {
-      hasMinLength,
-      hasUpperCase,
-      hasNumber,
-      hasSpecialChar: true, // Ya no requerido
-      isValid: hasMinLength && hasUpperCase && hasNumber,
-    };
-  };
-
-  const validation = validatePassword(newPassword);
+  const validationErrors = getPasswordValidationErrors(newPassword);
+  const passwordStrength = calculatePasswordStrength(newPassword);
+  const isPasswordValid = validationErrors.length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validation.isValid) {
-      toast.error('La contraseña no cumple con los requisitos de seguridad');
-      return;
-    }
+    // Validar con Zod schema
+    const result = setInitialPasswordSchema.safeParse({
+      password: newPassword,
+      confirmPassword,
+    });
 
-    if (newPassword !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
+    if (!result.success) {
+      const errorMessage = result.error.errors[0]?.message || 'Datos inválidos';
+      toast.error(errorMessage);
       return;
     }
 
@@ -114,12 +109,39 @@ export function ChangePasswordModal() {
 
           <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm font-medium text-foreground">Requisitos de contraseña:</p>
-            <ValidationItem isValid={validation.hasMinLength} text="Mínimo 8 caracteres" />
-            <ValidationItem isValid={validation.hasUpperCase} text="Al menos una mayúscula" />
-            <ValidationItem isValid={validation.hasNumber} text="Al menos un número" />
+            <ValidationItem isValid={newPassword.length >= 12} text="Mínimo 12 caracteres" />
+            <ValidationItem isValid={/[A-Z]/.test(newPassword)} text="Al menos una mayúscula" />
+            <ValidationItem isValid={/[a-z]/.test(newPassword)} text="Al menos una minúscula" />
+            <ValidationItem isValid={/[0-9]/.test(newPassword)} text="Al menos un número" />
+            <ValidationItem isValid={/[^A-Za-z0-9]/.test(newPassword)} text="Al menos un carácter especial" />
+            
+            {newPassword && (
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Fortaleza:</span>
+                  <span className={
+                    passwordStrength >= 80 ? 'text-green-500 font-medium' :
+                    passwordStrength >= 60 ? 'text-yellow-500 font-medium' :
+                    'text-red-500 font-medium'
+                  }>
+                    {passwordStrength >= 80 ? 'Fuerte' : passwordStrength >= 60 ? 'Media' : 'Débil'}
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all ${
+                      passwordStrength >= 80 ? 'bg-green-500' :
+                      passwordStrength >= 60 ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ width: `${passwordStrength}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading || !validation.isValid}>
+          <Button type="submit" className="w-full" disabled={isLoading || !isPasswordValid}>
             {isLoading ? 'Actualizando...' : 'Actualizar Contraseña'}
           </Button>
         </form>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Lock, Mail } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
+import { loginSchema } from '@/lib/validation/auth-schemas';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -18,14 +19,18 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error('Por favor completa todos los campos');
+    // Validar con Zod schema
+    const result = loginSchema.safeParse({ email, password });
+    
+    if (!result.success) {
+      const errorMessage = result.error.errors[0]?.message || 'Datos inválidos';
+      toast.error(errorMessage);
       return;
     }
 
     setIsLoading(true);
 
-    const { error } = await login(email, password);
+    const { error } = await login(result.data.email, result.data.password);
 
     if (error) {
       toast.error(error.message);

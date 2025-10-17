@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthService } from '@/services/auth.service';
 
 export type AdminRole = 'super_admin' | 'admin' | 'editor' | 'viewer';
 
@@ -35,37 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAdminUser = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching admin user:', error);
-        return null;
-      }
-
-      return data as AdminUser | null;
-    } catch (error) {
-      console.error('Exception fetching admin user:', error);
-      return null;
-    }
-  };
-
-  const updateLastLogin = async (userId: string) => {
-    await supabase
-      .from('admin_users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('user_id', userId);
-  };
-
   const refreshAdminUser = async () => {
     if (user) {
-      const adminData = await fetchAdminUser(user.id);
+      const adminData = await AuthService.fetchAdminUser(user.id);
       setAdminUser(adminData);
     }
   };
@@ -81,11 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           setTimeout(() => {
-            fetchAdminUser(session.user.id).then(adminData => {
+            AuthService.fetchAdminUser(session.user.id).then(adminData => {
               setAdminUser(adminData);
               
               if (event === 'SIGNED_IN') {
-                updateLastLogin(session.user.id);
+                AuthService.updateLastLogin(session.user.id);
               }
             });
           }, 0);
@@ -118,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const adminData = await fetchAdminUser(session.user.id);
+          const adminData = await AuthService.fetchAdminUser(session.user.id);
           setAdminUser(adminData);
         }
         
@@ -138,106 +111,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // Check if user is active admin
-      if (data.user) {
-        const adminData = await fetchAdminUser(data.user.id);
-        
-        if (!adminData) {
-          await supabase.auth.signOut();
-          throw new Error('No tienes permisos para acceder a esta aplicación');
-        }
-
-        if (!adminData.is_active) {
-          await supabase.auth.signOut();
-          throw new Error('Tu cuenta está desactivada. Contacta al administrador.');
-        }
-
-        setAdminUser(adminData);
-        await updateLastLogin(data.user.id);
-      }
-
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
+    const { error, adminUser: adminData } = await AuthService.login(email, password);
+    
+    if (adminData) {
+      setAdminUser(adminData);
     }
+    
+    return { error };
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await AuthService.logout();
     setAdminUser(null);
   };
 
   const updatePassword = async (currentPassword: string, newPassword: string) => {
-    try {
-      if (!user?.email) {
-        throw new Error('No hay usuario autenticado');
-      }
-
-      // Re-authenticate with current password to verify it
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
-      });
-
-      if (signInError) {
-        throw new Error('La contraseña actual es incorrecta');
-      }
-
-      // Update to new password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (updateError) throw updateError;
-
-      // Update needs_credentials flag
-      await supabase
-        .from('admin_users')
-        .update({ needs_credentials: false })
-        .eq('user_id', user.id);
-
-      // Force logout to require re-authentication with new password
-      await supabase.auth.signOut();
-      
-      return { error: null, requiresReauth: true };
-    } catch (error) {
-      return { error: error as Error, requiresReauth: false };
+    if (!user?.email) {
+      return { error: new Error('No hay usuario autenticado'), requiresReauth: false };
     }
+
+    return await AuthService.updatePassword(user.email, user.id, currentPassword, newPassword);
   };
 
   const setInitialPassword = async (newPassword: string) => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
-
-      if (user) {
-        await supabase
-          .from('admin_users')
-          .update({ needs_credentials: false })
-          .eq('user_id', user.id);
-        
-        // Update local state BEFORE logout to prevent modal from reopening
-        setAdminUser(prev => prev ? { ...prev, needs_credentials: false } : null);
-      }
-
-      // Logout to force re-login with new password
-      await supabase.auth.signOut();
-      
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
+    if (!user) {
+      return { error: new Error('No hay usuario autenticado') };
     }
+
+    // Actualizar estado local ANTES de logout para prevenir que el modal se reabra
+    setAdminUser(prev => prev ? { ...prev, needs_credentials: false } : null);
+    
+    return await AuthService.setInitialPassword(user.id, newPassword);
   };
 
   return (
