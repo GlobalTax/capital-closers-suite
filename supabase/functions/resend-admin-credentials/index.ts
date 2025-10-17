@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
       `;
 
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'Capittal <onboarding@resend.dev>',
+        from: 'Capittal <noreply@capittal.es>',
         to: [targetUser.email],
         subject: '🔑 Tus nuevas credenciales de acceso - Capittal',
         html: emailHtml,

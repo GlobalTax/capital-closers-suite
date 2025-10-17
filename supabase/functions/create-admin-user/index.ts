@@ -310,7 +310,7 @@ serve(async (req) => {
       `;
 
       const { error: emailError } = await resend.emails.send({
-        from: 'Capittal <onboarding@resend.dev>',
+        from: 'Capittal <noreply@capittal.es>',
         to: [email],
         subject: '🎉 Bienvenido a Capittal - Tus credenciales de acceso',
         html: emailHtml,
