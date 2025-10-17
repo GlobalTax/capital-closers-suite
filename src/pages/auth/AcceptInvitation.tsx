@@ -3,38 +3,27 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { passwordSchema } from '@/lib/validation/auth-schemas';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, User, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const acceptInvitationSchema = z.object({
-  password: z
-    .string()
-    .min(12, 'La contraseña debe tener al menos 12 caracteres')
-    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-    .regex(/[a-z]/, 'Debe contener al menos una minúscula')
-    .regex(/[0-9]/, 'Debe contener al menos un número')
-    .regex(/[^A-Za-z0-9]/, 'Debe contener al menos un carácter especial'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Las contraseñas no coinciden',
-  path: ['confirmPassword'],
-});
+const acceptPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
 
-type AcceptInvitationFormValues = z.infer<typeof acceptInvitationSchema>;
+type AcceptPasswordFormValues = z.infer<typeof acceptPasswordSchema>;
 
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams();
@@ -50,8 +39,8 @@ export default function AcceptInvitation() {
 
   const token = searchParams.get('token');
 
-  const form = useForm<AcceptInvitationFormValues>({
-    resolver: zodResolver(acceptInvitationSchema),
+  const form = useForm<AcceptPasswordFormValues>({
+    resolver: zodResolver(acceptPasswordSchema),
     defaultValues: {
       password: '',
       confirmPassword: '',
@@ -93,7 +82,7 @@ export default function AcceptInvitation() {
     validateToken();
   }, [token]);
 
-  const onSubmit = async (data: AcceptInvitationFormValues) => {
+  const onSubmit = async (data: AcceptPasswordFormValues) => {
     if (!token) return;
 
     setIsSubmitting(true);

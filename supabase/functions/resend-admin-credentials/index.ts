@@ -103,31 +103,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generar nueva contraseña temporal (8 caracteres: uppercase, lowercase, números)
-    const generatePassword = () => {
-      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-      const numbers = '0123456789';
-      
-      const getRandomChar = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
-      
-      let password = '';
-      // Asegurar al menos 1 uppercase, 1 lowercase, 1 número
-      password += getRandomChar(uppercase);
-      password += getRandomChar(lowercase);
-      password += getRandomChar(numbers);
-      
-      // Completar hasta 8 caracteres
-      const allChars = uppercase + lowercase + numbers;
-      for (let i = 0; i < 5; i++) {
-        password += getRandomChar(allChars);
-      }
-      
-      // Mezclar caracteres
-      return password.split('').sort(() => Math.random() - 0.5).join('');
-    };
+    // Generar nueva contraseña temporal usando función SQL mejorada
+    const { data: temporaryPassword, error: passwordError } = await supabaseAdmin.rpc(
+      'generate_secure_temp_password'
+    ) as { data: string | null; error: any };
 
-    const temporaryPassword = generatePassword();
+    if (passwordError || !temporaryPassword) {
+      console.error('Error generating password:', passwordError);
+      return new Response(
+        JSON.stringify({ error: 'Error al generar nueva contraseña' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Actualizar contraseña en Supabase Auth
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(

@@ -79,8 +79,18 @@ serve(async (req) => {
       )
     }
 
-    // Generar contraseña temporal segura (20 caracteres)
-    const tempPassword = generateSecurePassword()
+    // Generar contraseña temporal segura usando función SQL
+    const { data: tempPassword, error: passwordError } = await supabaseAdmin.rpc(
+      'generate_secure_temp_password'
+    ) as { data: string | null; error: any };
+    
+    if (passwordError || !tempPassword) {
+      console.error('Error generating password:', passwordError);
+      return new Response(
+        JSON.stringify({ error: 'Error al generar contraseña temporal' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`Processing user creation for: ${email}`)
 
@@ -332,24 +342,3 @@ serve(async (req) => {
   }
 })
 
-function generateSecurePassword(): string {
-  // Generar contraseña simple: 8 caracteres con mayúsculas y números
-  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
-  const lowercase = 'abcdefghijkmnpqrstuvwxyz'
-  const numbers = '23456789'
-  
-  let password = ''
-  
-  // Asegurar al menos 1 mayúscula, 1 minúscula, 1 número
-  password += uppercase[Math.floor(Math.random() * uppercase.length)]
-  password += numbers[Math.floor(Math.random() * numbers.length)]
-  
-  // Completar hasta 8 caracteres con letras y números
-  const allChars = uppercase + lowercase + numbers
-  for (let i = 2; i < 8; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)]
-  }
-  
-  // Mezclar caracteres
-  return password.split('').sort(() => Math.random() - 0.5).join('')
-}

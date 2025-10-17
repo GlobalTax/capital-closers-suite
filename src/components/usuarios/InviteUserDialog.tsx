@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { inviteUserSchema, InviteUserFormValues } from '@/lib/validation/auth-schemas';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -32,16 +32,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, User, Shield } from 'lucide-react';
-
-const inviteUserSchema = z.object({
-  email: z.string().email('Email inválido').max(254),
-  full_name: z.string().min(2, 'Mínimo 2 caracteres').max(100, 'Máximo 100 caracteres'),
-  role: z.enum(['super_admin', 'admin', 'editor', 'viewer'], {
-    required_error: 'Debes seleccionar un rol',
-  }),
-});
-
-type InviteUserFormValues = z.infer<typeof inviteUserSchema>;
 
 interface InviteUserDialogProps {
   open: boolean;
