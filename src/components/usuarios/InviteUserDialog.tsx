@@ -47,7 +47,7 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
     defaultValues: {
       email: '',
       full_name: '',
-      role: 'editor',
+      role: 'admin',
     },
   });
 
@@ -89,7 +89,6 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
     const labels: Record<string, string> = {
       super_admin: 'Super Administrador',
       admin: 'Administrador',
-      editor: 'Editor',
       viewer: 'Visualizador',
     };
     return labels[role] || role;
@@ -97,10 +96,9 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
 
   const getRoleDescription = (role: string) => {
     const descriptions: Record<string, string> = {
-      super_admin: 'Acceso total al sistema, gestión de usuarios',
-      admin: 'Gestión completa de datos y configuración',
-      editor: 'Puede crear y editar contenido',
-      viewer: 'Solo puede ver información',
+      super_admin: 'Control total, gestión de usuarios y configuración',
+      admin: 'Gestión completa del CRM y datos',
+      viewer: 'Solo lectura e interacciones',
     };
     return descriptions[role] || '';
   };
@@ -187,7 +185,7 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {(['super_admin', 'admin', 'editor', 'viewer'] as const).map((role) => (
+                      {(['super_admin', 'admin', 'viewer'] as const).map((role) => (
                         <SelectItem key={role} value={role}>
                           <div className="flex flex-col items-start">
                             <span className="font-medium">{getRoleLabel(role)}</span>

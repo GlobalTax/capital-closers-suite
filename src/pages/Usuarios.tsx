@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning, Mail } from "lucide-react";
+import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { NuevoUsuarioDialog } from "@/components/usuarios/NuevoUsuarioDialog";
 import { InviteUserDialog } from "@/components/usuarios/InviteUserDialog";
 import { EditarUsuarioDialog } from "@/components/usuarios/EditarUsuarioDialog";
@@ -25,6 +26,7 @@ import {
 
 export default function Usuarios() {
   const { adminUser } = useAuth();
+  const { canManageUsers } = useSimpleAuth();
   const { data: usuarios = [], isLoading } = useAdminUsers();
   const { mutate: deactivateUser } = useDeactivateAdminUser();
   const { mutate: reactivateUser } = useReactivateAdminUser();
@@ -36,13 +38,10 @@ export default function Usuarios() {
   const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [resendDialog, setResendDialog] = useState<{ open: boolean; user?: any }>({ open: false });
 
-  const isSuperAdmin = adminUser?.role === 'super_admin';
-
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'super_admin': return 'bg-purple-500/10 text-purple-500';
       case 'admin': return 'bg-blue-500/10 text-blue-500';
-      case 'editor': return 'bg-green-500/10 text-green-500';
       case 'viewer': return 'bg-gray-500/10 text-gray-500';
       default: return 'bg-gray-500/10 text-gray-500';
     }
@@ -52,7 +51,6 @@ export default function Usuarios() {
     const labels: Record<string, string> = {
       super_admin: 'Super Admin',
       admin: 'Administrador',
-      editor: 'Editor',
       viewer: 'Visor',
     };
     return labels[role] || role;
@@ -100,7 +98,7 @@ export default function Usuarios() {
         subtitle={`${usuarios.length} usuario${usuarios.length !== 1 ? 's' : ''} en el sistema`}
         icon={Users}
         actions={
-          isSuperAdmin && (
+          canManageUsers && (
             <Button onClick={() => setNuevoDialogOpen(true)} className="gap-2">
               <UserPlus className="h-4 w-4" />
               Nuevo Usuario
@@ -171,7 +169,7 @@ export default function Usuarios() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      {isSuperAdmin && (
+                      {canManageUsers && (
                         <>
                           {user.needs_credentials && !user.last_login && (
                             <Button

@@ -28,7 +28,7 @@ interface EditarUsuarioDialogProps {
 export function EditarUsuarioDialog({ open, onOpenChange, user }: EditarUsuarioDialogProps) {
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
-    role: user?.role || 'editor',
+    role: user?.role || 'admin',
   });
 
   const { mutate: updateUser, isPending } = useUpdateAdminUser();
@@ -37,7 +37,7 @@ export function EditarUsuarioDialog({ open, onOpenChange, user }: EditarUsuarioD
     if (user) {
       setFormData({
         full_name: user.full_name || '',
-        role: user.role || 'editor',
+        role: user.role || 'admin',
       });
     }
   }, [user]);
@@ -84,9 +84,8 @@ export function EditarUsuarioDialog({ open, onOpenChange, user }: EditarUsuarioD
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="viewer">Visor (solo lectura)</SelectItem>
-                <SelectItem value="editor">Editor (lectura/escritura)</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="super_admin">Super Administrador</SelectItem>
+                <SelectItem value="admin">Administrador (gestión completa)</SelectItem>
+                <SelectItem value="super_admin">Super Administrador (control total)</SelectItem>
               </SelectContent>
             </Select>
           </div>

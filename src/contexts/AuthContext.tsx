@@ -2,8 +2,7 @@ import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthService } from '@/services/auth.service';
-
-export type AdminRole = 'super_admin' | 'admin' | 'editor' | 'viewer';
+import type { AdminRole } from '@/types/permissions';
 
 export interface AdminUser {
   id: string;

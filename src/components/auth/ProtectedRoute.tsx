@@ -23,12 +23,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <AccessDenied message="Tu cuenta está desactivada. Contacta al administrador." />;
   }
 
-  // Check role hierarchy: super_admin > admin > editor > viewer
+  // Check role hierarchy: super_admin > admin > viewer
   if (requiredRole) {
     const roleHierarchy: Record<AdminRole, number> = {
-      super_admin: 4,
-      admin: 3,
-      editor: 2,
+      super_admin: 3,
+      admin: 2,
       viewer: 1,
     };
 
