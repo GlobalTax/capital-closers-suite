@@ -5972,6 +5972,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_secure_temp_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_signed_valuation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
