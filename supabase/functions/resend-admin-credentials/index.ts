@@ -79,12 +79,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!targetUser.needs_credentials) {
-      return new Response(
-        JSON.stringify({ error: 'El usuario ya ha configurado sus credenciales' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Permitir reenvío siempre (funciona como reset de contraseña)
+    console.log(`Reenviando credenciales a: ${targetUser.email}`);
 
     // Rate limiting: verificar reenvíos recientes
     const { data: recentResends, error: resendError } = await supabaseAdmin
