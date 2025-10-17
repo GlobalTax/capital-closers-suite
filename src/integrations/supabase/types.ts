@@ -1940,6 +1940,89 @@ export type Database = {
         }
         Relationships: []
       }
+      document_downloads: {
+        Row: {
+          created_at: string | null
+          document_id: string
+          download_method: string | null
+          downloaded_at: string | null
+          id: string
+          ip_address: unknown | null
+          page_url: string | null
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_company: string | null
+          user_email: string
+          user_id: string | null
+          user_name: string | null
+          user_phone: string | null
+          user_position: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_id: string
+          download_method?: string | null
+          downloaded_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_company?: string | null
+          user_email: string
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+          user_position?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string
+          download_method?: string | null
+          downloaded_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_company?: string | null
+          user_email?: string
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+          user_position?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_downloads_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documentos: {
         Row: {
           created_at: string | null
@@ -1993,6 +2076,129 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          access_level: string
+          author_name: string | null
+          category: string
+          created_at: string | null
+          created_by: string | null
+          cta_text: string | null
+          description: string | null
+          download_count: number | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          is_featured: boolean | null
+          landing_page_id: string | null
+          lead_conversion_count: number | null
+          meta_description: string | null
+          meta_title: string | null
+          og_image_url: string | null
+          previous_version_id: string | null
+          published_at: string | null
+          reading_time_minutes: number | null
+          requires_form: boolean | null
+          sector: string | null
+          slug: string
+          status: string
+          tags: string[] | null
+          target_audience: string[] | null
+          thumbnail_url: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          version: number | null
+          view_count: number | null
+        }
+        Insert: {
+          access_level?: string
+          author_name?: string | null
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          cta_text?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          is_featured?: boolean | null
+          landing_page_id?: string | null
+          lead_conversion_count?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          previous_version_id?: string | null
+          published_at?: string | null
+          reading_time_minutes?: number | null
+          requires_form?: boolean | null
+          sector?: string | null
+          slug: string
+          status?: string
+          tags?: string[] | null
+          target_audience?: string[] | null
+          thumbnail_url?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          version?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          access_level?: string
+          author_name?: string | null
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          cta_text?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          is_featured?: boolean | null
+          landing_page_id?: string | null
+          lead_conversion_count?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          previous_version_id?: string | null
+          published_at?: string | null
+          reading_time_minutes?: number | null
+          requires_form?: boolean | null
+          sector?: string | null
+          slug?: string
+          status?: string
+          tags?: string[] | null
+          target_audience?: string[] | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          version?: number | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "documents_previous_version_id_fkey"
+            columns: ["previous_version_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -2547,6 +2753,173 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_leads: {
+        Row: {
+          assigned_at: string | null
+          assigned_to: string | null
+          brevo_sent: boolean | null
+          brevo_sent_at: string | null
+          company: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
+          document_format: string
+          document_id: string | null
+          email: string
+          email_message_id: string | null
+          email_opened: boolean | null
+          email_opened_at: string | null
+          email_sent: boolean | null
+          email_sent_at: string | null
+          full_name: string
+          gdpr_consent: boolean
+          hubspot_sent: boolean | null
+          hubspot_sent_at: string | null
+          id: string
+          investment_range: string | null
+          investor_type: string | null
+          ip_address: unknown | null
+          is_deleted: boolean | null
+          lead_score: number | null
+          marketing_consent: boolean | null
+          notes: string | null
+          phone: string | null
+          preferred_location: string | null
+          referrer: string | null
+          rod_document_id: string | null
+          sectors_of_interest: string | null
+          status: string
+          status_updated_at: string | null
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          brevo_sent?: boolean | null
+          brevo_sent_at?: string | null
+          company?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          document_format: string
+          document_id?: string | null
+          email: string
+          email_message_id?: string | null
+          email_opened?: boolean | null
+          email_opened_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name: string
+          gdpr_consent?: boolean
+          hubspot_sent?: boolean | null
+          hubspot_sent_at?: string | null
+          id?: string
+          investment_range?: string | null
+          investor_type?: string | null
+          ip_address?: unknown | null
+          is_deleted?: boolean | null
+          lead_score?: number | null
+          marketing_consent?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          preferred_location?: string | null
+          referrer?: string | null
+          rod_document_id?: string | null
+          sectors_of_interest?: string | null
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to?: string | null
+          brevo_sent?: boolean | null
+          brevo_sent_at?: string | null
+          company?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          document_format?: string
+          document_id?: string | null
+          email?: string
+          email_message_id?: string | null
+          email_opened?: boolean | null
+          email_opened_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name?: string
+          gdpr_consent?: boolean
+          hubspot_sent?: boolean | null
+          hubspot_sent_at?: string | null
+          id?: string
+          investment_range?: string | null
+          investor_type?: string | null
+          ip_address?: unknown | null
+          is_deleted?: boolean | null
+          lead_score?: number | null
+          marketing_consent?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          preferred_location?: string | null
+          referrer?: string | null
+          rod_document_id?: string | null
+          sectors_of_interest?: string | null
+          status?: string
+          status_updated_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "investor_leads_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "investor_leads_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_leads_rod_document_id_fkey"
+            columns: ["rod_document_id"]
+            isOneToOne: false
+            referencedRelation: "rod_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -4479,6 +4852,69 @@ export type Database = {
         }
         Relationships: []
       }
+      rod_documents: {
+        Row: {
+          activated_at: string | null
+          created_at: string | null
+          created_by: string | null
+          deactivated_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean | null
+          is_deleted: boolean | null
+          is_latest: boolean | null
+          title: string
+          total_downloads: number | null
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          file_size_bytes?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          is_latest?: boolean | null
+          title: string
+          total_downloads?: number | null
+          updated_at?: string | null
+          version: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          deactivated_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          is_latest?: boolean | null
+          title?: string
+          total_downloads?: number | null
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       sector_multiples: {
         Row: {
           description: string | null
@@ -5495,6 +5931,14 @@ export type Database = {
         }
         Returns: Json
       }
+      create_temporary_user_bypass: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_role?: Database["public"]["Enums"]["admin_role"]
+        }
+        Returns: Json
+      }
       create_temporary_user_enhanced: {
         Args: {
           p_email: string
@@ -5525,6 +5969,10 @@ export type Database = {
         Returns: boolean
       }
       generate_proposal_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_signed_valuation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -5678,6 +6126,10 @@ export type Database = {
       validate_valuation_token: {
         Args: { _token: string }
         Returns: string
+      }
+      verify_valuation_token: {
+        Args: { token: string }
+        Returns: boolean
       }
     }
     Enums: {
