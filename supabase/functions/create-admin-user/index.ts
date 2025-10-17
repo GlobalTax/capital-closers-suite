@@ -236,7 +236,7 @@ serve(async (req) => {
 
     // Enviar email de bienvenida con credenciales
     try {
-      const loginUrl = 'https://fwhqtzkkvnjkazhaficj.lovableproject.com/auth/login';
+      const loginUrl = 'https://godeal.es/auth/login';
       
       const emailHtml = `
         <!DOCTYPE html>
