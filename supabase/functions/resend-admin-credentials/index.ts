@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Credenciales de Acceso - Capittal</title>
+            <title>Credenciales de Acceso - GoDeal</title>
           </head>
           <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
             <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Bienvenido a Capittal</h1>
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Bienvenido a GoDeal</h1>
                       </td>
                     </tr>
                     
@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
                       <td style="padding: 30px 40px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
                         <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5; text-align: center;">
                           Este es un correo automático, por favor no respondas a este mensaje.<br>
-                          © ${new Date().getFullYear()} Capittal. Todos los derechos reservados.
+                          © ${new Date().getFullYear()} GoDeal. Todos los derechos reservados.
                         </p>
                       </td>
                     </tr>
@@ -216,15 +216,21 @@ Deno.serve(async (req) => {
       `;
 
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'Capittal <noreply@capittal.es>',
+        from: 'GoDeal <noreply@godeal.es>',
         to: [targetUser.email],
-        subject: '🔑 Tus nuevas credenciales de acceso - Capittal',
+        subject: '🔑 Tus nuevas credenciales de acceso - GoDeal',
         html: emailHtml,
       });
 
+      let emailSent = false;
+      let emailId = null;
+      let emailErrorReason = null;
+
       if (emailError) {
         console.error('Email send error:', emailError);
-        // No fallar la petición si el email falla, pero logear el error
+        emailErrorReason = emailError.message?.includes('domain') ? 'domain_not_verified' : 'send_failed';
+        
+        // Logear el fallo
         await supabaseAdmin
           .from('admin_audit_log')
           .insert({
@@ -234,10 +240,14 @@ Deno.serve(async (req) => {
             target_user_email: targetUser.email,
             new_values: {
               error: emailError.message,
+              error_reason: emailErrorReason,
+              from: 'GoDeal <noreply@godeal.es>',
               timestamp: new Date().toISOString()
             }
           });
       } else {
+        emailSent = true;
+        emailId = emailData?.id || null;
         console.log(`Email sent successfully to ${targetUser.email}:`, emailData);
       }
     } catch (emailError) {
@@ -251,7 +261,7 @@ Deno.serve(async (req) => {
       .update({ credentials_sent_at: new Date().toISOString() })
       .eq('user_id', user_id);
 
-    // Log de auditoría
+    // Log de auditoría completo
     await supabaseAdmin
       .from('admin_audit_log')
       .insert({
@@ -261,7 +271,11 @@ Deno.serve(async (req) => {
         target_user_email: targetUser.email,
         new_values: {
           credentials_resent_at: new Date().toISOString(),
-          resent_by: user.email
+          resent_by: user.email,
+          email_sent: emailSent,
+          email_id: emailId,
+          provider: 'resend',
+          from: 'GoDeal <noreply@godeal.es>'
         }
       });
 
@@ -272,7 +286,13 @@ Deno.serve(async (req) => {
         user_id: user_id,
         email: targetUser.email,
         temporary_password: temporaryPassword,
-        message: 'Credenciales reenviadas correctamente y email enviado'
+        email_sent: emailSent,
+        email_id: emailId,
+        provider: 'resend',
+        error_reason: emailErrorReason,
+        message: emailSent 
+          ? 'Credenciales reenviadas correctamente y email enviado' 
+          : `Credenciales actualizadas. Email no enviado: ${emailErrorReason}`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
