@@ -129,6 +129,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Variables para tracking del email (declaradas fuera del try para acceso global)
+    let emailSent = false;
+    let emailId: string | null = null;
+    let emailErrorReason: string | null = null;
+    let usedFallback = false;
+    let finalFrom = 'GoDeal <noreply@godeal.es>';
+
     // Enviar email con credenciales
     try {
       const loginUrl = 'https://godeal.es/auth/login';
@@ -215,6 +222,7 @@ Deno.serve(async (req) => {
         </html>
       `;
 
+      // Primer intento: enviar desde godeal.es
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: 'GoDeal <noreply@godeal.es>',
         to: [targetUser.email],
@@ -222,36 +230,80 @@ Deno.serve(async (req) => {
         html: emailHtml,
       });
 
-      let emailSent = false;
-      let emailId = null;
-      let emailErrorReason = null;
-
       if (emailError) {
-        console.error('Email send error:', emailError);
-        emailErrorReason = emailError.message?.includes('domain') ? 'domain_not_verified' : 'send_failed';
-        
-        // Logear el fallo
-        await supabaseAdmin
-          .from('admin_audit_log')
-          .insert({
-            admin_user_id: user.id,
-            action_type: 'EMAIL_SEND_FAILED',
-            target_user_id: user_id,
-            target_user_email: targetUser.email,
-            new_values: {
-              error: emailError.message,
-              error_reason: emailErrorReason,
-              from: 'GoDeal <noreply@godeal.es>',
-              timestamp: new Date().toISOString()
-            }
+        console.error('Email send error (primer intento):', emailError);
+        const isDomainError = emailError.message?.includes('domain') || 
+                             emailError.message?.includes('not verified') ||
+                             (emailError as any).statusCode === 403;
+
+        if (isDomainError) {
+          // Fallback: intentar con dominio verificado de Resend
+          console.log('Dominio no verificado, usando fallback a onboarding@resend.dev');
+          emailErrorReason = 'domain_not_verified';
+          finalFrom = 'GoDeal via Resend <onboarding@resend.dev>';
+
+          const { data: fallbackData, error: fallbackError } = await resend.emails.send({
+            from: finalFrom,
+            to: [targetUser.email],
+            subject: '🔑 Tus nuevas credenciales de acceso - GoDeal',
+            html: emailHtml,
           });
+
+          if (fallbackError) {
+            console.error('Fallback email también falló:', fallbackError);
+            emailErrorReason = 'send_failed_after_fallback';
+            
+            // Logear el fallo del fallback
+            await supabaseAdmin
+              .from('admin_audit_log')
+              .insert({
+                admin_user_id: user.id,
+                action_type: 'EMAIL_SEND_FAILED',
+                target_user_id: user_id,
+                target_user_email: targetUser.email,
+                new_values: {
+                  error: fallbackError.message,
+                  error_reason: emailErrorReason,
+                  from: finalFrom,
+                  tried_fallback: true,
+                  timestamp: new Date().toISOString()
+                }
+              });
+          } else {
+            // Fallback exitoso
+            emailSent = true;
+            emailId = fallbackData?.id || null;
+            usedFallback = true;
+            console.log(`Email sent via fallback to ${targetUser.email}:`, fallbackData);
+          }
+        } else {
+          // Error no relacionado con dominio
+          emailErrorReason = 'send_failed';
+          
+          await supabaseAdmin
+            .from('admin_audit_log')
+            .insert({
+              admin_user_id: user.id,
+              action_type: 'EMAIL_SEND_FAILED',
+              target_user_id: user_id,
+              target_user_email: targetUser.email,
+              new_values: {
+                error: emailError.message,
+                error_reason: emailErrorReason,
+                from: finalFrom,
+                timestamp: new Date().toISOString()
+              }
+            });
+        }
       } else {
+        // Primer intento exitoso
         emailSent = true;
         emailId = emailData?.id || null;
         console.log(`Email sent successfully to ${targetUser.email}:`, emailData);
       }
-    } catch (emailError) {
-      console.error('Email exception:', emailError);
+    } catch (emailException) {
+      console.error('Email exception:', emailException);
+      emailErrorReason = 'exception';
       // Continuar aunque falle el email
     }
 
@@ -275,7 +327,9 @@ Deno.serve(async (req) => {
           email_sent: emailSent,
           email_id: emailId,
           provider: 'resend',
-          from: 'GoDeal <noreply@godeal.es>'
+          from: finalFrom,
+          used_fallback: usedFallback,
+          error_reason: emailErrorReason
         }
       });
 
@@ -289,9 +343,14 @@ Deno.serve(async (req) => {
         email_sent: emailSent,
         email_id: emailId,
         provider: 'resend',
+        from: finalFrom,
+        used_fallback: usedFallback,
         error_reason: emailErrorReason,
         message: emailSent 
-          ? 'Credenciales reenviadas correctamente y email enviado' 
+          ? (usedFallback 
+              ? 'Credenciales reenviadas. Email enviado usando dominio alternativo (godeal.es no verificado)' 
+              : 'Credenciales reenviadas correctamente y email enviado'
+            )
           : `Credenciales actualizadas. Email no enviado: ${emailErrorReason}`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
