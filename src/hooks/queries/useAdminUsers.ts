@@ -92,11 +92,14 @@ export function useResendAdminCredentials() {
     mutationFn: (userId: string) => adminUsersService.resendCredentials(userId),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin_users'] });
-      toast.success(`Credenciales reenviadas a: ${result.email}`);
-      toast.info(`Nueva contraseña temporal: ${result.temporary_password}`, {
-        duration: 15000,
-        description: 'Guarda esta contraseña, no se volverá a mostrar.',
-      });
+      
+      if (!result.email_sent) {
+        toast.warning('El email no pudo ser enviado', {
+          description: 'Usa el diálogo para compartir las credenciales manualmente',
+        });
+      } else {
+        toast.success(`Credenciales enviadas a: ${result.email}`);
+      }
     },
     onError: (error) => {
       handleError(error, 'Error al reenviar credenciales');

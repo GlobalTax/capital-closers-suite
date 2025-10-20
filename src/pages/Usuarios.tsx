@@ -15,6 +15,7 @@ import { InviteUserDialog } from "@/components/usuarios/InviteUserDialog";
 import { EditarUsuarioDialog } from "@/components/usuarios/EditarUsuarioDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ReenviarCredencialesDialog } from "@/components/usuarios/ReenviarCredencialesDialog";
+import { CredencialesResultDialog } from "@/components/usuarios/CredencialesResultDialog";
 import {
   Table,
   TableBody,
@@ -37,6 +38,13 @@ export default function Usuarios() {
   const [editarDialog, setEditarDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [resendDialog, setResendDialog] = useState<{ open: boolean; user?: any }>({ open: false });
+  const [resultDialog, setResultDialog] = useState<{ 
+    open: boolean; 
+    user?: any;
+    temporaryPassword?: string;
+    actionLink?: string | null;
+    emailSent?: boolean;
+  }>({ open: false });
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -71,7 +79,16 @@ export default function Usuarios() {
   const handleResendCredentials = () => {
     if (resendDialog.user) {
       resendCredentials(resendDialog.user.user_id, {
-        onSuccess: () => setResendDialog({ open: false }),
+        onSuccess: (result) => {
+          setResendDialog({ open: false });
+          setResultDialog({ 
+            open: true, 
+            user: resendDialog.user,
+            temporaryPassword: result.temporary_password,
+            actionLink: result.action_link,
+            emailSent: result.email_sent
+          });
+        },
       });
     }
   };
@@ -245,6 +262,18 @@ export default function Usuarios() {
           userEmail={resendDialog.user.email}
           onConfirm={handleResendCredentials}
           isLoading={isResending}
+        />
+      )}
+
+      {resultDialog.user && (
+        <CredencialesResultDialog
+          open={resultDialog.open}
+          onOpenChange={(open) => setResultDialog({ ...resultDialog, open })}
+          userName={resultDialog.user.full_name}
+          userEmail={resultDialog.user.email}
+          temporaryPassword={resultDialog.temporaryPassword || ''}
+          actionLink={resultDialog.actionLink || null}
+          emailSent={resultDialog.emailSent || false}
         />
       )}
     </div>

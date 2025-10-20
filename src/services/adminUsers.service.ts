@@ -151,6 +151,8 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
     user_id: string;
     email: string;
     temporary_password: string;
+    action_link: string | null;
+    email_sent: boolean;
     message: string;
   }> {
     try {
