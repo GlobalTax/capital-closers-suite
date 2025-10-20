@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
     // Permitir reenvío siempre (funciona como reset de contraseña)
     console.log(`Reenviando credenciales a: ${targetUser.email}`);
 
-    // Rate limiting: verificar reenvíos recientes
+    // Rate limiting: verificar reenvíos recientes (no bloquear generación del enlace)
+    let rateLimited = false;
     const { data: recentResends, error: resendError } = await supabaseAdmin
       .from('admin_audit_log')
       .select('id')
@@ -93,10 +94,8 @@ Deno.serve(async (req) => {
     if (resendError) {
       console.error('Rate limit check error:', resendError);
     } else if (recentResends && recentResends.length >= 5) {
-      return new Response(
-        JSON.stringify({ error: 'Límite de reenvíos alcanzado (máximo 5 por día)' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      rateLimited = true;
+      console.warn('Rate limit reached for user:', user_id);
     }
 
     // Generar nueva contraseña temporal usando función SQL con fallback
@@ -172,8 +171,9 @@ Si no solicitaste este cambio, por favor contacta con soporte inmediatamente.
 Saludos,
 El equipo de Capittal`;
 
-    // Enviar email con credenciales
-    try {
+    // Enviar email con credenciales (omitir si está rate-limited)
+    if (!rateLimited) {
+      try {
       const emailHtml = `<p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
   Hola <strong>${targetUser.full_name || 'Usuario'}</strong>,
 </p>
@@ -314,7 +314,11 @@ ${emailHtml}`;
       emailErrorReason = 'exception';
       // Continuar aunque falle el email
     }
-
+    } else {
+      // No enviar email por límite alcanzado, pero devolver credenciales y enlace para compartir manualmente
+      emailSent = false;
+      emailErrorReason = 'rate_limited';
+    }
     // Actualizar timestamp de credentials_sent_at
     await supabaseAdmin
       .from('admin_users')
@@ -357,9 +361,12 @@ ${emailHtml}`;
         from: finalFrom,
         used_fallback: usedFallback,
         error_reason: emailErrorReason,
-        message: emailSent 
-          ? 'Credenciales reenviadas correctamente'
-          : 'Credenciales generadas. Email falló pero el enlace de recuperación está disponible.'
+          message: rateLimited
+            ? 'Límite de reenvíos alcanzado. Se generó enlace para compartir manualmente.'
+            : (emailSent 
+              ? 'Credenciales reenviadas correctamente'
+              : 'Credenciales generadas. Email falló pero el enlace de recuperación está disponible.'
+            )
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
