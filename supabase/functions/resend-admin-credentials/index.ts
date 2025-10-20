@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     let emailId: string | null = null;
     let emailErrorReason: string | null = null;
     let usedFallback = false;
-    let finalFrom = 'GoDeal <noreply@godeal.es>';
+    let finalFrom = 'Capittal <noreply@capittal.es>';
 
     // Enviar email con credenciales
     try {
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Credenciales de Acceso - GoDeal</title>
+            <title>Credenciales de Acceso - Capittal</title>
           </head>
           <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
             <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
                     <!-- Header -->
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Bienvenido a GoDeal</h1>
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Bienvenido a Capittal</h1>
                       </td>
                     </tr>
                     
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
                       <td style="padding: 30px 40px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
                         <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5; text-align: center;">
                           Este es un correo automático, por favor no respondas a este mensaje.<br>
-                          © ${new Date().getFullYear()} GoDeal. Todos los derechos reservados.
+                          © ${new Date().getFullYear()} Capittal. Todos los derechos reservados.
                         </p>
                       </td>
                     </tr>
@@ -222,11 +222,11 @@ Deno.serve(async (req) => {
         </html>
       `;
 
-      // Primer intento: enviar desde godeal.es
+      // Enviar desde capittal.es (dominio verificado)
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'GoDeal <noreply@godeal.es>',
+        from: 'Capittal <noreply@capittal.es>',
         to: [targetUser.email],
-        subject: '🔑 Tus nuevas credenciales de acceso - GoDeal',
+        subject: '🔑 Tus nuevas credenciales de acceso - Capittal',
         html: emailHtml,
       });
 
@@ -240,12 +240,12 @@ Deno.serve(async (req) => {
           // Fallback: intentar con dominio verificado de Resend
           console.log('Dominio no verificado, usando fallback a onboarding@resend.dev');
           emailErrorReason = 'domain_not_verified';
-          finalFrom = 'GoDeal via Resend <onboarding@resend.dev>';
+          finalFrom = 'Capittal via Resend <onboarding@resend.dev>';
 
           const { data: fallbackData, error: fallbackError } = await resend.emails.send({
             from: finalFrom,
             to: [targetUser.email],
-            subject: '🔑 Tus nuevas credenciales de acceso - GoDeal',
+            subject: '🔑 Tus nuevas credenciales de acceso - Capittal',
             html: emailHtml,
           });
 
@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
         error_reason: emailErrorReason,
         message: emailSent 
           ? (usedFallback 
-              ? 'Credenciales reenviadas. Email enviado usando dominio alternativo (godeal.es no verificado)' 
+              ? 'Credenciales reenviadas. Email enviado usando dominio alternativo (capittal.es no verificado)' 
               : 'Credenciales reenviadas correctamente y email enviado'
             )
           : `Credenciales actualizadas. Email no enviado: ${emailErrorReason}`

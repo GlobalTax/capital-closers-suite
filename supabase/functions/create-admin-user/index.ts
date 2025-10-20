@@ -244,7 +244,7 @@ serve(async (req) => {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bienvenido a GoDeal</title>
+            <title>Bienvenido a Capittal</title>
           </head>
           <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
             <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
@@ -253,7 +253,7 @@ serve(async (req) => {
                   <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
                       <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">¡Bienvenido a GoDeal!</h1>
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">¡Bienvenido a Capittal!</h1>
                       </td>
                     </tr>
                     <tr>
@@ -262,7 +262,7 @@ serve(async (req) => {
                           Hola <strong>${full_name}</strong>,
                         </p>
                         <p style="margin: 0 0 20px; color: #555555; font-size: 15px; line-height: 1.6;">
-                          Se ha creado tu cuenta de acceso al sistema GoDeal. A continuación encontrarás tus credenciales de acceso:
+                          Se ha creado tu cuenta de acceso al sistema Capittal. A continuación encontrarás tus credenciales de acceso:
                         </p>
                         <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 30px 0; border-radius: 4px;">
                           <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -297,7 +297,7 @@ serve(async (req) => {
                       <td style="padding: 30px 40px; background-color: #f8f9fa; border-top: 1px solid #e9ecef; border-radius: 0 0 8px 8px;">
                         <p style="margin: 0; color: #6c757d; font-size: 13px; line-height: 1.5; text-align: center;">
                           Este es un correo automático, por favor no respondas a este mensaje.<br>
-                          © ${new Date().getFullYear()} GoDeal. Todos los derechos reservados.
+                          © ${new Date().getFullYear()} Capittal. Todos los derechos reservados.
                         </p>
                       </td>
                     </tr>
@@ -310,9 +310,9 @@ serve(async (req) => {
       `;
 
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'GoDeal <noreply@godeal.es>',
+        from: 'Capittal <noreply@capittal.es>',
         to: [email],
-        subject: '🎉 Bienvenido a GoDeal - Tus credenciales de acceso',
+        subject: '🎉 Bienvenido a Capittal - Tus credenciales de acceso',
         html: emailHtml,
       });
 
