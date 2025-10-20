@@ -154,12 +154,16 @@ serve(async (req) => {
     }
 
     // Construir URL de aceptación
-    const appUrl = Deno.env.get('APP_URL') || 'https://capittal.lovable.app';
+    const appUrl = Deno.env.get('APP_URL') || 'https://capittal.es';
     const acceptUrl = `${appUrl}/auth/accept-invitation?token=${encodeURIComponent(invitation_token)}`;
 
     // Enviar email de invitación
-    const emailResponse = await resend.emails.send({
-      from: 'Capittal <onboarding@resend.dev>',
+    let emailResponse;
+    let usedFallback = false;
+    
+    try {
+      emailResponse = await resend.emails.send({
+        from: 'Capittal <noreply@capittal.es>',
       to: [email],
       subject: 'Invitación para unirte a Capittal',
       html: `
@@ -238,12 +242,31 @@ serve(async (req) => {
           </body>
         </html>
       `,
-    });
+      });
+    } catch (emailError: any) {
+      console.error('Error enviando desde capittal.es:', emailError);
+      
+      // Fallback a onboarding@resend.dev
+      emailResponse = await resend.emails.send({
+        from: 'Capittal <onboarding@resend.dev>',
+        to: [email],
+        subject: 'Invitación para unirte a Capittal',
+        html: `
+          <p>Hola <strong>${full_name}</strong>,</p>
+          <p>Has sido invitado/a para unirte a <strong>Capittal</strong> con el rol de <strong>${role}</strong>.</p>
+          <p>Para aceptar la invitación, haz clic aquí: <a href="${acceptUrl}">${acceptUrl}</a></p>
+          <p><strong>⚠️ Importante:</strong> Este enlace expirará en 7 días.</p>
+        `,
+      });
+      usedFallback = true;
+    }
 
     console.log('Invitación enviada:', {
       email,
       invitation_id: invitation.id,
       email_id: emailResponse.data?.id,
+      used_fallback: usedFallback,
+      from: usedFallback ? 'onboarding@resend.dev' : 'noreply@capittal.es',
     });
 
     // Registrar evento de auditoría
@@ -255,6 +278,8 @@ serve(async (req) => {
         full_name,
         role,
         invitation_id: invitation.id,
+        used_fallback: usedFallback,
+        email_from: usedFallback ? 'onboarding@resend.dev' : 'noreply@capittal.es',
       },
       ip_address: req.headers.get('x-forwarded-for') || 'unknown',
       user_agent: req.headers.get('user-agent'),

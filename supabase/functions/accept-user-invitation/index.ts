@@ -164,10 +164,11 @@ serve(async (req) => {
 
     // Enviar email de bienvenida
     try {
-      const appUrl = Deno.env.get('APP_URL') || 'https://capittal.lovable.app';
+      const appUrl = Deno.env.get('APP_URL') || 'https://capittal.es';
       
-      await resend.emails.send({
-        from: 'Capittal <onboarding@resend.dev>',
+      try {
+        await resend.emails.send({
+          from: 'Capittal <noreply@capittal.es>',
         to: [invitation.email],
         subject: '¡Bienvenido/a a Capittal!',
         html: `
@@ -247,7 +248,24 @@ serve(async (req) => {
             </body>
           </html>
         `,
-      });
+        });
+      } catch (primaryError) {
+        console.error('Error enviando desde capittal.es:', primaryError);
+        
+        // Fallback a onboarding@resend.dev
+        await resend.emails.send({
+          from: 'Capittal <onboarding@resend.dev>',
+          to: [invitation.email],
+          subject: '¡Bienvenido/a a Capittal!',
+          html: `
+            <p>Hola <strong>${invitation.full_name}</strong>,</p>
+            <p>Tu cuenta ha sido creada exitosamente.</p>
+            <p><strong>Email:</strong> ${invitation.email}</p>
+            <p><strong>Rol:</strong> ${invitation.role}</p>
+            <p><a href="${appUrl}/auth/login">Iniciar Sesión</a></p>
+          `,
+        });
+      }
     } catch (emailError) {
       console.error('Error enviando email de bienvenida:', emailError);
       // No lanzar error, el usuario ya fue creado exitosamente
