@@ -61,7 +61,9 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
       });
 
       if (response.error) {
-        throw new Error(response.error.message || 'Error al crear usuario');
+        // Intentar extraer mensaje específico del contexto del error
+        const errorMessage = response.error.context?.body?.error || response.error.message || 'Error al crear usuario';
+        throw new Error(errorMessage);
       }
 
       return response.data;

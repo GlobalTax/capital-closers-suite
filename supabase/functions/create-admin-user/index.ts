@@ -9,6 +9,37 @@ const corsHeaders = {
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 
+// Utility: buscar usuario por email en auth.users con paginación completa
+async function findAuthUserByEmail(supabaseAdmin: any, email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  let page = 1;
+  const perPage = 1000;
+  const maxPages = 10; // Límite de seguridad
+  
+  while (page <= maxPages) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    
+    if (error) {
+      console.error('Error listing users:', error);
+      return null;
+    }
+    
+    const foundUser = data?.users?.find((u: any) => u.email?.toLowerCase() === normalizedEmail);
+    if (foundUser) {
+      return foundUser;
+    }
+    
+    // Si hay menos usuarios que perPage, hemos llegado al final
+    if (!data?.users || data.users.length < perPage) {
+      break;
+    }
+    
+    page++;
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -70,11 +101,21 @@ serve(async (req) => {
 
     const { email, full_name, role } = await req.json()
 
-    // Validar email
+    // Normalizar y validar email
+    const normalizedEmail = email?.trim().toLowerCase();
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-    if (!emailRegex.test(email)) {
+    if (!normalizedEmail || !emailRegex.test(normalizedEmail)) {
       return new Response(
         JSON.stringify({ error: 'Email inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validar rol
+    const allowedRoles = ['super_admin', 'admin', 'viewer'];
+    if (!role || !allowedRoles.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: `Rol inválido. Debe ser uno de: ${allowedRoles.join(', ')}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -95,33 +136,40 @@ serve(async (req) => {
       tempPassword = Array.from(arr, n => chars[n % chars.length]).join('') + '1!';
     }
 
-    console.log(`Processing user creation for: ${email}`)
+    console.log(`Processing user creation for: ${normalizedEmail}`)
 
-    // 1. Verificar si el email ya existe en auth.users
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-    const authUser = existingUsers?.users?.find(u => u.email === email)
+    // 1. Verificar si el email ya existe en auth.users (búsqueda paginada)
+    const authUser = await findAuthUserByEmail(supabaseAdmin, normalizedEmail);
 
     if (authUser) {
-      console.log(`User ${email} already exists in auth.users, checking admin_users...`)
+      console.log(`User ${normalizedEmail} already exists in auth.users, checking admin_users...`)
       
       // El usuario existe en auth.users, verificar si tiene registro en admin_users
       const { data: adminUser } = await supabaseAdmin
         .from('admin_users')
-        .select('user_id')
-        .eq('email', email)
+        .select('user_id, email, full_name, role')
+        .eq('email', normalizedEmail)
         .single()
 
       if (adminUser) {
         // Usuario ya existe completamente en ambas tablas
-        console.log(`User ${email} already exists in both tables`)
+        console.log(`User ${normalizedEmail} already exists in both tables`)
         return new Response(
-          JSON.stringify({ error: 'Este email ya está registrado como usuario administrador' }),
+          JSON.stringify({ 
+            error: 'Este email ya está registrado como usuario administrador',
+            user_id: adminUser.user_id,
+            existing_user: {
+              email: adminUser.email,
+              full_name: adminUser.full_name,
+              role: adminUser.role
+            }
+          }),
           { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
       // Usuario huérfano: existe en auth.users pero no en admin_users
-      console.log(`Orphan user detected: ${email}, linking to admin_users...`)
+      console.log(`Orphan user detected: ${normalizedEmail}, linking to admin_users...`)
 
       // Resetear contraseña del usuario existente y confirmar email
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -150,7 +198,7 @@ serve(async (req) => {
         .from('admin_users')
         .insert({
           user_id: authUser.id,
-          email,
+          email: normalizedEmail,
           full_name,
           role,
           is_active: true,
@@ -167,12 +215,12 @@ serve(async (req) => {
 
       // El trigger de admin_users ya creó el audit log automáticamente
 
-      console.log(`Orphan user linked successfully: ${email}`)
+      console.log(`Orphan user linked successfully: ${normalizedEmail}`)
 
       return new Response(
         JSON.stringify({
           user_id: authUser.id,
-          email,
+          email: normalizedEmail,
           temporary_password: tempPassword,
           message: `Usuario vinculado exitosamente (usuario huérfano reparado).`
         }),
@@ -181,11 +229,11 @@ serve(async (req) => {
     }
 
     // Usuario no existe en auth.users, proceder con creación normal
-    console.log(`Creating new user in auth.users: ${email}`)
+    console.log(`Creating new user in auth.users: ${normalizedEmail}`)
 
     // 2. Crear usuario en auth.users usando Admin API
     const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password: tempPassword,
       email_confirm: true, // Auto-confirmar email
       user_metadata: {
@@ -196,6 +244,55 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Error creating auth user:', authError)
+      
+      // Si el error es email_exists, reintentar búsqueda (caso de carrera)
+      if (authError.message?.includes('already been registered') || authError.code === 'email_exists') {
+        console.log(`Race condition detected, retrying search for: ${normalizedEmail}`)
+        const retryAuthUser = await findAuthUserByEmail(supabaseAdmin, normalizedEmail);
+        
+        if (retryAuthUser) {
+          // Verificar si ya está en admin_users
+          const { data: retryAdminUser } = await supabaseAdmin
+            .from('admin_users')
+            .select('user_id')
+            .eq('email', normalizedEmail)
+            .single()
+          
+          if (retryAdminUser) {
+            return new Response(
+              JSON.stringify({ error: 'Este email ya está registrado como usuario administrador' }),
+              { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
+          
+          // Reparar huérfano
+          console.log(`Repairing orphan user after race condition: ${normalizedEmail}`)
+          await supabaseAdmin.auth.admin.updateUserById(
+            retryAuthUser.id,
+            { password: tempPassword, email_confirm: true, user_metadata: { full_name, needs_credentials: true } }
+          )
+          
+          await supabaseAsUser.from('admin_users').insert({
+            user_id: retryAuthUser.id,
+            email: normalizedEmail,
+            full_name,
+            role,
+            is_active: true,
+            needs_credentials: true
+          })
+          
+          return new Response(
+            JSON.stringify({
+              user_id: retryAuthUser.id,
+              email: normalizedEmail,
+              temporary_password: tempPassword,
+              message: `Usuario vinculado exitosamente.`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+      
       return new Response(
         JSON.stringify({ error: `Error al crear usuario: ${authError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -210,7 +307,7 @@ serve(async (req) => {
       .from('admin_users')
       .insert({
         user_id: newUser.user.id,
-        email,
+        email: normalizedEmail,
         full_name,
         role,
         is_active: true,
@@ -232,11 +329,11 @@ serve(async (req) => {
 
     // El trigger de admin_users ya creó el audit log automáticamente
 
-    console.log(`User created successfully: ${email}`)
+    console.log(`User created successfully: ${normalizedEmail}`)
 
     // Enviar email de bienvenida con credenciales
     try {
-      const loginUrl = 'https://godeal.es/auth/login';
+      const loginUrl = 'https://capittal.es/auth/login';
       
       const emailHtml = `
         <!DOCTYPE html>
@@ -269,7 +366,7 @@ serve(async (req) => {
                             📧 Email
                           </p>
                           <p style="margin: 0 0 20px; color: #667eea; font-size: 16px; font-weight: 500;">
-                            ${email}
+                            ${normalizedEmail}
                           </p>
                           <p style="margin: 0 0 12px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                             🔑 Contraseña Temporal
@@ -311,7 +408,7 @@ serve(async (req) => {
 
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: 'Capittal <noreply@capittal.es>',
-        to: [email],
+        to: [normalizedEmail],
         subject: '🎉 Bienvenido a Capittal - Tus credenciales de acceso',
         html: emailHtml,
       });
@@ -320,7 +417,7 @@ serve(async (req) => {
         console.error('Email send error:', emailError);
         console.log(`Email failed - ID: ${emailData?.id || 'N/A'}, Reason: ${emailError.message}`);
       } else {
-        console.log(`Welcome email sent to ${email} - ID: ${emailData?.id}`);
+        console.log(`Welcome email sent to ${normalizedEmail} - ID: ${emailData?.id}`);
       }
     } catch (emailError) {
       console.error('Email exception:', emailError);
@@ -329,7 +426,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         user_id: newUser.user.id,
-        email,
+        email: normalizedEmail,
         temporary_password: tempPassword,
         message: `Usuario creado exitosamente y email de bienvenida enviado.`
       }),

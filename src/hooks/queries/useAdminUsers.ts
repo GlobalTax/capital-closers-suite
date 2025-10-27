@@ -33,8 +33,17 @@ export function useCreateAdminUser() {
         description: 'Guarda esta contraseña, no se volverá a mostrar.',
       });
     },
-    onError: (error) => {
-      handleError(error, 'Error al crear usuario');
+    onError: (error: any) => {
+      // Manejar errores específicos
+      const errorMessage = error?.message || 'Error al crear usuario';
+      
+      if (errorMessage.includes('ya está registrado')) {
+        toast.error('Este email ya está registrado', {
+          description: 'El usuario ya existe en el sistema. Puedes editarlo desde la lista.',
+        });
+      } else {
+        handleError(error, 'Error al crear usuario');
+      }
     },
   });
 }
