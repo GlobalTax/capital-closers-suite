@@ -174,9 +174,17 @@ export class AuthService {
         password: newPassword,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Detectar error específico de contraseña igual
+        if (error.message?.includes('same_password') || error.status === 422) {
+          return { 
+            error: new Error('La nueva contraseña debe ser diferente a tu contraseña temporal. Por favor, elige otra contraseña.') 
+          };
+        }
+        throw error;
+      }
 
-      // Actualizar flag de needs_credentials
+      // Actualizar flag de needs_credentials solo si la contraseña se actualizó correctamente
       await supabase
         .from('admin_users')
         .update({ needs_credentials: false })

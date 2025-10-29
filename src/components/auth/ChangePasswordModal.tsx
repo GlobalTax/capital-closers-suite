@@ -44,10 +44,20 @@ export function ChangePasswordModal() {
     const { error } = await setInitialPassword(newPassword);
 
     if (error) {
-      toast.error(error.message);
+      // Mostrar error específico sin cerrar el modal
+      if (error.message.includes('diferente') || error.message.includes('temporal')) {
+        toast.error(error.message, {
+          duration: 5000,
+          description: 'Por favor, elige una contraseña completamente diferente.'
+        });
+      } else {
+        toast.error(error.message);
+      }
       setIsLoading(false);
+      // Mantener el modal abierto para que el usuario pueda reintentar
     } else {
       toast.success('Contraseña configurada. Por favor inicia sesión nuevamente.');
+      // El logout automático cerrará el modal
     }
   };
 

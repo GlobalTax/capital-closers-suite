@@ -137,10 +137,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('No hay usuario autenticado') };
     }
 
-    // Actualizar estado local ANTES de logout para prevenir que el modal se reabra
-    setAdminUser(prev => prev ? { ...prev, needs_credentials: false } : null);
+    const result = await AuthService.setInitialPassword(user.id, newPassword);
     
-    return await AuthService.setInitialPassword(user.id, newPassword);
+    // Solo actualizar estado local si la operación fue exitosa
+    if (!result.error) {
+      setAdminUser(prev => prev ? { ...prev, needs_credentials: false } : null);
+    }
+    
+    return result;
   };
 
   return (
