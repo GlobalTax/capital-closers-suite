@@ -178,6 +178,43 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
       throw error;
     }
   }
+
+  /**
+   * Eliminar usuario permanentemente (hard delete)
+   * Elimina el usuario de auth.users y admin_users
+   */
+  async deleteUser(userId: string): Promise<{
+    success: boolean;
+    message: string;
+    deleted_user: {
+      user_id: string;
+      email: string;
+      full_name: string;
+      role: string;
+    };
+  }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
+      const response = await supabase.functions.invoke('delete-admin-user', {
+        body: { user_id: userId },
+      });
+
+      if (response.error) {
+        const errorMessage = response.error.context?.body?.error || response.error.message || 'Error al eliminar usuario';
+        throw new Error(errorMessage);
+      }
+
+      return response.data;
+    } catch (error) {
+      handleError(error, 'Error al eliminar usuario');
+      throw error;
+    }
+  }
 }
 
 export const adminUsersService = new AdminUsersService();

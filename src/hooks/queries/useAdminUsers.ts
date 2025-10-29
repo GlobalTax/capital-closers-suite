@@ -115,3 +115,36 @@ export function useResendAdminCredentials() {
     },
   });
 }
+
+export function useDeleteAdminUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminUsersService.deleteUser(userId),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin_users'] });
+      toast.success('Usuario eliminado permanentemente', {
+        description: `${result.deleted_user.email} ha sido eliminado del sistema`,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || 'Error al eliminar usuario';
+      
+      if (errorMessage.includes('No puedes eliminar tu propio usuario')) {
+        toast.error('No puedes eliminar tu propio usuario', {
+          description: 'Por seguridad, no puedes eliminar tu propia cuenta',
+        });
+      } else if (errorMessage.includes('Solo super_admin')) {
+        toast.error('Sin permisos', {
+          description: 'Solo los super administradores pueden eliminar usuarios',
+        });
+      } else if (errorMessage.includes('no encontrado')) {
+        toast.error('Usuario no encontrado', {
+          description: 'El usuario que intentas eliminar no existe',
+        });
+      } else {
+        handleError(error, 'Error al eliminar usuario');
+      }
+    },
+  });
+}

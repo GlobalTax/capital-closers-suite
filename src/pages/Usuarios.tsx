@@ -1,11 +1,20 @@
 import { useState } from "react";
-import { useAdminUsers, useDeactivateAdminUser, useReactivateAdminUser, useResendAdminCredentials } from "@/hooks/queries/useAdminUsers";
+import { useAdminUsers, useDeactivateAdminUser, useReactivateAdminUser, useResendAdminCredentials, useDeleteAdminUser } from "@/hooks/queries/useAdminUsers";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning } from "lucide-react";
+import { Users, UserPlus, UserCheck, UserX, Edit, MailWarning, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,12 +41,15 @@ export default function Usuarios() {
   const { mutate: deactivateUser } = useDeactivateAdminUser();
   const { mutate: reactivateUser } = useReactivateAdminUser();
   const { mutate: resendCredentials, isPending: isResending } = useResendAdminCredentials();
+  const { mutate: deleteUser, isPending: isDeleting } = useDeleteAdminUser();
 
   const [nuevoDialogOpen, setNuevoDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [editarDialog, setEditarDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [deactivateDialog, setDeactivateDialog] = useState<{ open: boolean; user?: any }>({ open: false });
   const [resendDialog, setResendDialog] = useState<{ open: boolean; user?: any }>({ open: false });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user?: any }>({ open: false });
+  const [confirmText, setConfirmText] = useState("");
   const [resultDialog, setResultDialog] = useState<{ 
     open: boolean; 
     user?: any;
@@ -88,6 +100,17 @@ export default function Usuarios() {
             actionLink: result.action_link,
             emailSent: result.email_sent
           });
+        },
+      });
+    }
+  };
+
+  const handleDeleteUser = () => {
+    if (deleteDialog.user && confirmText === "ELIMINAR") {
+      deleteUser(deleteDialog.user.user_id, {
+        onSuccess: () => {
+          setDeleteDialog({ open: false });
+          setConfirmText("");
         },
       });
     }
@@ -215,13 +238,24 @@ export default function Usuarios() {
                               <UserX className="h-4 w-4 text-red-500" />
                             </Button>
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReactivate(user)}
-                            >
-                              <UserCheck className="h-4 w-4 text-green-500" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReactivate(user)}
+                              >
+                                <UserCheck className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteDialog({ open: true, user })}
+                                disabled={user.user_id === adminUser?.user_id}
+                                title="Eliminar permanentemente"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
                           )}
                         </>
                       )}
@@ -276,6 +310,68 @@ export default function Usuarios() {
           emailSent={resultDialog.emailSent || false}
         />
       )}
+
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => {
+        setDeleteDialog({ ...deleteDialog, open });
+        if (!open) setConfirmText("");
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Eliminar Usuario Permanentemente
+            </DialogTitle>
+            <DialogDescription className="space-y-3 pt-4">
+              <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <p className="font-semibold text-destructive mb-2">⚠️ ADVERTENCIA: Esta acción es PERMANENTE e IRREVERSIBLE</p>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Se eliminará el usuario del sistema de autenticación</li>
+                  <li>• Se perderán todos sus datos de acceso</li>
+                  <li>• No podrá volver a iniciar sesión</li>
+                  <li>• Esta acción no se puede deshacer</li>
+                </ul>
+              </div>
+              
+              {deleteDialog.user && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-1">Usuario a eliminar:</p>
+                  <p className="text-sm"><span className="font-semibold">Nombre:</span> {deleteDialog.user.full_name}</p>
+                  <p className="text-sm"><span className="font-semibold">Email:</span> {deleteDialog.user.email}</p>
+                  <p className="text-sm"><span className="font-semibold">Rol:</span> {getRoleLabel(deleteDialog.user.role)}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Para confirmar, escribe <span className="font-mono font-bold text-destructive">ELIMINAR</span> en el campo de abajo:</p>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="Escribe ELIMINAR"
+                  className="font-mono"
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialog({ open: false });
+                setConfirmText("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteUser}
+              disabled={confirmText !== "ELIMINAR" || isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar Permanentemente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
