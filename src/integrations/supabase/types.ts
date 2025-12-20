@@ -1607,6 +1607,42 @@ export type Database = {
         }
         Relationships: []
       }
+      checklist_fases: {
+        Row: {
+          activo: boolean | null
+          color: string | null
+          created_at: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          orden: number
+          tipo_operacion: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          orden: number
+          tipo_operacion: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+          tipo_operacion?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       collaborator_applications: {
         Row: {
           assigned_at: string | null
@@ -5089,10 +5125,14 @@ export type Database = {
       mandato_checklist_tasks: {
         Row: {
           created_at: string | null
+          dependencias: string[] | null
           descripcion: string | null
+          duracion_estimada_dias: number | null
+          es_critica: boolean | null
           estado: string
           fase: string
           fecha_completada: string | null
+          fecha_inicio: string | null
           fecha_limite: string | null
           id: string
           mandato_id: string
@@ -5101,15 +5141,20 @@ export type Database = {
           responsable: string | null
           sistema: string | null
           tarea: string
+          tipo_operacion: string | null
           updated_at: string | null
           url_relacionada: string | null
         }
         Insert: {
           created_at?: string | null
+          dependencias?: string[] | null
           descripcion?: string | null
+          duracion_estimada_dias?: number | null
+          es_critica?: boolean | null
           estado?: string
           fase: string
           fecha_completada?: string | null
+          fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
           mandato_id: string
@@ -5118,15 +5163,20 @@ export type Database = {
           responsable?: string | null
           sistema?: string | null
           tarea: string
+          tipo_operacion?: string | null
           updated_at?: string | null
           url_relacionada?: string | null
         }
         Update: {
           created_at?: string | null
+          dependencias?: string[] | null
           descripcion?: string | null
+          duracion_estimada_dias?: number | null
+          es_critica?: boolean | null
           estado?: string
           fase?: string
           fecha_completada?: string | null
+          fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
           mandato_id?: string
@@ -5135,6 +5185,7 @@ export type Database = {
           responsable?: string | null
           sistema?: string | null
           tarea?: string
+          tipo_operacion?: string | null
           updated_at?: string | null
           url_relacionada?: string | null
         }
@@ -5166,35 +5217,47 @@ export type Database = {
         Row: {
           activo: boolean | null
           created_at: string | null
+          dependencias: string[] | null
           descripcion: string | null
+          duracion_estimada_dias: number | null
+          es_critica: boolean | null
           fase: string
           id: string
           orden: number
           responsable: string | null
           sistema: string | null
           tarea: string
+          tipo_operacion: string | null
         }
         Insert: {
           activo?: boolean | null
           created_at?: string | null
+          dependencias?: string[] | null
           descripcion?: string | null
+          duracion_estimada_dias?: number | null
+          es_critica?: boolean | null
           fase: string
           id?: string
           orden: number
           responsable?: string | null
           sistema?: string | null
           tarea: string
+          tipo_operacion?: string | null
         }
         Update: {
           activo?: boolean | null
           created_at?: string | null
+          dependencias?: string[] | null
           descripcion?: string | null
+          duracion_estimada_dias?: number | null
+          es_critica?: boolean | null
           fase?: string
           id?: string
           orden?: number
           responsable?: string | null
           sistema?: string | null
           tarea?: string
+          tipo_operacion?: string | null
         }
         Relationships: []
       }
@@ -8872,6 +8935,10 @@ export type Database = {
       }
       cleanup_old_audit_logs: { Args: never; Returns: number }
       cleanup_old_tracking_events: { Args: never; Returns: number }
+      copy_checklist_template_by_type: {
+        Args: { p_mandato_id: string; p_tipo_operacion: string }
+        Returns: number
+      }
       copy_checklist_template_to_mandato: {
         Args: { p_mandato_id: string }
         Returns: number
@@ -8971,6 +9038,20 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_checklist_progress: {
+        Args: { p_mandato_id: string }
+        Returns: {
+          completadas: number
+          dias_estimados: number
+          en_curso: number
+          fase: string
+          pendientes: number
+          porcentaje: number
+          tareas_criticas: number
+          total: number
+          vencidas: number
+        }[]
+      }
       get_lead_ai_stats: { Args: never; Returns: Json }
       get_marketplace_analytics: { Args: { days_back?: number }; Returns: Json }
       get_news_filter_options: {
@@ -8978,6 +9059,17 @@ export type Database = {
         Returns: {
           all_tags: string[]
           categories: string[]
+        }[]
+      }
+      get_overdue_tasks: {
+        Args: { p_mandato_id: string }
+        Returns: {
+          dias_vencida: number
+          es_critica: boolean
+          fase: string
+          fecha_limite: string
+          id: string
+          tarea: string
         }[]
       }
       get_portfolio_filter_options: {

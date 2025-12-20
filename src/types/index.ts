@@ -344,7 +344,24 @@ export interface TimeStats {
 // ============================================
 // CHECKLIST M&A
 // ============================================
-export type ChecklistFase = "1. Preparación" | "2. Marketing" | "3. Ofertas";
+
+// Fases dinámicas por tipo de operación
+export type ChecklistFaseCompra = 
+  | "1. Definición" 
+  | "2. Búsqueda" 
+  | "3. Aproximación" 
+  | "4. Due Diligence" 
+  | "5. Cierre";
+
+export type ChecklistFaseVenta = 
+  | "1. Preparación" 
+  | "2. Marketing" 
+  | "3. Ofertas"
+  | "4. Due Diligence"
+  | "5. Cierre";
+
+export type ChecklistFase = ChecklistFaseCompra | ChecklistFaseVenta | string;
+
 export type ChecklistResponsable = "Dirección M&A" | "Analista" | "Asesor M&A" | "Marketing" | "Legal" | "Research" | "M&A Support";
 export type ChecklistSistema = "Brevo" | "CRM" | "Lovable.dev" | "DealSuite" | "ARX" | "Data Room" | "Supabase";
 export type ChecklistEstado = "⏳ Pendiente" | "🔄 En curso" | "✅ Completa";
@@ -363,17 +380,64 @@ export interface MandatoChecklistTask {
   url_relacionada?: string;
   notas?: string;
   orden: number;
+  // Nuevos campos para checklist dinámico
+  tipo_operacion?: 'compra' | 'venta';
+  duracion_estimada_dias?: number;
+  es_critica?: boolean;
+  dependencias?: string[];
+  fecha_inicio?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface ChecklistFaseProgress {
-  fase: ChecklistFase;
+  fase: string;
   total: number;
   completadas: number;
   enCurso: number;
   pendientes: number;
   porcentaje: number;
+  // Nuevos campos
+  vencidas?: number;
+  diasEstimados?: number;
+  tareasCriticas?: number;
+}
+
+// Fase dinámica de la base de datos
+export interface ChecklistFaseConfig {
+  id: string;
+  nombre: string;
+  tipo_operacion: 'compra' | 'venta' | 'ambos';
+  orden: number;
+  color: string;
+  descripcion?: string;
+  activo: boolean;
+}
+
+// Template de checklist
+export interface ChecklistTemplate {
+  id: string;
+  fase: string;
+  tarea: string;
+  descripcion?: string;
+  responsable?: string;
+  sistema?: string;
+  orden: number;
+  tipo_operacion: 'compra' | 'venta';
+  duracion_estimada_dias?: number;
+  es_critica: boolean;
+  dependencias?: string[];
+  activo: boolean;
+}
+
+// Tarea vencida
+export interface OverdueTask {
+  id: string;
+  tarea: string;
+  fase: string;
+  fecha_limite: string;
+  es_critica: boolean;
+  dias_vencida: number;
 }
 
 // Archivos del Checklist M&A
