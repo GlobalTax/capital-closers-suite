@@ -4903,6 +4903,73 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_dismissed: boolean | null
+          is_read: boolean | null
+          mandato_id: string | null
+          metadata: Json | null
+          severity: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          mandato_id?: string | null
+          metadata?: Json | null
+          severity?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          mandato_id?: string | null
+          metadata?: Json | null
+          severity?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandato_checklist_task_files: {
         Row: {
           created_at: string | null
@@ -8306,6 +8373,51 @@ export type Database = {
           },
         ]
       }
+      v_active_alerts: {
+        Row: {
+          alert_type: string | null
+          created_at: string | null
+          description: string | null
+          empresa_nombre: string | null
+          empresa_sector: string | null
+          expires_at: string | null
+          id: string | null
+          is_dismissed: boolean | null
+          is_read: boolean | null
+          mandato_estado: string | null
+          mandato_id: string | null
+          mandato_tipo: string | null
+          mandato_valor: number | null
+          metadata: Json | null
+          pipeline_stage: string | null
+          severity: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_empleados_completo: {
         Row: {
           codigo_empleado: string | null
@@ -8598,6 +8710,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      generate_mandato_alerts: { Args: never; Returns: undefined }
       generate_proposal_number: { Args: never; Returns: string }
       generate_secure_temp_password: { Args: never; Returns: string }
       generate_signed_valuation_token: { Args: never; Returns: string }
