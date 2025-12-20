@@ -14,7 +14,7 @@ import { useEmpresaMandatos, useEmpresaContactos } from "@/hooks/queries/useEmpr
 import { useEmpresaInteracciones } from "@/hooks/queries/useInteracciones";
 import { useEmpresaDocumentos } from "@/hooks/queries/useDocumentos";
 import type { Mandato, Contacto } from "@/types";
-import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus, BarChart3, Percent } from "lucide-react";
+import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus, BarChart3, Percent, Calculator } from "lucide-react";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { format } from "date-fns";
@@ -24,6 +24,7 @@ import { ColorfulFinancialKPI } from "@/components/empresas/ColorfulFinancialKPI
 import { EmpresaActionsPanel } from "@/components/empresas/EmpresaActionsPanel";
 import { EmpresaBadge } from "@/components/empresas/EmpresaBadges";
 import { FinancialAnalysisSection } from "@/components/empresas/FinancialAnalysisSection";
+import { ValuationTab } from "@/components/empresas/ValuationTab";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 export default function EmpresaDetalle() {
@@ -209,7 +210,7 @@ export default function EmpresaDetalle() {
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="general" className="space-y-4">
-            <TabsList className="grid grid-cols-6 w-full bg-muted/50">
+            <TabsList className="grid grid-cols-7 w-full bg-muted/50">
               <TabsTrigger 
                 value="general" 
                 className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
@@ -223,6 +224,13 @@ export default function EmpresaDetalle() {
               >
                 <DollarSign className="h-5 w-5 mr-2" />
                 Financiero
+              </TabsTrigger>
+              <TabsTrigger 
+                value="valoracion"
+                className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
+              >
+                <Calculator className="h-5 w-5 mr-2" />
+                Valoración
               </TabsTrigger>
               <TabsTrigger 
                 value="contactos"
@@ -369,6 +377,11 @@ export default function EmpresaDetalle() {
                   margenEbitda={margenEbitda}
                 />
               </div>
+            </TabsContent>
+
+            {/* Tab Valoración */}
+            <TabsContent value="valoracion">
+              <ValuationTab empresa={empresa} />
             </TabsContent>
 
             {/* Tab Contactos */}

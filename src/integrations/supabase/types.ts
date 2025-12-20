@@ -1472,6 +1472,13 @@ export type Database = {
             referencedRelation: "company_valuations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "calendar_bookings_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       carousel_logos: {
@@ -1974,6 +1981,7 @@ export type Database = {
           email_sent: boolean | null
           email_sent_at: string | null
           employee_range: string
+          empresa_id: string | null
           final_valuation: number | null
           form_submitted_at: string | null
           growth_rate: number | null
@@ -2032,6 +2040,7 @@ export type Database = {
           email_sent?: boolean | null
           email_sent_at?: string | null
           employee_range: string
+          empresa_id?: string | null
           final_valuation?: number | null
           form_submitted_at?: string | null
           growth_rate?: number | null
@@ -2090,6 +2099,7 @@ export type Database = {
           email_sent?: boolean | null
           email_sent_at?: string | null
           employee_range?: string
+          empresa_id?: string | null
           final_valuation?: number | null
           form_submitted_at?: string | null
           growth_rate?: number | null
@@ -2131,6 +2141,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
           },
         ]
       }
@@ -2447,6 +2471,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contactos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
           },
           {
             foreignKeyName: "contactos_import_log_id_fkey"
@@ -2972,6 +3003,13 @@ export type Database = {
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "empresa_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
         ]
       }
       empresas: {
@@ -3184,6 +3222,13 @@ export type Database = {
             columns: ["valuation_id"]
             isOneToOne: false
             referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_sessions_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
@@ -3475,6 +3520,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
           },
           {
             foreignKeyName: "interacciones_mandato_id_fkey"
@@ -4404,6 +4456,13 @@ export type Database = {
             referencedRelation: "company_valuations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lead_ai_reports_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lead_enrichment_snapshots: {
@@ -5271,6 +5330,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mandato_empresas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+          {
             foreignKeyName: "mandato_empresas_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
@@ -5587,6 +5653,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mandatos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+          {
             foreignKeyName: "mandatos_import_log_id_fkey"
             columns: ["import_log_id"]
             isOneToOne: false
@@ -5689,6 +5762,13 @@ export type Database = {
             columns: ["valuation_id"]
             isOneToOne: false
             referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_logs_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
@@ -6374,6 +6454,13 @@ export type Database = {
             columns: ["valuation_id"]
             isOneToOne: false
             referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdf_download_logs_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
@@ -8451,6 +8538,93 @@ export type Database = {
           },
         ]
       }
+      v_empresa_valuations: {
+        Row: {
+          activity_description: string | null
+          adjustment_amount: number | null
+          assigned_at: string | null
+          assigned_to: string | null
+          cif: string | null
+          company_name: string | null
+          competitive_advantage: string | null
+          completion_percentage: number | null
+          contact_name: string | null
+          created_at: string | null
+          current_step: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
+          ebitda: number | null
+          ebitda_multiple_used: number | null
+          email: string | null
+          email_message_id: string | null
+          email_opened: boolean | null
+          email_opened_at: string | null
+          email_sent: boolean | null
+          email_sent_at: string | null
+          employee_range: string | null
+          empresa_id: string | null
+          final_valuation: number | null
+          form_submitted_at: string | null
+          growth_rate: number | null
+          has_adjustments: boolean | null
+          id: string | null
+          industry: string | null
+          ip_address: unknown
+          is_deleted: boolean | null
+          last_activity_at: string | null
+          last_modified_field: string | null
+          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
+          location: string | null
+          match_type: string | null
+          matched_empresa_id: string | null
+          matched_empresa_nombre: string | null
+          net_profit_margin: number | null
+          ownership_participation: string | null
+          phone: string | null
+          phone_e164: string | null
+          referrer: string | null
+          revenue: number | null
+          source_project: string | null
+          status_updated_at: string | null
+          time_spent_seconds: number | null
+          token_expires_at: string | null
+          token_used_at: string | null
+          unique_token: string | null
+          user_agent: string | null
+          user_id: string | null
+          valuation_range_max: number | null
+          valuation_range_min: number | null
+          valuation_status: string | null
+          whatsapp_opt_in: boolean | null
+          whatsapp_sent: boolean | null
+          whatsapp_sent_at: string | null
+          years_of_operation: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_valuations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
       v_mandatos_stuck: {
         Row: {
           created_at: string | null
@@ -8493,6 +8667,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
           },
           {
             foreignKeyName: "mandatos_import_log_id_fkey"
@@ -8545,6 +8726,45 @@ export type Database = {
           stage_order: number | null
           total_value: number | null
           weighted_value: number | null
+        }
+        Relationships: []
+      }
+      v_sector_multiples: {
+        Row: {
+          ebitda_multiple_max: number | null
+          ebitda_multiple_median: number | null
+          ebitda_multiple_min: number | null
+          net_profit_multiple_max: number | null
+          net_profit_multiple_median: number | null
+          net_profit_multiple_min: number | null
+          revenue_multiple_max: number | null
+          revenue_multiple_median: number | null
+          revenue_multiple_min: number | null
+          sector_name: string | null
+        }
+        Insert: {
+          ebitda_multiple_max?: number | null
+          ebitda_multiple_median?: number | null
+          ebitda_multiple_min?: number | null
+          net_profit_multiple_max?: number | null
+          net_profit_multiple_median?: number | null
+          net_profit_multiple_min?: number | null
+          revenue_multiple_max?: number | null
+          revenue_multiple_median?: number | null
+          revenue_multiple_min?: number | null
+          sector_name?: string | null
+        }
+        Update: {
+          ebitda_multiple_max?: number | null
+          ebitda_multiple_median?: number | null
+          ebitda_multiple_min?: number | null
+          net_profit_multiple_max?: number | null
+          net_profit_multiple_median?: number | null
+          net_profit_multiple_min?: number | null
+          revenue_multiple_max?: number | null
+          revenue_multiple_median?: number | null
+          revenue_multiple_min?: number | null
+          sector_name?: string | null
         }
         Relationships: []
       }
@@ -8800,6 +9020,10 @@ export type Database = {
       is_full_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_user_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { check_user_id: string }; Returns: boolean }
+      link_valuation_to_empresa: {
+        Args: { p_empresa_id: string; p_valuation_id: string }
+        Returns: boolean
+      }
       log_auth_security_event: {
         Args: {
           details?: Json
@@ -8925,6 +9149,10 @@ export type Database = {
           timeline: Json
           website_url: string
         }[]
+      }
+      unlink_valuation_from_empresa: {
+        Args: { p_valuation_id: string }
+        Returns: boolean
       }
       update_admin_user_role: {
         Args: {
