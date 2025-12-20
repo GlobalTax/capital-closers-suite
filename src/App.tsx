@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/query-client";
 const Login = lazy(() => import("./pages/auth/Login"));
 const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
 const Mandatos = lazy(() => import("./pages/Mandatos"));
+const Pipeline = lazy(() => import("./pages/Pipeline"));
 const MandatoDetalle = lazy(() => import("./pages/MandatoDetalle"));
 const Contactos = lazy(() => import("./pages/Contactos"));
 const ContactoDetalle = lazy(() => import("./pages/ContactoDetalle"));
@@ -50,7 +51,8 @@ function AppContent() {
           <Route path="/auth/accept-invitation" element={<AcceptInvitation />} />
 
           {/* Protected routes */}
-          <Route path="/" element={<Navigate to="/mandatos" replace />} />
+          <Route path="/" element={<Navigate to="/pipeline" replace />} />
+          <Route path="/pipeline" element={<ProtectedRoute><AppLayout><Pipeline /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos" element={<ProtectedRoute><AppLayout><Contactos /></AppLayout></ProtectedRoute>} />
