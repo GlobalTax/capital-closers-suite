@@ -1,11 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Bell, Settings, Plus, LogOut, User, Moon, Sun, Briefcase, Users, Building2, CheckSquare } from "lucide-react";
+import { Search, Settings, Plus, LogOut, User, Moon, Sun, Briefcase, Users, Building2, CheckSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AlertsCenter } from "@/components/alerts/AlertsCenter";
 
 // Lazy load drawers para optimizar rendimiento
 const NuevoMandatoDrawer = lazy(() => import("@/components/mandatos/NuevoMandatoDrawer").then(m => ({ default: m.NuevoMandatoDrawer })));
@@ -164,10 +165,7 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
-        </Button>
+        <AlertsCenter />
 
         {/* Menú de Usuario */}
         <DropdownMenu>
