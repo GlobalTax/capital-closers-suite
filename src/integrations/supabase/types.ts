@@ -2452,6 +2452,13 @@ export type Database = {
             referencedRelation: "documentos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacto_documentos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "v_documentos_con_versiones"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contactos: {
@@ -2707,47 +2714,188 @@ export type Database = {
           },
         ]
       }
+      document_folders: {
+        Row: {
+          created_at: string | null
+          fase_asociada: string | null
+          folder_type: string | null
+          icon: string | null
+          id: string
+          is_data_room: boolean | null
+          mandato_id: string
+          name: string
+          orden: number | null
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fase_asociada?: string | null
+          folder_type?: string | null
+          icon?: string | null
+          id?: string
+          is_data_room?: boolean | null
+          mandato_id: string
+          name: string
+          orden?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fase_asociada?: string | null
+          folder_type?: string | null
+          icon?: string | null
+          id?: string
+          is_data_room?: boolean | null
+          mandato_id?: string
+          name?: string
+          orden?: number | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          fase_aplicable: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          id: string
+          is_active: boolean | null
+          mime_type: string | null
+          name: string
+          template_url: string | null
+          tipo_operacion: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fase_aplicable?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          is_active?: boolean | null
+          mime_type?: string | null
+          name: string
+          template_url?: string | null
+          tipo_operacion?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          fase_aplicable?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          is_active?: boolean | null
+          mime_type?: string | null
+          name?: string
+          template_url?: string | null
+          tipo_operacion?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           created_at: string | null
           file_name: string
           file_size_bytes: number
+          folder_id: string | null
           id: string
+          is_latest_version: boolean | null
           mandato_id: string | null
           mime_type: string
+          parent_document_id: string | null
           storage_path: string
           tags: string[] | null
           tipo: string | null
           updated_at: string | null
           uploaded_by: string | null
+          version: number | null
         }
         Insert: {
           created_at?: string | null
           file_name: string
           file_size_bytes: number
+          folder_id?: string | null
           id?: string
+          is_latest_version?: boolean | null
           mandato_id?: string | null
           mime_type: string
+          parent_document_id?: string | null
           storage_path: string
           tags?: string[] | null
           tipo?: string | null
           updated_at?: string | null
           uploaded_by?: string | null
+          version?: number | null
         }
         Update: {
           created_at?: string | null
           file_name?: string
           file_size_bytes?: number
+          folder_id?: string | null
           id?: string
+          is_latest_version?: boolean | null
           mandato_id?: string | null
           mime_type?: string
+          parent_document_id?: string | null
           storage_path?: string
           tags?: string[] | null
           tipo?: string | null
           updated_at?: string | null
           uploaded_by?: string | null
+          version?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documentos_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documentos_mandato_id_fkey"
             columns: ["mandato_id"]
@@ -2767,6 +2915,20 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "v_documentos_con_versiones"
             referencedColumns: ["id"]
           },
         ]
@@ -3047,6 +3209,13 @@ export type Database = {
             columns: ["documento_id"]
             isOneToOne: false
             referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_documentos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "v_documentos_con_versiones"
             referencedColumns: ["id"]
           },
           {
@@ -8647,6 +8816,74 @@ export type Database = {
           },
         ]
       }
+      v_documentos_con_versiones: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          folder_id: string | null
+          folder_name: string | null
+          folder_type: string | null
+          id: string | null
+          is_data_room: boolean | null
+          is_latest_version: boolean | null
+          latest_version: number | null
+          mandato_id: string | null
+          mime_type: string | null
+          parent_document_id: string | null
+          storage_path: string | null
+          tags: string[] | null
+          tipo: string | null
+          total_versions: number | null
+          updated_at: string | null
+          uploaded_by: string | null
+          version: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_parent_document_id_fkey"
+            columns: ["parent_document_id"]
+            isOneToOne: false
+            referencedRelation: "v_documentos_con_versiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_empleados_completo: {
         Row: {
           codigo_empleado: string | null
@@ -9030,6 +9267,17 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      create_document_version: {
+        Args: {
+          p_file_name: string
+          p_file_size_bytes: number
+          p_mime_type: string
+          p_parent_document_id: string
+          p_storage_path: string
+          p_uploaded_by?: string
+        }
+        Returns: string
       }
       create_temporary_user: {
         Args: {
