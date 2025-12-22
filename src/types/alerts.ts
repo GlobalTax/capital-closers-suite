@@ -8,7 +8,8 @@ export type AlertType =
   | 'stuck_deal' 
   | 'upcoming_deadline'
   | 'missing_document'
-  | 'low_probability';
+  | 'low_probability'
+  | 'critical_task_overdue';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 

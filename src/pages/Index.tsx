@@ -3,15 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter, subDays, isPast } from "date-fns";
+import { format, subDays, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Calendar, 
-  Clock, 
-  TrendingUp, 
   AlertCircle, 
   Activity, 
   Users, 
@@ -28,6 +24,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Interaccion } from "@/services/interacciones";
+import { AlertsSummaryWidget } from "@/components/dashboard/AlertsSummaryWidget";
+import { useAlertsRealtime } from "@/hooks/useAlertsRealtime";
 
 interface ProximaAccion extends Interaccion {
   contacto?: { nombre: string; apellidos: string };
@@ -72,6 +70,9 @@ export default function Index() {
   const [proximasAcciones, setProximasAcciones] = useState<ProximaAccion[]>([]);
   const [interaccionesRecientes, setInteraccionesRecientes] = useState<ProximaAccion[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Suscripción a alertas en tiempo real
+  useAlertsRealtime();
 
   useEffect(() => {
     cargarDatos();
@@ -223,6 +224,9 @@ export default function Index() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Widget de Alertas M&A */}
+      <AlertsSummaryWidget />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Próximas Acciones */}
