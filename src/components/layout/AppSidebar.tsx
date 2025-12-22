@@ -22,6 +22,7 @@ import {
   ExternalLink,
   GitBranch,
   RefreshCw,
+  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +50,7 @@ const mandatosItems = [
 
 const otherMenuItems = [
   { title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
+  { title: "Calendario", url: "/calendario", icon: CalendarDays },
   { title: "Mis Horas", url: "/mis-horas", icon: Clock },
   { title: "Contactos", url: "/contactos", icon: Users },
   { title: "Empresas", url: "/empresas", icon: Building2 },
