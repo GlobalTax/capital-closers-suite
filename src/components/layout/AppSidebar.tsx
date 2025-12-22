@@ -21,6 +21,7 @@ import {
   Settings,
   ExternalLink,
   GitBranch,
+  RefreshCw,
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,6 +64,7 @@ const adminDashboardItems = [
 const superAdminItems = [
   { title: "Usuarios", url: "/usuarios", icon: UserCog },
   { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
+  { title: "Sync Valoraciones", url: "/sync-valuations", icon: RefreshCw },
   { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },
