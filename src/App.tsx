@@ -27,6 +27,7 @@ const EmpresaDetalle = lazy(() => import("./pages/EmpresaDetalle"));
 const Tareas = lazy(() => import("./pages/Tareas"));
 const Documentos = lazy(() => import("./pages/Documentos"));
 const Reportes = lazy(() => import("./pages/Reportes"));
+const Calendario = lazy(() => import("./pages/Calendario"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Perfil = lazy(() => import("./pages/Perfil"));
 const MisHoras = lazy(() => import("./pages/MisHoras"));
@@ -63,6 +64,7 @@ function AppContent() {
           <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
           <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
           <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
+          <Route path="/calendario" element={<ProtectedRoute><AppLayout><Calendario /></AppLayout></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
           <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
           <Route path="/horas-equipo" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><HorasEquipo /></AppLayout></ProtectedRoute>} />
