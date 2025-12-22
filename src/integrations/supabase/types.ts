@@ -2469,6 +2469,7 @@ export type Database = {
           notas: string | null
           telefono: string | null
           updated_at: string | null
+          valuation_id: string | null
         }
         Insert: {
           apellidos?: string | null
@@ -2484,6 +2485,7 @@ export type Database = {
           notas?: string | null
           telefono?: string | null
           updated_at?: string | null
+          valuation_id?: string | null
         }
         Update: {
           apellidos?: string | null
@@ -2499,6 +2501,7 @@ export type Database = {
           notas?: string | null
           telefono?: string | null
           updated_at?: string | null
+          valuation_id?: string | null
         }
         Relationships: [
           {
@@ -2520,6 +2523,20 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contactos_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contactos_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
@@ -3056,6 +3073,7 @@ export type Database = {
           descripcion: string | null
           deuda: number | null
           ebitda: number | null
+          ebitda_margin: number | null
           empleados: number | null
           es_target: boolean | null
           estado_target: string | null
@@ -3068,6 +3086,7 @@ export type Database = {
           revenue: number | null
           sector: string
           sitio_web: string | null
+          source_valuation_id: string | null
           subsector: string | null
           ubicacion: string | null
           updated_at: string | null
@@ -3079,6 +3098,7 @@ export type Database = {
           descripcion?: string | null
           deuda?: number | null
           ebitda?: number | null
+          ebitda_margin?: number | null
           empleados?: number | null
           es_target?: boolean | null
           estado_target?: string | null
@@ -3091,6 +3111,7 @@ export type Database = {
           revenue?: number | null
           sector: string
           sitio_web?: string | null
+          source_valuation_id?: string | null
           subsector?: string | null
           ubicacion?: string | null
           updated_at?: string | null
@@ -3102,6 +3123,7 @@ export type Database = {
           descripcion?: string | null
           deuda?: number | null
           ebitda?: number | null
+          ebitda_margin?: number | null
           empleados?: number | null
           es_target?: boolean | null
           estado_target?: string | null
@@ -3114,6 +3136,7 @@ export type Database = {
           revenue?: number | null
           sector?: string
           sitio_web?: string | null
+          source_valuation_id?: string | null
           subsector?: string | null
           ubicacion?: string | null
           updated_at?: string | null
@@ -3124,6 +3147,20 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_valuation_id_fkey"
+            columns: ["source_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_valuation_id_fkey"
+            columns: ["source_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
@@ -8153,6 +8190,48 @@ export type Database = {
         }
         Relationships: []
       }
+      valuation_sync_log: {
+        Row: {
+          contactos_created: number | null
+          contactos_linked: number | null
+          duration_ms: number | null
+          empresas_created: number | null
+          empresas_linked: number | null
+          errors: Json | null
+          executed_at: string | null
+          executed_by: string | null
+          id: string
+          status: string | null
+          total_valuations: number | null
+        }
+        Insert: {
+          contactos_created?: number | null
+          contactos_linked?: number | null
+          duration_ms?: number | null
+          empresas_created?: number | null
+          empresas_linked?: number | null
+          errors?: Json | null
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          status?: string | null
+          total_valuations?: number | null
+        }
+        Update: {
+          contactos_created?: number | null
+          contactos_linked?: number | null
+          duration_ms?: number | null
+          empresas_created?: number | null
+          empresas_linked?: number | null
+          errors?: Json | null
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          status?: string | null
+          total_valuations?: number | null
+        }
+        Relationships: []
+      }
       venta_empresas_comparisons: {
         Row: {
           aspect: string
@@ -9081,11 +9160,27 @@ export type Database = {
         }[]
       }
       get_sector_dossier_stats: { Args: never; Returns: Json }
+      get_sync_history: {
+        Args: never
+        Returns: {
+          contactos_created: number
+          contactos_linked: number
+          duration_ms: number
+          empresas_created: number
+          empresas_linked: number
+          errors_count: number
+          executed_at: string
+          id: string
+          status: string
+          total_valuations: number
+        }[]
+      }
       get_user_role: { Args: { check_user_id: string }; Returns: string }
       get_valuation_analytics: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
       }
+      get_valuation_sync_stats: { Args: never; Returns: Json }
       grant_rh_role: {
         Args: {
           notes_text?: string
@@ -9242,6 +9337,7 @@ export type Database = {
           website_url: string
         }[]
       }
+      sync_valuations_to_crm: { Args: { p_dry_run?: boolean }; Returns: Json }
       unlink_valuation_from_empresa: {
         Args: { p_valuation_id: string }
         Returns: boolean
