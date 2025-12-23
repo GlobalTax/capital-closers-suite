@@ -16,6 +16,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
 } from "recharts";
+import { SyncFromBrevoCard } from "@/components/sync/SyncFromBrevoCard";
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -112,6 +113,7 @@ export default function Reportes() {
             <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
             <TabsTrigger value="comparacion">Compra vs Venta</TabsTrigger>
             <TabsTrigger value="alertas">Alertas</TabsTrigger>
+            <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline" className="space-y-4">
@@ -248,6 +250,12 @@ export default function Reportes() {
                   ) : <p className="text-muted-foreground">Sin cierres próximos</p>}
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="integraciones" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SyncFromBrevoCard />
             </div>
           </TabsContent>
         </Tabs>

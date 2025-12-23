@@ -2465,6 +2465,8 @@ export type Database = {
         Row: {
           apellidos: string | null
           avatar: string | null
+          brevo_id: string | null
+          brevo_synced_at: string | null
           cargo: string | null
           created_at: string | null
           email: string
@@ -2481,6 +2483,8 @@ export type Database = {
         Insert: {
           apellidos?: string | null
           avatar?: string | null
+          brevo_id?: string | null
+          brevo_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
           email: string
@@ -2497,6 +2501,8 @@ export type Database = {
         Update: {
           apellidos?: string | null
           avatar?: string | null
+          brevo_id?: string | null
+          brevo_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
           email?: string
@@ -3287,6 +3293,8 @@ export type Database = {
       }
       empresas: {
         Row: {
+          brevo_id: string | null
+          brevo_synced_at: string | null
           capital_circulante: number | null
           cif: string | null
           created_at: string | null
@@ -3312,6 +3320,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          brevo_id?: string | null
+          brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
           created_at?: string | null
@@ -3337,6 +3347,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          brevo_id?: string | null
+          brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
           created_at?: string | null
