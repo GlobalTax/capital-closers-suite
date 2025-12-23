@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
+import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { useEmpresas } from "@/hooks/queries/useEmpresas";
 import { supabase } from "@/integrations/supabase/client";
 import type { Empresa } from "@/types";
-import { Building2, Star, TrendingUp, Activity, Globe } from "lucide-react";
+import { Building2, Star, TrendingUp, Activity, Globe, Sparkles } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ export default function Empresas() {
   const { data: empresas = [], isLoading } = useEmpresas();
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
 
   // KPIs calculados
@@ -170,6 +172,12 @@ export default function Empresas() {
         description="Base de datos de empresas de interés"
         actionLabel="Nueva Empresa"
         onAction={() => setDrawerOpen(true)}
+        extraActions={
+          <Button variant="outline" onClick={() => setAiImportOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Importar con IA
+          </Button>
+        }
       />
 
       {/* KPI Cards */}
@@ -260,6 +268,13 @@ export default function Empresas() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onEmpresaCreada={() => setDrawerOpen(false)}
+      />
+
+      <AIImportDrawer
+        open={aiImportOpen}
+        onOpenChange={setAiImportOpen}
+        defaultMode="empresa"
+        onSuccess={() => {}}
       />
     </div>
   );
