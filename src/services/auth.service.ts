@@ -164,12 +164,14 @@ export class AuthService {
 
   /**
    * Establece la contraseña inicial (primera vez)
+   * Usa función RPC con SECURITY DEFINER para bypasear RLS
    */
   static async setInitialPassword(
     userId: string,
     newPassword: string
   ): Promise<{ error: Error | null }> {
     try {
+      // 1. Actualizar contraseña en Supabase Auth
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -184,13 +186,22 @@ export class AuthService {
         throw error;
       }
 
-      // Actualizar flag de needs_credentials solo si la contraseña se actualizó correctamente
-      await supabase
-        .from('admin_users')
-        .update({ needs_credentials: false })
-        .eq('user_id', userId);
+      // 2. Usar función RPC con SECURITY DEFINER para actualizar needs_credentials
+      // Esto bypasea las políticas RLS restrictivas
+      const { data: success, error: rpcError } = await supabase
+        .rpc('complete_password_setup');
 
-      // Logout para forzar re-login con nueva contraseña
+      if (rpcError) {
+        console.error('Error al completar setup de contraseña:', rpcError);
+        throw new Error('Error al actualizar el estado de la cuenta. Contacta al administrador.');
+      }
+
+      if (!success) {
+        console.error('complete_password_setup retornó false');
+        throw new Error('No se pudo actualizar el estado de la cuenta. Contacta al administrador.');
+      }
+
+      // 3. Logout para forzar re-login con nueva contraseña
       await supabase.auth.signOut();
 
       return { error: null };
