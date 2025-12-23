@@ -1,112 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Users, FileText } from "lucide-react";
-import { fetchMandatos } from "@/services/mandatos";
-import { fetchContactos } from "@/services/contactos";
-import { fetchEmpresas } from "@/services/empresas";
-import type { Mandato } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  BarChart3, TrendingUp, Briefcase, Target, Clock, DollarSign, 
+  CalendarCheck, AlertTriangle, Download, RefreshCw, FileText,
+  ArrowUpRight, ArrowDownRight
+} from "lucide-react";
+import { useReportData } from "@/hooks/useReportData";
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
+} from "recharts";
+
+const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#ec4899', '#84cc16'];
+
+const iconMap: Record<string, React.ElementType> = {
+  TrendingUp, Scale: TrendingUp, Briefcase, Target, Clock, DollarSign, CalendarCheck, AlertTriangle
+};
 
 export default function Reportes() {
-  const [mandatos, setMandatos] = useState<Mandato[]>([]);
-  const [totalContactos, setTotalContactos] = useState(0);
-  const [totalTargets, setTotalTargets] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { kpis, pipelineMetrics, timeMetrics, comparisonMetrics, alertMetrics, loading, refetch, filters, setFilters } = useReportData();
+  const [activeTab, setActiveTab] = useState("pipeline");
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
-    setLoading(true);
-    try {
-      const [mandatosData, contactosData, targetsData] = await Promise.all([
-        fetchMandatos(),
-        fetchContactos(),
-        fetchEmpresas(true),
-      ]);
-      setMandatos(mandatosData);
-      setTotalContactos(contactosData.length);
-      setTotalTargets(targetsData.length);
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleExportPDF = async () => {
+    const { default: html2canvas } = await import('html2canvas');
+    const { default: jsPDF } = await import('jspdf');
+    
+    const element = document.getElementById('report-content');
+    if (!element) return;
+    
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`reporte-${new Date().toISOString().split('T')[0]}.pdf`);
   };
-
-  const mandatosActivos = mandatos.filter(
-    (m) => m.estado !== "cerrado" && m.estado !== "cancelado"
-  ).length;
-
-  const mandatosCerrados = mandatos.filter((m) => m.estado === "cerrado").length;
-  const tasaConversion =
-    mandatos.length > 0
-      ? Math.round((mandatosCerrados / mandatos.length) * 100)
-      : 0;
-
-  const mandatosPorEstado = [
-    {
-      estado: "Activo",
-      cantidad: mandatos.filter((m) => m.estado === "activo").length,
-      color: "bg-blue-500",
-    },
-    {
-      estado: "En Negociación",
-      cantidad: mandatos.filter((m) => m.estado === "en_negociacion").length,
-      color: "bg-yellow-500",
-    },
-    {
-      estado: "Prospecto",
-      cantidad: mandatos.filter((m) => m.estado === "prospecto").length,
-      color: "bg-purple-500",
-    },
-    {
-      estado: "Cerrado",
-      cantidad: mandatos.filter((m) => m.estado === "cerrado").length,
-      color: "bg-green-500",
-    },
-  ];
-
-  const stats = [
-    {
-      title: "Mandatos Activos",
-      value: mandatosActivos.toString(),
-      change: `${mandatos.length} total`,
-      icon: FileText,
-      color: "text-primary",
-    },
-    {
-      title: "Tasa de Conversión",
-      value: `${tasaConversion}%`,
-      change: `${mandatosCerrados} cerrados`,
-      icon: TrendingUp,
-      color: "text-green-600",
-    },
-    {
-      title: "Contactos Activos",
-      value: totalContactos.toString(),
-      change: "En sistema",
-      icon: Users,
-      color: "text-purple-600",
-    },
-    {
-      title: "Empresas Target",
-      value: totalTargets.toString(),
-      change: "Prospección",
-      icon: BarChart3,
-      color: "text-orange-600",
-    },
-  ];
 
   if (loading) {
     return (
       <div>
-        <PageHeader title="Reportes" description="Análisis y métricas del negocio" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="h-32 animate-pulse" />
-          ))}
+        <PageHeader title="Reportes M&A" description="Dashboard ejecutivo y análisis avanzado" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[1,2,3,4,5,6,7,8].map(i => <Skeleton key={i} className="h-28" />)}
         </div>
       </div>
     );
@@ -114,98 +56,201 @@ export default function Reportes() {
 
   return (
     <div>
-      <PageHeader title="Reportes" description="Análisis y métricas del negocio" />
+      <PageHeader 
+        title="Reportes M&A" 
+        description="Dashboard ejecutivo y análisis avanzado"
+        icon={<BarChart3 className="w-6 h-6" />}
+      />
 
-      <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex items-center gap-4 mb-6">
+        <Select 
+          value={filters.tipoMandato} 
+          onValueChange={(v) => setFilters({ ...filters, tipoMandato: v as any })}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="compra">Compra</SelectItem>
+            <SelectItem value="venta">Venta</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" onClick={refetch}>
+          <RefreshCw className="w-4 h-4 mr-2" /> Actualizar
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExportPDF}>
+          <Download className="w-4 h-4 mr-2" /> Exportar PDF
+        </Button>
+      </div>
+
+      <div id="report-content" className="space-y-6">
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {kpis.map((kpi) => {
+            const Icon = iconMap[kpi.icon] || FileText;
+            return (
+              <Card key={kpi.id}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
+                  <Icon className={`w-5 h-5 ${kpi.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  <p className="text-xs text-muted-foreground">{kpi.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Gráfico de Mandatos por Estado */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Mandatos por Estado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mandatosPorEstado.map((item) => (
-                <div key={item.estado} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{item.estado}</span>
-                    <span className="text-muted-foreground">
-                      {item.cantidad} mandatos
-                    </span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={`${item.color} h-2 rounded-full transition-all`}
-                      style={{
-                        width: `${
-                          mandatos.length > 0
-                            ? (item.cantidad / mandatos.length) * 100
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+            <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
+            <TabsTrigger value="comparacion">Compra vs Venta</TabsTrigger>
+            <TabsTrigger value="alertas">Alertas</TabsTrigger>
+          </TabsList>
 
-        {/* Pipeline de Conversión */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pipeline de Conversión</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-4">
-              {[
-                { label: "Targets", value: totalTargets, color: "bg-blue-500" },
-                {
-                  label: "Activo",
-                  value: mandatos.filter((m) => m.estado === "activo").length,
-                  color: "bg-purple-500",
-                },
-                {
-                  label: "Negociación",
-                  value: mandatos.filter((m) => m.estado === "en_negociacion").length,
-                  color: "bg-yellow-500",
-                },
-                { label: "Cerrados", value: mandatosCerrados, color: "bg-green-500" },
-              ].map((stage, index) => (
-                <div key={stage.label} className="flex-1 text-center relative">
-                  <div className="flex flex-col items-center gap-2">
-                    <div
-                      className={`w-16 h-16 rounded-full ${stage.color} flex items-center justify-center text-white font-bold text-xl`}
-                    >
-                      {stage.value}
-                    </div>
-                    <span className="text-sm font-medium">{stage.label}</span>
-                  </div>
-                  {index < 3 && (
-                    <div className="hidden md:block absolute w-full h-0.5 bg-muted top-8 left-1/2 -z-10" />
-                  )}
-                </div>
-              ))}
+          <TabsContent value="pipeline" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle>Valor por Etapa</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pipelineMetrics} layout="vertical">
+                      <XAxis type="number" tickFormatter={(v) => `€${(v/1000000).toFixed(1)}M`} />
+                      <YAxis type="category" dataKey="stage_name" width={100} />
+                      <Tooltip formatter={(v: number) => `€${(v/1000000).toFixed(2)}M`} />
+                      <Bar dataKey="total_value" fill="#3b82f6" radius={4} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle>Deals por Etapa</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pipelineMetrics} dataKey="deal_count" nameKey="stage_name" cx="50%" cy="50%" outerRadius={100} label>
+                        {pipelineMetrics.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="tiempo" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle>Horas por Semana</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={timeMetrics?.hoursByWeek || []}>
+                      <XAxis dataKey="week" />
+                      <YAxis />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="hours" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="Total" />
+                      <Area type="monotone" dataKey="billable" stroke="#22c55e" fill="#22c55e" fillOpacity={0.3} name="Facturable" />
+                      <Legend />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle>Horas por Tipo</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={timeMetrics?.hoursByType || []} dataKey="hours" nameKey="type" cx="50%" cy="50%" outerRadius={100} label>
+                        {(timeMetrics?.hoursByType || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="comparacion" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><ArrowUpRight className="text-green-500" /> Compra</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between"><span>Deals:</span><Badge>{comparisonMetrics?.compra.count || 0}</Badge></div>
+                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-bold">€{((comparisonMetrics?.compra.totalValue || 0)/1000000).toFixed(1)}M</span></div>
+                  <div className="flex justify-between"><span>Conversión:</span><span>{comparisonMetrics?.compra.conversionRate || 0}%</span></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><ArrowDownRight className="text-blue-500" /> Venta</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between"><span>Deals:</span><Badge>{comparisonMetrics?.venta.count || 0}</Badge></div>
+                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-bold">€{((comparisonMetrics?.venta.totalValue || 0)/1000000).toFixed(1)}M</span></div>
+                  <div className="flex justify-between"><span>Conversión:</span><span>{comparisonMetrics?.venta.conversionRate || 0}%</span></div>
+                </CardContent>
+              </Card>
+            </div>
+            <Card>
+              <CardHeader><CardTitle>Por Sector</CardTitle></CardHeader>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={comparisonMetrics?.bySector || []}>
+                    <XAxis dataKey="sector" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="compra" fill="#22c55e" name="Compra" />
+                    <Bar dataKey="venta" fill="#3b82f6" name="Venta" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="alertas" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="text-red-500" /> Deals Estancados</CardTitle></CardHeader>
+                <CardContent>
+                  {alertMetrics?.stuckDeals.length ? (
+                    <div className="space-y-2">
+                      {alertMetrics.stuckDeals.slice(0,5).map(d => (
+                        <div key={d.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                          <span className="truncate">{d.nombre}</span>
+                          <Badge variant="destructive">{d.daysInStage} días</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-muted-foreground">Sin deals estancados</p>}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><CalendarCheck className="text-cyan-500" /> Próximos Cierres</CardTitle></CardHeader>
+                <CardContent>
+                  {alertMetrics?.upcomingClosings.length ? (
+                    <div className="space-y-2">
+                      {alertMetrics.upcomingClosings.slice(0,5).map(d => (
+                        <div key={d.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                          <span className="truncate">{d.nombre}</span>
+                          <Badge variant="outline">{d.dias_restantes} días</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-muted-foreground">Sin cierres próximos</p>}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
