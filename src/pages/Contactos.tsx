@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity } from "lucide-react";
+import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useContactos } from "@/hooks/queries/useContactos";
@@ -21,6 +22,7 @@ export default function Contactos() {
   const navigate = useNavigate();
   const { data: contactos = [], isLoading, refetch } = useContactos();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
 
   useEffect(() => {
@@ -205,6 +207,12 @@ export default function Contactos() {
         description="Gestiona tus contactos profesionales"
         actionLabel="Nuevo Contacto"
         onAction={() => setDrawerOpen(true)}
+        extraActions={
+          <Button variant="outline" onClick={() => setAiImportOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Importar con IA
+          </Button>
+        }
       />
 
       {/* KPIs */}
@@ -270,6 +278,13 @@ export default function Contactos() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={refetch}
+      />
+
+      <AIImportDrawer
+        open={aiImportOpen}
+        onOpenChange={setAiImportOpen}
+        defaultMode="contacto"
+        onSuccess={() => refetch()}
       />
     </div>
   );

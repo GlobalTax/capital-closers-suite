@@ -10,6 +10,7 @@ interface PageHeaderProps {
   actionLabel?: string;
   onAction?: () => void;
   actions?: React.ReactNode;
+  extraActions?: React.ReactNode;
 }
 
 export function PageHeader({
@@ -20,6 +21,7 @@ export function PageHeader({
   actionLabel,
   onAction,
   actions,
+  extraActions,
 }: PageHeaderProps) {
   // Check if icon is a LucideIcon (function component) or a ReactNode
   const renderIcon = () => {
@@ -46,12 +48,15 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {actions || (actionLabel && onAction && (
-        <Button onClick={onAction} className="gap-2">
-          <Plus className="w-4 h-4" />
-          {actionLabel}
-        </Button>
-      ))}
+      <div className="flex items-center gap-2">
+        {extraActions}
+        {actions || (actionLabel && onAction && (
+          <Button onClick={onAction} className="gap-2">
+            <Plus className="w-4 h-4" />
+            {actionLabel}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }

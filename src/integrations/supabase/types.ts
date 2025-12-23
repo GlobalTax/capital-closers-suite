@@ -739,6 +739,67 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_imports: {
+        Row: {
+          contacto_id: string | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string | null
+          error_message: string | null
+          extracted_data: Json
+          id: string
+          image_url: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contacto_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json
+          id?: string
+          image_url: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contacto_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string | null
+          error_message?: string | null
+          extracted_data?: Json
+          id?: string
+          image_url?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_imports_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_imports_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_imports_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
       analytics_config: {
         Row: {
           config_key: string
