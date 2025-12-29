@@ -2306,6 +2306,7 @@ export type Database = {
           email_opened_at: string | null
           email_sent: boolean | null
           email_sent_at: string | null
+          empresa_id: string | null
           full_name: string
           id: string
           investment_budget: string | null
@@ -2340,6 +2341,7 @@ export type Database = {
           email_opened_at?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          empresa_id?: string | null
           full_name: string
           id?: string
           investment_budget?: string | null
@@ -2374,6 +2376,7 @@ export type Database = {
           email_opened_at?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          empresa_id?: string | null
           full_name?: string
           id?: string
           investment_budget?: string | null
@@ -2414,6 +2417,20 @@ export type Database = {
           {
             foreignKeyName: "contact_leads_crm_empresa_id_fkey"
             columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "contact_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
@@ -3472,6 +3489,7 @@ export type Database = {
           revenue: number | null
           sector: string
           sitio_web: string | null
+          source_pro_valuation_id: string | null
           source_valuation_id: string | null
           subsector: string | null
           ubicacion: string | null
@@ -3499,6 +3517,7 @@ export type Database = {
           revenue?: number | null
           sector: string
           sitio_web?: string | null
+          source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
           ubicacion?: string | null
@@ -3526,6 +3545,7 @@ export type Database = {
           revenue?: number | null
           sector?: string
           sitio_web?: string | null
+          source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
           ubicacion?: string | null
@@ -3537,6 +3557,13 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_pro_valuation_id_fkey"
+            columns: ["source_pro_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "professional_valuations"
             referencedColumns: ["id"]
           },
           {
@@ -8714,6 +8741,42 @@ export type Database = {
           layout_name?: string
           shared_with?: string[] | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
           user_id?: string
         }
         Relationships: []
