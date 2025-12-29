@@ -20,7 +20,6 @@ import {
   Target,
   Settings,
   ExternalLink,
-  GitBranch,
   RefreshCw,
   CalendarDays,
 } from "lucide-react";
@@ -43,7 +42,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const mandatosItems = [
-  { title: "Pipeline M&A", url: "/pipeline", icon: GitBranch },
   { title: "Mandatos Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
   { title: "Mandatos Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
 ];
