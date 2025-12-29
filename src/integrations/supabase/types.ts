@@ -2059,12 +2059,15 @@ export type Database = {
           adjustment_amount: number | null
           assigned_at: string | null
           assigned_to: string | null
+          call_attempts_count: number | null
           cif: string | null
           company_name: string
           competitive_advantage: string | null
           completion_percentage: number | null
           contact_name: string
           created_at: string
+          crm_contacto_id: string | null
+          crm_synced_at: string | null
           current_step: number | null
           deleted_at: string | null
           deleted_by: string | null
@@ -2080,6 +2083,7 @@ export type Database = {
           employee_range: string
           empresa_id: string | null
           final_valuation: number | null
+          followup_count: number | null
           form_submitted_at: string | null
           growth_rate: number | null
           has_adjustments: boolean | null
@@ -2088,13 +2092,17 @@ export type Database = {
           ip_address: unknown
           is_deleted: boolean | null
           last_activity_at: string | null
+          last_call_attempt_at: string | null
           last_modified_field: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           location: string | null
           net_profit_margin: number | null
+          notes: string | null
           ownership_participation: string | null
           phone: string | null
           phone_e164: string | null
+          precall_email_sent: boolean | null
+          precall_email_sent_at: string | null
           referrer: string | null
           revenue: number | null
           source_project: string | null
@@ -2118,12 +2126,15 @@ export type Database = {
           adjustment_amount?: number | null
           assigned_at?: string | null
           assigned_to?: string | null
+          call_attempts_count?: number | null
           cif?: string | null
           company_name: string
           competitive_advantage?: string | null
           completion_percentage?: number | null
           contact_name: string
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_synced_at?: string | null
           current_step?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -2139,6 +2150,7 @@ export type Database = {
           employee_range: string
           empresa_id?: string | null
           final_valuation?: number | null
+          followup_count?: number | null
           form_submitted_at?: string | null
           growth_rate?: number | null
           has_adjustments?: boolean | null
@@ -2147,13 +2159,17 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           last_activity_at?: string | null
+          last_call_attempt_at?: string | null
           last_modified_field?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
+          notes?: string | null
           ownership_participation?: string | null
           phone?: string | null
           phone_e164?: string | null
+          precall_email_sent?: boolean | null
+          precall_email_sent_at?: string | null
           referrer?: string | null
           revenue?: number | null
           source_project?: string | null
@@ -2177,12 +2193,15 @@ export type Database = {
           adjustment_amount?: number | null
           assigned_at?: string | null
           assigned_to?: string | null
+          call_attempts_count?: number | null
           cif?: string | null
           company_name?: string
           competitive_advantage?: string | null
           completion_percentage?: number | null
           contact_name?: string
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_synced_at?: string | null
           current_step?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -2198,6 +2217,7 @@ export type Database = {
           employee_range?: string
           empresa_id?: string | null
           final_valuation?: number | null
+          followup_count?: number | null
           form_submitted_at?: string | null
           growth_rate?: number | null
           has_adjustments?: boolean | null
@@ -2206,13 +2226,17 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           last_activity_at?: string | null
+          last_call_attempt_at?: string | null
           last_modified_field?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
+          notes?: string | null
           ownership_participation?: string | null
           phone?: string | null
           phone_e164?: string | null
+          precall_email_sent?: boolean | null
+          precall_email_sent_at?: string | null
           referrer?: string | null
           revenue?: number | null
           source_project?: string | null
@@ -2240,6 +2264,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "company_valuations_crm_contacto_id_fkey"
+            columns: ["crm_contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_valuations_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
@@ -2263,6 +2294,9 @@ export type Database = {
           company_size: string | null
           country: string | null
           created_at: string
+          crm_contacto_id: string | null
+          crm_empresa_id: string | null
+          crm_synced_at: string | null
           deleted_at: string | null
           deleted_by: string | null
           deletion_reason: string | null
@@ -2294,6 +2328,9 @@ export type Database = {
           company_size?: string | null
           country?: string | null
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_empresa_id?: string | null
+          crm_synced_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           deletion_reason?: string | null
@@ -2325,6 +2362,9 @@ export type Database = {
           company_size?: string | null
           country?: string | null
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_empresa_id?: string | null
+          crm_synced_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           deletion_reason?: string | null
@@ -2356,6 +2396,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contact_leads_crm_contacto_id_fkey"
+            columns: ["crm_contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
           },
         ]
       }
@@ -2661,6 +2722,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crm_sync_log: {
+        Row: {
+          completed_at: string | null
+          contactos_created: number | null
+          empresas_created: number | null
+          errors: Json | null
+          id: string
+          leads_processed: number | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          contactos_created?: number | null
+          empresas_created?: number | null
+          errors?: Json | null
+          id?: string
+          leads_processed?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          contactos_created?: number | null
+          empresas_created?: number | null
+          errors?: Json | null
+          id?: string
+          leads_processed?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
       }
       custom_newsletter_templates: {
         Row: {
@@ -3606,6 +3703,9 @@ export type Database = {
           company: string
           country: string | null
           created_at: string
+          crm_contacto_id: string | null
+          crm_empresa_id: string | null
+          crm_synced_at: string | null
           deleted_at: string | null
           deleted_by: string | null
           deletion_reason: string | null
@@ -3640,6 +3740,9 @@ export type Database = {
           company: string
           country?: string | null
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_empresa_id?: string | null
+          crm_synced_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           deletion_reason?: string | null
@@ -3674,6 +3777,9 @@ export type Database = {
           company?: string
           country?: string | null
           created_at?: string
+          crm_contacto_id?: string | null
+          crm_empresa_id?: string | null
+          crm_synced_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           deletion_reason?: string | null
@@ -3702,7 +3808,29 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "general_contact_leads_crm_contacto_id_fkey"
+            columns: ["crm_contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
       }
       hero_slides: {
         Row: {
@@ -4726,6 +4854,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          lead_id: string
+          lead_type: string
+          metadata: Json | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          lead_id: string
+          lead_type?: string
+          metadata?: Json | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          lead_id?: string
+          lead_type?: string
+          metadata?: Json | null
+        }
+        Relationships: []
       }
       lead_ai_report_feedback: {
         Row: {
@@ -8943,6 +9104,51 @@ export type Database = {
           title?: string
           updated_at?: string
           webinar_date?: string
+        }
+        Relationships: []
+      }
+      workflow_task_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_days_offset: number | null
+          id: string
+          is_active: boolean | null
+          is_automatable: boolean | null
+          lead_type: string | null
+          responsible_system: string
+          task_category: string
+          task_name: string
+          task_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_days_offset?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_automatable?: boolean | null
+          lead_type?: string | null
+          responsible_system: string
+          task_category: string
+          task_name: string
+          task_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_days_offset?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_automatable?: boolean | null
+          lead_type?: string | null
+          responsible_system?: string
+          task_category?: string
+          task_name?: string
+          task_order?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
