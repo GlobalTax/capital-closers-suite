@@ -15,12 +15,14 @@ import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, 
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useContactos } from "@/hooks/queries/useContactos";
+import { useContactosRealtime } from "@/hooks/useContactosRealtime";
 import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 
 export default function Contactos() {
   const navigate = useNavigate();
   const { data: contactos = [], isLoading, refetch } = useContactos();
+  useContactosRealtime(); // Suscripción a cambios en tiempo real
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
