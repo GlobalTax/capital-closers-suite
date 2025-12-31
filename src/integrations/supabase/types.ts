@@ -1233,6 +1233,100 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_assignment_history: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_to: string | null
+          booking_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_assignment_history_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "booking_assignment_history_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "booking_assignment_history_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_config: {
+        Row: {
+          config_type: string
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          duration_minutes: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          config_type: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration_minutes?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          config_type?: string
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          duration_minutes?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       brevo_sync_log: {
         Row: {
           attributes_sent: Json | null
@@ -1550,6 +1644,9 @@ export type Database = {
       }
       calendar_bookings: {
         Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_to: string | null
           booking_date: string
           booking_datetime: string
           booking_time: string
@@ -1571,6 +1668,9 @@ export type Database = {
           valuation_id: string | null
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
           booking_date: string
           booking_datetime: string
           booking_time: string
@@ -1592,6 +1692,9 @@ export type Database = {
           valuation_id?: string | null
         }
         Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
           booking_date?: string
           booking_datetime?: string
           booking_time?: string
@@ -1613,6 +1716,20 @@ export type Database = {
           valuation_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "calendar_bookings_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_bookings_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "calendar_bookings_valuation_id_fkey"
             columns: ["valuation_id"]
@@ -7749,6 +7866,9 @@ export type Database = {
           client_logo_url: string | null
           client_name: string
           client_phone: string | null
+          comparable_operations: Json | null
+          comparables_formatted_text: string | null
+          comparables_raw_text: string | null
           created_at: string
           created_by: string | null
           ebitda_multiple_high: number | null
@@ -7759,6 +7879,7 @@ export type Database = {
           email_subject: string | null
           financial_years: Json
           id: string
+          include_comparables: boolean | null
           internal_notes: string | null
           lead_source: string | null
           linked_lead_id: string | null
@@ -7799,6 +7920,9 @@ export type Database = {
           client_logo_url?: string | null
           client_name: string
           client_phone?: string | null
+          comparable_operations?: Json | null
+          comparables_formatted_text?: string | null
+          comparables_raw_text?: string | null
           created_at?: string
           created_by?: string | null
           ebitda_multiple_high?: number | null
@@ -7809,6 +7933,7 @@ export type Database = {
           email_subject?: string | null
           financial_years?: Json
           id?: string
+          include_comparables?: boolean | null
           internal_notes?: string | null
           lead_source?: string | null
           linked_lead_id?: string | null
@@ -7849,6 +7974,9 @@ export type Database = {
           client_logo_url?: string | null
           client_name?: string
           client_phone?: string | null
+          comparable_operations?: Json | null
+          comparables_formatted_text?: string | null
+          comparables_raw_text?: string | null
           created_at?: string
           created_by?: string | null
           ebitda_multiple_high?: number | null
@@ -7859,6 +7987,7 @@ export type Database = {
           email_subject?: string | null
           financial_years?: Json
           id?: string
+          include_comparables?: boolean | null
           internal_notes?: string | null
           lead_source?: string | null
           linked_lead_id?: string | null

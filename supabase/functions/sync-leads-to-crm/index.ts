@@ -234,8 +234,7 @@ async function syncLead(
         sector: lead.industry || null,
         facturacion: lead.revenue || null,
         ebitda: lead.ebitda || null,
-        pais: lead.country || lead.location || null,
-        origen: `sync-${table}`
+        ubicacion: lead.country || lead.location || null
       };
 
       const { data: newEmpresa, error: empresaError } = await supabase
@@ -276,8 +275,7 @@ async function syncLead(
         apellidos,
         email,
         telefono: lead.phone || null,
-        empresa_id: empresaId,
-        origen: `sync-${table}`
+        empresa_principal_id: empresaId
       };
 
       const { data: newContacto, error: contactoError } = await supabase
@@ -302,15 +300,24 @@ async function syncLead(
     crm_contacto_id: contactoId
   };
 
-  // Only update empresa_id for tables that have this field and don't already have it
-  if (table !== 'company_valuations' || !lead.empresa_id) {
+  // company_valuations has empresa_id, not crm_empresa_id
+  // other tables have crm_empresa_id
+  if (table === 'company_valuations') {
+    if (!lead.empresa_id && empresaId) {
+      updateData.empresa_id = empresaId;
+    }
+  } else {
     updateData.crm_empresa_id = empresaId;
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from(table)
     .update(updateData)
     .eq('id', lead.id);
+
+  if (updateError) {
+    console.error(`[sync-leads-to-crm] Error updating ${table} ${lead.id}:`, updateError);
+  }
 
   return { contactoCreated, empresaCreated };
 }

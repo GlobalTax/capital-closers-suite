@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { useEmpresas } from "@/hooks/queries/useEmpresas";
-import { supabase } from "@/integrations/supabase/client";
+import { useEmpresasRealtime } from "@/hooks/useEmpresasRealtime";
 import type { Empresa } from "@/types";
 import { Building2, Star, TrendingUp, Activity, Globe, Sparkles } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
@@ -22,6 +22,9 @@ export default function Empresas() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
+  
+  // Enable realtime updates
+  useEmpresasRealtime();
 
   // KPIs calculados
   const kpis = useMemo(() => {
