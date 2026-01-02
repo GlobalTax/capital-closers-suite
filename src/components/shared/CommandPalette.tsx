@@ -119,15 +119,15 @@ export function CommandPalette() {
             <CommandSeparator />
 
             <CommandGroup heading="Acciones">
-              <CommandItem onSelect={() => handleSelect(() => console.log("Nuevo mandato"))}>
+              <CommandItem onSelect={() => handleSelect(() => navigate("/mandatos?nuevo=true"))}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Mandato</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => console.log("Nuevo contacto"))}>
+              <CommandItem onSelect={() => handleSelect(() => navigate("/contactos?nuevo=true"))}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Contacto</span>
               </CommandItem>
-              <CommandItem onSelect={() => handleSelect(() => console.log("Nueva empresa"))}>
+              <CommandItem onSelect={() => handleSelect(() => navigate("/empresas?nuevo=true"))}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nueva Empresa</span>
               </CommandItem>
