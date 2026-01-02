@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText } from "lucide-react";
+import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText, GitMerge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +11,14 @@ import { useContacto, useDeleteContacto } from "@/hooks/queries/useContactos";
 import { useContactoMandatos } from "@/hooks/queries/useContactosMandatos";
 import { useContactoInteracciones } from "@/hooks/queries/useInteracciones";
 import { useContactoDocumentos } from "@/hooks/queries/useDocumentos";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import type { Contacto, Mandato } from "@/types";
 import type { Interaccion } from "@/services/interacciones";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawer";
+import { MergeContactoDialog } from "@/components/contactos/MergeContactoDialog";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,8 +27,10 @@ import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
 export default function ContactoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, isSuperAdmin } = useSimpleAuth();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
   const { data: contacto, isLoading: loadingContacto } = useContacto(id);
   const { data: mandatos = [], isLoading: loadingMandatos } = useContactoMandatos(id);
@@ -91,6 +95,12 @@ export default function ContactoDetalle() {
           </div>
         </div>
         <div className="flex gap-2">
+          {(isAdmin || isSuperAdmin) && (
+            <Button variant="outline" onClick={() => setMergeDialogOpen(true)}>
+              <GitMerge className="h-4 w-4 mr-2" />
+              Fusionar
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setEditDrawerOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Editar
@@ -357,6 +367,14 @@ export default function ContactoDetalle() {
           onOpenChange={setEditDrawerOpen}
           contacto={contacto}
           onSuccess={() => setEditDrawerOpen(false)}
+        />
+      )}
+
+      {contacto && (
+        <MergeContactoDialog
+          open={mergeDialogOpen}
+          onOpenChange={setMergeDialogOpen}
+          sourceContacto={contacto}
         />
       )}
     </div>

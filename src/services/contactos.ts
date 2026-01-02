@@ -14,6 +14,7 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
         *,
         empresa_principal:empresas(id, nombre)
       `)
+      .is('merged_into_contacto_id', null)
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -46,6 +47,7 @@ export const fetchContactosPaginated = async (
         *,
         empresa_principal:empresas(id, nombre)
       `, { count: 'exact' })
+      .is('merged_into_contacto_id', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
     
