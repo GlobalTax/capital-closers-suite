@@ -237,16 +237,8 @@ export const getContactoMandatos = async (contactoId: string): Promise<any[]> =>
 
 export const searchContactos = async (query: string): Promise<Contacto[]> => {
   try {
-    const searchTerm = `%${query.toLowerCase()}%`;
-    
     const { data, error } = await supabase
-      .from('contactos')
-      .select(`
-        *,
-        empresa_principal:empresas(id, nombre)
-      `)
-      .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm}`)
-      .order('nombre', { ascending: true })
+      .rpc('search_contactos_full', { search_query: query })
       .limit(20);
     
     if (error) {
@@ -256,7 +248,24 @@ export const searchContactos = async (query: string): Promise<Contacto[]> => {
       });
     }
     
-    return (data || []) as Contacto[];
+    // Transformar resultado para mantener la estructura esperada
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      nombre: row.nombre,
+      apellidos: row.apellidos,
+      email: row.email,
+      telefono: row.telefono,
+      cargo: row.cargo,
+      empresa_principal_id: row.empresa_principal_id,
+      linkedin: row.linkedin,
+      notas: row.notas,
+      avatar: row.avatar,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      empresa_principal: row.empresa_nombre 
+        ? { id: row.empresa_principal_id, nombre: row.empresa_nombre }
+        : null
+    })) as Contacto[];
   } catch (error) {
     if (error instanceof DatabaseError) throw error;
     throw new DatabaseError('Error inesperado al buscar contactos');
