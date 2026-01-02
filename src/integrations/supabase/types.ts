@@ -10522,6 +10522,7 @@ export type Database = {
         Args: { reason?: string; request_id: string }
         Returns: boolean
       }
+      report_metrics: { Args: { filters: Json }; Returns: Json }
       revoke_rh_role: {
         Args: {
           target_role: Database["public"]["Enums"]["rh_role"]
