@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { createTimeEntry } from "@/services/timeTracking";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
+import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import type { TimeEntryWorkType, MandatoChecklistTask } from "@/types";
 
 interface TimeTrackingDialogProps {
@@ -27,6 +28,7 @@ interface TimeTrackingDialogProps {
 interface FormData {
   mandato_id: string;
   task_id: string;
+  work_task_type_id: string;
   start_date: string;
   start_time: string;
   end_date: string;
@@ -60,11 +62,15 @@ export function TimeTrackingDialog({
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<MandatoChecklistTask[]>(propTasks || []);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  
+  // Tipos de tarea desde la base de datos
+  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       mandato_id: mandatoId || '',
       task_id: defaultTaskId || '',
+      work_task_type_id: '',
       start_date: format(new Date(), 'yyyy-MM-dd'),
       start_time: format(new Date(), 'HH:mm'),
       end_date: format(new Date(), 'yyyy-MM-dd'),
@@ -115,10 +121,10 @@ export function TimeTrackingDialog({
         return;
       }
 
-      if (!data.task_id) {
+      if (!data.work_task_type_id) {
         toast({
           title: "Error",
-          description: "Debes seleccionar una tarea",
+          description: "Debes seleccionar un tipo de tarea",
           variant: "destructive"
         });
         return;
@@ -143,7 +149,7 @@ export function TimeTrackingDialog({
       if (!user) throw new Error('Usuario no autenticado');
 
       await createTimeEntry({
-        task_id: data.task_id,
+        task_id: data.task_id || undefined,
         mandato_id: data.mandato_id,
         user_id: user.id,
         start_time: startDateTime.toISOString(),
@@ -152,7 +158,8 @@ export function TimeTrackingDialog({
         work_type: data.work_type,
         is_billable: data.is_billable,
         status: 'draft',
-        notes: data.notes
+        notes: data.notes,
+        work_task_type_id: data.work_task_type_id
       });
 
       toast({
@@ -206,31 +213,57 @@ export function TimeTrackingDialog({
           )}
 
           <div>
-            <Label htmlFor="task_id">Tarea *</Label>
+            <Label htmlFor="work_task_type_id">Tipo de Tarea *</Label>
             <Select
-              value={watch('task_id')}
-              onValueChange={(value) => setValue('task_id', value)}
-              disabled={!mandatoId && !selectedMandatoId}
+              value={watch('work_task_type_id')}
+              onValueChange={(value) => setValue('work_task_type_id', value)}
+              disabled={loadingWorkTaskTypes}
             >
               <SelectTrigger>
                 <SelectValue placeholder={
-                  loadingTasks ? "Cargando tareas..." :
-                  !mandatoId && !selectedMandatoId ? "Primero selecciona un mandato" :
-                  "Selecciona una tarea"
+                  loadingWorkTaskTypes ? "Cargando tipos..." : "Selecciona un tipo de tarea"
                 } />
               </SelectTrigger>
               <SelectContent>
-                {tasks.map((task) => (
-                  <SelectItem key={task.id} value={task.id}>
-                    [{task.fase}] {task.tarea}
+                {workTaskTypes.map((taskType) => (
+                  <SelectItem key={taskType.id} value={taskType.id}>
+                    {taskType.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.task_id && (
-              <p className="text-sm text-destructive mt-1">Selecciona una tarea</p>
+            {loadingWorkTaskTypes && (
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Cargando tipos de tarea...
+              </div>
             )}
           </div>
+
+          {/* Tarea del checklist (opcional) */}
+          {(mandatoId || selectedMandatoId) && tasks.length > 0 && (
+            <div>
+              <Label htmlFor="task_id">Tarea del Checklist (opcional)</Label>
+              <Select
+                value={watch('task_id')}
+                onValueChange={(value) => setValue('task_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    loadingTasks ? "Cargando..." : "Vincular a tarea del checklist"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sin vincular</SelectItem>
+                  {tasks.map((task) => (
+                    <SelectItem key={task.id} value={task.id}>
+                      [{task.fase}] {task.tarea}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
