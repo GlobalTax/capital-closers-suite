@@ -213,7 +213,9 @@ export function TimeEntriesTable({
                 </TableCell>
                 <TableCell>{formatDuration(entry.duration_minutes)}</TableCell>
                 <TableCell>
-                  <span className="text-sm">{entry.work_type}</span>
+                  <span className="text-sm">
+                    {entry.work_task_type?.name || entry.work_type || 'Sin tipo'}
+                  </span>
                   {entry.is_billable && (
                     <Badge variant="outline" className="ml-2">💰</Badge>
                   )}

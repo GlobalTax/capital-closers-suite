@@ -355,7 +355,8 @@ export interface TimeEntry {
   duration_minutes?: number;
   
   description: string;
-  work_type: TimeEntryWorkType;
+  /** @deprecated Use work_task_type_id instead. Kept for backward compatibility with historical data */
+  work_type?: TimeEntryWorkType;
   is_billable: boolean;
   status: TimeEntryStatus;
   notes?: string;

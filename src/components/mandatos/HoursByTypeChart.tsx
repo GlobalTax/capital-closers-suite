@@ -21,7 +21,8 @@ export function HoursByTypeChart({ entries }: HoursByTypeChartProps) {
   const typeHours: Record<string, number> = {};
   
   entries.forEach(entry => {
-    const type = entry.work_type || 'Otro';
+    // Prioritize new work_task_type, fallback to legacy work_type
+    const type = entry.work_task_type?.name || entry.work_type || 'Otro';
     typeHours[type] = (typeHours[type] || 0) + (entry.duration_minutes || 0);
   });
 

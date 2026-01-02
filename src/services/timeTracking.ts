@@ -24,6 +24,7 @@ export const fetchTimeEntries = async (
     .from('mandato_time_entries')
     .select(`
       *,
+      work_task_type:work_task_types(id, name),
       task:mandato_checklist_tasks(
         id,
         tarea,
@@ -96,6 +97,7 @@ export const fetchMyTimeEntries = async (
     .from('mandato_time_entries')
     .select(`
       *,
+      work_task_type:work_task_types(id, name),
       task:mandato_checklist_tasks(
         id,
         tarea,
@@ -167,6 +169,7 @@ export const fetchAllTimeEntries = async (
     .from('mandato_time_entries')
     .select(`
       *,
+      work_task_type:work_task_types(id, name),
       task:mandato_checklist_tasks(
         id,
         tarea,

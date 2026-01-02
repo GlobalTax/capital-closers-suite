@@ -71,7 +71,7 @@ export function ActiveTimerWidget({ activeTimer, onStop }: ActiveTimerWidgetProp
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Tipo:</span>
                   <Badge variant="secondary" className="text-xs">
-                    {activeTimer.work_type}
+                    {activeTimer.work_task_type?.name || activeTimer.work_type || 'Sin tipo'}
                   </Badge>
                 </div>
               </div>
