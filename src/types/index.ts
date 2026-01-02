@@ -83,6 +83,10 @@ export interface Contacto {
   avatar?: string;
   merged_into_contacto_id?: string;
   
+  // Campos de sincronización Brevo
+  brevo_id?: string;
+  brevo_synced_at?: string;
+  
   created_at: string;
   updated_at: string;
 }

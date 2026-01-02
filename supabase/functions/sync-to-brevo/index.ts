@@ -96,17 +96,26 @@ async function syncContactToBrevo(contactData: any, supabase: any): Promise<void
         }
       }
 
+      // Actualizar campos de sincronización en la tabla contactos
+      await supabase
+        .from('contactos')
+        .update({
+          brevo_synced_at: new Date().toISOString(),
+          brevo_id: contactData.email
+        })
+        .eq('id', contactData.id);
+
       // Actualizar log de sincronización
       await supabase
         .from('brevo_sync_log')
-        .update({
+        .upsert({
+          entity_type: 'contact',
+          entity_id: contactData.id,
           sync_status: 'success',
           brevo_id: contactData.email,
           last_sync_at: new Date().toISOString(),
           sync_error: null
-        })
-        .eq('entity_type', 'contact')
-        .eq('entity_id', contactData.id);
+        }, { onConflict: 'entity_type,entity_id' });
 
       console.log('Contact synced successfully');
     } else {
