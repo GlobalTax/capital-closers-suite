@@ -11,7 +11,7 @@ import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useContactosPaginated } from "@/hooks/queries/useContactos";
@@ -20,6 +20,21 @@ import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
+import { cn } from "@/lib/utils";
+
+type FiltroAccion = 'todos' | 'pendientes' | 'vencidas' | 'sin_actividad';
+
+interface InteraccionData {
+  total: number;
+  pendientes: number;
+  vencidas: number;
+  ultimaFecha: string | null;
+  proximaAccion: {
+    texto: string;
+    fecha: string;
+    esVencida: boolean;
+  } | null;
+}
 
 export default function Contactos() {
   const navigate = useNavigate();
@@ -31,7 +46,8 @@ export default function Contactos() {
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
-  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number; ultimaFecha: string | null }>>({});
+  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, InteraccionData>>({});
+  const [filtroAccion, setFiltroAccion] = useState<FiltroAccion>('todos');
 
   const contactos = result?.data || [];
 
@@ -47,6 +63,7 @@ export default function Contactos() {
     if (contactos.length === 0) return;
     
     try {
+      const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       const contactoIds = contactos.map(c => c.id);
       
@@ -64,8 +81,18 @@ export default function Contactos() {
         .in('contacto_id', contactoIds)
         .order('fecha', { ascending: false });
       
+      // Query 3: Próximas acciones por contacto
+      const { data: proximasAcciones, error: err3 } = await supabase
+        .from('interacciones')
+        .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
+        .in('contacto_id', contactoIds)
+        .not('siguiente_accion', 'is', null)
+        .not('fecha_siguiente_accion', 'is', null)
+        .order('fecha_siguiente_accion', { ascending: true });
+      
       if (err1) throw err1;
       if (err2) throw err2;
+      if (err3) throw err3;
       
       // Obtener última fecha por contacto
       const ultimasPorContacto: Record<string, string> = {};
@@ -75,33 +102,43 @@ export default function Contactos() {
         }
       });
       
-      // Procesar contadores de interacciones recientes
-      const counts: Record<string, { total: number; pendientes: number; ultimaFecha: string | null }> = {};
-      
-      interaccionesRecientes?.forEach((int) => {
-        if (int.contacto_id) {
-          if (!counts[int.contacto_id]) {
-            counts[int.contacto_id] = { 
-              total: 0, 
-              pendientes: 0, 
-              ultimaFecha: ultimasPorContacto[int.contacto_id] || null 
-            };
-          }
-          counts[int.contacto_id].total++;
-          if (int.siguiente_accion && int.fecha_siguiente_accion) {
-            counts[int.contacto_id].pendientes++;
-          }
+      // Encontrar la próxima acción más cercana por contacto
+      const proximasPorContacto: Record<string, { texto: string; fecha: string; esVencida: boolean }> = {};
+      proximasAcciones?.forEach((int) => {
+        if (int.contacto_id && !proximasPorContacto[int.contacto_id]) {
+          const esVencida = int.fecha_siguiente_accion! < today;
+          proximasPorContacto[int.contacto_id] = {
+            texto: int.siguiente_accion!,
+            fecha: int.fecha_siguiente_accion!,
+            esVencida
+          };
         }
       });
       
-      // Añadir contactos con interacciones antiguas (no en últimos 30 días)
-      Object.keys(ultimasPorContacto).forEach(contactoId => {
-        if (!counts[contactoId]) {
-          counts[contactoId] = { 
-            total: 0, 
-            pendientes: 0, 
-            ultimaFecha: ultimasPorContacto[contactoId] 
-          };
+      // Inicializar todos los contactos
+      const counts: Record<string, InteraccionData> = {};
+      contactoIds.forEach(contactoId => {
+        counts[contactoId] = { 
+          total: 0, 
+          pendientes: 0, 
+          vencidas: 0,
+          ultimaFecha: ultimasPorContacto[contactoId] || null,
+          proximaAccion: proximasPorContacto[contactoId] || null
+        };
+      });
+      
+      // Contar interacciones recientes y clasificar pendientes/vencidas
+      interaccionesRecientes?.forEach((int) => {
+        if (int.contacto_id && counts[int.contacto_id]) {
+          counts[int.contacto_id].total++;
+          
+          if (int.siguiente_accion && int.fecha_siguiente_accion) {
+            if (int.fecha_siguiente_accion >= today) {
+              counts[int.contacto_id].pendientes++;
+            } else {
+              counts[int.contacto_id].vencidas++;
+            }
+          }
         }
       });
       
@@ -111,11 +148,39 @@ export default function Contactos() {
     }
   };
 
+  // Filtrar contactos según el filtro de acción seleccionado
+  const contactosFiltrados = useMemo(() => {
+    if (filtroAccion === 'todos') return contactos;
+    
+    return contactos.filter(c => {
+      const data = interaccionesCounts[c.id];
+      
+      switch (filtroAccion) {
+        case 'pendientes':
+          return data?.proximaAccion && !data.proximaAccion.esVencida;
+        case 'vencidas':
+          return data?.proximaAccion?.esVencida;
+        case 'sin_actividad':
+          return !data?.ultimaFecha;
+        default:
+          return true;
+      }
+    });
+  }, [contactos, interaccionesCounts, filtroAccion]);
+
+  // Contadores para los filtros
+  const filtroContadores = useMemo(() => {
+    return {
+      todos: contactos.length,
+      pendientes: contactos.filter(c => interaccionesCounts[c.id]?.proximaAccion && !interaccionesCounts[c.id]?.proximaAccion?.esVencida).length,
+      vencidas: contactos.filter(c => interaccionesCounts[c.id]?.proximaAccion?.esVencida).length,
+      sin_actividad: contactos.filter(c => !interaccionesCounts[c.id]?.ultimaFecha).length
+    };
+  }, [contactos, interaccionesCounts]);
+
   // KPIs basados en count del servidor
   const kpis = useMemo(() => {
     const total = result?.count || 0;
-    // Para activos y nuevos, necesitaríamos queries separadas o calcular sobre los datos visibles
-    // Por ahora mostramos datos aproximados de la página actual
     const activos = contactos.filter(c => 
       c.updated_at && isAfter(new Date(c.updated_at), subDays(new Date(), 30))
     ).length;
@@ -178,7 +243,6 @@ export default function Contactos() {
         const interaccionesData = interaccionesCounts[row.id];
         const ultimaFecha = interaccionesData?.ultimaFecha;
         
-        // Si no hay interacciones, mostrar "Sin actividad"
         if (!ultimaFecha) {
           return <span className="text-muted-foreground text-sm">Sin actividad</span>;
         }
@@ -199,18 +263,46 @@ export default function Contactos() {
               )}
             </div>
             {interaccionesData && interaccionesData.total > 0 && (
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                  <Activity className="h-3 w-3" />
-                  {interaccionesData.total} interacción{interaccionesData.total !== 1 ? 'es' : ''} (30d)
-                </Badge>
-                {interaccionesData.pendientes > 0 && (
-                  <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
-                    ⏰ {interaccionesData.pendientes} pendiente{interaccionesData.pendientes !== 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
+              <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
+                <Activity className="h-3 w-3" />
+                {interaccionesData.total} (30d)
+              </Badge>
             )}
+          </div>
+        );
+      }
+    },
+    {
+      key: "proxima_accion",
+      label: "Próxima Acción",
+      sortable: false,
+      render: (_value: string, row: Contacto) => {
+        const data = interaccionesCounts[row.id];
+        const proxima = data?.proximaAccion;
+        
+        if (!proxima) {
+          return <span className="text-muted-foreground text-sm">—</span>;
+        }
+        
+        return (
+          <div className="flex flex-col gap-1 max-w-[200px]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">
+                {format(new Date(proxima.fecha), "d MMM", { locale: es })}
+              </span>
+              {proxima.esVencida ? (
+                <Badge variant="destructive" className="text-xs">
+                  Vencida
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  Pendiente
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground truncate" title={proxima.texto}>
+              {proxima.texto}
+            </p>
           </div>
         );
       }
@@ -268,6 +360,13 @@ export default function Contactos() {
         </div>
       )
     }
+  ];
+
+  const filtroButtons = [
+    { key: 'todos' as FiltroAccion, label: 'Todos', icon: Users },
+    { key: 'pendientes' as FiltroAccion, label: 'Pendientes', icon: Clock, activeClass: 'bg-blue-600 hover:bg-blue-700' },
+    { key: 'vencidas' as FiltroAccion, label: 'Vencidas', icon: AlertCircle, activeClass: 'bg-destructive hover:bg-destructive/90' },
+    { key: 'sin_actividad' as FiltroAccion, label: 'Sin actividad', icon: UserX }
   ];
 
   return (
@@ -337,9 +436,44 @@ export default function Contactos() {
         </Card>
       </div>
 
+      {/* Filtros rápidos de acciones */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground mr-2">Filtrar por:</span>
+        {filtroButtons.map(({ key, label, icon: Icon, activeClass }) => {
+          const isActive = filtroAccion === key;
+          const count = filtroContadores[key];
+          
+          return (
+            <Button
+              key={key}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltroAccion(key)}
+              className={cn(
+                isActive && activeClass,
+                !isActive && key === 'pendientes' && "text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950",
+                !isActive && key === 'vencidas' && "text-destructive border-destructive/30 hover:bg-destructive/10"
+              )}
+            >
+              <Icon className="h-4 w-4 mr-1" />
+              {label}
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "ml-2 px-1.5 py-0 text-xs",
+                  isActive && "bg-white/20 text-white"
+                )}
+              >
+                {count}
+              </Badge>
+            </Button>
+          );
+        })}
+      </div>
+
       <DataTableEnhanced
         columns={columns}
-        data={contactos}
+        data={contactosFiltrados}
         loading={isLoading}
         onRowClick={(row) => navigate(`/contactos/${row.id}`)}
         pageSize={DEFAULT_PAGE_SIZE}
