@@ -9496,6 +9496,7 @@ export type Database = {
           fecha_vencimiento: string | null
           id: string
           mandato_id: string | null
+          order_index: number | null
           prioridad: string | null
           titulo: string
           updated_at: string | null
@@ -9508,6 +9509,7 @@ export type Database = {
           fecha_vencimiento?: string | null
           id?: string
           mandato_id?: string | null
+          order_index?: number | null
           prioridad?: string | null
           titulo: string
           updated_at?: string | null
@@ -9520,6 +9522,7 @@ export type Database = {
           fecha_vencimiento?: string | null
           id?: string
           mandato_id?: string | null
+          order_index?: number | null
           prioridad?: string | null
           titulo?: string
           updated_at?: string | null

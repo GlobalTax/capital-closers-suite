@@ -199,7 +199,11 @@ export interface Tarea {
   estado: TareaEstado;
   prioridad: TareaPrioridad;
   asignado_a?: string;
+  /** Name of the assigned user (joined from admin_users) */
+  asignado_nombre?: string;
   fecha_vencimiento?: string;
+  /** Position within Kanban column for ordering */
+  order_index?: number;
   created_at: string;
   updated_at: string;
 }
