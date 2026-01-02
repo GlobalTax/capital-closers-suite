@@ -2,7 +2,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Calendar, TrendingUp, GripVertical } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Building2, Calendar, TrendingUp, GripVertical, Clock, AlertTriangle } from "lucide-react";
 import { Mandato } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -11,9 +12,11 @@ import { cn } from "@/lib/utils";
 
 interface MandatoCardProps {
   mandato: Mandato;
+  checklistProgress?: number;
+  hasOverdueTasks?: boolean;
 }
 
-export function MandatoCard({ mandato }: MandatoCardProps) {
+export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = false }: MandatoCardProps) {
   const navigate = useNavigate();
   const {
     attributes,
@@ -29,13 +32,27 @@ export function MandatoCard({ mandato }: MandatoCardProps) {
     transition,
   };
 
+  // Cast para acceder a campos extendidos
+  const extendedMandato = mandato as any;
+  const probability = extendedMandato.probability || 50;
+  const daysInStage = extendedMandato.days_in_stage || 0;
+  const isStagnant = daysInStage > 30;
+
+  const getProbabilityColor = (prob: number) => {
+    if (prob >= 70) return "bg-green-500";
+    if (prob >= 40) return "bg-amber-500";
+    return "bg-red-500";
+  };
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
       className={cn(
         "p-3 cursor-pointer hover:shadow-md transition-all",
-        isDragging && "opacity-50 shadow-lg ring-2 ring-primary"
+        isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
+        isStagnant && "border-l-4 border-l-destructive",
+        hasOverdueTasks && "ring-1 ring-destructive/50"
       )}
       onClick={() => navigate(`/mandatos/${mandato.id}`)}
     >
@@ -47,10 +64,15 @@ export function MandatoCard({ mandato }: MandatoCardProps) {
               <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"} className="text-xs">
                 {mandato.tipo === "venta" ? "Venta" : "Compra"}
               </Badge>
+              {/* Probability badge */}
+              <Badge variant="outline" className="text-xs gap-1">
+                <div className={cn("w-1.5 h-1.5 rounded-full", getProbabilityColor(probability))} />
+                {probability}%
+              </Badge>
               <div
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing"
+                className="cursor-grab active:cursor-grabbing ml-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -69,25 +91,47 @@ export function MandatoCard({ mandato }: MandatoCardProps) {
           </p>
         )}
 
-        {/* Metadata */}
-        <div className="space-y-1 text-xs text-muted-foreground">
-          {mandato.valor && (
-            <div className="flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              <span>{mandato.valor.toLocaleString('es-ES')} €</span>
+        {/* Progress bar del checklist */}
+        {checklistProgress > 0 && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Progreso</span>
+              <span>{checklistProgress}%</span>
             </div>
-          )}
-          
-          <div className="flex items-center gap-1">
-            <Building2 className="w-3 h-3" />
-            <span>{mandato.empresas?.length || 0} empresas</span>
+            <Progress value={checklistProgress} className="h-1.5" />
+          </div>
+        )}
+
+        {/* Metadata */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            {mandato.valor && (
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" />
+                <span>{(mandato.valor / 1000000).toFixed(1)}M€</span>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-1">
+              <Building2 className="w-3 h-3" />
+              <span>{mandato.empresas?.length || 0}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>
-              {format(new Date(mandato.updated_at), "dd MMM", { locale: es })}
-            </span>
+          {/* Indicadores de alerta */}
+          <div className="flex items-center gap-2">
+            {hasOverdueTasks && (
+              <AlertTriangle className="w-3 h-3 text-destructive" />
+            )}
+            
+            {/* Días en stage */}
+            <div className={cn(
+              "flex items-center gap-1",
+              isStagnant && "text-destructive font-medium"
+            )}>
+              <Clock className="w-3 h-3" />
+              <span>{daysInStage}d</span>
+            </div>
           </div>
         </div>
       </div>
