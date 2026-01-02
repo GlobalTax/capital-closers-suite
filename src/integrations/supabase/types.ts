@@ -10292,6 +10292,8 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_can_read: { Args: never; Returns: boolean }
+      current_user_can_write: { Args: never; Returns: boolean }
       current_user_has_rh_access: { Args: never; Returns: boolean }
       current_user_is_admin: { Args: never; Returns: boolean }
       current_user_is_rh_admin: { Args: never; Returns: boolean }
