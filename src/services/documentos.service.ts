@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { DatabaseError } from "@/lib/error-handler";
 import type { Documento } from "@/types";
 import type { DocumentoRow, DocumentoInsert, DocumentoUpdate } from "@/types/database";
+import type { PaginatedResult } from "@/types/pagination";
+import { calculatePagination, DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 class DocumentoService extends BaseService<Documento, DocumentoInsert, DocumentoUpdate> {
   constructor() {
@@ -23,6 +25,34 @@ class DocumentoService extends BaseService<Documento, DocumentoInsert, Documento
       created_at: raw.created_at || new Date().toISOString(),
       updated_at: raw.updated_at || new Date().toISOString(),
     } as Documento;
+  }
+
+  /**
+   * Obtener documentos con paginación server-side
+   */
+  async getAllPaginated(
+    page: number = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE
+  ): Promise<PaginatedResult<Documento>> {
+    const offset = (page - 1) * pageSize;
+
+    const { data, error, count } = await supabase
+      .from('documentos')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) {
+      throw new DatabaseError('Error obteniendo documentos paginados', {
+        table: 'documentos',
+        code: error.code,
+      });
+    }
+
+    return {
+      data: this.transformMany(data || []),
+      ...calculatePagination(count || 0, page, pageSize),
+    };
   }
 
   async getByMandato(mandatoId: string): Promise<Documento[]> {
@@ -148,6 +178,8 @@ const documentoService = new DocumentoService();
 
 // Exported functions
 export const fetchDocumentos = () => documentoService.getAll();
+export const fetchDocumentosPaginated = (page: number, pageSize: number) => 
+  documentoService.getAllPaginated(page, pageSize);
 export const getDocumentoById = (id: string) => documentoService.getById(id);
 export const createDocumento = (data: DocumentoInsert) => documentoService.create(data);
 export const deleteDocumento = (id: string) => documentoService.delete(id);

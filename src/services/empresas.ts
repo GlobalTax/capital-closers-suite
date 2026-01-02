@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { BaseService } from "./base.service";
 import { DatabaseError } from "@/lib/error-handler";
 import type { Empresa } from "@/types";
+import type { PaginatedResult } from "@/types/pagination";
+import { calculatePagination, DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 /**
  * Servicio de empresas usando BaseService
@@ -56,6 +58,42 @@ class EmpresaService extends BaseService<Empresa> {
     }
 
     return this.transformMany((data || []) as any[]);
+  }
+
+  /**
+   * Obtener empresas con paginación server-side
+   */
+  async getAllPaginated(
+    page: number = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE,
+    esTarget?: boolean
+  ): Promise<PaginatedResult<Empresa>> {
+    const offset = (page - 1) * pageSize;
+
+    let query = supabase
+      .from(this.tableName as any)
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (esTarget !== undefined) {
+      query = query.eq('es_target', esTarget);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw new DatabaseError('Error al obtener empresas paginadas', {
+        table: this.tableName,
+        code: error.code,
+        esTarget,
+      });
+    }
+
+    return {
+      data: this.transformMany((data || []) as any[]),
+      ...calculatePagination(count || 0, page, pageSize),
+    };
   }
 
   /**
@@ -114,6 +152,8 @@ const empresaService = new EmpresaService();
 
 // Exportar métodos para mantener compatibilidad con código existente
 export const fetchEmpresas = (esTarget?: boolean) => empresaService.getAll(esTarget);
+export const fetchEmpresasPaginated = (page: number, pageSize: number, esTarget?: boolean) => 
+  empresaService.getAllPaginated(page, pageSize, esTarget);
 export const getEmpresaById = (id: string) => empresaService.getById(id);
 export const createEmpresa = (empresa: Partial<Empresa>) => empresaService.create(empresa);
 export const updateEmpresa = (id: string, empresa: Partial<Empresa>) => empresaService.update(id, empresa);

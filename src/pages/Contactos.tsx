@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,30 +14,46 @@ import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { useContactos } from "@/hooks/queries/useContactos";
+import { useContactosPaginated } from "@/hooks/queries/useContactos";
 import { useContactosRealtime } from "@/hooks/useContactosRealtime";
 import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export default function Contactos() {
   const navigate = useNavigate();
-  const { data: contactos = [], isLoading, refetch } = useContactos();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  
+  const { data: result, isLoading, refetch } = useContactosPaginated(page, DEFAULT_PAGE_SIZE);
   useContactosRealtime(); // Suscripción a cambios en tiempo real
+  
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
+
+  const contactos = result?.data || [];
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams({ page: newPage.toString() });
+  };
 
   useEffect(() => {
     cargarInteracciones();
   }, [contactos]);
 
   const cargarInteracciones = async () => {
+    if (contactos.length === 0) return;
+    
     try {
       // Cargar contadores de interacciones del último mes
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+      const contactoIds = contactos.map(c => c.id);
+      
       const { data: interacciones, error } = await supabase
         .from('interacciones')
         .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
+        .in('contacto_id', contactoIds)
         .gte('fecha', thirtyDaysAgo);
       
       if (error) throw error;
@@ -62,9 +78,11 @@ export default function Contactos() {
     }
   };
 
-  // Calcular KPIs
+  // KPIs basados en count del servidor
   const kpis = useMemo(() => {
-    const total = contactos.length;
+    const total = result?.count || 0;
+    // Para activos y nuevos, necesitaríamos queries separadas o calcular sobre los datos visibles
+    // Por ahora mostramos datos aproximados de la página actual
     const activos = contactos.filter(c => 
       c.updated_at && isAfter(new Date(c.updated_at), subDays(new Date(), 30))
     ).length;
@@ -73,7 +91,7 @@ export default function Contactos() {
     ).length;
     
     return { total, activos, nuevos };
-  }, [contactos]);
+  }, [result, contactos]);
 
   const columns = [
     {
@@ -240,7 +258,7 @@ export default function Contactos() {
                 <p className="text-sm font-medium text-muted-foreground">Activos (30 días)</p>
                 <p className="text-3xl font-bold mt-2">{kpis.activos}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {kpis.total > 0 ? Math.round((kpis.activos / kpis.total) * 100) : 0}% del total
+                  en página actual
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center">
@@ -258,7 +276,7 @@ export default function Contactos() {
                 <p className="text-3xl font-bold mt-2">{kpis.nuevos}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
-                  <p className="text-xs text-green-500">Crecimiento</p>
+                  <p className="text-xs text-green-500">en página actual</p>
                 </div>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
@@ -274,6 +292,13 @@ export default function Contactos() {
         data={contactos}
         loading={isLoading}
         onRowClick={(row) => navigate(`/contactos/${row.id}`)}
+        pageSize={DEFAULT_PAGE_SIZE}
+        serverPagination={{
+          currentPage: page,
+          totalPages: result?.totalPages || 1,
+          totalCount: result?.count || 0,
+          onPageChange: handlePageChange,
+        }}
       />
 
       <NuevoContactoDrawer

@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { 
-  fetchEmpresas, 
+  fetchEmpresas,
+  fetchEmpresasPaginated,
   getEmpresaById, 
   createEmpresa, 
   updateEmpresa, 
@@ -9,6 +10,7 @@ import {
 import type { Empresa } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { toast } from "@/hooks/use-toast";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 /**
  * Hook para obtener todas las empresas
@@ -18,6 +20,22 @@ export function useEmpresas(esTarget?: boolean) {
     queryKey: ['empresas', { esTarget }],
     queryFn: () => fetchEmpresas(esTarget),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook para obtener empresas con paginación server-side
+ */
+export function useEmpresasPaginated(
+  page: number = 1, 
+  pageSize: number = DEFAULT_PAGE_SIZE, 
+  esTarget?: boolean
+) {
+  return useQuery({
+    queryKey: ['empresas', 'paginated', page, pageSize, { esTarget }],
+    queryFn: () => fetchEmpresasPaginated(page, pageSize, esTarget),
+    staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 

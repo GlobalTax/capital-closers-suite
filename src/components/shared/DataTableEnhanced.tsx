@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -14,6 +14,7 @@ import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { TableRecord } from "@/types/database";
+import type { ServerPaginationProps } from "@/types/pagination";
 
 export interface Column<T extends TableRecord = TableRecord> {
   key: string;
@@ -33,6 +34,8 @@ interface DataTableEnhancedProps<T extends TableRecord = TableRecord> {
   onSelectionChange?: (selectedIds: string[]) => void;
   pageSize?: number;
   rowClassName?: (row: T) => string;
+  /** Paginación server-side - si se proporciona, se usa en lugar de la local */
+  serverPagination?: ServerPaginationProps;
 }
 
 export function DataTableEnhanced<T extends TableRecord = TableRecord>({
@@ -45,35 +48,69 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
   onSelectionChange,
   pageSize = 10,
   rowClassName,
+  serverPagination,
 }: DataTableEnhancedProps<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<Record<string, string>>({});
 
-  // Filtrar datos
-  let filteredData = data.filter((row) => {
-    return Object.entries(filters).every(([key, value]) => {
-      if (!value) return true;
-      const cellValue = String((row as any)[key]).toLowerCase();
-      return cellValue.includes(value.toLowerCase());
-    });
-  });
+  // Determinar si usamos paginación server-side
+  const isServerPaginated = !!serverPagination;
 
-  // Ordenar datos
-  if (sortColumn) {
-    filteredData = [...filteredData].sort((a, b) => {
-      const aVal = (a as any)[sortColumn];
-      const bVal = (b as any)[sortColumn];
-      const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      return sortDirection === "asc" ? comparison : -comparison;
+  // Reset local page when filters change (solo para paginación local)
+  useEffect(() => {
+    if (!isServerPaginated) {
+      setLocalCurrentPage(1);
+    }
+  }, [filters, isServerPaginated]);
+
+  // Para paginación server-side, no filtramos/ordenamos localmente
+  // Para paginación local, aplicamos filtros y ordenamiento
+  let processedData = data;
+  
+  if (!isServerPaginated) {
+    // Filtrar datos (solo para paginación local)
+    processedData = data.filter((row) => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (!value) return true;
+        const cellValue = String((row as any)[key]).toLowerCase();
+        return cellValue.includes(value.toLowerCase());
+      });
     });
+
+    // Ordenar datos (solo para paginación local)
+    if (sortColumn) {
+      processedData = [...processedData].sort((a, b) => {
+        const aVal = (a as any)[sortColumn];
+        const bVal = (b as any)[sortColumn];
+        const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    }
   }
 
   // Paginación
-  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const currentPage = isServerPaginated ? serverPagination.currentPage : localCurrentPage;
+  const totalPages = isServerPaginated 
+    ? serverPagination.totalPages 
+    : Math.ceil(processedData.length / pageSize);
+  const totalCount = isServerPaginated 
+    ? serverPagination.totalCount 
+    : processedData.length;
+  
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedData = filteredData.slice(startIndex, startIndex + pageSize);
+  const paginatedData = isServerPaginated 
+    ? data // Ya viene paginado del servidor
+    : processedData.slice(startIndex, startIndex + pageSize);
+
+  const handlePageChange = (newPage: number) => {
+    if (isServerPaginated) {
+      serverPagination.onPageChange(newPage);
+    } else {
+      setLocalCurrentPage(newPage);
+    }
+  };
 
   const handleSort = (columnKey: string) => {
     if (sortColumn === columnKey) {
@@ -86,7 +123,11 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
 
   const handleFilterChange = (columnKey: string, value: string) => {
     setFilters((prev) => ({ ...prev, [columnKey]: value }));
-    setCurrentPage(1);
+    // Para paginación local, reseteamos a página 1
+    // Para server-side, el componente padre debe manejar el reset de página
+    if (!isServerPaginated) {
+      setLocalCurrentPage(1);
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -220,17 +261,17 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
         </div>
       </div>
 
-      {!loading && filteredData.length > 0 && (
+      {!loading && totalCount > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, filteredData.length)} de {filteredData.length} registros
+            Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)} de {totalCount} registros
             {externalSelectedRows.length > 0 && ` • ${externalSelectedRows.length} seleccionados`}
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
@@ -242,8 +283,8 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
             >
               Siguiente
               <ChevronRight className="w-4 h-4 ml-1" />

@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { 
-  fetchDocumentos, 
+  fetchDocumentos,
+  fetchDocumentosPaginated,
   getDocumentoById, 
   createDocumento, 
   deleteDocumento,
@@ -11,12 +12,25 @@ import { deleteFile } from "@/services/uploads";
 import { toast } from "sonner";
 import { handleError } from "@/lib/error-handler";
 import type { Documento } from "@/types";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export function useDocumentos() {
   return useQuery({
     queryKey: ['documentos'],
     queryFn: fetchDocumentos,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook para obtener documentos con paginación server-side
+ */
+export function useDocumentosPaginated(page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE) {
+  return useQuery({
+    queryKey: ['documentos', 'paginated', page, pageSize],
+    queryFn: () => fetchDocumentosPaginated(page, pageSize),
+    staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 
