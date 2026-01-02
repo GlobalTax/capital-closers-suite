@@ -35,3 +35,16 @@ export const TARGET_ESTADOS = [
 export const DD_WORKSTREAMS = [
   'legal', 'financial', 'commercial', 'ops', 'it', 'tax', 'other'
 ] as const;
+
+// Pipeline Stages
+export const PIPELINE_STAGES = [
+  'prospeccion', 'loi', 'due_diligence', 'negociacion', 'cierre'
+] as const;
+
+export const PIPELINE_STAGE_LABELS: Record<string, string> = {
+  prospeccion: 'Prospección',
+  loi: 'LOI',
+  due_diligence: 'Due Diligence',
+  negociacion: 'Negociación',
+  cierre: 'Cierre',
+};

@@ -31,6 +31,9 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { updateMandato } from "@/services/mandatos";
 import type { Mandato, MandatoEstado, TareaPrioridad } from "@/types";
+import { usePipelineGates } from "@/hooks/usePipelineGates";
+import { PipelineGateAlert } from "./PipelineGateAlert";
+import type { PipelineStage, GateValidationResult } from "@/lib/pipeline-gates";
 
 const formSchema = z.object({
   estado: z.enum(["prospecto", "activo", "en_negociacion", "cerrado", "cancelado"]),
@@ -92,6 +95,10 @@ export function EditarMandatoDrawer({
   onSuccess,
 }: EditarMandatoDrawerProps) {
   const [loading, setLoading] = useState(false);
+  const [gateResult, setGateResult] = useState<GateValidationResult | null>(null);
+  
+  // Hook para validación de gates
+  const { validateTransition } = usePipelineGates({ mandato });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -135,8 +142,32 @@ export function EditarMandatoDrawer({
         estado_negociacion: mandato.estado_negociacion || null,
         numero_ofertas_recibidas: mandato.numero_ofertas_recibidas || null,
       });
+      // Reset gate result when drawer opens
+      setGateResult(null);
     }
   }, [open, mandato, form]);
+
+  // Handler para cambio de pipeline_stage con validación de gates
+  const handlePipelineStageChange = (newStage: string, fieldOnChange: (value: string) => void) => {
+    const currentStage = form.getValues('pipeline_stage') as PipelineStage || 'prospeccion';
+    const result = validateTransition(currentStage, newStage as PipelineStage);
+    
+    if (result.canProceed) {
+      fieldOnChange(newStage);
+      setGateResult(null);
+    } else {
+      // Bloquear cambio y mostrar requisitos faltantes
+      setGateResult(result);
+    }
+  };
+
+  // Handler para resolver requisitos - navegar al tab correspondiente
+  const handleResolveGate = (link: string) => {
+    onOpenChange(false);
+    // El link puede ser 'resumen', 'documentos', 'checklist', 'edit', etc.
+    // La navegación real dependerá de cómo esté estructurada la UI
+    toast.info(`Navega a la sección "${link}" para completar el requisito`);
+  };
 
   const probability = form.watch("probability") || 50;
   const valor = form.watch("valor") || 0;
@@ -205,7 +236,10 @@ export function EditarMandatoDrawer({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Pipeline Stage</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <Select 
+                      onValueChange={(value) => handlePipelineStageChange(value, field.onChange)} 
+                      value={field.value || ""}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
@@ -224,6 +258,15 @@ export function EditarMandatoDrawer({
                 )}
               />
             </div>
+
+            {/* Gate Alert - Requisitos pendientes */}
+            {gateResult && !gateResult.canProceed && (
+              <PipelineGateAlert
+                failedRequirements={gateResult.failedRequirements}
+                onResolve={handleResolveGate}
+                onDismiss={() => setGateResult(null)}
+              />
+            )}
 
             {/* Valor y Probabilidad */}
             <div className="space-y-4">
