@@ -1660,6 +1660,8 @@ export type Database = {
           confirmed_by: string | null
           created_at: string
           id: string
+          lead_id: string | null
+          lead_type: string | null
           meeting_format: string
           meeting_type: string
           notes: string | null
@@ -1684,6 +1686,8 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string
           id?: string
+          lead_id?: string | null
+          lead_type?: string | null
           meeting_format?: string
           meeting_type?: string
           notes?: string | null
@@ -1708,6 +1712,8 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string
           id?: string
+          lead_id?: string | null
+          lead_type?: string | null
           meeting_format?: string
           meeting_type?: string
           notes?: string | null

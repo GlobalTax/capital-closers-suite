@@ -32,10 +32,12 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { createEmpresa } from "@/services/empresas";
+import { createContacto } from "@/services/contactos";
+import { addEmpresaToMandato } from "@/services/mandatos";
 import { toast } from "sonner";
 import { TARGET_ESTADOS, NIVEL_INTERES } from "@/lib/constants";
 import type { NivelInteres, TargetEstado } from "@/types";
-import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe } from "lucide-react";
+import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe, Loader2 } from "lucide-react";
 
 const SECTORES = [
   "Tecnología",
@@ -53,9 +55,9 @@ const SECTORES = [
 const formSchema = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100, "Máximo 100 caracteres"),
   sector: z.string().min(1, "Selecciona un sector"),
-  facturacion: z.string().min(1, "La facturación es requerida"),
-  empleados: z.coerce.number().min(1, "Debe tener al menos 1 empleado"),
-  ubicacion: z.string().min(2, "La ubicación es requerida"),
+  facturacion: z.string().optional(),
+  empleados: z.coerce.number().min(0).optional(),
+  ubicacion: z.string().optional(),
   interes: z.enum(["Alto", "Medio", "Bajo"] as const),
   estado: z.enum(TARGET_ESTADOS),
   descripcion: z.string().max(500, "Máximo 500 caracteres").optional(),
@@ -95,16 +97,47 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
     },
   });
 
+  const parseFacturacion = (facturacion: string): number | undefined => {
+    if (!facturacion) return undefined;
+    // Extraer número de strings como "€5M", "5.000.000", "5000000"
+    const cleaned = facturacion.replace(/[€$,.\s]/g, '').replace(/M/gi, '000000').replace(/K/gi, '000');
+    const value = parseInt(cleaned, 10);
+    return isNaN(value) ? undefined : value;
+  };
+
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      await createEmpresa({
+      // Crear la empresa con TODOS los campos capturados
+      const nuevaEmpresa = await createEmpresa({
         nombre: values.nombre,
         sector: values.sector,
         descripcion: values.descripcion,
         es_target: true,
         estado_target: values.estado as TargetEstado,
+        nivel_interes: values.interes as NivelInteres,
+        ubicacion: values.ubicacion || undefined,
+        empleados: values.empleados || undefined,
+        facturacion: parseFacturacion(values.facturacion || ""),
+        sitio_web: values.sitioWeb || undefined,
       });
+
+      // Si hay datos de contacto, crear el contacto asociado
+      if (values.contactoPrincipal || values.email) {
+        const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
+        await createContacto({
+          nombre: nombreParts[0] || "Contacto",
+          apellidos: nombreParts.slice(1).join(" ") || undefined,
+          email: values.email || `contacto@${values.nombre.toLowerCase().replace(/\s/g, '')}.com`,
+          telefono: values.telefono || undefined,
+          empresa_principal_id: nuevaEmpresa.id,
+        });
+      }
+
+      // Si hay mandatoId, asociar la empresa al mandato como target
+      if (mandatoId) {
+        await addEmpresaToMandato(mandatoId, nuevaEmpresa.id, "target", values.descripcion);
+      }
 
       toast.success("Empresa target creada exitosamente");
       form.reset();
@@ -183,7 +216,7 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
                     name="ubicacion"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ubicación *</FormLabel>
+                        <FormLabel>Ubicación</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -264,9 +297,9 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
                     name="facturacion"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Facturación Estimada *</FormLabel>
+                        <FormLabel>Facturación Estimada</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ej: €5M" {...field} />
+                          <Input placeholder="Ej: €5M o 5000000" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -278,7 +311,7 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
                     name="empleados"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nº de Empleados *</FormLabel>
+                        <FormLabel>Nº de Empleados</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Users className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -409,7 +442,8 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
               className="flex-1"
               disabled={loading}
             >
-              {loading ? "Creando..." : "Crear Empresa"}
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {loading ? "Creando..." : "Crear Empresa Target"}
             </Button>
           </div>
         </DrawerFooter>

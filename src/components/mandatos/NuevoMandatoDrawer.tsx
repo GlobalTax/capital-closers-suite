@@ -31,22 +31,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { fetchContactos } from "@/services/contactos";
+import { fetchEmpresas, createEmpresa } from "@/services/empresas";
 import { createMandato } from "@/services/mandatos";
-import type { Contacto } from "@/types";
-import { Loader2 } from "lucide-react";
+import type { Empresa } from "@/types";
+import { Loader2, Plus, Building2, Calendar } from "lucide-react";
 
 const mandatoSchema = z.object({
-  clienteId: z.string().min(1, "Selecciona un cliente"),
+  empresaId: z.string().optional(),
+  nuevaEmpresa: z.string().optional(),
   tipo: z.enum(["compra", "venta"], {
     required_error: "Selecciona el tipo de mandato",
   }),
-  empresa: z.string().min(2, "El nombre de la empresa es requerido"),
-  valor: z.string().min(1, "El valor estimado es requerido"),
+  valor: z.string().optional(),
+  probabilidad: z.coerce.number().min(0).max(100).optional(),
+  fechaCierreEsperada: z.string().optional(),
   descripcion: z
     .string()
     .min(10, "La descripción debe tener al menos 10 caracteres")
     .max(500, "La descripción no puede exceder 500 caracteres"),
+}).refine((data) => data.empresaId || data.nuevaEmpresa, {
+  message: "Selecciona una empresa existente o crea una nueva",
+  path: ["empresaId"],
 });
 
 type MandatoFormValues = z.infer<typeof mandatoSchema>;
@@ -62,56 +67,77 @@ export function NuevoMandatoDrawer({
   onOpenChange,
   onSuccess,
 }: NuevoMandatoDrawerProps) {
-  const [clientes, setClientes] = useState<Contacto[]>([]);
-  const [loadingClientes, setLoadingClientes] = useState(true);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showNewEmpresa, setShowNewEmpresa] = useState(false);
 
   const form = useForm<MandatoFormValues>({
     resolver: zodResolver(mandatoSchema),
     defaultValues: {
-      clienteId: "",
+      empresaId: "",
+      nuevaEmpresa: "",
       tipo: "venta",
-      empresa: "",
       valor: "",
+      probabilidad: 50,
+      fechaCierreEsperada: "",
       descripcion: "",
     },
   });
 
   useEffect(() => {
     if (open) {
-      cargarClientes();
+      cargarEmpresas();
     }
   }, [open]);
 
-  const cargarClientes = async () => {
-    setLoadingClientes(true);
+  const cargarEmpresas = async () => {
+    setLoadingEmpresas(true);
     try {
-      const data = await fetchContactos();
-      setClientes(data);
+      const data = await fetchEmpresas();
+      setEmpresas(data);
     } catch (error) {
-      console.error("Error cargando contactos:", error);
-      toast.error("Error al cargar la lista de contactos");
+      console.error("Error cargando empresas:", error);
+      toast.error("Error al cargar la lista de empresas");
     } finally {
-      setLoadingClientes(false);
+      setLoadingEmpresas(false);
     }
   };
 
   const onSubmit = async (data: MandatoFormValues) => {
     setSubmitting(true);
     try {
-      const contacto = clientes.find((c) => c.id === data.clienteId);
+      let empresaId = data.empresaId;
       
+      // Si se está creando una nueva empresa
+      if (showNewEmpresa && data.nuevaEmpresa) {
+        const nuevaEmpresa = await createEmpresa({
+          nombre: data.nuevaEmpresa,
+          sector: "Por definir",
+          es_target: data.tipo === "compra",
+        });
+        empresaId = nuevaEmpresa.id;
+      }
+
+      if (!empresaId) {
+        toast.error("Debes seleccionar o crear una empresa");
+        setSubmitting(false);
+        return;
+      }
+
       await createMandato({
         tipo: data.tipo,
         descripcion: data.descripcion,
         estado: "activo",
-        empresa_principal_id: data.clienteId,
-        valor: data.valor ? Number(data.valor) : 0,
+        empresa_principal_id: empresaId,
+        valor: data.valor ? Number(data.valor.replace(/[^0-9]/g, '')) : undefined,
         prioridad: "media",
+        fecha_cierre: data.fechaCierreEsperada || undefined,
       });
 
       toast.success("Mandato creado exitosamente");
       form.reset();
+      setShowNewEmpresa(false);
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -127,50 +153,105 @@ export function NuevoMandatoDrawer({
       <DrawerContent>
         <div className="mx-auto w-full max-w-2xl">
           <DrawerHeader>
-            <DrawerTitle>Nuevo Mandato</DrawerTitle>
+            <DrawerTitle>Nuevo Mandato M&A</DrawerTitle>
             <DrawerDescription>
-              Crea un nuevo mandato de compra o venta para un cliente
+              Crea un nuevo mandato de compra o venta asociado a una empresa
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="p-4 pb-0">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="clienteId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contacto</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={loadingClientes}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un contacto" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-background">
-                          {clientes.map((contacto) => (
-                            <SelectItem key={contacto.id} value={contacto.id}>
-                              {contacto.nombre} {contacto.apellidos}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+                {/* Selección de Empresa */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Empresa Principal *</FormLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowNewEmpresa(!showNewEmpresa);
+                        if (!showNewEmpresa) {
+                          form.setValue("empresaId", "");
+                        } else {
+                          form.setValue("nuevaEmpresa", "");
+                        }
+                      }}
+                    >
+                      {showNewEmpresa ? (
+                        <>Seleccionar existente</>
+                      ) : (
+                        <><Plus className="w-3 h-3 mr-1" />Nueva empresa</>
+                      )}
+                    </Button>
+                  </div>
+
+                  {showNewEmpresa ? (
+                    <FormField
+                      control={form.control}
+                      name="nuevaEmpresa"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <div className="relative">
+                              <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                              <Input 
+                                placeholder="Nombre de la nueva empresa" 
+                                className="pl-9" 
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="empresaId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={loadingEmpresas}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona una empresa" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-background max-h-60">
+                              {empresas.map((empresa) => (
+                                <SelectItem key={empresa.id} value={empresa.id}>
+                                  <span className="flex items-center gap-2">
+                                    <Building2 className="w-3 h-3" />
+                                    {empresa.nombre}
+                                    {empresa.sector && (
+                                      <span className="text-xs text-muted-foreground">
+                                        ({empresa.sector})
+                                      </span>
+                                    )}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
 
                 <FormField
                   control={form.control}
                   name="tipo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo de Mandato</FormLabel>
+                      <FormLabel>Tipo de Mandato *</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -180,13 +261,13 @@ export function NuevoMandatoDrawer({
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="venta" id="venta" />
                             <label htmlFor="venta" className="cursor-pointer">
-                              Venta
+                              Venta (Sell-Side)
                             </label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="compra" id="compra" />
                             <label htmlFor="compra" className="cursor-pointer">
-                              Compra
+                              Compra (Buy-Side)
                             </label>
                           </div>
                         </RadioGroup>
@@ -196,28 +277,53 @@ export function NuevoMandatoDrawer({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="empresa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre de la Empresa</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: TechCorp Solutions" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="valor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor Estimado (€)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ej: 2500000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="probabilidad"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Probabilidad (%)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={0} 
+                            max={100} 
+                            placeholder="50" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
-                  name="valor"
+                  name="fechaCierreEsperada"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Valor Estimado</FormLabel>
+                      <FormLabel>Fecha de Cierre Esperada</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: €2.5M" {...field} />
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input type="date" className="pl-9" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -229,10 +335,10 @@ export function NuevoMandatoDrawer({
                   name="descripcion"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descripción</FormLabel>
+                      <FormLabel>Descripción *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Describe el mandato, objetivos y contexto..."
+                          placeholder="Describe el mandato, objetivos y contexto del deal..."
                           className="min-h-[100px]"
                           {...field}
                         />
