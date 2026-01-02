@@ -9,8 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BarChart3, TrendingUp, Briefcase, Target, Clock, DollarSign, 
   CalendarCheck, AlertTriangle, Download, RefreshCw, FileText,
-  ArrowUpRight, ArrowDownRight
+  ArrowUpRight, ArrowDownRight, Activity
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useInactiveMandatos } from "@/hooks/useMandatoActivity";
 import { useReportData } from "@/hooks/useReportData";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -27,7 +29,9 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function Reportes() {
+  const navigate = useNavigate();
   const { kpis, pipelineMetrics, timeMetrics, comparisonMetrics, alertMetrics, loading, refetch, filters, setFilters } = useReportData();
+  const { inactiveMandatos, count: inactiveCount } = useInactiveMandatos(14);
   const [activeTab, setActiveTab] = useState("pipeline");
 
   const handleExportPDF = async () => {
@@ -223,14 +227,18 @@ export default function Reportes() {
           </TabsContent>
 
           <TabsContent value="alertas" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="text-red-500" /> Deals Estancados</CardTitle></CardHeader>
                 <CardContent>
                   {alertMetrics?.stuckDeals.length ? (
                     <div className="space-y-2">
                       {alertMetrics.stuckDeals.slice(0,5).map(d => (
-                        <div key={d.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                        <div 
+                          key={d.id} 
+                          className="flex justify-between items-center p-2 bg-muted rounded cursor-pointer hover:bg-muted/80"
+                          onClick={() => navigate(`/mandatos/${d.id}`)}
+                        >
                           <span className="truncate">{d.nombre}</span>
                           <Badge variant="destructive">{d.daysInStage} días</Badge>
                         </div>
@@ -239,13 +247,44 @@ export default function Reportes() {
                   ) : <p className="text-muted-foreground">Sin deals estancados</p>}
                 </CardContent>
               </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="text-orange-500" /> 
+                    Sin Actividad (+14 días)
+                    {inactiveCount > 0 && <Badge variant="destructive">{inactiveCount}</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {inactiveMandatos.length ? (
+                    <div className="space-y-2">
+                      {inactiveMandatos.slice(0, 5).map(m => (
+                        <div 
+                          key={m.id} 
+                          className="flex justify-between items-center p-2 bg-muted rounded cursor-pointer hover:bg-muted/80"
+                          onClick={() => navigate(`/mandatos/${m.id}`)}
+                        >
+                          <span className="truncate">{m.empresa_principal?.nombre || m.descripcion || 'Sin nombre'}</span>
+                          <Badge variant="outline">{m.dias_sin_actividad}d</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-muted-foreground">Todos los mandatos tienen actividad reciente</p>}
+                </CardContent>
+              </Card>
+              
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2"><CalendarCheck className="text-cyan-500" /> Próximos Cierres</CardTitle></CardHeader>
                 <CardContent>
                   {alertMetrics?.upcomingClosings.length ? (
                     <div className="space-y-2">
                       {alertMetrics.upcomingClosings.slice(0,5).map(d => (
-                        <div key={d.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                        <div 
+                          key={d.id} 
+                          className="flex justify-between items-center p-2 bg-muted rounded cursor-pointer hover:bg-muted/80"
+                          onClick={() => navigate(`/mandatos/${d.id}`)}
+                        >
                           <span className="truncate">{d.nombre}</span>
                           <Badge variant="outline">{d.daysUntilClose} días</Badge>
                         </div>

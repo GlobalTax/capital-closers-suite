@@ -37,6 +37,13 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
   const probability = extendedMandato.probability || 50;
   const daysInStage = extendedMandato.days_in_stage || 0;
   const isStagnant = daysInStage > 30;
+  
+  // Calcular días sin actividad
+  const lastActivity = extendedMandato.last_activity_at || extendedMandato.created_at;
+  const daysSinceActivity = lastActivity 
+    ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isInactive = daysSinceActivity !== null && daysSinceActivity > 14;
 
   const getProbabilityColor = (prob: number) => {
     if (prob >= 70) return "bg-green-500";
@@ -69,6 +76,13 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
                 <div className={cn("w-1.5 h-1.5 rounded-full", getProbabilityColor(probability))} />
                 {probability}%
               </Badge>
+              {/* Inactivity badge */}
+              {isInactive && (
+                <Badge variant="destructive" className="text-xs gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {daysSinceActivity}d
+                </Badge>
+              )}
               <div
                 {...attributes}
                 {...listeners}
