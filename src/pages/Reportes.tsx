@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { useInactiveMandatos } from "@/hooks/useMandatoActivity";
 import { useReportData } from "@/hooks/useReportData";
 import { useWinLossMetrics } from "@/hooks/useWinLossMetrics";
+import { useTopMandatosByCost, useTotalCostMetrics } from "@/hooks/useMandatoCosts";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
@@ -35,6 +36,8 @@ export default function Reportes() {
   const { kpis, pipelineMetrics, timeMetrics, comparisonMetrics, alertMetrics, loading, refetch, filters, setFilters } = useReportData();
   const { inactiveMandatos, count: inactiveCount } = useInactiveMandatos(14);
   const { data: winLossMetrics, isLoading: winLossLoading } = useWinLossMetrics();
+  const { data: topMandatosByCost, isLoading: costLoading } = useTopMandatosByCost(10);
+  const { data: costMetrics } = useTotalCostMetrics();
   const [activeTab, setActiveTab] = useState("pipeline");
 
   const handleExportPDF = async () => {
@@ -299,6 +302,52 @@ export default function Reportes() {
           </TabsContent>
 
           <TabsContent value="tiempo" className="space-y-4">
+            {/* Cost KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Coste Total</CardTitle>
+                  <DollarSign className="w-5 h-5 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">€{(costMetrics?.totalCost || 0).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">{costMetrics?.mandatosWithCost || 0} mandatos con coste</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Horas Totales</CardTitle>
+                  <Clock className="w-5 h-5 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{costMetrics?.totalHours || 0}h</div>
+                  <p className="text-xs text-muted-foreground">Registradas en el sistema</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Billable Rate</CardTitle>
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{costMetrics?.avgBillableRate || 0}%</div>
+                  <p className="text-xs text-muted-foreground">Promedio facturable</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Coste/Hora Medio</CardTitle>
+                  <DollarSign className="w-5 h-5 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    €{costMetrics?.totalHours ? Math.round(costMetrics.totalCost / costMetrics.totalHours) : 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Tarifa media aplicada</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <CardHeader><CardTitle>Horas por Semana</CardTitle></CardHeader>
@@ -330,6 +379,60 @@ export default function Reportes() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Top 10 Mandatos by Cost */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Top 10 Mandatos por Coste de Ejecución
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {costLoading ? (
+                  <div className="space-y-2">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-12" />)}
+                  </div>
+                ) : topMandatosByCost?.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mandato</TableHead>
+                        <TableHead className="text-right">Horas</TableHead>
+                        <TableHead className="text-right">€ Coste</TableHead>
+                        <TableHead className="text-right">% Billable</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {topMandatosByCost.map((m) => (
+                        <TableRow 
+                          key={m.mandatoId} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/mandatos/${m.mandatoId}`)}
+                        >
+                          <TableCell className="font-medium">
+                            {m.empresaNombre || m.descripcion || 'Sin nombre'}
+                          </TableCell>
+                          <TableCell className="text-right">{m.totalHours}h</TableCell>
+                          <TableCell className="text-right font-medium">
+                            €{m.totalCost.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={m.billablePercentage >= 80 ? "default" : "secondary"}>
+                              {m.billablePercentage}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    Sin datos de coste disponibles
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="comparacion" className="space-y-4">
