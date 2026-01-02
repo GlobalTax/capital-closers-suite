@@ -286,7 +286,7 @@ export function useReportData() {
 
       // Próximos cierres - mandatos con expected_close_date en los próximos 30 días
       const today = new Date();
-      const in30Days = addDays(today, 30);
+      const in30Days: Date = addDays(today, 30);
       
       const { data: upcomingData } = await supabase
         .from('mandatos')
@@ -312,12 +312,15 @@ export function useReportData() {
       });
 
       // Tareas vencidas del checklist
-      const { data: overdueTasks } = await supabase
+      const todayStr = today.toISOString().split('T')[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const overdueResult: { data: any[] | null } = await (supabase as any)
         .from('mandato_checklist_tasks')
         .select('id, tarea, fecha_limite, mandato_id')
         .eq('completada', false)
-        .lt('fecha_limite', today.toISOString().split('T')[0])
+        .lt('fecha_limite', todayStr)
         .limit(20);
+      const overdueTasks = overdueResult.data;
 
       const criticalAlerts = (stuckMandatos?.length || 0) + (overdueTasks?.filter((t: any) => {
         const daysOverdue = Math.ceil((today.getTime() - new Date(t.fecha_limite).getTime()) / (1000 * 60 * 60 * 24));

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
-import { Building2, MapPin, Users, TrendingUp, DollarSign, StickyNote, MoreVertical, Trash2, ExternalLink } from "lucide-react";
+import { Building2, MapPin, Users, TrendingUp, DollarSign, StickyNote, MoreVertical, Trash2, ExternalLink, MessageSquare } from "lucide-react";
 import { MandatoEmpresa, EmpresaRol } from "@/types";
 import { getRolColor, formatCurrency } from "@/lib/mandato-utils";
 import { removeEmpresaFromMandato, updateMandatoEmpresa } from "@/services/mandatos";
