@@ -30,3 +30,8 @@ export const TARGET_ESTADOS = [
   "oferta",
   "cerrada",
 ] as const;
+
+// Due Diligence Workstreams
+export const DD_WORKSTREAMS = [
+  'legal', 'financial', 'commercial', 'ops', 'it', 'tax', 'other'
+] as const;

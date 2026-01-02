@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MandatoChecklistTask } from "@/types";
+import { MandatoChecklistTask, WORKSTREAM_CONFIG } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ExternalLink, ChevronDown, Paperclip } from "lucide-react";
@@ -76,6 +76,19 @@ export function ChecklistTaskRow({ task, onEdit, onDelete, onStatusChange }: Che
           )}
 
           <div className="flex flex-wrap gap-2">
+            {task.workstream && WORKSTREAM_CONFIG[task.workstream] && (
+              <Badge 
+                variant="outline" 
+                className="text-xs"
+                style={{ 
+                  borderColor: WORKSTREAM_CONFIG[task.workstream].color,
+                  color: WORKSTREAM_CONFIG[task.workstream].color,
+                  backgroundColor: `${WORKSTREAM_CONFIG[task.workstream].color}10`,
+                }}
+              >
+                {WORKSTREAM_CONFIG[task.workstream].label}
+              </Badge>
+            )}
             {task.responsable && (
               <Badge variant="outline" className={getResponsableColor(task.responsable)}>
                 {task.responsable}

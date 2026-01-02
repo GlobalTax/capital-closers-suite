@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { MandatoChecklistTask, ChecklistFase, ChecklistResponsable, ChecklistSistema, ChecklistEstado } from "@/types";
+import type { MandatoChecklistTask, ChecklistFase, ChecklistResponsable, ChecklistSistema, ChecklistEstado, DDWorkstream } from "@/types";
+import { WORKSTREAM_CONFIG } from "@/types";
 import { createChecklistTask, updateChecklistTask } from "@/services/checklist.service";
 import { toast } from "@/hooks/use-toast";
 
@@ -21,6 +22,7 @@ const FASES: ChecklistFase[] = ["1. Preparación", "2. Marketing", "3. Ofertas"]
 const RESPONSABLES: ChecklistResponsable[] = ["Dirección M&A", "Analista", "Asesor M&A", "Marketing", "Legal", "Research", "M&A Support"];
 const SISTEMAS: ChecklistSistema[] = ["Brevo", "CRM", "Lovable.dev", "DealSuite", "ARX", "Data Room", "Supabase"];
 const ESTADOS: ChecklistEstado[] = ["⏳ Pendiente", "🔄 En curso", "✅ Completa"];
+const WORKSTREAMS: DDWorkstream[] = ['legal', 'financial', 'commercial', 'ops', 'it', 'tax', 'other'];
 
 export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuccess }: ChecklistTaskDrawerProps) {
   const [loading, setLoading] = useState(false);
@@ -34,6 +36,7 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
     fecha_limite: string;
     url_relacionada: string;
     notas: string;
+    workstream: DDWorkstream;
   }>({
     fase: "1. Preparación",
     tarea: "",
@@ -44,6 +47,7 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
     fecha_limite: "",
     url_relacionada: "",
     notas: "",
+    workstream: "other",
   });
 
   useEffect(() => {
@@ -58,6 +62,7 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
         fecha_limite: task.fecha_limite || "",
         url_relacionada: task.url_relacionada || "",
         notas: task.notas || "",
+        workstream: task.workstream || "other",
       });
     } else {
       setFormData({
@@ -70,6 +75,7 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
         fecha_limite: "",
         url_relacionada: "",
         notas: "",
+        workstream: "other",
       });
     }
   }, [task, open]);
@@ -89,6 +95,7 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
         fecha_limite: formData.fecha_limite || undefined,
         url_relacionada: formData.url_relacionada || undefined,
         notas: formData.notas || undefined,
+        workstream: formData.workstream,
       };
 
       if (task) {
@@ -183,6 +190,28 @@ export function ChecklistTaskDrawer({ open, onOpenChange, mandatoId, task, onSuc
               <SelectContent>
                 {SISTEMAS.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="workstream">Workstream DD</Label>
+            <Select value={formData.workstream} onValueChange={(v) => setFormData({ ...formData, workstream: v as DDWorkstream })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar área..." />
+              </SelectTrigger>
+              <SelectContent>
+                {WORKSTREAMS.map((ws) => (
+                  <SelectItem key={ws} value={ws}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: WORKSTREAM_CONFIG[ws].color }} 
+                      />
+                      {WORKSTREAM_CONFIG[ws].label}
+                    </div>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
