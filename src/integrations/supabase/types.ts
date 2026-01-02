@@ -4156,9 +4156,54 @@ export type Database = {
           },
         ]
       }
+      exit_readiness_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          max_points: number | null
+          options: Json
+          question_key: string
+          question_order: number
+          question_text: string
+          recommendation_if_low: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_points?: number | null
+          options: Json
+          question_key: string
+          question_order: number
+          question_text: string
+          recommendation_if_low?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_points?: number | null
+          options?: Json
+          question_key?: string
+          question_order?: number
+          question_text?: string
+          recommendation_if_low?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       exit_readiness_tests: {
         Row: {
+          admin_notes: string | null
+          ai_report_content: string | null
+          ai_report_error: string | null
+          ai_report_generated_at: string | null
+          ai_report_status: string | null
           company_name: string | null
+          contacted_at: string | null
           created_at: string
           email: string
           id: string
@@ -4166,6 +4211,7 @@ export type Database = {
           name: string | null
           page_origin: string | null
           phone: string | null
+          questions_version: number | null
           readiness_level: string | null
           recommendations: Json | null
           referrer: string | null
@@ -4179,7 +4225,13 @@ export type Database = {
           utm_source: string | null
         }
         Insert: {
+          admin_notes?: string | null
+          ai_report_content?: string | null
+          ai_report_error?: string | null
+          ai_report_generated_at?: string | null
+          ai_report_status?: string | null
           company_name?: string | null
+          contacted_at?: string | null
           created_at?: string
           email: string
           id?: string
@@ -4187,6 +4239,7 @@ export type Database = {
           name?: string | null
           page_origin?: string | null
           phone?: string | null
+          questions_version?: number | null
           readiness_level?: string | null
           recommendations?: Json | null
           referrer?: string | null
@@ -4200,7 +4253,13 @@ export type Database = {
           utm_source?: string | null
         }
         Update: {
+          admin_notes?: string | null
+          ai_report_content?: string | null
+          ai_report_error?: string | null
+          ai_report_generated_at?: string | null
+          ai_report_status?: string | null
           company_name?: string | null
+          contacted_at?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -4208,6 +4267,7 @@ export type Database = {
           name?: string | null
           page_origin?: string | null
           phone?: string | null
+          questions_version?: number | null
           readiness_level?: string | null
           recommendations?: Json | null
           referrer?: string | null

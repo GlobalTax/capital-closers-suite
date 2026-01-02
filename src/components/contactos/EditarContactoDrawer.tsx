@@ -127,7 +127,7 @@ export function EditarContactoDrawer({
         email: data.email,
         telefono: data.telefono || undefined,
         cargo: data.cargo || undefined,
-        empresa_principal_id: data.empresa_principal_id || undefined,
+        empresa_principal_id: data.empresa_principal_id === '__none__' ? undefined : data.empresa_principal_id || undefined,
         linkedin: data.linkedin || undefined,
         notas: data.notas || undefined,
       });
@@ -265,7 +265,7 @@ export function EditarContactoDrawer({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="bg-background">
-                            <SelectItem value="">Sin empresa</SelectItem>
+                            <SelectItem value="__none__">Sin empresa</SelectItem>
                             {empresas.map((empresa) => (
                               <SelectItem key={empresa.id} value={empresa.id}>
                                 {empresa.nombre}
