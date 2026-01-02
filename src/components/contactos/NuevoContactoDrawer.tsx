@@ -140,9 +140,21 @@ export function NuevoContactoDrawer({
       form.reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creando contacto:", error);
-      toast.error("Error al crear el contacto");
+      
+      // Detectar error de email duplicado
+      if (error?.metadata?.isDuplicate && error?.metadata?.duplicateField === 'email') {
+        toast.error("Ya existe un contacto con este email");
+        form.setError('email', { 
+          type: 'manual', 
+          message: 'Este email ya está registrado' 
+        });
+      } else if (error?.metadata?.supabaseError?.code === '23505') {
+        toast.error("Ya existe un contacto con este email");
+      } else {
+        toast.error("Error al crear el contacto");
+      }
     } finally {
       setSubmitting(false);
     }

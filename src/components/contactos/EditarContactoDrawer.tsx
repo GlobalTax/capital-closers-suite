@@ -135,9 +135,21 @@ export function EditarContactoDrawer({
       toast.success("Contacto actualizado exitosamente");
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error actualizando contacto:", error);
-      toast.error("Error al actualizar el contacto");
+      
+      // Detectar error de email duplicado
+      if (error?.metadata?.isDuplicate && error?.metadata?.duplicateField === 'email') {
+        toast.error("Ya existe otro contacto con este email");
+        form.setError('email', { 
+          type: 'manual', 
+          message: 'Este email ya está en uso por otro contacto' 
+        });
+      } else if (error?.metadata?.supabaseError?.code === '23505') {
+        toast.error("Ya existe otro contacto con este email");
+      } else {
+        toast.error("Error al actualizar el contacto");
+      }
     } finally {
       setSubmitting(false);
     }
