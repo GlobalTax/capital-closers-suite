@@ -69,6 +69,8 @@ export default function MandatoDetalle() {
   if (loading) return <PageSkeleton />;
   if (!mandato) return <div>Mandato no encontrado</div>;
 
+  const checklistLabel = mandato.tipo === "compra" ? "Checklist Buy-Side" : "Checklist Sell-Side";
+
   return (
     <div className="space-y-6">
       <MandatoHeader
@@ -91,12 +93,10 @@ export default function MandatoDetalle() {
           <TabsTrigger value="targets">
             Targets ({targetsCount})
           </TabsTrigger>
-          {mandato.tipo === "compra" && (
-            <TabsTrigger value="checklist">
-              <ListTodo className="w-4 h-4 mr-2" />
-              Checklist M&A
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="checklist">
+            <ListTodo className="w-4 h-4 mr-2" />
+            {checklistLabel}
+          </TabsTrigger>
           <TabsTrigger value="documentos">
             <FileText className="w-4 h-4 mr-2" />
             Documentos ({documentos.length})
@@ -123,11 +123,9 @@ export default function MandatoDetalle() {
           <TargetsTab mandato={mandato} onRefresh={refetch} />
         </TabsContent>
 
-        {mandato.tipo === "compra" && (
-          <TabsContent value="checklist">
-            <ChecklistTab mandato={mandato} />
-          </TabsContent>
-        )}
+        <TabsContent value="checklist">
+          <ChecklistTab mandato={mandato} />
+        </TabsContent>
 
         <TabsContent value="documentos">
           <DocumentosTab
