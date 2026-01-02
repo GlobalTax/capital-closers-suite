@@ -7062,6 +7062,9 @@ export type Database = {
           estado: string
           estado_negociacion: string | null
           expected_close_date: string | null
+          external_operation_id: string | null
+          external_source: string | null
+          external_synced_at: string | null
           fecha_cierre: string | null
           fecha_inicio: string | null
           id: string
@@ -7083,6 +7086,7 @@ export type Database = {
           tipo: string
           tipo_comprador_buscado: string | null
           updated_at: string | null
+          url_publica: string | null
           valor: number | null
           valoracion_esperada: number | null
           weighted_value: number | null
@@ -7099,6 +7103,9 @@ export type Database = {
           estado?: string
           estado_negociacion?: string | null
           expected_close_date?: string | null
+          external_operation_id?: string | null
+          external_source?: string | null
+          external_synced_at?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
@@ -7120,6 +7127,7 @@ export type Database = {
           tipo?: string
           tipo_comprador_buscado?: string | null
           updated_at?: string | null
+          url_publica?: string | null
           valor?: number | null
           valoracion_esperada?: number | null
           weighted_value?: number | null
@@ -7136,6 +7144,9 @@ export type Database = {
           estado?: string
           estado_negociacion?: string | null
           expected_close_date?: string | null
+          external_operation_id?: string | null
+          external_source?: string | null
+          external_synced_at?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
           id?: string
@@ -7157,6 +7168,7 @@ export type Database = {
           tipo?: string
           tipo_comprador_buscado?: string | null
           updated_at?: string | null
+          url_publica?: string | null
           valor?: number | null
           valoracion_esperada?: number | null
           weighted_value?: number | null
@@ -8006,6 +8018,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      operation_sync_log: {
+        Row: {
+          duration_ms: number | null
+          empresas_created: number | null
+          errors: Json | null
+          errors_count: number | null
+          executed_at: string | null
+          id: string
+          mandatos_created: number | null
+          mandatos_updated: number | null
+          operations_processed: number | null
+          status: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          duration_ms?: number | null
+          empresas_created?: number | null
+          errors?: Json | null
+          errors_count?: number | null
+          executed_at?: string | null
+          id?: string
+          mandatos_created?: number | null
+          mandatos_updated?: number | null
+          operations_processed?: number | null
+          status?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          duration_ms?: number | null
+          empresas_created?: number | null
+          errors?: Json | null
+          errors_count?: number | null
+          executed_at?: string | null
+          id?: string
+          mandatos_created?: number | null
+          mandatos_updated?: number | null
+          operations_processed?: number | null
+          status?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: []
       }
       operation_views: {
         Row: {
