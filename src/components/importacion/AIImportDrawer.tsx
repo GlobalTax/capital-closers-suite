@@ -26,12 +26,14 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useAIImport, ExtractedData } from '@/hooks/useAIImport';
+import { addEmpresaToMandato } from '@/services/mandatos';
 import { cn } from '@/lib/utils';
 
 interface AIImportDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultMode?: 'empresa' | 'contacto' | 'both';
+  mandatoId?: string;
   onSuccess?: (data: { empresaId?: string; contactoId?: string }) => void;
 }
 
@@ -39,6 +41,7 @@ export function AIImportDrawer({
   open, 
   onOpenChange, 
   defaultMode = 'both',
+  mandatoId,
   onSuccess 
 }: AIImportDrawerProps) {
   const {
@@ -90,6 +93,16 @@ export function AIImportDrawer({
         result = await createBoth();
       }
 
+      // If we have a mandatoId and an empresa was created, associate it as target
+      if (mandatoId && result.empresaId) {
+        try {
+          await addEmpresaToMandato(mandatoId, result.empresaId, 'target');
+        } catch (err) {
+          console.error('Error associating to mandate:', err);
+          // Don't fail the whole operation for this
+        }
+      }
+
       if (result.empresaId || result.contactoId) {
         onSuccess?.({ 
           empresaId: result.empresaId || undefined, 
@@ -129,6 +142,11 @@ export function AIImportDrawer({
           <DrawerTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             Importar con IA
+            {mandatoId && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                Se asociará como Target
+              </Badge>
+            )}
           </DrawerTitle>
           <DrawerDescription>
             Sube una captura de pantalla y extraeremos automáticamente los datos de empresa y contacto
@@ -348,7 +366,7 @@ export function AIImportDrawer({
           
           {extractedData && (
             <>
-              {hasEmpresaData && (
+              {hasEmpresaData && !mandatoId && (
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -359,7 +377,7 @@ export function AIImportDrawer({
                   Solo Empresa
                 </Button>
               )}
-              {hasContactoData && (
+              {hasContactoData && !mandatoId && (
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -370,14 +388,14 @@ export function AIImportDrawer({
                   Solo Contacto
                 </Button>
               )}
-              {hasEmpresaData && hasContactoData && (
+              {hasEmpresaData && (
                 <Button
                   className="flex-1"
-                  onClick={() => handleCreate('both')}
+                  onClick={() => handleCreate(mandatoId ? 'empresa' : 'both')}
                   disabled={isCreating}
                 >
                   {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
-                  Crear Ambos
+                  {mandatoId ? 'Crear Target' : (hasContactoData ? 'Crear Ambos' : 'Crear Empresa')}
                 </Button>
               )}
             </>

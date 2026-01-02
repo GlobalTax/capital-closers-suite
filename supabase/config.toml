@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.sync-operations-to-crm]
 verify_jwt = false
+
+[functions.firecrawl-scrape]
+verify_jwt = true
+
+[functions.enrich-company]
+verify_jwt = true

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { fetchEmpresas } from "@/services/empresas";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import type { Empresa, EmpresaRol } from "@/types";
-import { Building2, Search, MapPin, Users, Loader2 } from "lucide-react";
+import { Building2, Search, MapPin, Users, Loader2, X } from "lucide-react";
 
 const ROLES: { value: EmpresaRol; label: string }[] = [
   { value: "target", label: "Target" },
@@ -40,6 +40,7 @@ interface AsociarEmpresaDialogProps {
   onOpenChange: (open: boolean) => void;
   mandatoId: string;
   onSuccess?: () => void;
+  defaultRol?: EmpresaRol;
 }
 
 export function AsociarEmpresaDialog({
@@ -47,34 +48,33 @@ export function AsociarEmpresaDialog({
   onOpenChange,
   mandatoId,
   onSuccess,
+  defaultRol = "target",
 }: AsociarEmpresaDialogProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [filteredEmpresas, setFilteredEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | null>(null);
-  const [rol, setRol] = useState<EmpresaRol>("target");
-  const [notas, setNotas] = useState("");
+  const [selectedEmpresas, setSelectedEmpresas] = useState<Empresa[]>([]);
+  const [rol, setRol] = useState<EmpresaRol>(defaultRol);
 
   useEffect(() => {
     if (open) {
       loadEmpresas();
+      setRol(defaultRol);
     }
-  }, [open]);
+  }, [open, defaultRol]);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const filtered = empresas.filter(
-        (e) =>
-          e.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.sector?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.ubicacion?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredEmpresas(filtered);
-    } else {
-      setFilteredEmpresas(empresas.slice(0, 10));
+  const filteredEmpresas = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return empresas.slice(0, 20);
     }
+    const query = searchQuery.toLowerCase();
+    return empresas.filter(
+      (e) =>
+        e.nombre.toLowerCase().includes(query) ||
+        e.sector?.toLowerCase().includes(query) ||
+        e.ubicacion?.toLowerCase().includes(query)
+    ).slice(0, 20);
   }, [searchQuery, empresas]);
 
   const loadEmpresas = async () => {
@@ -82,7 +82,6 @@ export function AsociarEmpresaDialog({
     try {
       const data = await fetchEmpresas();
       setEmpresas(data);
-      setFilteredEmpresas(data.slice(0, 10));
     } catch (error) {
       console.error("Error cargando empresas:", error);
       toast.error("Error al cargar empresas");
@@ -91,45 +90,104 @@ export function AsociarEmpresaDialog({
     }
   };
 
+  const toggleEmpresa = (empresa: Empresa) => {
+    setSelectedEmpresas((prev) => {
+      const exists = prev.find((e) => e.id === empresa.id);
+      if (exists) {
+        return prev.filter((e) => e.id !== empresa.id);
+      }
+      return [...prev, empresa];
+    });
+  };
+
+  const removeSelected = (empresaId: string) => {
+    setSelectedEmpresas((prev) => prev.filter((e) => e.id !== empresaId));
+  };
+
   const handleSubmit = async () => {
-    if (!selectedEmpresa) {
-      toast.error("Selecciona una empresa");
+    if (selectedEmpresas.length === 0) {
+      toast.error("Selecciona al menos una empresa");
       return;
     }
 
     setSubmitting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
     try {
-      await addEmpresaToMandato(mandatoId, selectedEmpresa.id, rol, notas || undefined);
-      toast.success(`${selectedEmpresa.nombre} asociada como ${rol}`);
+      for (const empresa of selectedEmpresas) {
+        try {
+          await addEmpresaToMandato(mandatoId, empresa.id, rol);
+          successCount++;
+        } catch (error: any) {
+          console.error(`Error asociando ${empresa.nombre}:`, error);
+          if (error.message?.includes("duplicate")) {
+            // Already associated, count as success
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          `${successCount} empresa${successCount > 1 ? "s" : ""} asociada${successCount > 1 ? "s" : ""} como ${rol}`
+        );
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} empresa${errorCount > 1 ? "s" : ""} no se pudieron asociar`);
+      }
+
       resetForm();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      console.error("Error asociando empresa:", error);
-      toast.error(error.message || "Error al asociar empresa");
     } finally {
       setSubmitting(false);
     }
   };
 
   const resetForm = () => {
-    setSelectedEmpresa(null);
+    setSelectedEmpresas([]);
     setSearchQuery("");
-    setRol("target");
-    setNotas("");
+    setRol(defaultRol);
   };
+
+  const isSelected = (empresaId: string) => selectedEmpresas.some((e) => e.id === empresaId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Asociar Empresa Existente</DialogTitle>
+          <DialogTitle>Asociar Empresas Existentes</DialogTitle>
           <DialogDescription>
-            Busca y asocia una empresa existente a este mandato
+            Busca y selecciona empresas para asociarlas a este mandato
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Selected chips */}
+          {selectedEmpresas.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-muted/30">
+              {selectedEmpresas.map((empresa) => (
+                <Badge
+                  key={empresa.id}
+                  variant="secondary"
+                  className="pl-2 pr-1 py-1 gap-1"
+                >
+                  {empresa.nombre}
+                  <button
+                    type="button"
+                    onClick={() => removeSelected(empresa.id)}
+                    className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
           {/* Search */}
           <div className="space-y-2">
             <Label>Buscar empresa</Label>
@@ -146,7 +204,14 @@ export function AsociarEmpresaDialog({
 
           {/* Results */}
           <div className="space-y-2">
-            <Label>Seleccionar empresa</Label>
+            <Label>
+              Seleccionar empresas
+              {selectedEmpresas.length > 0 && (
+                <span className="ml-2 text-primary">
+                  ({selectedEmpresas.length} seleccionada{selectedEmpresas.length > 1 ? "s" : ""})
+                </span>
+              )}
+            </Label>
             <div className="border rounded-lg max-h-48 overflow-y-auto">
               {loading ? (
                 <div className="p-4 space-y-2">
@@ -165,10 +230,14 @@ export function AsociarEmpresaDialog({
                       key={empresa.id}
                       type="button"
                       className={`w-full p-3 text-left hover:bg-accent transition-colors flex items-start gap-3 ${
-                        selectedEmpresa?.id === empresa.id ? "bg-accent" : ""
+                        isSelected(empresa.id) ? "bg-primary/5" : ""
                       }`}
-                      onClick={() => setSelectedEmpresa(empresa)}
+                      onClick={() => toggleEmpresa(empresa)}
                     >
+                      <Checkbox
+                        checked={isSelected(empresa.id)}
+                        className="mt-1"
+                      />
                       <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <Building2 className="w-5 h-5 text-primary" />
                       </div>
@@ -202,52 +271,31 @@ export function AsociarEmpresaDialog({
             </div>
           </div>
 
-          {selectedEmpresa && (
-            <>
-              {/* Selected indicator */}
-              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="text-sm font-medium">Empresa seleccionada:</div>
-                <div className="text-primary font-semibold">{selectedEmpresa.nombre}</div>
-              </div>
-
-              {/* Role */}
-              <div className="space-y-2">
-                <Label>Rol en el mandato</Label>
-                <Select value={rol} onValueChange={(v) => setRol(v as EmpresaRol)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label>Notas (opcional)</Label>
-                <Textarea
-                  placeholder="Notas adicionales sobre esta asociación..."
-                  value={notas}
-                  onChange={(e) => setNotas(e.target.value)}
-                  rows={2}
-                />
-              </div>
-            </>
-          )}
+          {/* Role */}
+          <div className="space-y-2">
+            <Label>Rol en el mandato</Label>
+            <Select value={rol} onValueChange={(v) => setRol(v as EmpresaRol)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={!selectedEmpresa || submitting}>
+          <Button onClick={handleSubmit} disabled={selectedEmpresas.length === 0 || submitting}>
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Asociar Empresa
+            Asociar {selectedEmpresas.length > 0 ? `${selectedEmpresas.length} Empresa${selectedEmpresas.length > 1 ? "s" : ""}` : "Empresas"}
           </Button>
         </DialogFooter>
       </DialogContent>
