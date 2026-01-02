@@ -4206,6 +4206,8 @@ export type Database = {
           contacted_at: string | null
           created_at: string
           email: string
+          email_sent: boolean | null
+          email_sent_at: string | null
           id: string
           ip_address: unknown
           name: string | null
@@ -4234,6 +4236,8 @@ export type Database = {
           contacted_at?: string | null
           created_at?: string
           email: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           id?: string
           ip_address?: unknown
           name?: string | null
@@ -4262,6 +4266,8 @@ export type Database = {
           contacted_at?: string | null
           created_at?: string
           email?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           id?: string
           ip_address?: unknown
           name?: string | null
