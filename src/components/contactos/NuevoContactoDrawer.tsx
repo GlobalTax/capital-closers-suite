@@ -258,7 +258,7 @@ export function NuevoContactoDrawer({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent className="bg-background">
-                            <SelectItem value="none">Sin empresa</SelectItem>
+                            <SelectItem value="">Sin empresa</SelectItem>
                             {empresas.map((empresa) => (
                               <SelectItem key={empresa.id} value={empresa.id}>
                                 {empresa.nombre}
