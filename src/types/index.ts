@@ -14,6 +14,19 @@ export type TransactionStatus = "pendiente" | "completada" | "cancelada";
 export type ContactoRol = "vendedor" | "comprador" | "asesor" | "intermediario" | "otro";
 export type EmpresaRol = "vendedora" | "compradora" | "competidora" | "comparable" | "target" | "otro";
 
+// Win/Loss Types
+export type MandatoOutcome = 'open' | 'won' | 'lost' | 'cancelled';
+export type LossReasonType = 
+  | 'precio'
+  | 'competidor'
+  | 'timing'
+  | 'fit_estrategico'
+  | 'due_diligence'
+  | 'financiacion'
+  | 'cambio_prioridades'
+  | 'relacion_cliente'
+  | 'otro';
+
 // ============================================
 // EMPRESA (unifica clientes.empresa + empresas_target)
 // ============================================
@@ -128,6 +141,15 @@ export interface Mandato {
   
   created_at: string;
   updated_at: string;
+  
+  // Win/Loss tracking
+  outcome?: MandatoOutcome;
+  loss_reason?: LossReasonType;
+  loss_notes?: string;
+  won_value?: number;
+  closed_at?: string;
+  closed_by?: string;
+  last_activity_at?: string;
 }
 
 // ============================================

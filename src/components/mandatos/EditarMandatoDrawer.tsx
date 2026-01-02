@@ -30,9 +30,10 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { updateMandato } from "@/services/mandatos";
-import type { Mandato, MandatoEstado, TareaPrioridad } from "@/types";
+import type { Mandato, MandatoEstado, TareaPrioridad, MandatoOutcome, LossReasonType } from "@/types";
 import { usePipelineGates } from "@/hooks/usePipelineGates";
 import { PipelineGateAlert } from "./PipelineGateAlert";
+import { CloseMandatoDialog, type CloseData } from "./CloseMandatoDialog";
 import type { PipelineStage, GateValidationResult } from "@/lib/pipeline-gates";
 
 const formSchema = z.object({
@@ -96,6 +97,8 @@ export function EditarMandatoDrawer({
 }: EditarMandatoDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [gateResult, setGateResult] = useState<GateValidationResult | null>(null);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [pendingOutcome, setPendingOutcome] = useState<"won" | "lost" | "cancelled">("won");
   
   // Hook para validación de gates
   const { validateTransition } = usePipelineGates({ mandato });
@@ -211,7 +214,21 @@ export function EditarMandatoDrawer({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        // Intercept close states to show close dialog
+                        if (value === "cerrado") {
+                          setPendingOutcome("won");
+                          setCloseDialogOpen(true);
+                        } else if (value === "cancelado") {
+                          setPendingOutcome("cancelled");
+                          setCloseDialogOpen(true);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
@@ -564,6 +581,35 @@ export function EditarMandatoDrawer({
             </div>
           </form>
         </Form>
+
+        {/* Close Mandato Dialog */}
+        <CloseMandatoDialog
+          open={closeDialogOpen}
+          onOpenChange={setCloseDialogOpen}
+          mandato={mandato}
+          initialOutcome={pendingOutcome}
+          onConfirm={async (closeData: CloseData) => {
+            setLoading(true);
+            try {
+              const newEstado = closeData.outcome === "won" ? "cerrado" : "cancelado";
+              await updateMandato(mandato.id, {
+                estado: newEstado,
+                outcome: closeData.outcome,
+                loss_reason: closeData.loss_reason,
+                loss_notes: closeData.loss_notes,
+                won_value: closeData.won_value,
+              } as any);
+              toast.success(`Mandato ${closeData.outcome === "won" ? "cerrado como ganado" : closeData.outcome === "lost" ? "marcado como perdido" : "cancelado"}`);
+              onSuccess?.();
+              onOpenChange(false);
+            } catch (error) {
+              console.error("Error:", error);
+              toast.error("Error al cerrar el mandato");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
       </SheetContent>
     </Sheet>
   );

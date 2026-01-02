@@ -3506,6 +3506,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_folders_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
@@ -3644,6 +3651,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
           {
@@ -4754,6 +4768,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
         ]
@@ -6252,6 +6273,13 @@ export type Database = {
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mandato_alerts: {
@@ -6317,6 +6345,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
         ]
@@ -6470,6 +6505,13 @@ export type Database = {
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mandato_checklist_templates: {
@@ -6577,6 +6619,13 @@ export type Database = {
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_contactos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mandato_documentos: {
@@ -6680,6 +6729,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_empresas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
         ]
@@ -6798,6 +6854,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mandato_time_entries_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -6877,6 +6940,8 @@ export type Database = {
       }
       mandatos: {
         Row: {
+          closed_at: string | null
+          closed_by: string | null
           created_at: string | null
           days_in_stage: number | null
           descripcion: string | null
@@ -6890,7 +6955,10 @@ export type Database = {
           id: string
           import_log_id: string | null
           last_activity_at: string | null
+          loss_notes: string | null
+          loss_reason: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas: number | null
+          outcome: Database["public"]["Enums"]["mandato_outcome"] | null
           perfil_empresa_buscada: string | null
           pipeline_stage: string | null
           prioridad: string | null
@@ -6906,8 +6974,11 @@ export type Database = {
           valor: number | null
           valoracion_esperada: number | null
           weighted_value: number | null
+          won_value: number | null
         }
         Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null
@@ -6921,7 +6992,10 @@ export type Database = {
           id?: string
           import_log_id?: string | null
           last_activity_at?: string | null
+          loss_notes?: string | null
+          loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas?: number | null
+          outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
           prioridad?: string | null
@@ -6937,8 +7011,11 @@ export type Database = {
           valor?: number | null
           valoracion_esperada?: number | null
           weighted_value?: number | null
+          won_value?: number | null
         }
         Update: {
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null
@@ -6952,7 +7029,10 @@ export type Database = {
           id?: string
           import_log_id?: string | null
           last_activity_at?: string | null
+          loss_notes?: string | null
+          loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas?: number | null
+          outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
           prioridad?: string | null
@@ -6968,6 +7048,7 @@ export type Database = {
           valor?: number | null
           valoracion_esperada?: number | null
           weighted_value?: number | null
+          won_value?: number | null
         }
         Relationships: [
           {
@@ -9223,6 +9304,13 @@ export type Database = {
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tareas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
         ]
       }
       team_members: {
@@ -10040,6 +10128,13 @@ export type Database = {
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
         ]
       }
       v_active_alerts: {
@@ -10083,6 +10178,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
         ]
@@ -10137,6 +10239,13 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
           {
@@ -10333,6 +10442,23 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_mandatos_winloss: {
+        Row: {
+          closed_at: string | null
+          empresa_nombre: string | null
+          estado: string | null
+          id: string | null
+          loss_notes: string | null
+          loss_reason: Database["public"]["Enums"]["loss_reason_type"] | null
+          outcome: Database["public"]["Enums"]["mandato_outcome"] | null
+          pipeline_stage: string | null
+          sector: string | null
+          tipo: string | null
+          valor: number | null
+          won_value: number | null
+        }
+        Relationships: []
       }
       v_nominas_completo: {
         Row: {
@@ -10974,6 +11100,17 @@ export type Database = {
         | "fase0_bloqueado"
         | "mandato_propuesto"
         | "mandato_firmado"
+      loss_reason_type:
+        | "precio"
+        | "competidor"
+        | "timing"
+        | "fit_estrategico"
+        | "due_diligence"
+        | "financiacion"
+        | "cambio_prioridades"
+        | "relacion_cliente"
+        | "otro"
+      mandato_outcome: "open" | "won" | "lost" | "cancelled"
       proposal_status:
         | "draft"
         | "sent"
@@ -11178,6 +11315,18 @@ export const Constants = {
         "mandato_propuesto",
         "mandato_firmado",
       ],
+      loss_reason_type: [
+        "precio",
+        "competidor",
+        "timing",
+        "fit_estrategico",
+        "due_diligence",
+        "financiacion",
+        "cambio_prioridades",
+        "relacion_cliente",
+        "otro",
+      ],
+      mandato_outcome: ["open", "won", "lost", "cancelled"],
       proposal_status: [
         "draft",
         "sent",
