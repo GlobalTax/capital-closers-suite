@@ -19,6 +19,7 @@ import { useContactosRealtime } from "@/hooks/useContactosRealtime";
 import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
+import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
 
 export default function Contactos() {
   const navigate = useNavigate();
@@ -191,18 +192,27 @@ export default function Contactos() {
               </a>
             </Button>
           )}
-          {row.telefono && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              asChild
-            >
-              <a href={`https://wa.me/${row.telefono.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp">
-                <MessageCircle className="h-4 w-4" />
-              </a>
-            </Button>
-          )}
+          {row.telefono && (() => {
+            const waData = formatPhoneForWhatsApp(row.telefono);
+            if (!waData) return null;
+            return (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                asChild
+              >
+                <a 
+                  href={`https://wa.me/${waData.number}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  title={waData.hasCountryCode ? "WhatsApp" : "WhatsApp (verificar prefijo país)"}
+                >
+                  <MessageCircle className={`h-4 w-4 ${!waData.hasCountryCode ? "text-yellow-500" : ""}`} />
+                </a>
+              </Button>
+            );
+          })()}
           {row.linkedin && (
             <Button
               variant="ghost"
