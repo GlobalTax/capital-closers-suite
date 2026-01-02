@@ -10517,6 +10517,7 @@ export type Database = {
       log_valuation_access_attempt: { Args: never; Returns: undefined }
       monitor_security_violations: { Args: never; Returns: undefined }
       refresh_banner_analytics: { Args: never; Returns: undefined }
+      refresh_mandatos_days_in_stage: { Args: never; Returns: undefined }
       reject_user_registration: {
         Args: { reason?: string; request_id: string }
         Returns: boolean

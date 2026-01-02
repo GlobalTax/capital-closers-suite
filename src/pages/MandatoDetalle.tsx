@@ -18,8 +18,10 @@ import { DocumentosTab } from "@/features/mandatos/tabs/DocumentosTab";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
+import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
+import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
 import type { TimeEntry, TimeStats } from "@/types";
 import { handleError } from "@/lib/error-handler";
 
@@ -28,6 +30,7 @@ export default function MandatoDetalle() {
   const { user, adminUser } = useAuth();
   const [openContactoDrawer, setOpenContactoDrawer] = useState(false);
   const [openAsociarDialog, setOpenAsociarDialog] = useState(false);
+  const [editarMandatoOpen, setEditarMandatoOpen] = useState(false);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
@@ -46,6 +49,9 @@ export default function MandatoDetalle() {
     targetsCount,
     tareasPendientes,
   } = useMandatoDetalle(id);
+
+  // Obtener progreso del checklist
+  const { totalProgress, overdueTasks } = useChecklistDynamic(id || '', mandato?.tipo || 'venta');
 
   useEffect(() => {
     loadTimeEntries();
@@ -75,10 +81,15 @@ export default function MandatoDetalle() {
     <div className="space-y-6">
       <MandatoHeader
         mandato={mandato}
+        onEdit={() => setEditarMandatoOpen(true)}
         onDelete={handleEliminar}
       />
 
-      <MandatoKPIs mandato={mandato} />
+      <MandatoKPIs 
+        mandato={mandato} 
+        checklistProgress={totalProgress}
+        overdueTasks={overdueTasks.length}
+      />
 
       <Tabs defaultValue="resumen" className="w-full">
         <TabsList>
@@ -181,6 +192,13 @@ export default function MandatoDetalle() {
         onOpenChange={setTimeDialogOpen}
         mandatoId={id!}
         onSuccess={loadTimeEntries}
+      />
+
+      <EditarMandatoDrawer
+        open={editarMandatoOpen}
+        onOpenChange={setEditarMandatoOpen}
+        mandato={mandato}
+        onSuccess={refetch}
       />
     </div>
   );
