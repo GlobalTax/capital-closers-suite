@@ -11100,6 +11100,24 @@ export type Database = {
         Returns: Json
       }
       rollback_import: { Args: { p_import_log_id: string }; Returns: Json }
+      search_contactos_full: {
+        Args: { search_query: string }
+        Returns: {
+          apellidos: string
+          avatar: string
+          cargo: string
+          created_at: string
+          email: string
+          empresa_nombre: string
+          empresa_principal_id: string
+          id: string
+          linkedin: string
+          nombre: string
+          notas: string
+          telefono: string
+          updated_at: string
+        }[]
+      }
       search_news_articles: {
         Args: {
           filter_category?: string

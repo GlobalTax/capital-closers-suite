@@ -25,11 +25,11 @@ export const searchGlobal = async (query: string): Promise<ResultadoBusqueda[]> 
       });
     }
 
-    // Buscar contactos
+    // Buscar contactos (incluye teléfono y cargo)
     const { data: contactos } = await supabase
       .from('contactos')
-      .select('id, nombre, apellidos, email, cargo')
-      .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm}`)
+      .select('id, nombre, apellidos, email, cargo, telefono')
+      .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm},telefono.ilike.${searchTerm},cargo.ilike.${searchTerm}`)
       .limit(5);
 
     if (contactos) {

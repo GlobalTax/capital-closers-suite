@@ -142,7 +142,7 @@ export function AsociarContactoDialog({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="search"
-                placeholder="Buscar por nombre, email o empresa..."
+                placeholder="Buscar por nombre, email, teléfono, cargo o empresa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
