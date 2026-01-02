@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText, GitMerge, Plus, Unlink } from "lucide-react";
+import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText, GitMerge, Plus, Unlink, Send, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { useContactoMandatos } from "@/hooks/queries/useContactosMandatos";
 import { useContactoInteracciones } from "@/hooks/queries/useInteracciones";
 import { useContactoDocumentos, useDesvincularDocumentoContacto } from "@/hooks/queries/useDocumentos";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
+import { useSyncContactoToBrevo } from "@/hooks/useSyncContactoToBrevo";
 import type { Contacto, Mandato } from "@/types";
 import type { Interaccion } from "@/services/interacciones";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
@@ -33,6 +34,7 @@ export default function ContactoDetalle() {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [vincularDocDialogOpen, setVincularDocDialogOpen] = useState(false);
+  const [localBrevoSyncedAt, setLocalBrevoSyncedAt] = useState<string | null>(null);
 
   const { data: contacto, isLoading: loadingContacto } = useContacto(id);
   const { data: mandatos = [], isLoading: loadingMandatos } = useContactoMandatos(id);
@@ -40,6 +42,7 @@ export default function ContactoDetalle() {
   const { data: documentos = [], isLoading: loadingDocumentos } = useContactoDocumentos(id);
   const deleteMutation = useDeleteContacto();
   const desvincularMutation = useDesvincularDocumentoContacto();
+  const { syncToBrevo, syncing: syncingBrevo } = useSyncContactoToBrevo();
 
   const loading = loadingContacto || loadingMandatos || loadingInteracciones || loadingDocumentos;
 
@@ -58,10 +61,22 @@ export default function ContactoDetalle() {
     desvincularMutation.mutate({ contactoId: id, documentoId });
   };
 
+  const handleSyncToBrevo = async () => {
+    if (!contacto) return;
+    const result = await syncToBrevo(contacto);
+    if (result.success) {
+      setLocalBrevoSyncedAt(new Date().toISOString());
+    }
+  };
+
   const getInitials = (nombre: string, apellidos?: string) => {
     const initials = `${nombre.charAt(0)}${apellidos?.charAt(0) || ""}`;
     return initials.toUpperCase();
   };
+
+  // Determinar estado de sincronización con Brevo
+  const brevoSyncedAt = localBrevoSyncedAt || contacto?.brevo_synced_at;
+  const isSyncedToBrevo = !!brevoSyncedAt;
 
   if (loading) {
     return (
@@ -169,6 +184,33 @@ export default function ContactoDetalle() {
                     LinkedIn
                   </Button>
                 )}
+                
+                {/* Botón Enviar a Brevo */}
+                <div className="flex flex-col items-start">
+                  <Button 
+                    variant={isSyncedToBrevo ? "default" : "outline"}
+                    size="sm" 
+                    onClick={handleSyncToBrevo}
+                    disabled={syncingBrevo || !contacto.email}
+                    className={isSyncedToBrevo ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                    title={!contacto.email ? "El contacto necesita un email para sincronizar" : undefined}
+                  >
+                    {syncingBrevo ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : isSyncedToBrevo ? (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {isSyncedToBrevo ? "Enviado a Brevo" : "Enviar a Brevo"}
+                  </Button>
+                  
+                  {brevoSyncedAt && (
+                    <span className="text-xs text-muted-foreground mt-1">
+                      Último envío: {format(new Date(brevoSyncedAt), "dd/MM/yyyy HH:mm", { locale: es })}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
