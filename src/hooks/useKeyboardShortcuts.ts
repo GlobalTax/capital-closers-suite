@@ -27,13 +27,13 @@ export function useKeyboardShortcuts() {
         const path = location.pathname;
         
         if (path.startsWith("/mandatos")) {
-          console.log("Nuevo mandato");
-        } else if (path.startsWith("/clientes")) {
-          console.log("Nuevo cliente");
-        } else if (path.startsWith("/targets")) {
-          console.log("Nuevo target");
+          navigate("/mandatos?nuevo=true");
+        } else if (path.startsWith("/contactos")) {
+          navigate("/contactos?nuevo=true");
+        } else if (path.startsWith("/empresas")) {
+          navigate("/empresas?nuevo=true");
         } else if (path.startsWith("/tareas")) {
-          console.log("Nueva tarea");
+          navigate("/tareas?nuevo=true");
         }
         return;
       }

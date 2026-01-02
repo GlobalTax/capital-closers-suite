@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, adminUser, loading } = useAuth();
+  const { user, adminUser, loading, session } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
@@ -24,6 +24,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   // Check role hierarchy: super_admin > admin > viewer
+  // Hybrid validation: prefer JWT claims, fallback to DB
   if (requiredRole) {
     const roleHierarchy: Record<AdminRole, number> = {
       super_admin: 3,
@@ -31,7 +32,12 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       viewer: 1,
     };
 
-    const userLevel = roleHierarchy[adminUser.role];
+    // Try to get role from JWT claims first (faster, real-time)
+    const jwtRole = session?.user?.app_metadata?.role as AdminRole | undefined;
+    // Fallback to admin_users table role
+    const effectiveRole = jwtRole || adminUser.role;
+
+    const userLevel = roleHierarchy[effectiveRole] ?? 0;
     const requiredLevel = roleHierarchy[requiredRole];
 
     if (userLevel < requiredLevel) {
