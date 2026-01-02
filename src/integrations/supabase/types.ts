@@ -7194,6 +7194,8 @@ export type Database = {
       }
       mandatos: {
         Row: {
+          brevo_deal_id: string | null
+          brevo_synced_at: string | null
           closed_at: string | null
           closed_by: string | null
           created_at: string | null
@@ -7235,6 +7237,8 @@ export type Database = {
           won_value: number | null
         }
         Insert: {
+          brevo_deal_id?: string | null
+          brevo_synced_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string | null
@@ -7276,6 +7280,8 @@ export type Database = {
           won_value?: number | null
         }
         Update: {
+          brevo_deal_id?: string | null
+          brevo_synced_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string | null
