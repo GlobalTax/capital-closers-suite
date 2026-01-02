@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { Building2, MapPin, Users, TrendingUp, DollarSign, StickyNote, MoreVertical, Trash2, Edit, ExternalLink } from "lucide-react";
+import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
+import { Building2, MapPin, Users, TrendingUp, DollarSign, StickyNote, MoreVertical, Trash2, ExternalLink } from "lucide-react";
 import { MandatoEmpresa, EmpresaRol } from "@/types";
 import { getRolColor, formatCurrency } from "@/lib/mandato-utils";
 import { removeEmpresaFromMandato, updateMandatoEmpresa } from "@/services/mandatos";
@@ -31,6 +32,8 @@ export function EmpresasAsociadasCard({ empresas, onAddEmpresa, mandatoId, onRef
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [empresaToDelete, setEmpresaToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [interaccionDialogOpen, setInteraccionDialogOpen] = useState(false);
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!empresaToDelete) return;
@@ -63,6 +66,11 @@ export function EmpresasAsociadasCard({ empresas, onAddEmpresa, mandatoId, onRef
     } catch (error) {
       toast.error("Error al actualizar rol");
     }
+  };
+
+  const handleOpenInteraccion = (empresaId: string) => {
+    setSelectedEmpresaId(empresaId);
+    setInteraccionDialogOpen(true);
   };
 
   if (loading) {
@@ -137,6 +145,10 @@ export function EmpresasAsociadasCard({ empresas, onAddEmpresa, mandatoId, onRef
                           <DropdownMenuItem onClick={() => me.empresa && navigate(`/empresas/${me.empresa.id}`)}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Ver Empresa
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => me.empresa && handleOpenInteraccion(me.empresa.id)}>
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Nueva Interacción
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleChangeRol(me.id, "target")}>

@@ -15,52 +15,78 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, Users, FileText, Plus, Calendar } from "lucide-react";
-import type { Interaccion } from "@/types";
-import { updateEmpresa } from "@/services/empresas";
+import { Mail, Phone, Users, FileText, Plus, MessageCircle, Linkedin, MapPin } from "lucide-react";
+import type { Interaccion } from "@/services/interacciones";
+import { createInteraccion } from "@/services/interacciones";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 
 interface InteraccionTimelineProps {
   interacciones: Interaccion[];
-  targetId: string;
+  empresaId: string;
+  mandatoId?: string;
   onUpdate: () => void;
 }
 
-const iconMap = {
+const iconMap: Record<string, React.ElementType> = {
   email: Mail,
   llamada: Phone,
   reunion: Users,
   nota: FileText,
+  whatsapp: MessageCircle,
+  linkedin: Linkedin,
+  visita: MapPin,
 };
 
-const colorMap = {
+const colorMap: Record<string, string> = {
   email: "text-blue-500",
   llamada: "text-green-500",
   reunion: "text-purple-500",
-  nota: "text-gray-500",
+  nota: "text-muted-foreground",
+  whatsapp: "text-emerald-500",
+  linkedin: "text-sky-600",
+  visita: "text-orange-500",
 };
 
-export function InteraccionTimeline({ interacciones, targetId, onUpdate }: InteraccionTimelineProps) {
+interface FormData {
+  tipo: 'llamada' | 'email' | 'reunion' | 'nota' | 'whatsapp' | 'linkedin' | 'visita';
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+}
+
+export function InteraccionTimeline({ interacciones, empresaId, mandatoId, onUpdate }: InteraccionTimelineProps) {
   const [open, setOpen] = useState(false);
-  const { register, handleSubmit, reset, setValue, watch } = useForm({
+  const [saving, setSaving] = useState(false);
+  const { register, handleSubmit, reset, setValue, watch } = useForm<FormData>({
     defaultValues: {
-      tipo: "email" as const,
+      tipo: "email",
       titulo: "",
       descripcion: "",
       fecha: new Date().toISOString().slice(0, 16),
     },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
+    setSaving(true);
     try {
-      // TODO: Implementar tabla de interacciones separada
-      // Por ahora comentado hasta que se cree la tabla correspondiente
-      toast.info("Funcionalidad de interacciones disponible próximamente");
+      await createInteraccion({
+        empresa_id: empresaId,
+        mandato_id: mandatoId,
+        tipo: data.tipo,
+        titulo: data.titulo,
+        descripcion: data.descripcion || undefined,
+        fecha: new Date(data.fecha).toISOString(),
+      });
+      toast.success("Interacción registrada");
       setOpen(false);
       reset();
+      onUpdate();
     } catch (error) {
+      console.error("Error al crear interacción:", error);
       toast.error("Error al registrar interacción");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -68,10 +94,10 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Timeline de Interacciones</CardTitle>
+          <CardTitle className="text-base">Timeline de Interacciones</CardTitle>
           <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-              <Button>
+              <Button size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Interacción
               </Button>
@@ -80,14 +106,14 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
               <form onSubmit={handleSubmit(onSubmit)}>
                 <DrawerHeader>
                   <DrawerTitle>Nueva Interacción</DrawerTitle>
-                  <DrawerDescription>Registra una nueva interacción con el target</DrawerDescription>
+                  <DrawerDescription>Registra una nueva interacción con la empresa</DrawerDescription>
                 </DrawerHeader>
                 <div className="px-4 space-y-4">
                   <div className="space-y-2">
                     <Label>Tipo de Interacción</Label>
                     <Select
                       value={watch("tipo")}
-                      onValueChange={(value) => setValue("tipo", value as any)}
+                      onValueChange={(value) => setValue("tipo", value as FormData['tipo'])}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -109,6 +135,24 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4" />
                             Reunión
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="whatsapp">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="w-4 h-4" />
+                            WhatsApp
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="linkedin">
+                          <div className="flex items-center gap-2">
+                            <Linkedin className="w-4 h-4" />
+                            LinkedIn
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="visita">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            Visita
                           </div>
                         </SelectItem>
                         <SelectItem value="nota">
@@ -146,9 +190,11 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
                   </div>
                 </div>
                 <DrawerFooter>
-                  <Button type="submit">Guardar Interacción</Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Guardando..." : "Guardar Interacción"}
+                  </Button>
                   <DrawerClose asChild>
-                    <Button variant="outline">Cancelar</Button>
+                    <Button variant="outline" type="button">Cancelar</Button>
                   </DrawerClose>
                 </DrawerFooter>
               </form>
@@ -164,8 +210,8 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
               {interacciones
                 .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
                 .map((interaccion) => {
-                  const Icon = iconMap[interaccion.tipo];
-                  const colorClass = colorMap[interaccion.tipo];
+                  const Icon = iconMap[interaccion.tipo] || FileText;
+                  const colorClass = colorMap[interaccion.tipo] || "text-muted-foreground";
 
                   return (
                     <div key={interaccion.id} className="relative pl-10">
@@ -179,7 +225,6 @@ export function InteraccionTimeline({ interacciones, targetId, onUpdate }: Inter
                           <div>
                             <h4 className="font-medium">{interaccion.titulo}</h4>
                             <p className="text-xs text-muted-foreground">
-                              {interaccion.responsable} •{" "}
                               {new Date(interaccion.fecha).toLocaleDateString("es-ES", {
                                 year: "numeric",
                                 month: "long",
