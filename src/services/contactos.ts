@@ -12,7 +12,7 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `)
       .order('created_at', { ascending: false });
     
@@ -44,7 +44,7 @@ export const fetchContactosPaginated = async (
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
@@ -76,7 +76,7 @@ export const getContactoById = async (id: string): Promise<Contacto | null> => {
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `)
       .eq('id', id)
       .single();
@@ -110,7 +110,7 @@ export const createContacto = async (contacto: Partial<Contacto>) => {
       .insert(normalizedData as any)
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `)
       .single();
     
@@ -160,7 +160,7 @@ export const updateContacto = async (id: string, contacto: Partial<Contacto>) =>
       .eq('id', id)
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `)
       .single();
     
@@ -243,7 +243,7 @@ export const searchContactos = async (query: string): Promise<Contacto[]> => {
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(*)
+        empresa_principal:empresas(id, nombre)
       `)
       .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm}`)
       .order('nombre', { ascending: true })

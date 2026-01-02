@@ -59,6 +59,14 @@ export interface Empresa {
 }
 
 // ============================================
+// RELACIONES PARCIALES (para optimizar queries)
+// ============================================
+export interface EmpresaBasic {
+  id: string;
+  nombre: string;
+}
+
+// ============================================
 // CONTACTO (antes Cliente)
 // ============================================
 export interface Contacto {
@@ -69,7 +77,7 @@ export interface Contacto {
   telefono?: string;
   cargo?: string;
   empresa_principal_id?: string;
-  empresa_principal?: Empresa;
+  empresa_principal?: EmpresaBasic | null;
   linkedin?: string;
   notas?: string;
   avatar?: string;
