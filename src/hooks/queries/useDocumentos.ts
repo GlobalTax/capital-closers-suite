@@ -6,7 +6,9 @@ import {
   createDocumento, 
   deleteDocumento,
   getContactoDocumentos,
-  getEmpresaDocumentos
+  getEmpresaDocumentos,
+  vincularDocumentoContacto,
+  desvincularDocumentoContacto
 } from "@/services/documentos.service";
 import { deleteFile } from "@/services/uploads";
 import { toast } from "sonner";
@@ -88,6 +90,47 @@ export function useCreateDocumento() {
     },
     onError: (error) => {
       handleError(error, "Error al crear documento");
+    },
+  });
+}
+
+export function useVincularDocumentoContacto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contactoId, documentoId, notas }: { 
+      contactoId: string; 
+      documentoId: string; 
+      notas?: string 
+    }) => vincularDocumentoContacto(contactoId, documentoId, notas),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['documentos', 'contacto', variables.contactoId] 
+      });
+      toast.success("Documento vinculado correctamente");
+    },
+    onError: (error) => {
+      handleError(error, "Error al vincular documento");
+    },
+  });
+}
+
+export function useDesvincularDocumentoContacto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contactoId, documentoId }: { 
+      contactoId: string; 
+      documentoId: string 
+    }) => desvincularDocumentoContacto(contactoId, documentoId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['documentos', 'contacto', variables.contactoId] 
+      });
+      toast.success("Documento desvinculado");
+    },
+    onError: (error) => {
+      handleError(error, "Error al desvincular documento");
     },
   });
 }

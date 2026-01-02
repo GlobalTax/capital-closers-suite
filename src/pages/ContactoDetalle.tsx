@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText, GitMerge } from "lucide-react";
+import { ArrowLeft, Mail, Linkedin, Building2, Edit, Trash2, Briefcase, Phone, MessageCircle, Clock, Banknote, TrendingUp, Activity, FileText, GitMerge, Plus, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useContacto, useDeleteContacto } from "@/hooks/queries/useContactos";
 import { useContactoMandatos } from "@/hooks/queries/useContactosMandatos";
 import { useContactoInteracciones } from "@/hooks/queries/useInteracciones";
-import { useContactoDocumentos } from "@/hooks/queries/useDocumentos";
+import { useContactoDocumentos, useDesvincularDocumentoContacto } from "@/hooks/queries/useDocumentos";
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import type { Contacto, Mandato } from "@/types";
 import type { Interaccion } from "@/services/interacciones";
@@ -19,6 +19,7 @@ import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDial
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawer";
 import { MergeContactoDialog } from "@/components/contactos/MergeContactoDialog";
+import { VincularDocumentoDialog } from "@/components/contactos/VincularDocumentoDialog";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,12 +32,14 @@ export default function ContactoDetalle() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [vincularDocDialogOpen, setVincularDocDialogOpen] = useState(false);
 
   const { data: contacto, isLoading: loadingContacto } = useContacto(id);
   const { data: mandatos = [], isLoading: loadingMandatos } = useContactoMandatos(id);
   const { data: interacciones = [], isLoading: loadingInteracciones } = useContactoInteracciones(id);
   const { data: documentos = [], isLoading: loadingDocumentos } = useContactoDocumentos(id);
   const deleteMutation = useDeleteContacto();
+  const desvincularMutation = useDesvincularDocumentoContacto();
 
   const loading = loadingContacto || loadingMandatos || loadingInteracciones || loadingDocumentos;
 
@@ -48,6 +51,11 @@ export default function ContactoDetalle() {
     } catch (error) {
       // Error ya manejado por el hook
     }
+  };
+
+  const handleDesvincular = (documentoId: string) => {
+    if (!id || !documentoId) return;
+    desvincularMutation.mutate({ contactoId: id, documentoId });
   };
 
   const getInitials = (nombre: string, apellidos?: string) => {
@@ -321,11 +329,14 @@ export default function ContactoDetalle() {
           </Card>
         </TabsContent>
 
-        {/* Tab: Documentos */}
         <TabsContent value="documentos">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Documentos Compartidos</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setVincularDocDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Vincular documento
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -340,6 +351,15 @@ export default function ContactoDetalle() {
                         </p>
                       </div>
                     </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDesvincular(doc.documento?.id)}
+                      disabled={desvincularMutation.isPending}
+                      title="Desvincular documento"
+                    >
+                      <Unlink className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                   </div>
                 ))}
                 {documentos.length === 0 && (
@@ -377,6 +397,13 @@ export default function ContactoDetalle() {
           sourceContacto={contacto}
         />
       )}
+
+      <VincularDocumentoDialog
+        open={vincularDocDialogOpen}
+        onOpenChange={setVincularDocDialogOpen}
+        contactoId={id!}
+        documentosVinculados={documentos.map((d: any) => d.documento?.id).filter(Boolean)}
+      />
     </div>
   );
 }
