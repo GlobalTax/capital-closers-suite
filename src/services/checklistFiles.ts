@@ -25,13 +25,14 @@ export async function uploadTaskFile(
   description?: string,
   userId?: string
 ): Promise<MandatoChecklistTaskFile> {
-  // Generar nombre único para el archivo
-  const uniqueFileName = generateUniqueFileName(file.name);
-  const filePath = `${taskId}/${uniqueFileName}`;
+  // Generar nombre único para el archivo con path estandarizado
+  const timestamp = Date.now();
+  const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const filePath = `checklist-tasks/${taskId}/${timestamp}_${sanitizedFileName}`;
   
   // Subir archivo a Storage
   const { error: uploadError } = await supabase.storage
-    .from('mandato-checklist-files')
+    .from('mandato-documentos')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false
@@ -42,6 +43,7 @@ export async function uploadTaskFile(
   // Crear registro en la base de datos
   const fileCategory = getCategoryFromMimeType(file.type);
   
+  // Nota: No usamos generateUniqueFileName ya que el path ya es único con timestamp
   const { data, error } = await supabase
     .from('mandato_checklist_task_files')
     .insert({
@@ -59,7 +61,7 @@ export async function uploadTaskFile(
   
   if (error) {
     // Si falla la BD, eliminar archivo de Storage
-    await supabase.storage.from('mandato-checklist-files').remove([filePath]);
+    await supabase.storage.from('mandato-documentos').remove([filePath]);
     throw error;
   }
   
@@ -71,7 +73,7 @@ export async function uploadTaskFile(
  */
 export async function downloadTaskFile(filePath: string): Promise<string> {
   const { data, error } = await supabase.storage
-    .from('mandato-checklist-files')
+    .from('mandato-documentos')
     .createSignedUrl(filePath, 600); // URL válida por 10 minutos
   
   if (error) throw error;
@@ -86,7 +88,7 @@ export async function downloadTaskFile(filePath: string): Promise<string> {
 export async function deleteTaskFile(fileId: string, filePath: string): Promise<void> {
   // Eliminar de Storage
   const { error: storageError } = await supabase.storage
-    .from('mandato-checklist-files')
+    .from('mandato-documentos')
     .remove([filePath]);
   
   if (storageError) throw storageError;
