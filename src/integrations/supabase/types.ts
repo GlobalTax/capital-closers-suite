@@ -3113,6 +3113,7 @@ export type Database = {
           id: string
           import_log_id: string | null
           linkedin: string | null
+          merged_into_contacto_id: string | null
           nombre: string
           notas: string | null
           telefono: string | null
@@ -3131,6 +3132,7 @@ export type Database = {
           id?: string
           import_log_id?: string | null
           linkedin?: string | null
+          merged_into_contacto_id?: string | null
           nombre: string
           notas?: string | null
           telefono?: string | null
@@ -3149,6 +3151,7 @@ export type Database = {
           id?: string
           import_log_id?: string | null
           linkedin?: string | null
+          merged_into_contacto_id?: string | null
           nombre?: string
           notas?: string | null
           telefono?: string | null
@@ -3175,6 +3178,13 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contactos_merged_into_contacto_id_fkey"
+            columns: ["merged_into_contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
             referencedColumns: ["id"]
           },
           {
@@ -11084,6 +11094,10 @@ export type Database = {
       }
       log_tracking_access_violation: { Args: never; Returns: undefined }
       log_valuation_access_attempt: { Args: never; Returns: undefined }
+      merge_contactos: {
+        Args: { p_source_id: string; p_target_id: string; p_user_id: string }
+        Returns: Json
+      }
       monitor_security_violations: { Args: never; Returns: undefined }
       refresh_banner_analytics: { Args: never; Returns: undefined }
       refresh_mandatos_days_in_stage: { Args: never; Returns: undefined }

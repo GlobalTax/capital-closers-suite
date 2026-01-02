@@ -81,6 +81,7 @@ export interface Contacto {
   linkedin?: string;
   notas?: string;
   avatar?: string;
+  merged_into_contacto_id?: string;
   
   created_at: string;
   updated_at: string;
