@@ -135,7 +135,7 @@ export function TimeTrackingDialog({
       if (!user) throw new Error('Usuario no autenticado');
 
       await createTimeEntry({
-        task_id: data.task_id || undefined,
+        task_id: data.task_id === '__none__' ? undefined : data.task_id || undefined,
         mandato_id: data.mandato_id,
         user_id: user.id,
         start_time: startDateTime.toISOString(),
@@ -240,7 +240,7 @@ export function TimeTrackingDialog({
                   } />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin vincular</SelectItem>
+                  <SelectItem value="__none__">Sin vincular</SelectItem>
                   {tasks.map((task) => (
                     <SelectItem key={task.id} value={task.id}>
                       [{task.fase}] {task.tarea}
