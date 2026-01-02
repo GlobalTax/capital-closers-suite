@@ -457,6 +457,27 @@ export interface OverdueTask {
   dias_vencida: number;
 }
 
+// ============================================
+// MANDATO ACTIVITY TRACKING
+// ============================================
+export type MandatoActivityType = 'interaccion' | 'tarea' | 'documento' | 'hora' | 'nota' | 'estado_cambio';
+
+export interface MandatoActivity {
+  id: string;
+  mandato_id: string;
+  activity_type: MandatoActivityType;
+  activity_description?: string;
+  entity_id?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface MandatoWithInactivity extends Mandato {
+  dias_sin_actividad: number;
+  ultima_actividad_tipo?: string;
+  ultima_actividad_desc?: string;
+}
+
 // Archivos del Checklist M&A
 export type FileCategory = "documento" | "imagen" | "hoja_calculo" | "presentacion" | "otro";
 

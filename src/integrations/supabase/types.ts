@@ -6202,6 +6202,58 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_activity: {
+        Row: {
+          activity_description: string | null
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          entity_id: string | null
+          id: string
+          mandato_id: string
+        }
+        Insert: {
+          activity_description?: string | null
+          activity_type: string
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string | null
+          id?: string
+          mandato_id: string
+        }
+        Update: {
+          activity_description?: string | null
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string | null
+          id?: string
+          mandato_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandato_alerts: {
         Row: {
           alert_type: string

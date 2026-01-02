@@ -41,6 +41,8 @@ import {
   Plus,
   Settings,
   Upload,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -239,10 +241,30 @@ export default function Mandatos() {
       ),
     },
     {
-      key: "updated_at",
-      label: "Última actualización",
+      key: "last_activity_at",
+      label: "Última actividad",
       sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString('es-ES'),
+      render: (value: string, row: Mandato) => {
+        const dateToUse = value || (row as any).created_at;
+        const daysAgo = dateToUse 
+          ? Math.floor((Date.now() - new Date(dateToUse).getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        
+        if (daysAgo === null) return <span className="text-muted-foreground">—</span>;
+        
+        const isInactive = daysAgo > 14;
+        
+        return (
+          <div className={cn(
+            "flex items-center gap-1.5 text-sm",
+            isInactive && "text-destructive font-medium"
+          )}>
+            <Clock className="w-3.5 h-3.5" />
+            <span>Hace {daysAgo}d</span>
+            {isInactive && <AlertTriangle className="w-3.5 h-3.5" />}
+          </div>
+        );
+      },
     },
     {
       key: "actions",
