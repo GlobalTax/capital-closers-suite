@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { createTimeEntry } from "@/services/timeTracking";
+import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import type { TimeEntryWorkType, MandatoChecklistTask } from "@/types";
 
 interface TimeTrackingDialogProps {
@@ -36,11 +37,6 @@ interface FormData {
   notes?: string;
 }
 
-interface Mandato {
-  id: string;
-  descripcion: string;
-  tipo: string;
-}
 
 const WORK_TYPES: TimeEntryWorkType[] = [
   'Análisis',
@@ -62,7 +58,6 @@ export function TimeTrackingDialog({
   onSuccess
 }: TimeTrackingDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [mandatos, setMandatos] = useState<Mandato[]>([]);
   const [tasks, setTasks] = useState<MandatoChecklistTask[]>(propTasks || []);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
@@ -82,31 +77,10 @@ export function TimeTrackingDialog({
   const selectedMandatoId = watch('mandato_id');
 
   useEffect(() => {
-    if (!mandatoId && open) {
-      loadMandatos();
-    }
-  }, [open, mandatoId]);
-
-  useEffect(() => {
     if (selectedMandatoId && !mandatoId) {
       loadTasksForMandato(selectedMandatoId);
     }
   }, [selectedMandatoId, mandatoId]);
-
-  const loadMandatos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('mandatos')
-        .select('id, descripcion, tipo')
-        .eq('estado', 'activo')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMandatos(data || []);
-    } catch (error) {
-      console.error('Error loading mandatos:', error);
-    }
-  };
 
   const loadTasksForMandato = async (mandatoId: string) => {
     try {
@@ -217,32 +191,14 @@ export function TimeTrackingDialog({
           {!mandatoId && (
             <div>
               <Label htmlFor="mandato_id">Mandato *</Label>
-              <Select
+              <MandatoSelect
                 value={watch('mandato_id')}
                 onValueChange={(value) => {
                   setValue('mandato_id', value);
                   setValue('task_id', ''); // Reset task when mandato changes
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un mandato" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Trabajo General M&A - Internal Mandate */}
-                  <SelectItem 
-                    key="00000000-0000-0000-0000-000000000001" 
-                    value="00000000-0000-0000-0000-000000000001"
-                    className="font-semibold border-b"
-                  >
-                    🏢 Trabajo General M&A
-                  </SelectItem>
-                  {mandatos.map((mandato) => (
-                    <SelectItem key={mandato.id} value={mandato.id}>
-                      {mandato.descripcion || `Mandato ${mandato.tipo}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                includeGeneralWork={true}
+              />
               {errors.mandato_id && (
                 <p className="text-sm text-destructive mt-1">Selecciona un mandato</p>
               )}
