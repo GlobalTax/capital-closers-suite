@@ -6,14 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   BarChart3, TrendingUp, Briefcase, Target, Clock, DollarSign, 
   CalendarCheck, AlertTriangle, Download, RefreshCw, FileText,
-  ArrowUpRight, ArrowDownRight, Activity
+  ArrowUpRight, ArrowDownRight, Activity, Trophy, XCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInactiveMandatos } from "@/hooks/useMandatoActivity";
 import { useReportData } from "@/hooks/useReportData";
+import { useWinLossMetrics } from "@/hooks/useWinLossMetrics";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
@@ -32,6 +34,7 @@ export default function Reportes() {
   const navigate = useNavigate();
   const { kpis, pipelineMetrics, timeMetrics, comparisonMetrics, alertMetrics, loading, refetch, filters, setFilters } = useReportData();
   const { inactiveMandatos, count: inactiveCount } = useInactiveMandatos(14);
+  const { data: winLossMetrics, isLoading: winLossLoading } = useWinLossMetrics();
   const [activeTab, setActiveTab] = useState("pipeline");
 
   const handleExportPDF = async () => {
@@ -118,6 +121,7 @@ export default function Reportes() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+            <TabsTrigger value="winloss">Win/Loss</TabsTrigger>
             <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
             <TabsTrigger value="comparacion">Compra vs Venta</TabsTrigger>
             <TabsTrigger value="alertas">Alertas</TabsTrigger>
@@ -154,6 +158,144 @@ export default function Reportes() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Win/Loss Tab */}
+          <TabsContent value="winloss" className="space-y-4">
+            {winLossLoading ? (
+              <div className="grid grid-cols-4 gap-4">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="h-28" />)}
+              </div>
+            ) : winLossMetrics ? (
+              <>
+                {/* Win/Loss KPI Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Win Rate</CardTitle>
+                      <Trophy className="w-5 h-5 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{winLossMetrics.winRate}%</div>
+                      <p className="text-xs text-muted-foreground">De {winLossMetrics.totalClosed} cerrados</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Ganados</CardTitle>
+                      <Trophy className="w-5 h-5 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{winLossMetrics.wonCount}</div>
+                      <p className="text-xs text-muted-foreground">€{(winLossMetrics.totalWonValue/1000000).toFixed(1)}M total</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Perdidos</CardTitle>
+                      <XCircle className="w-5 h-5 text-destructive" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-destructive">{winLossMetrics.lostCount}</div>
+                      <p className="text-xs text-muted-foreground">{winLossMetrics.lossesByReason.length} razones distintas</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Cancelados</CardTitle>
+                      <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-orange-600">{winLossMetrics.cancelledCount}</div>
+                      <p className="text-xs text-muted-foreground">Mandatos cancelados</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Losses by Reason Chart */}
+                  <Card>
+                    <CardHeader><CardTitle>Pérdidas por Razón</CardTitle></CardHeader>
+                    <CardContent className="h-72">
+                      {winLossMetrics.lossesByReason.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={winLossMetrics.lossesByReason} layout="vertical">
+                            <XAxis type="number" />
+                            <YAxis type="category" dataKey="label" width={180} tick={{ fontSize: 12 }} />
+                            <Tooltip formatter={(v: number) => [`${v} deals`, 'Cantidad']} />
+                            <Bar dataKey="count" fill="#ef4444" radius={4} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          Sin datos de pérdidas registradas
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Losses by Stage Chart */}
+                  <Card>
+                    <CardHeader><CardTitle>Pérdidas por Etapa del Pipeline</CardTitle></CardHeader>
+                    <CardContent className="h-72">
+                      {winLossMetrics.lossesByStage.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={winLossMetrics.lossesByStage}>
+                            <XAxis dataKey="stage_label" />
+                            <YAxis />
+                            <Tooltip formatter={(v: number) => [`${v} deals`, 'Perdidos']} />
+                            <Bar dataKey="count" fill="#f59e0b" radius={4} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          Sin datos de pérdidas por etapa
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Win Rate by Type Table */}
+                <Card>
+                  <CardHeader><CardTitle>Win Rate por Tipo de Mandato</CardTitle></CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead className="text-right">Ganados</TableHead>
+                          <TableHead className="text-right">Perdidos</TableHead>
+                          <TableHead className="text-right">Cancelados</TableHead>
+                          <TableHead className="text-right">Win Rate</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {winLossMetrics.byType.map((row) => (
+                          <TableRow key={row.tipo}>
+                            <TableCell className="font-medium capitalize">{row.tipo}</TableCell>
+                            <TableCell className="text-right text-green-600">{row.won}</TableCell>
+                            <TableCell className="text-right text-destructive">{row.lost}</TableCell>
+                            <TableCell className="text-right text-orange-600">{row.cancelled}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant={row.winRate >= 50 ? "default" : "secondary"}>
+                                {row.winRate}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No hay datos de Win/Loss disponibles
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="tiempo" className="space-y-4">

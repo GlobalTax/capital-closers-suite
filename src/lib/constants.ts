@@ -48,3 +48,19 @@ export const PIPELINE_STAGE_LABELS: Record<string, string> = {
   negociacion: 'Negociación',
   cierre: 'Cierre',
 };
+
+// Mandato Outcomes (Win/Loss)
+export const MANDATO_OUTCOMES = ['open', 'won', 'lost', 'cancelled'] as const;
+
+// Loss Reasons (Top 8 + Otro)
+export const LOSS_REASON_OPTIONS = [
+  { value: 'precio', label: 'Precio/Valoración no aceptada' },
+  { value: 'competidor', label: 'Perdido ante competidor' },
+  { value: 'timing', label: 'Timing inadecuado' },
+  { value: 'fit_estrategico', label: 'No encaja estratégicamente' },
+  { value: 'due_diligence', label: 'Problemas en Due Diligence' },
+  { value: 'financiacion', label: 'No obtuvo financiación' },
+  { value: 'cambio_prioridades', label: 'Cliente cambió prioridades' },
+  { value: 'relacion_cliente', label: 'Problema en relación' },
+  { value: 'otro', label: 'Otra razón' },
+] as const;
