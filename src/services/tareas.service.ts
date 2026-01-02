@@ -19,9 +19,27 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       fecha_vencimiento: raw.fecha_vencimiento || undefined,
       asignado_a: raw.asignado_a || undefined,
       mandato_id: raw.mandato_id || undefined,
+      order_index: raw.order_index ?? 0,
       created_at: raw.created_at || new Date().toISOString(),
       updated_at: raw.updated_at || new Date().toISOString(),
     } as Tarea;
+  }
+
+  async getAll(): Promise<Tarea[]> {
+    const { data, error } = await supabase
+      .from('tareas')
+      .select('*')
+      .order('order_index', { ascending: true })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new DatabaseError('Error obteniendo tareas', {
+        table: 'tareas',
+        code: error.code,
+      });
+    }
+
+    return this.transformMany(data || []);
   }
 
   async getByMandato(mandatoId: string): Promise<Tarea[]> {
@@ -29,6 +47,7 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .from('tareas')
       .select('*')
       .eq('mandato_id', mandatoId)
+      .order('order_index', { ascending: true })
       .order('fecha_vencimiento', { ascending: true });
 
     if (error) {
@@ -46,6 +65,7 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .from('tareas')
       .select('*')
       .eq('asignado_a', userId)
+      .order('order_index', { ascending: true })
       .order('fecha_vencimiento', { ascending: true });
 
     if (error) {
@@ -63,6 +83,7 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .from('tareas')
       .select('*')
       .in('estado', ['pendiente', 'en_progreso'])
+      .order('order_index', { ascending: true })
       .order('fecha_vencimiento', { ascending: true });
 
     if (error) {

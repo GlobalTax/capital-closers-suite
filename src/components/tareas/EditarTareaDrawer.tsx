@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,35 +30,46 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar as CalendarIcon, Loader2, Trash2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { createTarea } from "@/services/tareas.service";
+import { updateTarea, deleteTarea } from "@/services/tareas.service";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { TareaEstado, TareaPrioridad } from "@/types";
+import type { Tarea, TareaEstado, TareaPrioridad } from "@/types";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres"),
   descripcion: z.string().optional(),
-  mandatoId: z.string().optional(),
   asignado_a: z.string().optional(),
   fechaVencimiento: z.date().optional().nullable(),
   estado: z.enum(["pendiente", "en_progreso", "completada"] as const),
   prioridad: z.enum(["alta", "media", "baja", "urgente"] as const),
-  etiquetas: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface NuevaTareaDrawerProps {
+interface EditarTareaDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tarea: Tarea | null;
   onSuccess: () => void;
 }
 
-export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDrawerProps) {
+export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: EditarTareaDrawerProps) {
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch active users from admin_users
   const { data: usuarios = [], isLoading: loadingUsuarios } = useQuery({
@@ -81,40 +92,70 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
     defaultValues: {
       titulo: "",
       descripcion: "",
-      mandatoId: "",
       asignado_a: "",
       fechaVencimiento: null,
       estado: "pendiente",
       prioridad: "media",
-      etiquetas: "",
     },
   });
 
+  // Update form when tarea changes
+  useEffect(() => {
+    if (tarea) {
+      form.reset({
+        titulo: tarea.titulo,
+        descripcion: tarea.descripcion || "",
+        asignado_a: tarea.asignado_a || "",
+        fechaVencimiento: tarea.fecha_vencimiento 
+          ? parseISO(tarea.fecha_vencimiento) 
+          : null,
+        estado: tarea.estado as "pendiente" | "en_progreso" | "completada",
+        prioridad: tarea.prioridad as "alta" | "media" | "baja" | "urgente",
+      });
+    }
+  }, [tarea, form]);
+
   const onSubmit = async (values: FormValues) => {
+    if (!tarea) return;
+    
     setLoading(true);
     try {
-      await createTarea({
+      await updateTarea(tarea.id, {
         titulo: values.titulo,
-        descripcion: values.descripcion,
-        mandato_id: values.mandatoId || null,
+        descripcion: values.descripcion || null,
         asignado_a: values.asignado_a || null,
         fecha_vencimiento: values.fechaVencimiento 
           ? format(values.fechaVencimiento, "yyyy-MM-dd") 
           : null,
         estado: values.estado as TareaEstado,
         prioridad: values.prioridad as TareaPrioridad,
-        order_index: 0,
       });
 
-      toast.success("Tarea creada exitosamente");
-      form.reset();
+      toast.success("Tarea actualizada exitosamente");
       onOpenChange(false);
       onSuccess();
     } catch (error) {
-      console.error("Error creando tarea:", error);
-      toast.error("Error al crear la tarea");
+      console.error("Error actualizando tarea:", error);
+      toast.error("Error al actualizar la tarea");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!tarea) return;
+    
+    setDeleting(true);
+    try {
+      await deleteTarea(tarea.id);
+      toast.success("Tarea eliminada exitosamente");
+      onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      console.error("Error eliminando tarea:", error);
+      toast.error("Error al eliminar la tarea");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -123,10 +164,36 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
       <DrawerContent>
         <div className="mx-auto w-full max-w-2xl">
           <DrawerHeader>
-            <DrawerTitle>Nueva Tarea</DrawerTitle>
-            <DrawerDescription>
-              Crea una nueva tarea para el equipo
-            </DrawerDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DrawerTitle>Editar Tarea</DrawerTitle>
+                <DrawerDescription>
+                  Modifica los detalles de la tarea
+                </DrawerDescription>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar tarea?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. La tarea será eliminada permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+                      {deleting ? "Eliminando..." : "Eliminar"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </DrawerHeader>
 
           <Form {...form}>
@@ -285,23 +352,6 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="etiquetas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Etiquetas</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Separadas por comas (ej: urgente, cliente)"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="flex gap-2 justify-end">
                 <Button
                   type="button"
@@ -312,7 +362,7 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Creando..." : "Crear Tarea"}
+                  {loading ? "Guardando..." : "Guardar Cambios"}
                 </Button>
               </div>
             </form>

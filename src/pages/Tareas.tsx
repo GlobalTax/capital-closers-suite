@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
 import type { Tarea, TareaEstado } from "@/types";
-import { toast } from "sonner";
 import {
   DndContext,
   DragEndEvent,
@@ -17,22 +15,27 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  useDroppable,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { NuevaTareaDrawer } from "@/components/tareas/NuevaTareaDrawer";
+import { EditarTareaDrawer } from "@/components/tareas/EditarTareaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 interface TareaCardProps {
   tarea: Tarea;
   isDragging?: boolean;
+  onClick?: () => void;
 }
 
-function TareaCard({ tarea, isDragging = false }: TareaCardProps) {
+function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: tarea.id,
   });
@@ -53,7 +56,14 @@ function TareaCard({ tarea, isDragging = false }: TareaCardProps) {
     }
   };
 
-  const isOverdue = tarea.fecha_vencimiento && new Date(tarea.fecha_vencimiento) < new Date();
+  const isOverdue = tarea.fecha_vencimiento && 
+    new Date(tarea.fecha_vencimiento) < new Date() && 
+    tarea.estado !== "completada";
+
+  const getInitials = (id?: string) => {
+    if (!id) return "?";
+    return id.slice(0, 2).toUpperCase();
+  };
 
   return (
     <div
@@ -61,33 +71,123 @@ function TareaCard({ tarea, isDragging = false }: TareaCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`p-3 bg-card border rounded-lg cursor-move hover:shadow-md transition-shadow ${
-        isOverdue && tarea.estado !== "completada" ? "border-destructive" : ""
-      }`}
+      onClick={onClick}
+      className={cn(
+        "p-3 bg-card border rounded-lg cursor-move hover:shadow-md transition-shadow",
+        isOverdue && "border-destructive bg-destructive/5"
+      )}
     >
       <h4 className="font-medium text-sm mb-2">{tarea.titulo}</h4>
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
         {tarea.prioridad && (
           <Badge variant={getPriorityColor(tarea.prioridad)} className="text-xs">
             {tarea.prioridad}
           </Badge>
         )}
-        {tarea.fecha_vencimiento && (
+        {isOverdue && (
+          <Badge variant="destructive" className="text-xs">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Vencida
+          </Badge>
+        )}
+        {tarea.fecha_vencimiento && !isOverdue && (
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             <span>{format(new Date(tarea.fecha_vencimiento), "dd MMM", { locale: es })}</span>
           </div>
         )}
         {tarea.asignado_a && (
-          <div className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            <span>{tarea.asignado_a}</span>
-          </div>
+          <Avatar className="h-5 w-5">
+            <AvatarFallback className="text-[10px] bg-primary/10">
+              {getInitials(tarea.asignado_a)}
+            </AvatarFallback>
+          </Avatar>
         )}
       </div>
     </div>
   );
 }
+
+interface KanbanColumnProps {
+  id: TareaEstado;
+  label: string;
+  tareas: Tarea[];
+  quickAddValue: string;
+  onQuickAddChange: (value: string) => void;
+  onQuickAdd: () => void;
+  onTareaClick: (tarea: Tarea) => void;
+}
+
+function KanbanColumn({ 
+  id, 
+  label, 
+  tareas, 
+  quickAddValue, 
+  onQuickAddChange, 
+  onQuickAdd,
+  onTareaClick 
+}: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold">{label}</h3>
+        <Badge variant="secondary">{tareas.length}</Badge>
+      </div>
+
+      {/* Quick Add */}
+      <div className="mb-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder="+ Añadir tarea rápida"
+            value={quickAddValue}
+            onChange={(e) => onQuickAddChange(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") onQuickAdd();
+            }}
+            className="text-sm"
+          />
+          {quickAddValue && (
+            <Button size="sm" variant="ghost" onClick={() => onQuickAddChange("")}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <SortableContext items={tareas.map(t => t.id)} strategy={verticalListSortingStrategy}>
+        <div 
+          ref={setNodeRef}
+          className={cn(
+            "space-y-2 min-h-[200px] p-2 rounded-lg border-2 border-dashed transition-colors",
+            isOver ? "border-primary bg-primary/5" : "border-transparent"
+          )}
+        >
+          {tareas.map((tarea) => (
+            <TareaCard 
+              key={tarea.id} 
+              tarea={tarea} 
+              onClick={() => onTareaClick(tarea)}
+            />
+          ))}
+          {tareas.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              No hay tareas en esta columna
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </Card>
+  );
+}
+
+const COLUMN_CONFIG: { id: TareaEstado; label: string }[] = [
+  { id: "pendiente", label: "Pendiente" },
+  { id: "en_progreso", label: "En Progreso" },
+  { id: "completada", label: "Completada" },
+];
 
 export default function Tareas() {
   const { data: tareas = [], isLoading, refetch } = useTareas();
@@ -98,6 +198,8 @@ export default function Tareas() {
   const [filtroEstado, setFiltroEstado] = useState<TareaEstado | "">("");
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [tareaEditando, setTareaEditando] = useState<Tarea | null>(null);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("kanban");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [nuevasTareas, setNuevasTareas] = useState<{ [key: string]: string }>({
@@ -125,19 +227,65 @@ export default function Tareas() {
     if (!over) return;
 
     const tareaId = active.id as string;
-    const nuevoEstado = over.id as TareaEstado;
+    const overId = over.id as string;
 
     const tarea = tareas.find((t) => t.id === tareaId);
-    if (!tarea || tarea.estado === nuevoEstado) return;
+    if (!tarea) return;
 
-    try {
-      await updateMutation.mutateAsync({
-        id: tareaId,
-        data: { estado: nuevoEstado },
-      });
-      refetch();
-    } catch (error) {
-      console.error("Error al actualizar tarea:", error);
+    // Check if dropping on a column
+    const isColumn = COLUMN_CONFIG.some(col => col.id === overId);
+
+    if (isColumn) {
+      const nuevoEstado = overId as TareaEstado;
+      if (tarea.estado !== nuevoEstado) {
+        try {
+          await updateMutation.mutateAsync({
+            id: tareaId,
+            data: { estado: nuevoEstado, order_index: 0 },
+          });
+          refetch();
+        } catch (error) {
+          console.error("Error al mover tarea:", error);
+        }
+      }
+    } else {
+      // Dropping on another task - reorder within column
+      const targetTarea = tareas.find(t => t.id === overId);
+      if (targetTarea) {
+        const nuevoEstado = targetTarea.estado;
+        const tareasColumna = tareas
+          .filter(t => t.estado === nuevoEstado)
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        
+        const oldIndex = tareasColumna.findIndex(t => t.id === tareaId);
+        const newIndex = tareasColumna.findIndex(t => t.id === overId);
+        
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          try {
+            await updateMutation.mutateAsync({
+              id: tareaId,
+              data: { 
+                estado: nuevoEstado,
+                order_index: newIndex 
+              },
+            });
+            refetch();
+          } catch (error) {
+            console.error("Error al reordenar tarea:", error);
+          }
+        } else if (tarea.estado !== nuevoEstado) {
+          // Moving to a different column by dropping on a task
+          try {
+            await updateMutation.mutateAsync({
+              id: tareaId,
+              data: { estado: nuevoEstado, order_index: newIndex },
+            });
+            refetch();
+          } catch (error) {
+            console.error("Error al mover tarea:", error);
+          }
+        }
+      }
     }
   };
 
@@ -150,12 +298,18 @@ export default function Tareas() {
         titulo,
         estado,
         prioridad: "media",
+        order_index: 0,
       });
       setNuevasTareas((prev) => ({ ...prev, [estado]: "" }));
       refetch();
     } catch (error) {
       console.error("Error al crear tarea:", error);
     }
+  };
+
+  const handleTareaClick = (tarea: Tarea) => {
+    setTareaEditando(tarea);
+    setEditDrawerOpen(true);
   };
 
   const tareasFiltradas = tareas.filter((tarea) => {
@@ -169,9 +323,15 @@ export default function Tareas() {
   const prioridadesUnicas = Array.from(new Set(tareas.map((t) => t.prioridad).filter(Boolean)));
 
   const tareasPorEstado = {
-    pendiente: tareasFiltradas.filter((t) => t.estado === "pendiente"),
-    en_progreso: tareasFiltradas.filter((t) => t.estado === "en_progreso"),
-    completada: tareasFiltradas.filter((t) => t.estado === "completada"),
+    pendiente: tareasFiltradas
+      .filter((t) => t.estado === "pendiente")
+      .sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+    en_progreso: tareasFiltradas
+      .filter((t) => t.estado === "en_progreso")
+      .sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+    completada: tareasFiltradas
+      .filter((t) => t.estado === "completada")
+      .sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
   };
 
   const columnasTabla = [
@@ -219,10 +379,10 @@ export default function Tareas() {
     {
       key: "fecha_vencimiento",
       label: "Vencimiento",
-      render: (value: string) => {
+      render: (value: string, row: Tarea) => {
         if (!value) return "Sin fecha";
         const fecha = new Date(value);
-        const isOverdue = fecha < new Date();
+        const isOverdue = fecha < new Date() && row.estado !== "completada";
         return (
           <span className={isOverdue ? "text-destructive font-medium" : ""}>
             {format(fecha, "dd/MM/yyyy", { locale: es })}
@@ -235,7 +395,12 @@ export default function Tareas() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Tareas" description="Gestiona las tareas del equipo" />
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-semibold">Tareas</h1>
+            <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="p-4">
@@ -389,51 +554,24 @@ export default function Tareas() {
 
       {/* Vista Kanban */}
       {vistaActual === "kanban" && (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter} 
+          onDragStart={handleDragStart} 
+          onDragEnd={handleDragEnd}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(["pendiente", "en_progreso", "completada"] as TareaEstado[]).map((estado) => (
-              <SortableContext key={estado} items={tareasPorEstado[estado].map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                <Card className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold">
-                      {estado === "pendiente" ? "Pendiente" : estado === "en_progreso" ? "En Progreso" : "Completada"}
-                    </h3>
-                    <Badge variant="secondary">{tareasPorEstado[estado].length}</Badge>
-                  </div>
-
-                  {/* Quick Add */}
-                  <div className="mb-4">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="+ Añadir tarea rápida"
-                        value={nuevasTareas[estado]}
-                        onChange={(e) => setNuevasTareas((prev) => ({ ...prev, [estado]: e.target.value }))}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") handleQuickAdd(estado);
-                        }}
-                        className="text-sm"
-                      />
-                      {nuevasTareas[estado] && (
-                        <Button size="sm" variant="ghost" onClick={() => setNuevasTareas((prev) => ({ ...prev, [estado]: "" }))}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 min-h-[200px]">
-                    {tareasPorEstado[estado].map((tarea) => (
-                      <TareaCard key={tarea.id} tarea={tarea} />
-                    ))}
-                    {tareasPorEstado[estado].length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        No hay tareas en esta columna
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </SortableContext>
+            {COLUMN_CONFIG.map((col) => (
+              <KanbanColumn
+                key={col.id}
+                id={col.id}
+                label={col.label}
+                tareas={tareasPorEstado[col.id]}
+                quickAddValue={nuevasTareas[col.id]}
+                onQuickAddChange={(value) => setNuevasTareas(prev => ({ ...prev, [col.id]: value }))}
+                onQuickAdd={() => handleQuickAdd(col.id)}
+                onTareaClick={handleTareaClick}
+              />
             ))}
           </div>
 
@@ -448,6 +586,17 @@ export default function Tareas() {
         onOpenChange={setDrawerOpen}
         onSuccess={() => {
           setDrawerOpen(false);
+          refetch();
+        }}
+      />
+
+      <EditarTareaDrawer
+        open={editDrawerOpen}
+        onOpenChange={setEditDrawerOpen}
+        tarea={tareaEditando}
+        onSuccess={() => {
+          setEditDrawerOpen(false);
+          setTareaEditando(null);
           refetch();
         }}
       />
