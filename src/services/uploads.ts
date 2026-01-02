@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { documentAccessLogService } from "./documentAccessLog.service";
 
 import type { DocumentoTipo } from "@/types";
 
@@ -112,10 +113,19 @@ export const listUserFiles = async () => {
   }
 };
 
-export const downloadFile = async (storagePath: string, fileName: string) => {
+export const downloadFile = async (
+  storagePath: string, 
+  fileName: string,
+  documentId?: string
+) => {
   try {
     const signedUrl = await getSignedUrl(storagePath);
     if (!signedUrl) throw new Error("No se pudo generar URL de descarga");
+
+    // Registrar acceso de forma asíncrona
+    if (documentId) {
+      documentAccessLogService.logAccess(documentId, fileName, 'download').catch(console.error);
+    }
 
     const response = await fetch(signedUrl);
     const blob = await response.blob();

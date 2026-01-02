@@ -17,7 +17,8 @@ const TABLES = [
   "tareas",
   "documentos",
   "admin_users",
-  "mandato_checklist_tasks"
+  "mandato_checklist_tasks",
+  "document_access_logs"
 ];
 
 const ACTIONS = ["INSERT", "UPDATE", "DELETE"];

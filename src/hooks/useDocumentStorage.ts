@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { documentAccessLogService } from "@/services/documentAccessLog.service";
 
 export type DocumentoTipo = "Contrato" | "NDA" | "Due Diligence" | "Financiero" | "Legal" | "Otro";
 
@@ -143,13 +144,26 @@ export function useDocumentStorage() {
     }
   };
 
-  const getSignedUrl = async (storagePath: string): Promise<string | null> => {
+  const getSignedUrl = async (
+    storagePath: string,
+    documentInfo?: { id: string; nombre: string }
+  ): Promise<string | null> => {
     try {
       const { data, error } = await supabase.storage
         .from("mandato-documentos")
         .createSignedUrl(storagePath, 600); // 10 minutes
 
       if (error) throw error;
+
+      // Registrar acceso de forma asíncrona (no bloquea la descarga)
+      if (documentInfo?.id) {
+        documentAccessLogService.logAccess(
+          documentInfo.id,
+          documentInfo.nombre,
+          'download'
+        ).catch(console.error);
+      }
+
       return data.signedUrl;
     } catch (error) {
       console.error("Error generating signed URL:", error);
