@@ -1081,6 +1081,45 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_rates: {
+        Row: {
+          created_at: string | null
+          currency: string
+          description: string | null
+          effective_from: string
+          effective_to: string | null
+          hourly_rate: number
+          id: string
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["admin_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean | null
+          role: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_analytics: {
         Row: {
           id: string
@@ -3502,6 +3541,13 @@ export type Database = {
             foreignKeyName: "document_folders_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -3645,6 +3691,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "documentos_mandato_id_fkey"
@@ -4762,6 +4815,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "interacciones_mandato_id_fkey"
@@ -6270,6 +6330,13 @@ export type Database = {
             foreignKeyName: "mandato_activity_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -6339,6 +6406,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandato_alerts_mandato_id_fkey"
@@ -6502,6 +6576,13 @@ export type Database = {
             foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -6616,6 +6697,13 @@ export type Database = {
             foreignKeyName: "mandato_contactos_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_contactos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -6723,6 +6811,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_empresas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandato_empresas_mandato_id_fkey"
@@ -6845,6 +6940,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandato_time_entries_mandato_id_fkey"
@@ -9301,6 +9403,13 @@ export type Database = {
             foreignKeyName: "tareas_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "tareas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -10125,6 +10234,13 @@ export type Database = {
             foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
             referencedRelation: "v_mandatos_stuck"
             referencedColumns: ["id"]
           },
@@ -10172,6 +10288,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandato_alerts_mandato_id_fkey"
@@ -10233,6 +10356,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mandatos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "documentos_mandato_id_fkey"
@@ -10383,6 +10513,22 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
         ]
+      }
+      v_mandato_costs: {
+        Row: {
+          billable_cost: number | null
+          billable_hours: number | null
+          billable_percentage: number | null
+          descripcion: string | null
+          empresa_nombre: string | null
+          entries_count: number | null
+          estado: string | null
+          mandato_id: string | null
+          tipo: string | null
+          total_cost: number | null
+          total_hours: number | null
+        }
+        Relationships: []
       }
       v_mandatos_stuck: {
         Row: {

@@ -22,6 +22,7 @@ import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
+import { CostSummaryCard } from "@/components/mandatos/CostSummaryCard";
 import type { TimeEntry, TimeStats } from "@/types";
 import { handleError } from "@/lib/error-handler";
 
@@ -154,6 +155,9 @@ export default function MandatoDetalle() {
               Registrar Tiempo
             </Button>
           </div>
+
+          {/* Cost Summary Card */}
+          <CostSummaryCard mandatoId={id!} />
 
           {timeStats && <TimeTrackingStats stats={timeStats} />}
 

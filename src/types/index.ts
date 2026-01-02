@@ -559,3 +559,46 @@ export interface MandatoInfo {
   tipo: MandatoTipo;
   estado: MandatoEstado;
 }
+
+// ============================================
+// BILLING & COST TRACKING
+// ============================================
+export interface BillingRate {
+  id: string;
+  role: 'super_admin' | 'admin' | 'editor' | 'viewer';
+  hourly_rate: number;
+  currency: string;
+  effective_from: string;
+  effective_to?: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MandatoCostSummary {
+  mandatoId: string;
+  descripcion: string;
+  empresaNombre?: string;
+  tipo?: string;
+  totalHours: number;
+  billableHours: number;
+  totalCost: number;
+  billableCost: number;
+  billablePercentage: number;
+}
+
+export interface CostByWorkType {
+  workType: string;
+  hours: number;
+  cost: number;
+}
+
+export interface CostByUser {
+  userId: string;
+  userName: string;
+  role: string;
+  hours: number;
+  rate: number;
+  cost: number;
+}
