@@ -332,11 +332,23 @@ export type TimeEntryWorkType =
 
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 
+// Tipo de tarea configurable desde admin
+export interface WorkTaskType {
+  id: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TimeEntry {
   id: string;
-  task_id: string;
+  task_id?: string;
   mandato_id: string;
   user_id: string;
+  work_task_type_id?: string;
   
   start_time: string;
   end_time?: string;
@@ -367,6 +379,7 @@ export interface TimeEntry {
     fase: ChecklistFase;
   };
   mandato?: MandatoInfo;
+  work_task_type?: WorkTaskType;
 }
 
 export interface TimeStats {

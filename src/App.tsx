@@ -40,6 +40,7 @@ const GestionLeads = lazy(() => import("./pages/GestionLeads"));
 const ConfigurarDashboardTV = lazy(() => import("./pages/ConfigurarDashboardTV"));
 const SyncValuations = lazy(() => import("./pages/SyncValuations"));
 const SyncOperations = lazy(() => import("./pages/SyncOperations"));
+const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -76,6 +77,7 @@ function AppContent() {
             <Route path="/gestion-leads" element={<ProtectedRoute requiredRole="admin"><AppLayout><GestionLeads /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-valuations" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncValuations /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
+            <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -4156,6 +4156,72 @@ export type Database = {
           },
         ]
       }
+      exit_readiness_tests: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: unknown
+          name: string | null
+          page_origin: string | null
+          phone: string | null
+          readiness_level: string | null
+          recommendations: Json | null
+          referrer: string | null
+          responses: Json
+          total_score: number
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: unknown
+          name?: string | null
+          page_origin?: string | null
+          phone?: string | null
+          readiness_level?: string | null
+          recommendations?: Json | null
+          referrer?: string | null
+          responses?: Json
+          total_score?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: unknown
+          name?: string | null
+          page_origin?: string | null
+          phone?: string | null
+          readiness_level?: string | null
+          recommendations?: Json | null
+          referrer?: string | null
+          responses?: Json
+          total_score?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       fase0_document_templates: {
         Row: {
           available_variables: Json | null
@@ -6896,6 +6962,7 @@ export type Database = {
           task_id: string
           updated_at: string | null
           user_id: string
+          work_task_type_id: string | null
           work_type: string
         }
         Insert: {
@@ -6915,6 +6982,7 @@ export type Database = {
           task_id: string
           updated_at?: string | null
           user_id: string
+          work_task_type_id?: string | null
           work_type: string
         }
         Update: {
@@ -6934,6 +7002,7 @@ export type Database = {
           task_id?: string
           updated_at?: string | null
           user_id?: string
+          work_task_type_id?: string | null
           work_type?: string
         }
         Relationships: [
@@ -6985,6 +7054,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "task_time_summary"
             referencedColumns: ["task_id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_work_task_type_id_fkey"
+            columns: ["work_task_type_id"]
+            isOneToOne: false
+            referencedRelation: "work_task_types"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10184,6 +10260,36 @@ export type Database = {
           title?: string
           updated_at?: string
           webinar_date?: string
+        }
+        Relationships: []
+      }
+      work_task_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
