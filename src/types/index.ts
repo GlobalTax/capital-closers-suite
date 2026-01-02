@@ -159,6 +159,12 @@ export interface Mandato {
   closed_at?: string;
   closed_by?: string;
   last_activity_at?: string;
+  
+  // Campos de sincronización externa
+  external_operation_id?: string;
+  external_source?: 'manual' | 'capittal_marketplace' | 'brevo';
+  external_synced_at?: string;
+  url_publica?: string;
 }
 
 // ============================================

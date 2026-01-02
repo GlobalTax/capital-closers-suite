@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.sync-leads-to-crm]
 verify_jwt = false
+
+[functions.sync-operations-to-crm]
+verify_jwt = false
