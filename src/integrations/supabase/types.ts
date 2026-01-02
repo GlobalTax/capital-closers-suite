@@ -4040,6 +4040,189 @@ export type Database = {
           },
         ]
       }
+      empresa_financial_statements: {
+        Row: {
+          cash_equivalents: number | null
+          cost_of_sales: number | null
+          created_at: string | null
+          currency: string | null
+          current_year_result: number | null
+          debt_ebitda_ratio: number | null
+          depreciation_amortization: number | null
+          ebit: number | null
+          ebitda: number | null
+          ebt: number | null
+          empresa_id: string
+          financial_assets: number | null
+          financial_result: number | null
+          gross_margin: number | null
+          id: string
+          intangible_assets: number | null
+          inventories: number | null
+          is_audited: boolean | null
+          long_term_debt: number | null
+          net_debt: number | null
+          net_income: number | null
+          notes: string | null
+          other_current_assets: number | null
+          other_current_liabilities: number | null
+          other_income: number | null
+          other_non_current_liabilities: number | null
+          other_operating_expenses: number | null
+          period_type: string | null
+          personnel_expenses: number | null
+          reserves: number | null
+          retained_earnings: number | null
+          revenue: number | null
+          share_capital: number | null
+          short_term_debt: number | null
+          source: string | null
+          source_document_id: string | null
+          tangible_assets: number | null
+          taxes: number | null
+          total_assets: number | null
+          total_current_assets: number | null
+          total_current_liabilities: number | null
+          total_equity: number | null
+          total_equity_liabilities: number | null
+          total_income: number | null
+          total_liabilities: number | null
+          total_non_current_assets: number | null
+          total_non_current_liabilities: number | null
+          total_opex: number | null
+          trade_payables: number | null
+          trade_receivables: number | null
+          updated_at: string | null
+          working_capital: number | null
+          year: number
+        }
+        Insert: {
+          cash_equivalents?: number | null
+          cost_of_sales?: number | null
+          created_at?: string | null
+          currency?: string | null
+          current_year_result?: number | null
+          debt_ebitda_ratio?: number | null
+          depreciation_amortization?: number | null
+          ebit?: number | null
+          ebitda?: number | null
+          ebt?: number | null
+          empresa_id: string
+          financial_assets?: number | null
+          financial_result?: number | null
+          gross_margin?: number | null
+          id?: string
+          intangible_assets?: number | null
+          inventories?: number | null
+          is_audited?: boolean | null
+          long_term_debt?: number | null
+          net_debt?: number | null
+          net_income?: number | null
+          notes?: string | null
+          other_current_assets?: number | null
+          other_current_liabilities?: number | null
+          other_income?: number | null
+          other_non_current_liabilities?: number | null
+          other_operating_expenses?: number | null
+          period_type?: string | null
+          personnel_expenses?: number | null
+          reserves?: number | null
+          retained_earnings?: number | null
+          revenue?: number | null
+          share_capital?: number | null
+          short_term_debt?: number | null
+          source?: string | null
+          source_document_id?: string | null
+          tangible_assets?: number | null
+          taxes?: number | null
+          total_assets?: number | null
+          total_current_assets?: number | null
+          total_current_liabilities?: number | null
+          total_equity?: number | null
+          total_equity_liabilities?: number | null
+          total_income?: number | null
+          total_liabilities?: number | null
+          total_non_current_assets?: number | null
+          total_non_current_liabilities?: number | null
+          total_opex?: number | null
+          trade_payables?: number | null
+          trade_receivables?: number | null
+          updated_at?: string | null
+          working_capital?: number | null
+          year: number
+        }
+        Update: {
+          cash_equivalents?: number | null
+          cost_of_sales?: number | null
+          created_at?: string | null
+          currency?: string | null
+          current_year_result?: number | null
+          debt_ebitda_ratio?: number | null
+          depreciation_amortization?: number | null
+          ebit?: number | null
+          ebitda?: number | null
+          ebt?: number | null
+          empresa_id?: string
+          financial_assets?: number | null
+          financial_result?: number | null
+          gross_margin?: number | null
+          id?: string
+          intangible_assets?: number | null
+          inventories?: number | null
+          is_audited?: boolean | null
+          long_term_debt?: number | null
+          net_debt?: number | null
+          net_income?: number | null
+          notes?: string | null
+          other_current_assets?: number | null
+          other_current_liabilities?: number | null
+          other_income?: number | null
+          other_non_current_liabilities?: number | null
+          other_operating_expenses?: number | null
+          period_type?: string | null
+          personnel_expenses?: number | null
+          reserves?: number | null
+          retained_earnings?: number | null
+          revenue?: number | null
+          share_capital?: number | null
+          short_term_debt?: number | null
+          source?: string | null
+          source_document_id?: string | null
+          tangible_assets?: number | null
+          taxes?: number | null
+          total_assets?: number | null
+          total_current_assets?: number | null
+          total_current_liabilities?: number | null
+          total_equity?: number | null
+          total_equity_liabilities?: number | null
+          total_income?: number | null
+          total_liabilities?: number | null
+          total_non_current_assets?: number | null
+          total_non_current_liabilities?: number | null
+          total_opex?: number | null
+          trade_payables?: number | null
+          trade_receivables?: number | null
+          updated_at?: string | null
+          working_capital?: number | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_financial_statements_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_financial_statements_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           brevo_id: string | null
