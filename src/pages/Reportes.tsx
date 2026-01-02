@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { SyncFromBrevoCard } from "@/components/sync/SyncFromBrevoCard";
 import { SyncLeadsCard } from "@/components/sync/SyncLeadsCard";
+import { SyncDealsFromBrevoCard } from "@/components/sync/SyncDealsFromBrevoCard";
 import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#ec4899', '#84cc16'];
@@ -542,9 +543,10 @@ export default function Reportes() {
           </TabsContent>
 
           <TabsContent value="integraciones" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <SyncLeadsCard />
               <SyncFromBrevoCard />
+              <SyncDealsFromBrevoCard />
             </div>
           </TabsContent>
         </Tabs>
