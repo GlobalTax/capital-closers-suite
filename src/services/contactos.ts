@@ -115,6 +115,15 @@ export const createContacto = async (contacto: Partial<Contacto>) => {
       .single();
     
     if (error) {
+      // Detectar error de email duplicado
+      if (error.code === '23505' && error.message?.includes('email')) {
+        throw new DatabaseError('Ya existe un contacto con este email', {
+          supabaseError: error,
+          table: 'contactos',
+          isDuplicate: true,
+          duplicateField: 'email',
+        });
+      }
       throw new DatabaseError('Error al crear contacto', {
         supabaseError: error,
         table: 'contactos',
@@ -156,6 +165,16 @@ export const updateContacto = async (id: string, contacto: Partial<Contacto>) =>
       .single();
     
     if (error) {
+      // Detectar error de email duplicado
+      if (error.code === '23505' && error.message?.includes('email')) {
+        throw new DatabaseError('Ya existe otro contacto con este email', {
+          supabaseError: error,
+          table: 'contactos',
+          id,
+          isDuplicate: true,
+          duplicateField: 'email',
+        });
+      }
       throw new DatabaseError('Error al actualizar contacto', {
         supabaseError: error,
         table: 'contactos',
