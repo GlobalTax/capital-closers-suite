@@ -31,7 +31,7 @@ export default function Contactos() {
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
-  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
+  const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number; ultimaFecha: string | null }>>({});
 
   const contactos = result?.data || [];
 
@@ -47,33 +47,65 @@ export default function Contactos() {
     if (contactos.length === 0) return;
     
     try {
-      // Cargar contadores de interacciones del último mes
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       const contactoIds = contactos.map(c => c.id);
       
-      const { data: interacciones, error } = await supabase
+      // Query 1: Contadores del último mes
+      const { data: interaccionesRecientes, error: err1 } = await supabase
         .from('interacciones')
         .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
         .in('contacto_id', contactoIds)
         .gte('fecha', thirtyDaysAgo);
       
-      if (error) throw error;
+      // Query 2: Última interacción por contacto (todas las fechas)
+      const { data: ultimasInteracciones, error: err2 } = await supabase
+        .from('interacciones')
+        .select('contacto_id, fecha')
+        .in('contacto_id', contactoIds)
+        .order('fecha', { ascending: false });
       
-      if (interacciones) {
-        const counts: Record<string, { total: number; pendientes: number }> = {};
-        interacciones.forEach((int) => {
-          if (int.contacto_id) {
-            if (!counts[int.contacto_id]) {
-              counts[int.contacto_id] = { total: 0, pendientes: 0 };
-            }
-            counts[int.contacto_id].total++;
-            if (int.siguiente_accion && int.fecha_siguiente_accion) {
-              counts[int.contacto_id].pendientes++;
-            }
+      if (err1) throw err1;
+      if (err2) throw err2;
+      
+      // Obtener última fecha por contacto
+      const ultimasPorContacto: Record<string, string> = {};
+      ultimasInteracciones?.forEach((int) => {
+        if (int.contacto_id && !ultimasPorContacto[int.contacto_id]) {
+          ultimasPorContacto[int.contacto_id] = int.fecha;
+        }
+      });
+      
+      // Procesar contadores de interacciones recientes
+      const counts: Record<string, { total: number; pendientes: number; ultimaFecha: string | null }> = {};
+      
+      interaccionesRecientes?.forEach((int) => {
+        if (int.contacto_id) {
+          if (!counts[int.contacto_id]) {
+            counts[int.contacto_id] = { 
+              total: 0, 
+              pendientes: 0, 
+              ultimaFecha: ultimasPorContacto[int.contacto_id] || null 
+            };
           }
-        });
-        setInteraccionesCounts(counts);
-      }
+          counts[int.contacto_id].total++;
+          if (int.siguiente_accion && int.fecha_siguiente_accion) {
+            counts[int.contacto_id].pendientes++;
+          }
+        }
+      });
+      
+      // Añadir contactos con interacciones antiguas (no en últimos 30 días)
+      Object.keys(ultimasPorContacto).forEach(contactoId => {
+        if (!counts[contactoId]) {
+          counts[contactoId] = { 
+            total: 0, 
+            pendientes: 0, 
+            ultimaFecha: ultimasPorContacto[contactoId] 
+          };
+        }
+      });
+      
+      setInteraccionesCounts(counts);
     } catch (error) {
       handleError(error, 'Carga de interacciones');
     }
@@ -139,23 +171,31 @@ export default function Contactos() {
       render: (value: string) => value || <span className="text-muted-foreground">-</span>
     },
     {
-      key: "updated_at",
+      key: "ultima_actividad",
       label: "Última Actividad",
-      sortable: true,
+      sortable: false,
       render: (_value: string, row: Contacto) => {
-        if (!row.updated_at) return <span className="text-muted-foreground">-</span>;
-        
-        const isRecent = isAfter(new Date(row.updated_at), subDays(new Date(), 7));
         const interaccionesData = interaccionesCounts[row.id];
+        const ultimaFecha = interaccionesData?.ultimaFecha;
+        
+        // Si no hay interacciones, mostrar "Sin actividad"
+        if (!ultimaFecha) {
+          return <span className="text-muted-foreground text-sm">Sin actividad</span>;
+        }
+        
+        const fechaInteraccion = new Date(ultimaFecha);
+        const isRecent = isAfter(fechaInteraccion, subDays(new Date(), 7));
         
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-sm">
-                {format(new Date(row.updated_at), "d MMM yyyy", { locale: es })}
+                {format(fechaInteraccion, "d MMM yyyy", { locale: es })}
               </span>
               {isRecent && (
-                <Badge variant="secondary" className="text-xs">Reciente</Badge>
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  Reciente
+                </Badge>
               )}
             </div>
             {interaccionesData && interaccionesData.total > 0 && (
