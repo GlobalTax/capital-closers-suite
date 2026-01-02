@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import { addDays, subDays, subMonths, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 
 interface ReportFilters {
   periodo: 'mes' | 'trimestre' | 'semestre' | 'año' | 'custom';
@@ -57,6 +58,14 @@ interface ComparisonMetrics {
   bySector: { sector: string; compra: number; venta: number }[];
 }
 
+interface UpcomingClosing {
+  id: string;
+  nombre: string;
+  expected_close_date: string;
+  valor?: number;
+  daysUntilClose: number;
+}
+
 interface AlertMetrics {
   stuckDeals: {
     id: string;
@@ -66,7 +75,7 @@ interface AlertMetrics {
     valor?: number;
   }[];
   overdueChecklists: any[];
-  upcomingClosings: any[];
+  upcomingClosings: UpcomingClosing[];
   criticalAlerts: number;
   warningAlerts: number;
 }
@@ -80,6 +89,23 @@ function formatCurrency(value: number): string {
   if (value >= 1000000) return `€${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `€${(value / 1000).toFixed(0)}K`;
   return `€${value}`;
+}
+
+function getDateRangeFromPeriod(periodo: ReportFilters['periodo']): { start: Date; end: Date } {
+  const now = new Date();
+  
+  switch (periodo) {
+    case 'mes':
+      return { start: startOfMonth(now), end: endOfMonth(now) };
+    case 'trimestre':
+      return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case 'semestre':
+      return { start: subMonths(startOfMonth(now), 5), end: endOfMonth(now) };
+    case 'año':
+      return { start: startOfYear(now), end: endOfYear(now) };
+    default:
+      return { start: subMonths(now, 3), end: now };
+  }
 }
 
 export function useReportData() {
@@ -97,10 +123,19 @@ export function useReportData() {
     setError(null);
 
     try {
-      // Fetch mandatos
-      const { data: mandatosRaw } = await supabase
+      // Calcular rango de fechas basado en filtros
+      const dateRange = filters.periodo === 'custom' && filters.fechaInicio && filters.fechaFin
+        ? { start: filters.fechaInicio, end: filters.fechaFin }
+        : getDateRangeFromPeriod(filters.periodo);
+
+      // Fetch mandatos con filtro de fecha
+      let mandatosQuery = supabase
         .from('mandatos')
-        .select('id, tipo, estado, valor, probability, weighted_value, days_in_stage, pipeline_stage, sectores_interes, fecha_inicio, fecha_cierre');
+        .select('id, tipo, estado, valor, probability, weighted_value, days_in_stage, pipeline_stage, sectores_interes, fecha_inicio, fecha_cierre, expected_close_date, descripcion, created_at')
+        .gte('created_at', dateRange.start.toISOString())
+        .lte('created_at', dateRange.end.toISOString());
+
+      const { data: mandatosRaw } = await mandatosQuery;
 
       let mandatos: any[] = mandatosRaw || [];
       if (filters.tipoMandato !== 'todos') {
@@ -114,10 +149,12 @@ export function useReportData() {
       const weightedValue = activos.reduce((sum: number, m: any) => sum + (m.weighted_value || 0), 0);
       const conversionRate = mandatos.length ? Math.round((cerrados.length / mandatos.length) * 100) : 0;
 
-      // Time data
+      // Time data con filtro de fecha
       const { data: timeData } = await supabase
         .from('mandato_time_entries')
-        .select('duration_minutes, is_billable, work_type, user_id, mandato_id, start_time');
+        .select('duration_minutes, is_billable, work_type, user_id, mandato_id, start_time')
+        .gte('start_time', dateRange.start.toISOString())
+        .lte('start_time', dateRange.end.toISOString());
 
       const entries: any[] = timeData || [];
       const totalMinutes = entries.reduce((sum: number, e: any) => sum + (e.duration_minutes || 0), 0);
@@ -237,7 +274,7 @@ export function useReportData() {
         bySector: Array.from(sectorMap.entries()).map(([sector, data]) => ({ sector, ...data })).sort((a, b) => (b.compra + b.venta) - (a.compra + a.venta)).slice(0, 8),
       });
 
-      // Alert Metrics
+      // Alert Metrics - Deals estancados
       const { data: stuckMandatos } = await supabase
         .from('mandatos')
         .select('id, descripcion, pipeline_stage, days_in_stage, valor')
@@ -247,12 +284,58 @@ export function useReportData() {
         .order('days_in_stage', { ascending: false })
         .limit(10);
 
+      // Próximos cierres - mandatos con expected_close_date en los próximos 30 días
+      const today = new Date();
+      const in30Days = addDays(today, 30);
+      
+      const { data: upcomingData } = await supabase
+        .from('mandatos')
+        .select('id, descripcion, expected_close_date, valor')
+        .not('expected_close_date', 'is', null)
+        .gte('expected_close_date', today.toISOString().split('T')[0])
+        .lte('expected_close_date', in30Days.toISOString().split('T')[0])
+        .neq('estado', 'cerrado')
+        .neq('estado', 'cancelado')
+        .order('expected_close_date', { ascending: true })
+        .limit(10);
+
+      const upcomingClosings: UpcomingClosing[] = (upcomingData || []).map((m: any) => {
+        const closeDate = new Date(m.expected_close_date);
+        const daysUntilClose = Math.ceil((closeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+          id: m.id,
+          nombre: m.descripcion || 'Sin nombre',
+          expected_close_date: m.expected_close_date,
+          valor: m.valor,
+          daysUntilClose,
+        };
+      });
+
+      // Tareas vencidas del checklist
+      const { data: overdueTasks } = await supabase
+        .from('mandato_checklist_tasks')
+        .select('id, tarea, fecha_limite, mandato_id')
+        .eq('completada', false)
+        .lt('fecha_limite', today.toISOString().split('T')[0])
+        .limit(20);
+
+      const criticalAlerts = (stuckMandatos?.length || 0) + (overdueTasks?.filter((t: any) => {
+        const daysOverdue = Math.ceil((today.getTime() - new Date(t.fecha_limite).getTime()) / (1000 * 60 * 60 * 24));
+        return daysOverdue > 7;
+      }).length || 0);
+
+      const warningAlerts = upcomingClosings.filter(c => c.daysUntilClose <= 7).length + 
+        (overdueTasks?.filter((t: any) => {
+          const daysOverdue = Math.ceil((today.getTime() - new Date(t.fecha_limite).getTime()) / (1000 * 60 * 60 * 24));
+          return daysOverdue <= 7 && daysOverdue > 0;
+        }).length || 0);
+
       setAlertMetrics({
         stuckDeals: (stuckMandatos || []).map((m: any) => ({ id: m.id, nombre: m.descripcion || 'Sin nombre', stage: m.pipeline_stage || 'prospeccion', daysInStage: m.days_in_stage || 0, valor: m.valor })),
-        overdueChecklists: [],
-        upcomingClosings: [],
-        criticalAlerts: 0,
-        warningAlerts: 0,
+        overdueChecklists: overdueTasks || [],
+        upcomingClosings,
+        criticalAlerts,
+        warningAlerts,
       });
 
     } catch (err) {

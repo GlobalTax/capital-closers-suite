@@ -244,7 +244,7 @@ export default function Reportes() {
                       {alertMetrics.upcomingClosings.slice(0,5).map(d => (
                         <div key={d.id} className="flex justify-between items-center p-2 bg-muted rounded">
                           <span className="truncate">{d.nombre}</span>
-                          <Badge variant="outline">{d.dias_restantes} días</Badge>
+                          <Badge variant="outline">{d.daysUntilClose} días</Badge>
                         </div>
                       ))}
                     </div>
