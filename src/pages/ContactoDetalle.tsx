@@ -20,6 +20,7 @@ import { EditarContactoDrawer } from "@/components/contactos/EditarContactoDrawe
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
 
 export default function ContactoDetalle() {
   const { id } = useParams();
@@ -123,9 +124,24 @@ export default function ContactoDetalle() {
                       <Phone className="h-4 w-4 mr-2" />
                       Llamar
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => window.open(`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`)}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        const waData = formatPhoneForWhatsApp(contacto.telefono!);
+                        if (waData) {
+                          window.open(`https://wa.me/${waData.number}`, '_blank');
+                        }
+                      }}
+                      title={formatPhoneForWhatsApp(contacto.telefono!)?.hasCountryCode 
+                        ? "WhatsApp" 
+                        : "WhatsApp (verificar prefijo país)"}
+                    >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       WhatsApp
+                      {!formatPhoneForWhatsApp(contacto.telefono!)?.hasCountryCode && (
+                        <span className="ml-1 text-yellow-500">⚠</span>
+                      )}
                     </Button>
                   </>
                 )}

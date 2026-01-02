@@ -66,3 +66,57 @@ export function validateMultiple<T extends Record<string, any>>(
 
   return { success: true, data: validatedData as T };
 }
+
+/**
+ * Normaliza email: trim + lowercase
+ */
+export function normalizeEmail(email: string): string {
+  if (!email) return '';
+  return email.trim().toLowerCase();
+}
+
+/**
+ * Normaliza teléfono para almacenamiento:
+ * - Mantiene solo dígitos y + inicial
+ * - Resultado: "+34600123456" o "600123456"
+ */
+export function normalizePhone(phone: string): string {
+  if (!phone) return '';
+  
+  const trimmed = phone.trim();
+  if (!trimmed) return '';
+  
+  // Extraer si empieza con +
+  const hasPlus = trimmed.startsWith('+');
+  
+  // Mantener solo dígitos
+  const digits = trimmed.replace(/\D/g, '');
+  
+  if (!digits) return '';
+  
+  return hasPlus ? `+${digits}` : digits;
+}
+
+/**
+ * Formatea teléfono para WhatsApp API
+ * - Si ya tiene prefijo país (ej: +34), lo usa
+ * - Si no tiene prefijo, devuelve los dígitos (WhatsApp intentará inferir)
+ * - Devuelve null si el formato es inválido
+ */
+export function formatPhoneForWhatsApp(phone: string): { number: string; hasCountryCode: boolean } | null {
+  if (!phone) return null;
+  
+  const normalized = normalizePhone(phone);
+  if (!normalized) return null;
+  
+  // Obtener solo dígitos para WhatsApp
+  const digitsOnly = normalized.replace(/\D/g, '');
+  
+  // Verificar si tiene código de país (empieza con + o tiene más de 10 dígitos)
+  const hasCountryCode = normalized.startsWith('+') || digitsOnly.length > 10;
+  
+  return {
+    number: digitsOnly,
+    hasCountryCode
+  };
+}

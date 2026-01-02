@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { DatabaseError } from "@/lib/error-handler";
 import { isValidUUID } from "@/lib/validation/regex";
+import { normalizeEmail, normalizePhone } from "@/lib/validation/validators";
 import type { PaginatedResult } from "@/types/pagination";
 import { calculatePagination, DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
@@ -97,9 +98,16 @@ export const getContactoById = async (id: string): Promise<Contacto | null> => {
 
 export const createContacto = async (contacto: Partial<Contacto>) => {
   try {
+    // Normalizar email y teléfono antes de insertar
+    const normalizedData = {
+      ...contacto,
+      ...(contacto.email && { email: normalizeEmail(contacto.email) }),
+      ...(contacto.telefono && { telefono: normalizePhone(contacto.telefono) }),
+    };
+
     const { data, error } = await supabase
       .from('contactos')
-      .insert(contacto as any)
+      .insert(normalizedData as any)
       .select(`
         *,
         empresa_principal:empresas(*)
@@ -126,9 +134,20 @@ export const updateContacto = async (id: string, contacto: Partial<Contacto>) =>
   }
   
   try {
+    // Normalizar email y teléfono antes de actualizar
+    const normalizedData = {
+      ...contacto,
+      ...(contacto.email !== undefined && { 
+        email: contacto.email ? normalizeEmail(contacto.email) : null 
+      }),
+      ...(contacto.telefono !== undefined && { 
+        telefono: contacto.telefono ? normalizePhone(contacto.telefono) : null 
+      }),
+    };
+
     const { data, error } = await supabase
       .from('contactos')
-      .update(contacto)
+      .update(normalizedData)
       .eq('id', id)
       .select(`
         *,
