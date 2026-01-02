@@ -7,6 +7,7 @@ import { Toolbar } from "@/components/shared/Toolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
 import { MandatoCard } from "@/components/mandatos/MandatoCard";
+import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -370,6 +371,8 @@ export default function Mandatos() {
           </Button>
         </div>
       </div>
+
+      <AgingAlertsBanner variant="expanded" maxItems={5} />
 
       <Toolbar
         filtros={

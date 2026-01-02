@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { SyncFromBrevoCard } from "@/components/sync/SyncFromBrevoCard";
 import { SyncLeadsCard } from "@/components/sync/SyncLeadsCard";
+import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -106,6 +107,8 @@ export default function Reportes() {
             );
           })}
         </div>
+
+        <AgingAlertsBanner variant="compact" showDismiss={false} />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
