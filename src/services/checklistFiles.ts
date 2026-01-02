@@ -72,7 +72,7 @@ export async function uploadTaskFile(
 export async function downloadTaskFile(filePath: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from('mandato-checklist-files')
-    .createSignedUrl(filePath, 3600); // URL válida por 1 hora
+    .createSignedUrl(filePath, 600); // URL válida por 10 minutos
   
   if (error) throw error;
   if (!data?.signedUrl) throw new Error('No se pudo generar la URL de descarga');
@@ -98,15 +98,4 @@ export async function deleteTaskFile(fileId: string, filePath: string): Promise<
     .eq('id', fileId);
   
   if (dbError) throw dbError;
-}
-
-/**
- * Obtiene la URL pública del archivo (si el bucket fuera público)
- */
-export function getFileUrl(filePath: string): string {
-  const { data } = supabase.storage
-    .from('mandato-checklist-files')
-    .getPublicUrl(filePath);
-  
-  return data.publicUrl;
 }
