@@ -84,7 +84,7 @@ function AppContent() {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       <TooltipProvider>
         <ThemeProvider>
           <Toaster />
