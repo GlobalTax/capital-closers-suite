@@ -19,15 +19,14 @@ export const uploadFile = async (
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuario no autenticado");
 
-    // Generate unique file path
+    // Generate unique file path with sanitized filename
     const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${timestamp}-${file.name}`;
-    const storagePath = `${user.id}/${fileName}`;
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${user.id}/uploads/${timestamp}_${sanitizedFileName}`;
 
     // Upload to storage with progress tracking
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('uploads')
+      .from('mandato-documentos')
       .upload(storagePath, file, {
         cacheControl: '3600',
         upsert: false,
@@ -63,7 +62,7 @@ export const uploadFile = async (
 export const getSignedUrl = async (storagePath: string, expiresIn = 600) => {
   try {
     const { data, error } = await supabase.storage
-      .from('uploads')
+      .from('mandato-documentos')
       .createSignedUrl(storagePath, expiresIn);
 
     if (error) throw error;
@@ -78,7 +77,7 @@ export const deleteFile = async (documentId: string, storagePath: string) => {
   try {
     // Delete from storage
     const { error: storageError } = await supabase.storage
-      .from('uploads')
+      .from('mandato-documentos')
       .remove([storagePath]);
 
     if (storageError) throw storageError;

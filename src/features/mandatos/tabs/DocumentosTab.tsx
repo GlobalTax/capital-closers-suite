@@ -84,12 +84,13 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     setIsUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const fileName = `${Date.now()}-${params.file.name}`;
-      const storagePath = `mandatos/${mandatoId}/${fileName}`;
+      const timestamp = Date.now();
+      const sanitizedFileName = params.file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `${user?.id}/mandatos/${mandatoId}/${timestamp}_${sanitizedFileName}`;
 
       // Subir a storage
       const { error: uploadError } = await supabase.storage
-        .from('documentos')
+        .from('mandato-documentos')
         .upload(storagePath, params.file);
 
       if (uploadError) throw uploadError;
