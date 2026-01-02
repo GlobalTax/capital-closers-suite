@@ -3,11 +3,15 @@ import { EmpresasAsociadasCard } from "@/components/mandatos/EmpresasAsociadasCa
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { AsociarEmpresaDialog } from "@/components/empresas/AsociarEmpresaDialog";
 import { InteraccionTimeline } from "@/components/targets/InteraccionTimeline";
+import { QuickAddTarget } from "@/components/targets/QuickAddTarget";
+import { EnrichFromWebDrawer } from "@/components/targets/EnrichFromWebDrawer";
+import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, MessageSquare, Building2 } from "lucide-react";
+import { Plus, Search, MessageSquare, Building2, Globe, Sparkles } from "lucide-react";
 import { fetchInteraccionesByEmpresa } from "@/services/interacciones";
+import { addEmpresaToMandato } from "@/services/mandatos";
 import type { Interaccion } from "@/services/interacciones";
 import type { Mandato } from "@/types";
 
@@ -26,6 +30,10 @@ interface EmpresaInteracciones {
 export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
   const [nuevoTargetOpen, setNuevoTargetOpen] = useState(false);
   const [asociarEmpresaOpen, setAsociarEmpresaOpen] = useState(false);
+  const [enrichFromWebOpen, setEnrichFromWebOpen] = useState(false);
+  const [aiImportOpen, setAiImportOpen] = useState(false);
+  const [enrichInitialName, setEnrichInitialName] = useState("");
+  const [enrichInitialUrl, setEnrichInitialUrl] = useState("");
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
   const [interaccionDialogOpen, setInteraccionDialogOpen] = useState(false);
   const [empresaInteracciones, setEmpresaInteracciones] = useState<EmpresaInteracciones>({});
@@ -76,11 +84,30 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
     setExpandedEmpresa(prev => prev === empresaId ? null : empresaId);
   };
 
+  const handleEnrichFromWeb = (name: string, url?: string) => {
+    setEnrichInitialName(name);
+    setEnrichInitialUrl(url || "");
+    setEnrichFromWebOpen(true);
+  };
+
+  const handleAIImportSuccess = async (data: { empresaId?: string; contactoId?: string }) => {
+    // If empresa was created, associate it as target
+    if (data.empresaId) {
+      try {
+        await addEmpresaToMandato(mandato.id, data.empresaId, "target");
+        onRefresh();
+      } catch (error) {
+        console.error("Error associating empresa:", error);
+      }
+    }
+  };
+
   const targetEmpresas = mandato.empresas?.filter(e => e.rol === 'target') || [];
   const otrasEmpresas = mandato.empresas?.filter(e => e.rol !== 'target') || [];
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Empresas Target</h3>
@@ -89,16 +116,43 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setAsociarEmpresaOpen(true)}>
-            <Search className="w-4 h-4 mr-2" />
-            Buscar Existente
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setAiImportOpen(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            IA Imagen
           </Button>
-          <Button onClick={() => setNuevoTargetOpen(true)}>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setEnrichInitialName("");
+              setEnrichInitialUrl("");
+              setEnrichFromWebOpen(true);
+            }}
+          >
+            <Globe className="w-4 h-4 mr-2" />
+            IA Web
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setAsociarEmpresaOpen(true)}>
+            <Search className="w-4 h-4 mr-2" />
+            Buscar
+          </Button>
+          <Button size="sm" onClick={() => setNuevoTargetOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Nuevo Target
+            Completo
           </Button>
         </div>
       </div>
+
+      {/* Quick Add */}
+      <QuickAddTarget
+        mandatoId={mandato.id}
+        onSuccess={onRefresh}
+        onEnrichFromWeb={handleEnrichFromWeb}
+      />
 
       {/* Lista de empresas target con interacciones */}
       {targetEmpresas.length > 0 ? (
@@ -166,9 +220,9 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
             <p className="text-sm text-muted-foreground mb-4">
               No hay empresas target asociadas a este mandato
             </p>
-            <Button onClick={() => setNuevoTargetOpen(true)} variant="outline" size="sm">
-              Añadir primer target
-            </Button>
+            <p className="text-xs text-muted-foreground mb-4">
+              Usa el Quick Add arriba para añadir rápidamente, o los botones para más opciones
+            </p>
           </CardContent>
         </Card>
       )}
@@ -186,6 +240,7 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
         </div>
       )}
 
+      {/* Drawers and Dialogs */}
       <NuevoTargetDrawer
         open={nuevoTargetOpen}
         onOpenChange={setNuevoTargetOpen}
@@ -198,6 +253,23 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
         onOpenChange={setAsociarEmpresaOpen}
         mandatoId={mandato.id}
         onSuccess={onRefresh}
+        defaultRol="target"
+      />
+
+      <EnrichFromWebDrawer
+        open={enrichFromWebOpen}
+        onOpenChange={setEnrichFromWebOpen}
+        mandatoId={mandato.id}
+        initialName={enrichInitialName}
+        initialUrl={enrichInitialUrl}
+        onSuccess={onRefresh}
+      />
+
+      <AIImportDrawer
+        open={aiImportOpen}
+        onOpenChange={setAiImportOpen}
+        mandatoId={mandato.id}
+        onSuccess={handleAIImportSuccess}
       />
     </div>
   );

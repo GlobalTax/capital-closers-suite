@@ -161,6 +161,83 @@ export const deleteEmpresa = (id: string) => empresaService.delete(id);
 export const getEmpresaMandatos = (empresaId: string) => empresaService.getMandatos(empresaId);
 export const getEmpresaContactos = (empresaId: string) => empresaService.getContactos(empresaId);
 
+/**
+ * Buscar empresas similares por nombre (para detección de duplicados)
+ */
+export async function findSimilarEmpresas(
+  nombre: string,
+  cif?: string,
+  web?: string
+): Promise<{ id: string; nombre: string; sector?: string; similarity: number }[]> {
+  if (!nombre || nombre.length < 2) return [];
+
+  const searchTerm = nombre.toLowerCase().trim();
+  
+  // Build OR conditions for search
+  let query = supabase
+    .from('empresas')
+    .select('id, nombre, sector, cif, sitio_web')
+    .or(`nombre.ilike.%${searchTerm}%`)
+    .limit(5);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error finding similar empresas:', error);
+    return [];
+  }
+
+  // Calculate similarity and sort
+  const results = (data || []).map((emp) => {
+    const empName = emp.nombre.toLowerCase();
+    let similarity = 0;
+
+    // Exact match
+    if (empName === searchTerm) {
+      similarity = 100;
+    }
+    // Starts with
+    else if (empName.startsWith(searchTerm) || searchTerm.startsWith(empName)) {
+      similarity = 90;
+    }
+    // Contains
+    else if (empName.includes(searchTerm) || searchTerm.includes(empName)) {
+      similarity = 70;
+    }
+    // Partial match
+    else {
+      const words = searchTerm.split(/\s+/);
+      const matchingWords = words.filter(w => empName.includes(w));
+      similarity = (matchingWords.length / words.length) * 60;
+    }
+
+    // Boost if CIF matches
+    if (cif && emp.cif && emp.cif.toLowerCase() === cif.toLowerCase()) {
+      similarity = 100;
+    }
+
+    // Boost if website matches
+    if (web && emp.sitio_web) {
+      const webDomain = web.replace(/https?:\/\//, '').replace(/www\./, '').split('/')[0];
+      const empDomain = emp.sitio_web.replace(/https?:\/\//, '').replace(/www\./, '').split('/')[0];
+      if (webDomain === empDomain) {
+        similarity = Math.max(similarity, 95);
+      }
+    }
+
+    return {
+      id: emp.id,
+      nombre: emp.nombre,
+      sector: emp.sector || undefined,
+      similarity: Math.round(similarity),
+    };
+  });
+
+  return results
+    .filter(r => r.similarity >= 50)
+    .sort((a, b) => b.similarity - a.similarity);
+}
+
 // Alias for backward compatibility
 export const fetchTargets = fetchEmpresas;
 export const createTarget = createEmpresa;
