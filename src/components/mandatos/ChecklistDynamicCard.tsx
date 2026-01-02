@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -13,11 +12,12 @@ import { ChecklistTaskDrawer } from "./ChecklistTaskDrawer";
 import { ChecklistPhaseCard } from "./ChecklistPhaseCard";
 import { ChecklistTimelineView } from "./ChecklistTimelineView";
 import { ChecklistTemplateSelector } from "./ChecklistTemplateSelector";
+import { WorkstreamSummary } from "./WorkstreamSummary";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
 import { updateChecklistTask, deleteChecklistTask } from "@/services/checklist.service";
 import { Plus, Download, Copy, List, GanttChart, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import type { MandatoChecklistTask, MandatoTipo } from "@/types";
+import type { MandatoChecklistTask, MandatoTipo, DDWorkstream } from "@/types";
 
 interface ChecklistDynamicCardProps {
   mandatoId: string;
@@ -43,6 +43,13 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const [activeView, setActiveView] = useState<"list" | "timeline">("list");
   const [expandedFase, setExpandedFase] = useState<string | null>(null);
+  const [selectedWorkstream, setSelectedWorkstream] = useState<DDWorkstream | 'all'>('all');
+
+  // Filter tasks by selected workstream
+  const filteredTasks = useMemo(() => {
+    if (selectedWorkstream === 'all') return tasks;
+    return tasks.filter(t => (t.workstream || 'other') === selectedWorkstream);
+  }, [tasks, selectedWorkstream]);
 
   const handleStatusChange = async (taskId: string, newStatus: MandatoChecklistTask["estado"]) => {
     try {
@@ -99,7 +106,7 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
   };
 
   const getTasksByFase = (faseName: string) => {
-    return tasks.filter(t => t.fase === faseName);
+    return filteredTasks.filter(t => t.fase === faseName);
   };
 
   const tipoLabel = mandatoTipo === 'compra' ? 'Buy-Side' : 'Sell-Side';
@@ -203,6 +210,13 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {/* Workstream Filter */}
+          <WorkstreamSummary
+            tasks={tasks}
+            selectedWorkstream={selectedWorkstream}
+            onSelectWorkstream={setSelectedWorkstream}
+          />
+
           {/* Phase Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {fases.map(fase => {

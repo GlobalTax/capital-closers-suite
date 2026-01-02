@@ -366,6 +366,21 @@ export type ChecklistResponsable = "Dirección M&A" | "Analista" | "Asesor M&A" 
 export type ChecklistSistema = "Brevo" | "CRM" | "Lovable.dev" | "DealSuite" | "ARX" | "Data Room" | "Supabase";
 export type ChecklistEstado = "⏳ Pendiente" | "🔄 En curso" | "✅ Completa";
 
+// ============================================
+// DUE DILIGENCE WORKSTREAMS
+// ============================================
+export type DDWorkstream = 'legal' | 'financial' | 'commercial' | 'ops' | 'it' | 'tax' | 'other';
+
+export const WORKSTREAM_CONFIG: Record<DDWorkstream, { label: string; color: string; icon: string }> = {
+  legal: { label: 'Legal', color: '#8B5CF6', icon: 'Scale' },
+  financial: { label: 'Finanzas', color: '#10B981', icon: 'Calculator' },
+  commercial: { label: 'Comercial', color: '#F59E0B', icon: 'TrendingUp' },
+  ops: { label: 'Operaciones', color: '#3B82F6', icon: 'Settings' },
+  it: { label: 'IT', color: '#EC4899', icon: 'Server' },
+  tax: { label: 'Fiscal', color: '#EF4444', icon: 'FileText' },
+  other: { label: 'Otro', color: '#6B7280', icon: 'Circle' },
+};
+
 export interface MandatoChecklistTask {
   id: string;
   mandato_id: string;
@@ -380,12 +395,14 @@ export interface MandatoChecklistTask {
   url_relacionada?: string;
   notas?: string;
   orden: number;
-  // Nuevos campos para checklist dinámico
+  // Campos para checklist dinámico
   tipo_operacion?: 'compra' | 'venta';
   duracion_estimada_dias?: number;
   es_critica?: boolean;
   dependencias?: string[];
   fecha_inicio?: string;
+  // Workstream de Due Diligence
+  workstream?: DDWorkstream;
   created_at: string;
   updated_at: string;
 }
