@@ -1,14 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchContactos, getContactoById, createContacto, updateContacto, deleteContacto } from "@/services/contactos";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { fetchContactos, fetchContactosPaginated, getContactoById, createContacto, updateContacto, deleteContacto } from "@/services/contactos";
 import type { Contacto } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { toast } from "@/hooks/use-toast";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export function useContactos() {
   return useQuery({
     queryKey: ['contactos'],
     queryFn: fetchContactos,
     staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+}
+
+/**
+ * Hook para obtener contactos con paginación server-side
+ */
+export function useContactosPaginated(page: number = 1, pageSize: number = DEFAULT_PAGE_SIZE) {
+  return useQuery({
+    queryKey: ['contactos', 'paginated', page, pageSize],
+    queryFn: () => fetchContactosPaginated(page, pageSize),
+    staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 

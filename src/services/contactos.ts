@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { DatabaseError } from "@/lib/error-handler";
 import { isValidUUID } from "@/lib/validation/regex";
+import type { PaginatedResult } from "@/types/pagination";
+import { calculatePagination, DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export const fetchContactos = async (): Promise<Contacto[]> => {
   try {
@@ -24,6 +26,42 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
   } catch (error) {
     if (error instanceof DatabaseError) throw error;
     throw new DatabaseError('Error inesperado al obtener contactos');
+  }
+};
+
+/**
+ * Obtener contactos con paginación server-side
+ */
+export const fetchContactosPaginated = async (
+  page: number = 1,
+  pageSize: number = DEFAULT_PAGE_SIZE
+): Promise<PaginatedResult<Contacto>> => {
+  try {
+    const offset = (page - 1) * pageSize;
+    
+    const { data, error, count } = await supabase
+      .from('contactos')
+      .select(`
+        *,
+        empresa_principal:empresas(*)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    
+    if (error) {
+      throw new DatabaseError('Error al obtener contactos paginados', {
+        supabaseError: error,
+        table: 'contactos',
+      });
+    }
+    
+    return {
+      data: (data || []) as Contacto[],
+      ...calculatePagination(count || 0, page, pageSize),
+    };
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al obtener contactos paginados');
   }
 };
 

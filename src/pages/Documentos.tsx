@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
@@ -6,18 +7,28 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Download, Trash2, FileText, File, Image as ImageIcon } from "lucide-react";
 import { UploadDialog } from "@/components/documentos/UploadDialog";
-import { useDocumentos, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
+import { useDocumentosPaginated, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
 import { downloadFile } from "@/services/uploads";
 import type { Documento } from "@/types";
 import { handleError } from "@/lib/error-handler";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export default function Documentos() {
-  const { data: documentos = [], isLoading: loading, refetch } = useDocumentos();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  
+  const { data: result, isLoading: loading, refetch } = useDocumentosPaginated(page, DEFAULT_PAGE_SIZE);
   const { mutate: deleteDoc, isPending: isDeleting } = useDeleteDocumento();
   
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; doc?: Documento }>({ open: false });
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  const documentos = result?.data || [];
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams({ page: newPage.toString() });
+  };
 
   const handleDownload = async (doc: Documento) => {
     setDownloading(doc.id);
@@ -139,7 +150,13 @@ export default function Documentos() {
         columns={columns}
         data={documentos}
         loading={loading}
-        pageSize={15}
+        pageSize={DEFAULT_PAGE_SIZE}
+        serverPagination={{
+          currentPage: page,
+          totalPages: result?.totalPages || 1,
+          totalCount: result?.count || 0,
+          onPageChange: handlePageChange,
+        }}
       />
 
       <UploadDialog

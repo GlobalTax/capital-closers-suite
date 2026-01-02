@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
@@ -7,28 +7,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
-import { useEmpresas } from "@/hooks/queries/useEmpresas";
+import { useEmpresasPaginated } from "@/hooks/queries/useEmpresas";
 import { useEmpresasRealtime } from "@/hooks/useEmpresasRealtime";
 import type { Empresa } from "@/types";
 import { Building2, Star, TrendingUp, Activity, Globe, Sparkles } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 
 export default function Empresas() {
   const navigate = useNavigate();
-  const { data: empresas = [], isLoading } = useEmpresas();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  
   const [filtroTarget, setFiltroTarget] = useState<boolean | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
   
-  // Enable realtime updates
+  const { data: result, isLoading } = useEmpresasPaginated(page, DEFAULT_PAGE_SIZE, filtroTarget);
   useEmpresasRealtime();
 
-  // KPIs calculados
+  const empresas = result?.data || [];
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams({ page: newPage.toString() });
+  };
+
+  // KPIs basados en count del servidor
   const kpis = useMemo(() => {
-    const total = empresas.length;
+    const total = result?.count || 0;
     const targets = empresas.filter(e => e.es_target).length;
     const facturacionPromedio = empresas.length > 0 
       ? empresas.reduce((sum, e) => sum + (e.facturacion || 0), 0) / empresas.length 
@@ -40,12 +49,7 @@ export default function Empresas() {
       targetPercentage: total > 0 ? ((targets / total) * 100).toFixed(0) : 0,
       facturacionPromedio,
     };
-  }, [empresas]);
-
-  const empresasFiltradas = useMemo(() => {
-    if (filtroTarget === undefined) return empresas;
-    return empresas.filter(e => e.es_target === filtroTarget);
-  }, [empresas, filtroTarget]);
+  }, [result, empresas]);
 
   const columns = [
     {
@@ -106,11 +110,6 @@ export default function Empresas() {
                   <Activity className="h-3 w-3" />
                   {interaccionesData.total} interacción{interaccionesData.total !== 1 ? 'es' : ''} (30d)
                 </Badge>
-                {interaccionesData.pendientes > 0 && (
-                  <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">
-                    ⏰ {interaccionesData.pendientes} pendiente{interaccionesData.pendientes !== 1 ? 's' : ''}
-                  </Badge>
-                )}
               </div>
             )}
           </div>
@@ -150,7 +149,7 @@ export default function Empresas() {
     },
   ];
 
-  if (isLoading) {
+  if (isLoading && !result) {
     return (
       <div>
         <PageHeader title="Empresas" description="Base de datos de empresas de interés" />
@@ -203,7 +202,7 @@ export default function Empresas() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Prioritarias</p>
                 <p className="text-2xl font-bold">{kpis.targets}</p>
-                <p className="text-xs text-muted-foreground">{kpis.targetPercentage}% del total</p>
+                <p className="text-xs text-muted-foreground">en página actual</p>
               </div>
               <Star className="h-8 w-8 text-primary" />
             </div>
@@ -239,21 +238,21 @@ export default function Empresas() {
         <Badge 
           variant={filtroTarget === undefined ? "default" : "outline"}
           className="cursor-pointer"
-          onClick={() => setFiltroTarget(undefined)}
+          onClick={() => { setFiltroTarget(undefined); setSearchParams({ page: '1' }); }}
         >
           Todas
         </Badge>
         <Badge 
           variant={filtroTarget === true ? "default" : "outline"}
           className="cursor-pointer"
-          onClick={() => setFiltroTarget(true)}
+          onClick={() => { setFiltroTarget(true); setSearchParams({ page: '1' }); }}
         >
           Prioritarias
         </Badge>
         <Badge 
           variant={filtroTarget === false ? "default" : "outline"}
           className="cursor-pointer"
-          onClick={() => setFiltroTarget(false)}
+          onClick={() => { setFiltroTarget(false); setSearchParams({ page: '1' }); }}
         >
           Otras
         </Badge>
@@ -261,10 +260,16 @@ export default function Empresas() {
 
       <DataTableEnhanced
         columns={columns}
-        data={empresasFiltradas}
+        data={empresas}
         loading={isLoading}
         onRowClick={(row) => navigate(`/empresas/${row.id}`)}
-        pageSize={10}
+        pageSize={DEFAULT_PAGE_SIZE}
+        serverPagination={{
+          currentPage: page,
+          totalPages: result?.totalPages || 1,
+          totalCount: result?.count || 0,
+          onPageChange: handlePageChange,
+        }}
       />
 
       <NuevoEmpresaDrawer
