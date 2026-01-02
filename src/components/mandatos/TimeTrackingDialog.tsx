@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { createTimeEntry } from "@/services/timeTracking";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
-import type { TimeEntryWorkType, MandatoChecklistTask } from "@/types";
+import type { MandatoChecklistTask } from "@/types";
 
 interface TimeTrackingDialogProps {
   open: boolean;
@@ -34,22 +34,9 @@ interface FormData {
   end_date: string;
   end_time: string;
   description: string;
-  work_type: TimeEntryWorkType;
   is_billable: boolean;
   notes?: string;
 }
-
-
-const WORK_TYPES: TimeEntryWorkType[] = [
-  'Análisis',
-  'Reunión',
-  'Due Diligence',
-  'Documentación',
-  'Negociación',
-  'Marketing',
-  'Research',
-  'Otro'
-];
 
 export function TimeTrackingDialog({
   open,
@@ -75,7 +62,6 @@ export function TimeTrackingDialog({
       start_time: format(new Date(), 'HH:mm'),
       end_date: format(new Date(), 'yyyy-MM-dd'),
       end_time: '',
-      work_type: 'Análisis',
       is_billable: true
     }
   });
@@ -155,7 +141,7 @@ export function TimeTrackingDialog({
         start_time: startDateTime.toISOString(),
         end_time: endDateTime?.toISOString(),
         description: data.description,
-        work_type: data.work_type,
+        work_type: 'Otro', // Default value for backward compatibility
         is_billable: data.is_billable,
         status: 'draft',
         notes: data.notes,
@@ -304,25 +290,6 @@ export function TimeTrackingDialog({
                 Dejar vacío si aún está en progreso
               </p>
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="work_type">Tipo de Trabajo *</Label>
-            <Select
-              value={watch('work_type')}
-              onValueChange={(value) => setValue('work_type', value as TimeEntryWorkType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WORK_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
