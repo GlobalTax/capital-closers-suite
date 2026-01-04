@@ -41,6 +41,7 @@ const ConfigurarDashboardTV = lazy(() => import("./pages/ConfigurarDashboardTV")
 const SyncValuations = lazy(() => import("./pages/SyncValuations"));
 const SyncOperations = lazy(() => import("./pages/SyncOperations"));
 const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
+const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -78,6 +79,7 @@ function AppContent() {
             <Route path="/sync-valuations" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncValuations /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
             <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
+            <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
