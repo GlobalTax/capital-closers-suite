@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,10 +139,11 @@ Rellena solo los campos que puedas identificar con certeza. Deja null los demás
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Error interno del servidor";
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Error interno del servidor" }),
+      JSON.stringify({ error: errMsg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

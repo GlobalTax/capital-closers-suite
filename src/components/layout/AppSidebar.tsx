@@ -22,6 +22,7 @@ import {
   ExternalLink,
   RefreshCw,
   CalendarDays,
+  Link2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -65,6 +66,7 @@ const superAdminItems = [
   { title: "Usuarios", url: "/usuarios", icon: UserCog },
   { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
   { title: "Sync Valoraciones", url: "/sync-valuations", icon: RefreshCw },
+  { title: "Integración Brevo", url: "/integraciones/brevo", icon: Link2 },
   { title: "Importar Datos", url: "/importar-datos", icon: Upload },
   { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
   { title: "Audit Logs", url: "/audit-logs", icon: Shield },

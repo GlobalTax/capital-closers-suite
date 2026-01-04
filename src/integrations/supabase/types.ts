@@ -1417,6 +1417,54 @@ export type Database = {
         }
         Relationships: []
       }
+      brevo_sync_queue: {
+        Row: {
+          action: string
+          attempts: number | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          next_retry_at: string | null
+          payload: Json | null
+          priority: number | null
+          processed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          action: string
+          attempts?: number | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          priority?: number | null
+          processed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          action?: string
+          attempts?: number | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          priority?: number | null
+          processed_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       bulk_inquiries: {
         Row: {
           company_name: string
@@ -3105,6 +3153,7 @@ export type Database = {
           apellidos: string | null
           avatar: string | null
           brevo_id: string | null
+          brevo_last_modified_at: string | null
           brevo_synced_at: string | null
           cargo: string | null
           created_at: string | null
@@ -3124,6 +3173,7 @@ export type Database = {
           apellidos?: string | null
           avatar?: string | null
           brevo_id?: string | null
+          brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
@@ -3143,6 +3193,7 @@ export type Database = {
           apellidos?: string | null
           avatar?: string | null
           brevo_id?: string | null
+          brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
@@ -4226,6 +4277,7 @@ export type Database = {
       empresas: {
         Row: {
           brevo_id: string | null
+          brevo_last_modified_at: string | null
           brevo_synced_at: string | null
           capital_circulante: number | null
           cif: string | null
@@ -4254,6 +4306,7 @@ export type Database = {
         }
         Insert: {
           brevo_id?: string | null
+          brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
@@ -4282,6 +4335,7 @@ export type Database = {
         }
         Update: {
           brevo_id?: string | null
+          brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
@@ -10740,6 +10794,15 @@ export type Database = {
           },
         ]
       }
+      v_brevo_sync_status: {
+        Row: {
+          entity_type: string | null
+          pending_sync: number | null
+          synced: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
       v_documentos_con_versiones: {
         Row: {
           created_at: string | null
@@ -11220,6 +11283,7 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: string
       }
+      cleanup_brevo_sync_queue: { Args: never; Returns: number }
       cleanup_old_audit_logs: { Args: never; Returns: number }
       cleanup_old_tracking_events: { Args: never; Returns: number }
       complete_password_setup: { Args: never; Returns: boolean }
@@ -11341,6 +11405,14 @@ export type Database = {
           last_login: string
           role: Database["public"]["Enums"]["admin_role"]
           user_id: string
+        }[]
+      }
+      get_brevo_queue_stats: {
+        Args: never
+        Returns: {
+          count: number
+          entity_type: string
+          status: string
         }[]
       }
       get_checklist_progress: {
@@ -11524,6 +11596,10 @@ export type Database = {
         Returns: boolean
       }
       report_metrics: { Args: { filters: Json }; Returns: Json }
+      retry_failed_brevo_sync: {
+        Args: { p_entity_type?: string }
+        Returns: number
+      }
       revoke_rh_role: {
         Args: {
           target_role: Database["public"]["Enums"]["rh_role"]
