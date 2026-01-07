@@ -13,6 +13,7 @@ export const fetchMandatos = async (): Promise<Mandato[]> => {
         contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
         empresas:mandato_empresas(*, empresa:empresas(*))
       `)
+      .or('categoria.is.null,categoria.eq.operacion_ma')
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -26,6 +27,33 @@ export const fetchMandatos = async (): Promise<Mandato[]> => {
   } catch (error) {
     if (error instanceof DatabaseError) throw error;
     throw new DatabaseError('Error inesperado al obtener mandatos');
+  }
+};
+
+export const fetchServicios = async (): Promise<Mandato[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('mandatos')
+      .select(`
+        *,
+        empresa_principal:empresas(*),
+        contactos:mandato_contactos(*, contacto:contactos(*, empresa_principal:empresas(*))),
+        empresas:mandato_empresas(*, empresa:empresas(*))
+      `)
+      .in('categoria', ['due_diligence', 'spa_legal', 'valoracion', 'asesoria'])
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      throw new DatabaseError('Error al obtener servicios', {
+        supabaseError: error,
+        table: 'mandatos',
+      });
+    }
+    
+    return (data || []) as Mandato[];
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al obtener servicios');
   }
 };
 
