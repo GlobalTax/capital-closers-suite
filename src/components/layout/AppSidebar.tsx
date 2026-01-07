@@ -23,6 +23,10 @@ import {
   RefreshCw,
   CalendarDays,
   Link2,
+  Search,
+  Scale,
+  Calculator,
+  Briefcase,
 } from "lucide-react";
 import {
   Sidebar,
@@ -42,9 +46,16 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-const mandatosItems = [
-  { title: "Mandatos Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
-  { title: "Mandatos Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
+const mandatosMAItems = [
+  { title: "Mandatos Compra", url: "/mandatos?categoria=operacion_ma&tipo=compra", icon: ShoppingCart },
+  { title: "Mandatos Venta", url: "/mandatos?categoria=operacion_ma&tipo=venta", icon: TrendingUp },
+];
+
+const serviciosItems = [
+  { title: "Due Diligence", url: "/mandatos?categoria=due_diligence", icon: Search },
+  { title: "SPA / Legal", url: "/mandatos?categoria=spa_legal", icon: Scale },
+  { title: "Valoraciones", url: "/mandatos?categoria=valoracion", icon: Calculator },
+  { title: "Asesoría", url: "/mandatos?categoria=asesoria", icon: Briefcase },
 ];
 
 const otherMenuItems = [
@@ -127,11 +138,40 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs font-medium px-3">
-            Mandatos
+            Operaciones M&A
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mandatosItems.map((item) => (
+              {mandatosMAItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }`
+                      }
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs font-medium px-3">
+            Servicios
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {serviciosItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
