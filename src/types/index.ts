@@ -4,6 +4,9 @@
 
 export type MandatoEstado = "prospecto" | "activo" | "en_negociacion" | "cerrado" | "cancelado";
 export type MandatoTipo = "compra" | "venta";
+export type MandatoCategoria = "operacion_ma" | "due_diligence" | "spa_legal" | "valoracion" | "asesoria";
+export type ServicioTipo = "buy-side" | "sell-side" | "vendor" | "independiente";
+export type EstructuraHonorarios = "fijo" | "exito" | "mixto" | "horario";
 export type TargetEstado = "pendiente" | "contactada" | "interesada" | "rechazada" | "en_dd" | "oferta" | "cerrada";
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
 export type TareaPrioridad = "alta" | "media" | "baja" | "urgente";
@@ -120,6 +123,7 @@ export interface MandatoEmpresa {
 export interface Mandato {
   id: string;
   tipo: MandatoTipo;
+  categoria?: MandatoCategoria;
   empresa_principal_id?: string;
   empresa_principal?: Empresa;
   estado: MandatoEstado;
@@ -141,6 +145,15 @@ export interface Mandato {
   tipo_comprador_buscado?: string;
   estado_negociacion?: string;
   numero_ofertas_recibidas?: number;
+  
+  // Campos para servicios (DD, SPA, Valoración, Asesoría)
+  parent_mandato_id?: string;
+  parent_mandato?: Mandato;
+  servicio_tipo?: ServicioTipo;
+  cliente_externo?: string;
+  honorarios_propuestos?: number;
+  honorarios_aceptados?: number;
+  estructura_honorarios?: EstructuraHonorarios;
   
   // Relaciones pobladas
   contactos?: MandatoContacto[];

@@ -7433,6 +7433,8 @@ export type Database = {
         Row: {
           brevo_deal_id: string | null
           brevo_synced_at: string | null
+          categoria: string
+          cliente_externo: string | null
           closed_at: string | null
           closed_by: string | null
           created_at: string | null
@@ -7442,12 +7444,15 @@ export type Database = {
           es_interno: boolean | null
           estado: string
           estado_negociacion: string | null
+          estructura_honorarios: string | null
           expected_close_date: string | null
           external_operation_id: string | null
           external_source: string | null
           external_synced_at: string | null
           fecha_cierre: string | null
           fecha_inicio: string | null
+          honorarios_aceptados: number | null
+          honorarios_propuestos: number | null
           id: string
           import_log_id: string | null
           last_activity_at: string | null
@@ -7455,6 +7460,7 @@ export type Database = {
           loss_reason: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas: number | null
           outcome: Database["public"]["Enums"]["mandato_outcome"] | null
+          parent_mandato_id: string | null
           perfil_empresa_buscada: string | null
           pipeline_stage: string | null
           prioridad: string | null
@@ -7462,6 +7468,7 @@ export type Database = {
           rango_inversion_max: number | null
           rango_inversion_min: number | null
           sectores_interes: string[] | null
+          servicio_tipo: string | null
           stage_entered_at: string | null
           timeline_objetivo: string | null
           tipo: string
@@ -7476,6 +7483,8 @@ export type Database = {
         Insert: {
           brevo_deal_id?: string | null
           brevo_synced_at?: string | null
+          categoria?: string
+          cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string | null
@@ -7485,12 +7494,15 @@ export type Database = {
           es_interno?: boolean | null
           estado?: string
           estado_negociacion?: string | null
+          estructura_honorarios?: string | null
           expected_close_date?: string | null
           external_operation_id?: string | null
           external_source?: string | null
           external_synced_at?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
+          honorarios_aceptados?: number | null
+          honorarios_propuestos?: number | null
           id?: string
           import_log_id?: string | null
           last_activity_at?: string | null
@@ -7498,6 +7510,7 @@ export type Database = {
           loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
+          parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
           prioridad?: string | null
@@ -7505,6 +7518,7 @@ export type Database = {
           rango_inversion_max?: number | null
           rango_inversion_min?: number | null
           sectores_interes?: string[] | null
+          servicio_tipo?: string | null
           stage_entered_at?: string | null
           timeline_objetivo?: string | null
           tipo?: string
@@ -7519,6 +7533,8 @@ export type Database = {
         Update: {
           brevo_deal_id?: string | null
           brevo_synced_at?: string | null
+          categoria?: string
+          cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string | null
@@ -7528,12 +7544,15 @@ export type Database = {
           es_interno?: boolean | null
           estado?: string
           estado_negociacion?: string | null
+          estructura_honorarios?: string | null
           expected_close_date?: string | null
           external_operation_id?: string | null
           external_source?: string | null
           external_synced_at?: string | null
           fecha_cierre?: string | null
           fecha_inicio?: string | null
+          honorarios_aceptados?: number | null
+          honorarios_propuestos?: number | null
           id?: string
           import_log_id?: string | null
           last_activity_at?: string | null
@@ -7541,6 +7560,7 @@ export type Database = {
           loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
+          parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
           prioridad?: string | null
@@ -7548,6 +7568,7 @@ export type Database = {
           rango_inversion_max?: number | null
           rango_inversion_min?: number | null
           sectores_interes?: string[] | null
+          servicio_tipo?: string | null
           stage_entered_at?: string | null
           timeline_objetivo?: string | null
           tipo?: string
@@ -7579,6 +7600,41 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
         ]
@@ -9443,6 +9499,137 @@ export type Database = {
           {
             foreignKeyName: "saved_searches_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      searcher_leads: {
+        Row: {
+          additional_criteria: string | null
+          background: string | null
+          brevo_lists: number[] | null
+          created_at: string
+          deal_type_preferences: string[] | null
+          email: string
+          email_sent: boolean | null
+          email_sent_at: string | null
+          full_name: string
+          fund_raised: string | null
+          gdpr_consent: boolean
+          how_found_us: string | null
+          id: string
+          investor_backing: string | null
+          investor_names: string | null
+          ip_address: unknown
+          is_verified: boolean | null
+          job_title: string | null
+          linkedin_url: string | null
+          marketing_consent: boolean | null
+          max_ebitda: number | null
+          max_revenue: number | null
+          min_ebitda: number | null
+          min_revenue: number | null
+          notes: string | null
+          phone: string | null
+          preferred_locations: string[] | null
+          preferred_sectors: string[] | null
+          referrer: string | null
+          search_phase: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          additional_criteria?: string | null
+          background?: string | null
+          brevo_lists?: number[] | null
+          created_at?: string
+          deal_type_preferences?: string[] | null
+          email: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name: string
+          fund_raised?: string | null
+          gdpr_consent?: boolean
+          how_found_us?: string | null
+          id?: string
+          investor_backing?: string | null
+          investor_names?: string | null
+          ip_address?: unknown
+          is_verified?: boolean | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          marketing_consent?: boolean | null
+          max_ebitda?: number | null
+          max_revenue?: number | null
+          min_ebitda?: number | null
+          min_revenue?: number | null
+          notes?: string | null
+          phone?: string | null
+          preferred_locations?: string[] | null
+          preferred_sectors?: string[] | null
+          referrer?: string | null
+          search_phase?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          additional_criteria?: string | null
+          background?: string | null
+          brevo_lists?: number[] | null
+          created_at?: string
+          deal_type_preferences?: string[] | null
+          email?: string
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          full_name?: string
+          fund_raised?: string | null
+          gdpr_consent?: boolean
+          how_found_us?: string | null
+          id?: string
+          investor_backing?: string | null
+          investor_names?: string | null
+          ip_address?: unknown
+          is_verified?: boolean | null
+          job_title?: string | null
+          linkedin_url?: string | null
+          marketing_consent?: boolean | null
+          max_ebitda?: number | null
+          max_revenue?: number | null
+          min_ebitda?: number | null
+          min_revenue?: number | null
+          notes?: string | null
+          phone?: string | null
+          preferred_locations?: string[] | null
+          preferred_sectors?: string[] | null
+          referrer?: string | null
+          search_phase?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "searcher_leads_verified_by_fkey"
+            columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
