@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/query-client";
 const Login = lazy(() => import("./pages/auth/Login"));
 const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
 const Mandatos = lazy(() => import("./pages/Mandatos"));
+const Servicios = lazy(() => import("./pages/Servicios"));
 const MandatoDetalle = lazy(() => import("./pages/MandatoDetalle"));
 const Contactos = lazy(() => import("./pages/Contactos"));
 const ContactoDetalle = lazy(() => import("./pages/ContactoDetalle"));
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="/" element={<Navigate to="/mandatos" replace />} />
           <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
+          <Route path="/servicios" element={<ProtectedRoute><AppLayout><Servicios /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos" element={<ProtectedRoute><AppLayout><Contactos /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos/:id" element={<ProtectedRoute><AppLayout><ContactoDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/empresas" element={<ProtectedRoute><AppLayout><Empresas /></AppLayout></ProtectedRoute>} />

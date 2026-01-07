@@ -6,8 +6,6 @@ import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { Toolbar } from "@/components/shared/Toolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
-import { MandatoCard } from "@/components/mandatos/MandatoCard";
-import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,10 +22,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchMandatos, deleteMandato, updateMandato } from "@/services/mandatos";
+import { fetchServicios, deleteMandato, updateMandato } from "@/services/mandatos";
 import { exportToCSV, cn } from "@/lib/utils";
-import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
-import type { Mandato, MandatoEstado } from "@/types";
+import { MANDATO_CATEGORIA_LABELS, PIPELINE_STAGE_LABELS_SERVICIO } from "@/lib/constants";
+import type { Mandato, MandatoCategoria } from "@/types";
 import { toast } from "sonner";
 import {
   Search,
@@ -39,26 +37,31 @@ import {
   Table as TableIcon,
   Columns,
   Plus,
-  Settings,
-  Upload,
   Clock,
-  AlertTriangle,
+  Briefcase,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useKanbanConfig } from "@/hooks/useKanbanConfig";
-import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
+import { MandatoCard } from "@/components/mandatos/MandatoCard";
+
+const SERVICIO_CATEGORIAS: MandatoCategoria[] = ["due_diligence", "spa_legal", "valoracion", "asesoria"];
+
+const SERVICIO_PIPELINE_STAGES = [
+  { id: "propuesta", label: "Propuesta", color: "bg-blue-500/10 border-blue-500/30" },
+  { id: "en_ejecucion", label: "En Ejecución", color: "bg-amber-500/10 border-amber-500/30" },
+  { id: "entregado", label: "Entregado", color: "bg-green-500/10 border-green-500/30" },
+];
 
 function KanbanColumn({ 
   id, 
   label, 
   color, 
-  mandatos 
+  servicios 
 }: { 
   id: string; 
   label: string; 
   color: string; 
-  mandatos: Mandato[] 
+  servicios: Mandato[] 
 }) {
   const { setNodeRef } = useDroppable({ id });
   
@@ -68,23 +71,23 @@ function KanbanColumn({
         <h3 className="font-semibold text-sm uppercase text-muted-foreground">
           {label}
         </h3>
-        <Badge variant="outline">{mandatos.length}</Badge>
+        <Badge variant="outline">{servicios.length}</Badge>
       </div>
       
       <SortableContext
         id={id}
-        items={mandatos.map((m) => m.id)}
+        items={servicios.map((s) => s.id)}
         strategy={verticalListSortingStrategy}
       >
         <div 
           ref={setNodeRef}
           className={cn(
-            "space-y-2 min-h-[500px] p-3 rounded-lg border-2 border-dashed transition-colors",
+            "space-y-2 min-h-[400px] p-3 rounded-lg border-2 border-dashed transition-colors",
             color
           )}
         >
-          {mandatos.map((mandato) => (
-            <MandatoCard key={mandato.id} mandato={mandato} />
+          {servicios.map((servicio) => (
+            <MandatoCard key={servicio.id} mandato={servicio} />
           ))}
         </div>
       </SortableContext>
@@ -92,20 +95,17 @@ function KanbanColumn({
   );
 }
 
-export default function Mandatos() {
+export default function Servicios() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [mandatos, setMandatos] = useState<Mandato[]>([]);
+  const [searchParams] = useSearchParams();
+  const [servicios, setServicios] = useState<Mandato[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>(searchParams.get("tipo") || "todos");
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
-  const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
-
-  const { fases } = useKanbanConfig();
+  const [servicioArrastrado, setServicioArrastrado] = useState<Mandato | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -114,28 +114,26 @@ export default function Mandatos() {
   );
 
   useEffect(() => {
-    cargarMandatos();
+    cargarServicios();
   }, []);
 
-  // Actualizar filtros cuando cambian los query params
   useEffect(() => {
     const tipoParam = searchParams.get("tipo");
-    
-    if (tipoParam && (tipoParam === "compra" || tipoParam === "venta")) {
+    if (tipoParam && SERVICIO_CATEGORIAS.includes(tipoParam as MandatoCategoria)) {
       setFiltroTipo(tipoParam);
     } else if (!tipoParam) {
       setFiltroTipo("todos");
     }
   }, [searchParams]);
 
-  const cargarMandatos = async () => {
+  const cargarServicios = async () => {
     setLoading(true);
     try {
-      const data = await fetchMandatos();
-      setMandatos(data);
+      const data = await fetchServicios();
+      setServicios(data);
     } catch (error) {
-      console.error("Error cargando mandatos:", error);
-      toast.error("Error al cargar los mandatos");
+      console.error("Error cargando servicios:", error);
+      toast.error("Error al cargar los servicios");
     } finally {
       setLoading(false);
     }
@@ -144,70 +142,72 @@ export default function Mandatos() {
   const handleDelete = async (id: string) => {
     try {
       await deleteMandato(id);
-      toast.success("Mandato eliminado");
-      cargarMandatos();
+      toast.success("Servicio eliminado");
+      cargarServicios();
     } catch (error) {
-      toast.error("Error al eliminar el mandato");
+      toast.error("Error al eliminar el servicio");
     }
   };
 
   const handleExportCSV = () => {
-    const exportData = mandatosFiltrados.map((m) => ({
-      ID: m.id,
-      Tipo: m.tipo,
-      Estado: m.estado,
-      Descripción: m.descripcion,
-      Fecha: m.created_at,
+    const exportData = serviciosFiltrados.map((s) => ({
+      ID: s.id,
+      Tipo: MANDATO_CATEGORIA_LABELS[s.categoria || "asesoria"]?.label || s.categoria,
+      Estado: s.estado,
+      Cliente: s.empresa_principal?.nombre || s.cliente_externo || "Sin asignar",
+      Honorarios: s.honorarios_propuestos,
+      Fecha: s.created_at,
     }));
-    exportToCSV(exportData, `mandatos-${new Date().toISOString().split("T")[0]}`);
-    toast.success("Mandatos exportados a CSV");
+    exportToCSV(exportData, `servicios-${new Date().toISOString().split("T")[0]}`);
+    toast.success("Servicios exportados a CSV");
   };
 
-  const getMandatosPorEstado = (estado: MandatoEstado) => {
-    return mandatosFiltrados.filter((m) => m.estado === estado);
+  const getServiciosPorEstado = (estado: string) => {
+    return serviciosFiltrados.filter((s) => s.estado === estado);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const mandato = mandatos.find((m) => m.id === event.active.id);
-    setMandatoArrastrado(mandato || null);
+    const servicio = servicios.find((s) => s.id === event.active.id);
+    setServicioArrastrado(servicio || null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    setMandatoArrastrado(null);
+    setServicioArrastrado(null);
 
     if (!over) return;
 
-    const mandatoId = active.id as string;
-    const nuevoEstado = over.id as MandatoEstado;
+    const servicioId = active.id as string;
+    const nuevoEstado = over.id as string;
 
-    const mandato = mandatos.find((m) => m.id === mandatoId);
-    if (!mandato || mandato.estado === nuevoEstado) return;
+    const servicio = servicios.find((s) => s.id === servicioId);
+    if (!servicio || servicio.estado === nuevoEstado) return;
 
     try {
-      await updateMandato(mandatoId, { estado: nuevoEstado });
-      toast.success(`Mandato movido a ${nuevoEstado}`);
-      cargarMandatos();
+      await updateMandato(servicioId, { estado: nuevoEstado as any });
+      toast.success(`Servicio movido a ${PIPELINE_STAGE_LABELS_SERVICIO[nuevoEstado] || nuevoEstado}`);
+      cargarServicios();
     } catch (error) {
-      toast.error("Error al actualizar el mandato");
+      toast.error("Error al actualizar el servicio");
     }
   };
 
-  // Filtros combinados
-  const mandatosFiltrados = mandatos.filter((mandato) => {
-    const empresaNombre = mandato.empresa_principal?.nombre || "";
+  const serviciosFiltrados = servicios.filter((servicio) => {
+    const clienteNombre = servicio.empresa_principal?.nombre || servicio.cliente_externo || "";
     const matchSearch =
       searchQuery === "" ||
-      empresaNombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mandato.id.toLowerCase().includes(searchQuery.toLowerCase());
+      clienteNombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      servicio.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchEstado =
-      filtroEstado === "todos" || mandato.estado === filtroEstado;
+    const matchTipo = filtroTipo === "todos" || servicio.categoria === filtroTipo;
+    const matchEstado = filtroEstado === "todos" || servicio.estado === filtroEstado;
 
-    const matchTipo = filtroTipo === "todos" || mandato.tipo === filtroTipo;
-
-    return matchSearch && matchEstado && matchTipo;
+    return matchSearch && matchTipo && matchEstado;
   });
+
+  const getTipoLabel = (categoria: string | undefined) => {
+    return MANDATO_CATEGORIA_LABELS[categoria || "asesoria"]?.label || categoria;
+  };
 
   const columns = [
     { key: "id", label: "ID", sortable: true, filterable: true },
@@ -215,15 +215,15 @@ export default function Mandatos() {
       key: "empresa_principal", 
       label: "Cliente", 
       sortable: true, 
-      render: (value: any) => value?.nombre || "Sin asignar"
+      render: (value: any, row: Mandato) => value?.nombre || row.cliente_externo || "Sin asignar"
     },
     {
-      key: "tipo",
+      key: "categoria",
       label: "Tipo",
       sortable: true,
       render: (value: string) => (
-        <Badge variant={value === "venta" ? "default" : "secondary"}>
-          {value === "venta" ? "Venta" : "Compra"}
+        <Badge variant="outline">
+          {getTipoLabel(value)}
         </Badge>
       ),
     },
@@ -232,16 +232,16 @@ export default function Mandatos() {
       label: "Estado",
       sortable: true,
       render: (value: string) => (
-        <BadgeStatus status={value as any} type="mandato" />
+        <Badge variant={value === "entregado" ? "default" : value === "en_ejecucion" ? "secondary" : "outline"}>
+          {PIPELINE_STAGE_LABELS_SERVICIO[value] || value}
+        </Badge>
       ),
     },
     {
-      key: "empresas",
-      label: "Targets",
-      sortable: false,
-      render: (value: any[]) => (
-        <span className="text-muted-foreground">{value?.length || 0}</span>
-      ),
+      key: "honorarios_propuestos",
+      label: "Honorarios",
+      sortable: true,
+      render: (value: number) => value ? `€${value.toLocaleString()}` : "—",
     },
     {
       key: "last_activity_at",
@@ -255,16 +255,10 @@ export default function Mandatos() {
         
         if (daysAgo === null) return <span className="text-muted-foreground">—</span>;
         
-        const isInactive = daysAgo > 14;
-        
         return (
-          <div className={cn(
-            "flex items-center gap-1.5 text-sm",
-            isInactive && "text-destructive font-medium"
-          )}>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="w-3.5 h-3.5" />
             <span>Hace {daysAgo}d</span>
-            {isInactive && <AlertTriangle className="w-3.5 h-3.5" />}
           </div>
         );
       },
@@ -301,7 +295,7 @@ export default function Mandatos() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm("¿Estás seguro de eliminar este mandato?")) {
+                if (confirm("¿Estás seguro de eliminar este servicio?")) {
                   handleDelete(row.id);
                 }
               }}
@@ -320,34 +314,34 @@ export default function Mandatos() {
     return (
       <div>
         <PageHeader
-          title="Mandatos M&A"
-          description="Gestiona operaciones de compra y venta de empresas"
+          title="Servicios"
+          description="Gestiona proyectos de Due Diligence, SPA, Valoraciones y Asesoría"
         />
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Cargando mandatos...</p>
+          <p className="text-muted-foreground">Cargando servicios...</p>
         </div>
       </div>
     );
   }
 
-  if (mandatos.length === 0) {
+  if (servicios.length === 0) {
     return (
       <div>
         <PageHeader
-          title="Mandatos M&A"
-          description="Gestiona operaciones de compra y venta de empresas"
+          title="Servicios"
+          description="Gestiona proyectos de Due Diligence, SPA, Valoraciones y Asesoría"
         />
         <EmptyState
-          icon={FileText}
-          titulo="No hay mandatos M&A registrados"
-          descripcion="Crea tu primer mandato para comenzar a gestionar operaciones de compra y venta"
-          accionLabel="Crear primer mandato"
+          icon={Briefcase}
+          titulo="No hay servicios registrados"
+          descripcion="Crea tu primer servicio para gestionar proyectos de DD, SPA, Valoraciones o Asesoría"
+          accionLabel="Crear primer servicio"
           onAccion={() => setDrawerOpen(true)}
         />
         <NuevoMandatoDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          onSuccess={cargarMandatos}
+          onSuccess={cargarServicios}
         />
       </div>
     );
@@ -357,9 +351,9 @@ export default function Mandatos() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Mandatos M&A</h1>
+          <h1 className="text-3xl font-semibold text-foreground">Servicios</h1>
           <p className="text-muted-foreground mt-1">
-            Gestiona operaciones de compra y venta de empresas
+            Gestiona proyectos de Due Diligence, SPA, Valoraciones y Asesoría
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -379,25 +373,12 @@ export default function Mandatos() {
               <Columns className="w-4 h-4" />
             </Button>
           </div>
-          {vistaActual === "kanban" && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setConfigDialogOpen(true)}
-              className="gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Configurar Fases
-            </Button>
-          )}
           <Button onClick={() => setDrawerOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
-            Nuevo Mandato
+            Nuevo Servicio
           </Button>
         </div>
       </div>
-
-      <AgingAlertsBanner variant="expanded" maxItems={5} />
 
       <Toolbar
         filtros={
@@ -405,7 +386,7 @@ export default function Mandatos() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente, empresa o ID..."
+                placeholder="Buscar por cliente o ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -413,14 +394,14 @@ export default function Mandatos() {
             </div>
 
             <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tipo" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Tipo de servicio" />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="todos">Todos</SelectItem>
-                {MANDATO_TIPOS.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {tipo === "venta" ? "Venta" : "Compra"}
+                <SelectItem value="todos">Todos los tipos</SelectItem>
+                {SERVICIO_CATEGORIAS.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {MANDATO_CATEGORIA_LABELS[cat]?.label || cat}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -432,9 +413,9 @@ export default function Mandatos() {
               </SelectTrigger>
               <SelectContent className="bg-background">
                 <SelectItem value="todos">Todos estados</SelectItem>
-                {MANDATO_ESTADOS.map((estado) => (
-                  <SelectItem key={estado} value={estado}>
-                    {estado}
+                {SERVICIO_PIPELINE_STAGES.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    {stage.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -442,54 +423,46 @@ export default function Mandatos() {
           </>
         }
         acciones={
-          <>
-            <Button variant="outline" onClick={() => navigate("/importar-datos")}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
-            <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </>
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar CSV
+          </Button>
         }
       />
 
-      {/* Vista Tabla */}
       {vistaActual === "tabla" && (
         <DataTableEnhanced
           columns={columns}
-          data={mandatosFiltrados}
+          data={serviciosFiltrados}
           loading={false}
           onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
           pageSize={10}
         />
       )}
 
-      {/* Vista Kanban */}
       {vistaActual === "kanban" && (
         <DndContext
           sensors={sensors}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {fases.map((fase) => {
-              const mandatosColumna = getMandatosPorEstado(fase.fase_id as MandatoEstado);
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {SERVICIO_PIPELINE_STAGES.map((stage) => {
+              const serviciosColumna = getServiciosPorEstado(stage.id);
               return (
                 <KanbanColumn
-                  key={fase.id}
-                  id={fase.fase_id}
-                  label={fase.label}
-                  color={fase.color}
-                  mandatos={mandatosColumna}
+                  key={stage.id}
+                  id={stage.id}
+                  label={stage.label}
+                  color={stage.color}
+                  servicios={serviciosColumna}
                 />
               );
             })}
           </div>
           
           <DragOverlay>
-            {mandatoArrastrado ? <MandatoCard mandato={mandatoArrastrado} /> : null}
+            {servicioArrastrado ? <MandatoCard mandato={servicioArrastrado} /> : null}
           </DragOverlay>
         </DndContext>
       )}
@@ -497,12 +470,7 @@ export default function Mandatos() {
       <NuevoMandatoDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onSuccess={cargarMandatos}
-      />
-
-      <KanbanConfigDialog
-        open={configDialogOpen}
-        onOpenChange={setConfigDialogOpen}
+        onSuccess={cargarServicios}
       />
     </div>
   );

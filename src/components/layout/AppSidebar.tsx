@@ -47,15 +47,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const mandatosMAItems = [
-  { title: "Mandatos Compra", url: "/mandatos?categoria=operacion_ma&tipo=compra", icon: ShoppingCart },
-  { title: "Mandatos Venta", url: "/mandatos?categoria=operacion_ma&tipo=venta", icon: TrendingUp },
+  { title: "Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
+  { title: "Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
 ];
 
 const serviciosItems = [
-  { title: "Due Diligence", url: "/mandatos?categoria=due_diligence", icon: Search },
-  { title: "SPA / Legal", url: "/mandatos?categoria=spa_legal", icon: Scale },
-  { title: "Valoraciones", url: "/mandatos?categoria=valoracion", icon: Calculator },
-  { title: "Asesoría", url: "/mandatos?categoria=asesoria", icon: Briefcase },
+  { title: "Due Diligence", url: "/servicios?tipo=due_diligence", icon: Search },
+  { title: "SPA / Legal", url: "/servicios?tipo=spa_legal", icon: Scale },
+  { title: "Valoraciones", url: "/servicios?tipo=valoracion", icon: Calculator },
+  { title: "Asesoría", url: "/servicios?tipo=asesoria", icon: Briefcase },
 ];
 
 const otherMenuItems = [
@@ -138,7 +138,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs font-medium px-3">
-            Operaciones M&A
+            Mandatos M&A
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
