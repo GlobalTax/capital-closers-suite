@@ -16,9 +16,7 @@ interface DocumentUploadZoneProps {
   onSuccess?: () => void;
 }
 
-interface FileWithPreview extends File {
-  preview?: string;
-}
+type FileWithPreview = File & { preview?: string };
 
 const ALLOWED_TYPES = {
   "application/pdf": [".pdf"],
