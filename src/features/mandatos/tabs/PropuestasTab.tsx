@@ -186,10 +186,10 @@ export function PropuestasTab({ mandatoId }: PropuestasTabProps) {
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Eliminar propuesta"
-        description="¿Estás seguro de eliminar esta propuesta? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        onConfirm={confirmDelete}
+        titulo="Eliminar propuesta"
+        descripcion="¿Estás seguro de eliminar esta propuesta? Esta acción no se puede deshacer."
+        textoConfirmar="Eliminar"
+        onConfirmar={confirmDelete}
         variant="destructive"
       />
 

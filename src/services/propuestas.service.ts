@@ -40,9 +40,14 @@ export async function getPropuestaById(id: string): Promise<PropuestaHonorarios 
 }
 
 export async function createPropuesta(propuesta: PropuestaInsert): Promise<PropuestaHonorarios> {
+  const dbPayload = {
+    ...propuesta,
+    desglose: propuesta.desglose as unknown as Record<string, unknown>[],
+  };
+  
   const { data, error } = await supabase
     .from("propuestas_honorarios")
-    .insert({ ...propuesta, desglose: propuesta.desglose as unknown as Record<string, unknown>[] })
+    .insert(dbPayload as any)
     .select()
     .single();
 
@@ -51,13 +56,13 @@ export async function createPropuesta(propuesta: PropuestaInsert): Promise<Propu
 }
 
 export async function updatePropuesta(id: string, updates: PropuestaUpdate): Promise<PropuestaHonorarios> {
-  const payload = updates.desglose 
+  const dbPayload = updates.desglose 
     ? { ...updates, desglose: updates.desglose as unknown as Record<string, unknown>[] }
     : updates;
     
   const { data, error } = await supabase
     .from("propuestas_honorarios")
-    .update(payload)
+    .update(dbPayload as any)
     .eq("id", id)
     .select()
     .single();

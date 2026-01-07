@@ -51,14 +51,10 @@ export function PropuestasTable({
     return (
       <EmptyState
         icon={FileText}
-        title="Sin propuestas"
-        description="Crea tu primera propuesta de honorarios para este servicio"
-        action={
-          <Button onClick={onNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva propuesta
-          </Button>
-        }
+        titulo="Sin propuestas"
+        descripcion="Crea tu primera propuesta de honorarios para este servicio"
+        accionLabel="Nueva propuesta"
+        onAccion={onNew}
       />
     );
   }
