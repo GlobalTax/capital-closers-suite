@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { fetchMandatos, deleteMandato, updateMandato } from "@/services/mandatos";
 import { exportToCSV, cn } from "@/lib/utils";
-import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
-import type { Mandato, MandatoEstado } from "@/types";
+import { MANDATO_ESTADOS, MANDATO_TIPOS, MANDATO_CATEGORIAS, MANDATO_CATEGORIA_LABELS } from "@/lib/constants";
+import type { Mandato, MandatoEstado, MandatoCategoria } from "@/types";
 import { toast } from "sonner";
 import {
   Search,
@@ -100,6 +100,7 @@ export default function Mandatos() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [filtroTipo, setFiltroTipo] = useState<string>(searchParams.get("tipo") || "todos");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>(searchParams.get("categoria") || "todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
@@ -117,11 +118,21 @@ export default function Mandatos() {
     cargarMandatos();
   }, []);
 
-  // Actualizar filtro cuando cambia el query param
+  // Actualizar filtros cuando cambian los query params
   useEffect(() => {
     const tipoParam = searchParams.get("tipo");
+    const categoriaParam = searchParams.get("categoria");
+    
     if (tipoParam && (tipoParam === "compra" || tipoParam === "venta")) {
       setFiltroTipo(tipoParam);
+    } else if (!tipoParam) {
+      setFiltroTipo("todos");
+    }
+    
+    if (categoriaParam && MANDATO_CATEGORIAS.includes(categoriaParam as MandatoCategoria)) {
+      setFiltroCategoria(categoriaParam);
+    } else if (!categoriaParam) {
+      setFiltroCategoria("todos");
     }
   }, [searchParams]);
 
@@ -203,7 +214,11 @@ export default function Mandatos() {
 
     const matchTipo = filtroTipo === "todos" || mandato.tipo === filtroTipo;
 
-    return matchSearch && matchEstado && matchTipo;
+    const matchCategoria = 
+      filtroCategoria === "todos" || 
+      (mandato.categoria || "operacion_ma") === filtroCategoria;
+
+    return matchSearch && matchEstado && matchTipo && matchCategoria;
   });
 
   const columns = [
@@ -409,12 +424,26 @@ export default function Mandatos() {
               />
             </div>
 
+            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="todos">Todas las categorías</SelectItem>
+                {MANDATO_CATEGORIAS.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {MANDATO_CATEGORIA_LABELS[cat]?.label || cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="todos">Todos los tipos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 {MANDATO_TIPOS.map((tipo) => (
                   <SelectItem key={tipo} value={tipo}>
                     {tipo === "venta" ? "Venta" : "Compra"}
@@ -424,11 +453,11 @@ export default function Mandatos() {
             </Select>
 
             <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value="todos">Todos estados</SelectItem>
                 {MANDATO_ESTADOS.map((estado) => (
                   <SelectItem key={estado} value={estado}>
                     {estado}
