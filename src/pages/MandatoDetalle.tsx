@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, Target, ListTodo, Clock } from "lucide-react";
+import { FileText, Target, ListTodo, Clock, Receipt } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
@@ -15,6 +15,7 @@ import { FinanzasTab } from "@/features/mandatos/tabs/FinanzasTab";
 import { TargetsTab } from "@/features/mandatos/tabs/TargetsTab";
 import { ChecklistTab } from "@/features/mandatos/tabs/ChecklistTab";
 import { DocumentosTab } from "@/features/mandatos/tabs/DocumentosTab";
+import { PropuestasTab } from "@/features/mandatos/tabs/PropuestasTab";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
@@ -25,7 +26,6 @@ import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
 import { CostSummaryCard } from "@/components/mandatos/CostSummaryCard";
 import type { TimeEntry, TimeStats } from "@/types";
 import { handleError } from "@/lib/error-handler";
-
 export default function MandatoDetalle() {
   const { id } = useParams();
   const { user, adminUser } = useAuth();
@@ -76,6 +76,7 @@ export default function MandatoDetalle() {
   if (loading) return <PageSkeleton />;
   if (!mandato) return <div>Mandato no encontrado</div>;
 
+  const esServicio = mandato.categoria !== 'operacion_ma';
   const checklistLabel = mandato.tipo === "compra" ? "Checklist Buy-Side" : "Checklist Sell-Side";
 
   return (
@@ -98,17 +99,26 @@ export default function MandatoDetalle() {
             <FileText className="w-4 h-4 mr-2" />
             Resumen
           </TabsTrigger>
-          <TabsTrigger value="finanzas">
-            <Target className="w-4 h-4 mr-2" />
-            Finanzas
-          </TabsTrigger>
-          <TabsTrigger value="targets">
-            Targets ({targetsCount})
-          </TabsTrigger>
-          <TabsTrigger value="checklist">
-            <ListTodo className="w-4 h-4 mr-2" />
-            {checklistLabel}
-          </TabsTrigger>
+          {esServicio ? (
+            <TabsTrigger value="propuestas">
+              <Receipt className="w-4 h-4 mr-2" />
+              Propuestas
+            </TabsTrigger>
+          ) : (
+            <>
+              <TabsTrigger value="finanzas">
+                <Target className="w-4 h-4 mr-2" />
+                Finanzas
+              </TabsTrigger>
+              <TabsTrigger value="targets">
+                Targets ({targetsCount})
+              </TabsTrigger>
+              <TabsTrigger value="checklist">
+                <ListTodo className="w-4 h-4 mr-2" />
+                {checklistLabel}
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="documentos">
             <FileText className="w-4 h-4 mr-2" />
             Documentos ({documentos.length})
@@ -127,17 +137,25 @@ export default function MandatoDetalle() {
           />
         </TabsContent>
 
-        <TabsContent value="finanzas">
-          <FinanzasTab mandatoId={id!} />
-        </TabsContent>
+        {esServicio ? (
+          <TabsContent value="propuestas">
+            <PropuestasTab mandatoId={id!} />
+          </TabsContent>
+        ) : (
+          <>
+            <TabsContent value="finanzas">
+              <FinanzasTab mandatoId={id!} />
+            </TabsContent>
 
-        <TabsContent value="targets">
-          <TargetsTab mandato={mandato} onRefresh={refetch} />
-        </TabsContent>
+            <TabsContent value="targets">
+              <TargetsTab mandato={mandato} onRefresh={refetch} />
+            </TabsContent>
 
-        <TabsContent value="checklist">
-          <ChecklistTab mandato={mandato} />
-        </TabsContent>
+            <TabsContent value="checklist">
+              <ChecklistTab mandato={mandato} />
+            </TabsContent>
+          </>
+        )}
 
         <TabsContent value="documentos">
           <DocumentosTab
