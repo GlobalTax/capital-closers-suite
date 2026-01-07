@@ -9006,69 +9006,139 @@ export type Database = {
       }
       propuestas_honorarios: {
         Row: {
+          alcance_dd: Json | null
           archivo_pdf_path: string | null
+          clausulas_adicionales: Json | null
+          cliente_cif: string | null
+          cliente_domicilio: string | null
           condiciones_pago: string | null
           created_at: string
           created_by: string | null
           descripcion: string | null
+          descripcion_transaccion: string | null
           desglose: Json | null
+          empresa_cliente_id: string | null
+          empresa_target_id: string | null
           estado: string
           estructura: string | null
           fecha_emision: string | null
           fecha_respuesta: string | null
           fecha_vencimiento: string | null
+          firma_cliente: string | null
+          firma_firma: string | null
+          honorarios_negociacion: number | null
           id: string
           importe_total: number
           mandato_id: string
           motivo_rechazo: string | null
           notas_internas: string | null
+          plantilla_tipo: string | null
+          target_cif: string | null
+          target_domicilio: string | null
+          target_nombre: string | null
           titulo: string
           updated_at: string
           version: number
         }
         Insert: {
+          alcance_dd?: Json | null
           archivo_pdf_path?: string | null
+          clausulas_adicionales?: Json | null
+          cliente_cif?: string | null
+          cliente_domicilio?: string | null
           condiciones_pago?: string | null
           created_at?: string
           created_by?: string | null
           descripcion?: string | null
+          descripcion_transaccion?: string | null
           desglose?: Json | null
+          empresa_cliente_id?: string | null
+          empresa_target_id?: string | null
           estado?: string
           estructura?: string | null
           fecha_emision?: string | null
           fecha_respuesta?: string | null
           fecha_vencimiento?: string | null
+          firma_cliente?: string | null
+          firma_firma?: string | null
+          honorarios_negociacion?: number | null
           id?: string
           importe_total?: number
           mandato_id: string
           motivo_rechazo?: string | null
           notas_internas?: string | null
+          plantilla_tipo?: string | null
+          target_cif?: string | null
+          target_domicilio?: string | null
+          target_nombre?: string | null
           titulo: string
           updated_at?: string
           version?: number
         }
         Update: {
+          alcance_dd?: Json | null
           archivo_pdf_path?: string | null
+          clausulas_adicionales?: Json | null
+          cliente_cif?: string | null
+          cliente_domicilio?: string | null
           condiciones_pago?: string | null
           created_at?: string
           created_by?: string | null
           descripcion?: string | null
+          descripcion_transaccion?: string | null
           desglose?: Json | null
+          empresa_cliente_id?: string | null
+          empresa_target_id?: string | null
           estado?: string
           estructura?: string | null
           fecha_emision?: string | null
           fecha_respuesta?: string | null
           fecha_vencimiento?: string | null
+          firma_cliente?: string | null
+          firma_firma?: string | null
+          honorarios_negociacion?: number | null
           id?: string
           importe_total?: number
           mandato_id?: string
           motivo_rechazo?: string | null
           notas_internas?: string | null
+          plantilla_tipo?: string | null
+          target_cif?: string | null
+          target_domicilio?: string | null
+          target_nombre?: string | null
           titulo?: string
           updated_at?: string
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "propuestas_honorarios_empresa_cliente_id_fkey"
+            columns: ["empresa_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_empresa_cliente_id_fkey"
+            columns: ["empresa_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_empresa_target_id_fkey"
+            columns: ["empresa_target_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_empresa_target_id_fkey"
+            columns: ["empresa_target_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
           {
             foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
             columns: ["mandato_id"]
@@ -9105,6 +9175,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      psh_plantillas: {
+        Row: {
+          alcance_default: Json | null
+          clausulas_default: Json | null
+          condiciones_pago_default: string | null
+          created_at: string
+          descripcion: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          nombre: string
+          tipo_servicio: string
+          updated_at: string
+        }
+        Insert: {
+          alcance_default?: Json | null
+          clausulas_default?: Json | null
+          condiciones_pago_default?: string | null
+          created_at?: string
+          descripcion?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          nombre: string
+          tipo_servicio: string
+          updated_at?: string
+        }
+        Update: {
+          alcance_default?: Json | null
+          clausulas_default?: Json | null
+          condiciones_pago_default?: string | null
+          created_at?: string
+          descripcion?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          nombre?: string
+          tipo_servicio?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       rate_limits: {
         Row: {
