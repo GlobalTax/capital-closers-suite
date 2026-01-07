@@ -32,16 +32,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fetchEmpresas, createEmpresa } from "@/services/empresas";
-import { createMandato } from "@/services/mandatos";
-import type { Empresa } from "@/types";
-import { Loader2, Plus, Building2, Calendar } from "lucide-react";
+import { createMandato, fetchMandatos } from "@/services/mandatos";
+import type { Empresa, Mandato } from "@/types";
+import { Loader2, Plus, Building2, Calendar, Briefcase, Search, FileText, Calculator, Users, Link } from "lucide-react";
+import { 
+  MANDATO_CATEGORIA_LABELS, 
+  SERVICIO_TIPO_LABELS, 
+  ESTRUCTURA_HONORARIOS_LABELS 
+} from "@/lib/constants";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const mandatoSchema = z.object({
+  categoria: z.enum(["operacion_ma", "due_diligence", "spa_legal", "valoracion", "asesoria"], {
+    required_error: "Selecciona el tipo de proyecto",
+  }),
   empresaId: z.string().optional(),
   nuevaEmpresa: z.string().optional(),
-  tipo: z.enum(["compra", "venta"], {
-    required_error: "Selecciona el tipo de mandato",
-  }),
+  tipo: z.enum(["compra", "venta"]).optional(),
   valor: z.string().optional(),
   probabilidad: z.coerce.number().min(0).max(100).optional(),
   fechaCierreEsperada: z.string().optional(),
@@ -49,9 +56,32 @@ const mandatoSchema = z.object({
     .string()
     .min(10, "La descripción debe tener al menos 10 caracteres")
     .max(500, "La descripción no puede exceder 500 caracteres"),
-}).refine((data) => data.empresaId || data.nuevaEmpresa, {
-  message: "Selecciona una empresa existente o crea una nueva",
+  // Campos de servicios
+  servicio_tipo: z.enum(["buy-side", "sell-side", "vendor", "independiente"]).optional(),
+  cliente_externo: z.string().optional(),
+  honorarios_propuestos: z.coerce.number().min(0).optional(),
+  estructura_honorarios: z.enum(["fijo", "exito", "mixto", "horario"]).optional(),
+  parent_mandato_id: z.string().optional(),
+  vincular_operacion: z.boolean().optional(),
+}).refine((data) => {
+  // Para operaciones M&A, necesita empresa o nueva empresa
+  if (data.categoria === "operacion_ma") {
+    return data.empresaId || data.nuevaEmpresa;
+  }
+  // Para servicios, puede tener empresa, cliente externo, o parent_mandato
+  return data.empresaId || data.nuevaEmpresa || data.cliente_externo || data.parent_mandato_id;
+}, {
+  message: "Indica una empresa, cliente externo, o vincula a una operación",
   path: ["empresaId"],
+}).refine((data) => {
+  // Para operaciones M&A, tipo es obligatorio
+  if (data.categoria === "operacion_ma") {
+    return !!data.tipo;
+  }
+  return true;
+}, {
+  message: "Selecciona el tipo de mandato",
+  path: ["tipo"],
 });
 
 type MandatoFormValues = z.infer<typeof mandatoSchema>;
@@ -62,12 +92,21 @@ interface NuevoMandatoDrawerProps {
   onSuccess?: () => void;
 }
 
+const categoriaIcons: Record<string, React.ReactNode> = {
+  operacion_ma: <Briefcase className="w-4 h-4" />,
+  due_diligence: <Search className="w-4 h-4" />,
+  spa_legal: <FileText className="w-4 h-4" />,
+  valoracion: <Calculator className="w-4 h-4" />,
+  asesoria: <Users className="w-4 h-4" />,
+};
+
 export function NuevoMandatoDrawer({
   open,
   onOpenChange,
   onSuccess,
 }: NuevoMandatoDrawerProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [mandatos, setMandatos] = useState<Mandato[]>([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showNewEmpresa, setShowNewEmpresa] = useState(false);
@@ -75,6 +114,7 @@ export function NuevoMandatoDrawer({
   const form = useForm<MandatoFormValues>({
     resolver: zodResolver(mandatoSchema),
     defaultValues: {
+      categoria: "operacion_ma",
       empresaId: "",
       nuevaEmpresa: "",
       tipo: "venta",
@@ -82,23 +122,42 @@ export function NuevoMandatoDrawer({
       probabilidad: 50,
       fechaCierreEsperada: "",
       descripcion: "",
+      servicio_tipo: undefined,
+      cliente_externo: "",
+      honorarios_propuestos: undefined,
+      estructura_honorarios: undefined,
+      parent_mandato_id: "",
+      vincular_operacion: false,
     },
   });
 
+  const categoria = form.watch("categoria");
+  const vincularOperacion = form.watch("vincular_operacion");
+  const isServicio = categoria !== "operacion_ma";
+
   useEffect(() => {
     if (open) {
-      cargarEmpresas();
+      cargarDatos();
     }
   }, [open]);
 
-  const cargarEmpresas = async () => {
+  const cargarDatos = async () => {
     setLoadingEmpresas(true);
     try {
-      const data = await fetchEmpresas();
-      setEmpresas(data);
+      const [empresasData, mandatosData] = await Promise.all([
+        fetchEmpresas(),
+        fetchMandatos(),
+      ]);
+      setEmpresas(empresasData);
+      // Solo mostrar mandatos M&A activos para vincular
+      setMandatos(mandatosData.filter(m => 
+        (m.categoria === "operacion_ma" || !m.categoria) && 
+        m.estado !== "cerrado" && 
+        m.estado !== "cancelado"
+      ));
     } catch (error) {
-      console.error("Error cargando empresas:", error);
-      toast.error("Error al cargar la lista de empresas");
+      console.error("Error cargando datos:", error);
+      toast.error("Error al cargar los datos");
     } finally {
       setLoadingEmpresas(false);
     }
@@ -119,30 +178,38 @@ export function NuevoMandatoDrawer({
         empresaId = nuevaEmpresa.id;
       }
 
-      if (!empresaId) {
-        toast.error("Debes seleccionar o crear una empresa");
-        setSubmitting(false);
-        return;
-      }
+      // Determinar pipeline_stage inicial
+      const pipelineStage = data.categoria === "operacion_ma" 
+        ? "prospeccion" 
+        : "propuesta";
 
       await createMandato({
-        tipo: data.tipo,
+        categoria: data.categoria,
+        tipo: data.tipo || "venta", // Default para servicios
         descripcion: data.descripcion,
         estado: "activo",
-        empresa_principal_id: empresaId,
+        empresa_principal_id: empresaId || undefined,
         valor: data.valor ? Number(data.valor.replace(/[^0-9]/g, '')) : undefined,
         prioridad: "media",
         fecha_cierre: data.fechaCierreEsperada || undefined,
-      });
+        pipeline_stage: pipelineStage,
+        // Campos de servicios
+        servicio_tipo: data.servicio_tipo,
+        cliente_externo: data.cliente_externo || undefined,
+        honorarios_propuestos: data.honorarios_propuestos,
+        estructura_honorarios: data.estructura_honorarios,
+        parent_mandato_id: data.vincular_operacion ? data.parent_mandato_id : undefined,
+      } as any);
 
-      toast.success("Mandato creado exitosamente");
+      const categoriaLabel = MANDATO_CATEGORIA_LABELS[data.categoria]?.label || "Proyecto";
+      toast.success(`${categoriaLabel} creado exitosamente`);
       form.reset();
       setShowNewEmpresa(false);
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
       console.error("Error creando mandato:", error);
-      toast.error("Error al crear el mandato");
+      toast.error("Error al crear el proyecto");
     } finally {
       setSubmitting(false);
     }
@@ -151,174 +218,369 @@ export function NuevoMandatoDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
-        <div className="mx-auto w-full max-w-2xl">
+        <div className="mx-auto w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DrawerHeader>
-            <DrawerTitle>Nuevo Mandato M&A</DrawerTitle>
+            <DrawerTitle>Nuevo Proyecto</DrawerTitle>
             <DrawerDescription>
-              Crea un nuevo mandato de compra o venta asociado a una empresa
+              Crea una operación M&A o un servicio de asesoría
             </DrawerDescription>
           </DrawerHeader>
 
           <div className="p-4 pb-0">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Selección de Empresa */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Empresa Principal *</FormLabel>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowNewEmpresa(!showNewEmpresa);
-                        if (!showNewEmpresa) {
-                          form.setValue("empresaId", "");
-                        } else {
-                          form.setValue("nuevaEmpresa", "");
-                        }
-                      }}
-                    >
-                      {showNewEmpresa ? (
-                        <>Seleccionar existente</>
-                      ) : (
-                        <><Plus className="w-3 h-3 mr-1" />Nueva empresa</>
-                      )}
-                    </Button>
-                  </div>
-
-                  {showNewEmpresa ? (
-                    <FormField
-                      control={form.control}
-                      name="nuevaEmpresa"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <div className="relative">
-                              <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                              <Input 
-                                placeholder="Nombre de la nueva empresa" 
-                                className="pl-9" 
-                                {...field} 
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name="empresaId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={loadingEmpresas}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona una empresa" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-background max-h-60">
-                              {empresas.map((empresa) => (
-                                <SelectItem key={empresa.id} value={empresa.id}>
-                                  <span className="flex items-center gap-2">
-                                    <Building2 className="w-3 h-3" />
-                                    {empresa.nombre}
-                                    {empresa.sector && (
-                                      <span className="text-xs text-muted-foreground">
-                                        ({empresa.sector})
-                                      </span>
-                                    )}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </div>
-
+                {/* Selector de Categoría */}
                 <FormField
                   control={form.control}
-                  name="tipo"
+                  name="categoria"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo de Mandato *</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="venta" id="venta" />
-                            <label htmlFor="venta" className="cursor-pointer">
-                              Venta (Sell-Side)
-                            </label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="compra" id="compra" />
-                            <label htmlFor="compra" className="cursor-pointer">
-                              Compra (Buy-Side)
-                            </label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
+                      <FormLabel>Tipo de Proyecto *</FormLabel>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {Object.entries(MANDATO_CATEGORIA_LABELS).map(([key, config]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => field.onChange(key)}
+                            className={`p-3 rounded-lg border-2 text-left transition-all ${
+                              field.value === key
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              {categoriaIcons[key]}
+                              <span className="font-medium text-sm">{config.label}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{config.description}</p>
+                          </button>
+                        ))}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Vincular a operación existente (solo para servicios) */}
+                {isServicio && (
                   <FormField
                     control={form.control}
-                    name="valor"
+                    name="vincular_operacion"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor Estimado (€)</FormLabel>
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
                         <FormControl>
-                          <Input placeholder="Ej: 2500000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="probabilidad"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Probabilidad (%)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min={0} 
-                            max={100} 
-                            placeholder="50" 
-                            {...field} 
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
                           />
                         </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="flex items-center gap-2">
+                            <Link className="w-4 h-4" />
+                            Vincular a una operación existente
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Este servicio forma parte de una operación M&A en curso
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Selector de operación padre */}
+                {isServicio && vincularOperacion && (
+                  <FormField
+                    control={form.control}
+                    name="parent_mandato_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Operación Vinculada</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona la operación" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-background max-h-60">
+                            {mandatos.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                <span className="flex items-center gap-2">
+                                  <Briefcase className="w-3 h-3" />
+                                  {m.empresa_principal?.nombre || "Sin empresa"} - {m.tipo}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
+                )}
+
+                {/* Empresa o Cliente */}
+                {!vincularOperacion && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <FormLabel>{isServicio ? "Empresa / Cliente" : "Empresa Principal *"}</FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setShowNewEmpresa(!showNewEmpresa);
+                          if (!showNewEmpresa) {
+                            form.setValue("empresaId", "");
+                          } else {
+                            form.setValue("nuevaEmpresa", "");
+                          }
+                        }}
+                      >
+                        {showNewEmpresa ? (
+                          <>Seleccionar existente</>
+                        ) : (
+                          <><Plus className="w-3 h-3 mr-1" />Nueva empresa</>
+                        )}
+                      </Button>
+                    </div>
+
+                    {showNewEmpresa ? (
+                      <FormField
+                        control={form.control}
+                        name="nuevaEmpresa"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="relative">
+                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                                <Input 
+                                  placeholder="Nombre de la nueva empresa" 
+                                  className="pl-9" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="empresaId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={loadingEmpresas}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona una empresa" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-background max-h-60">
+                                {empresas.map((empresa) => (
+                                  <SelectItem key={empresa.id} value={empresa.id}>
+                                    <span className="flex items-center gap-2">
+                                      <Building2 className="w-3 h-3" />
+                                      {empresa.nombre}
+                                      {empresa.sector && (
+                                        <span className="text-xs text-muted-foreground">
+                                          ({empresa.sector})
+                                        </span>
+                                      )}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Cliente externo (solo para servicios) */}
+                    {isServicio && !showNewEmpresa && (
+                      <FormField
+                        control={form.control}
+                        name="cliente_externo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input 
+                                placeholder="O introduce el nombre del cliente externo" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Tipo de Mandato (solo para M&A) */}
+                {!isServicio && (
+                  <FormField
+                    control={form.control}
+                    name="tipo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo de Mandato *</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="venta" id="venta" />
+                              <label htmlFor="venta" className="cursor-pointer">
+                                Venta (Sell-Side)
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="compra" id="compra" />
+                              <label htmlFor="compra" className="cursor-pointer">
+                                Compra (Buy-Side)
+                              </label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Campos específicos de Servicios */}
+                {isServicio && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                    <h4 className="font-medium text-sm">Detalles del Servicio</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="servicio_tipo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tipo de Servicio</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(SERVICIO_TIPO_LABELS).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="estructura_honorarios"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estructura Honorarios</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(ESTRUCTURA_HONORARIOS_LABELS).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="honorarios_propuestos"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Honorarios Propuestos (€)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Ej: 25000" 
+                              {...field}
+                              onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {/* Valor y Probabilidad (solo para M&A) */}
+                {!isServicio && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="valor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Estimado (€)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ej: 2500000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="probabilidad"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Probabilidad (%)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              max={100} 
+                              placeholder="50" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
                 <FormField
                   control={form.control}
                   name="fechaCierreEsperada"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de Cierre Esperada</FormLabel>
+                      <FormLabel>{isServicio ? "Fecha de Entrega Esperada" : "Fecha de Cierre Esperada"}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -338,7 +600,10 @@ export function NuevoMandatoDrawer({
                       <FormLabel>Descripción *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Describe el mandato, objetivos y contexto del deal..."
+                          placeholder={isServicio 
+                            ? "Describe el alcance del servicio, entregables y objetivos..."
+                            : "Describe el mandato, objetivos y contexto del deal..."
+                          }
                           className="min-h-[100px]"
                           {...field}
                         />
@@ -351,7 +616,7 @@ export function NuevoMandatoDrawer({
                 <DrawerFooter className="px-0">
                   <Button type="submit" disabled={submitting}>
                     {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Crear Mandato
+                    Crear {MANDATO_CATEGORIA_LABELS[categoria]?.label || "Proyecto"}
                   </Button>
                   <DrawerClose asChild>
                     <Button variant="outline" type="button">
