@@ -9004,6 +9004,108 @@ export type Database = {
           },
         ]
       }
+      propuestas_honorarios: {
+        Row: {
+          archivo_pdf_path: string | null
+          condiciones_pago: string | null
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          desglose: Json | null
+          estado: string
+          estructura: string | null
+          fecha_emision: string | null
+          fecha_respuesta: string | null
+          fecha_vencimiento: string | null
+          id: string
+          importe_total: number
+          mandato_id: string
+          motivo_rechazo: string | null
+          notas_internas: string | null
+          titulo: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archivo_pdf_path?: string | null
+          condiciones_pago?: string | null
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          desglose?: Json | null
+          estado?: string
+          estructura?: string | null
+          fecha_emision?: string | null
+          fecha_respuesta?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          importe_total?: number
+          mandato_id: string
+          motivo_rechazo?: string | null
+          notas_internas?: string | null
+          titulo: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archivo_pdf_path?: string | null
+          condiciones_pago?: string | null
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          desglose?: Json | null
+          estado?: string
+          estructura?: string | null
+          fecha_emision?: string | null
+          fecha_respuesta?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          importe_total?: number
+          mandato_id?: string
+          motivo_rechazo?: string | null
+          notas_internas?: string | null
+          titulo?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           action: string | null
