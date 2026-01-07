@@ -276,5 +276,5 @@ export function downloadPSHPdf(data: PSHData, filename?: string) {
 
 export function previewPSHPdf(data: PSHData): string {
   const doc = generatePSHPdf(data);
-  return doc.output("bloburl") as string;
+  return doc.output("bloburl") as unknown as string;
 }

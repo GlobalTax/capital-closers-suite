@@ -236,11 +236,23 @@ export function NuevaPSHDrawer({
 
   const handlePreview = () => {
     const values = form.getValues();
-    const data: Partial<PropuestaHonorarios> = {
-      ...values,
+    const data = {
+      titulo: values.titulo,
+      descripcion_transaccion: values.descripcion_transaccion,
+      cliente_nombre: values.cliente_nombre,
+      cliente_cif: values.cliente_cif,
+      cliente_domicilio: values.cliente_domicilio,
+      target_nombre: values.target_nombre,
+      target_cif: values.target_cif,
+      target_domicilio: values.target_domicilio,
+      condiciones_pago: values.condiciones_pago,
+      notas_internas: values.notas_internas,
+      fecha_vencimiento: values.fecha_vencimiento 
+        ? values.fecha_vencimiento.toISOString().split('T')[0] 
+        : undefined,
       version,
-      alcance_dd: alcanceDD as any,
-      clausulas_adicionales: clausulas as any,
+      alcance_dd: alcanceDD,
+      clausulas_adicionales: clausulas,
       importe_total: totalGeneral,
       plantilla_tipo: selectedPlantilla?.tipo_servicio,
       desglose: Object.entries(alcanceDD)
@@ -251,7 +263,7 @@ export function NuevaPSHDrawer({
           importe: area?.importe || 0,
         })),
     };
-    onPreviewPDF?.(data);
+    onPreviewPDF?.(data as Partial<PropuestaHonorarios>);
   };
 
   const toggleSection = (section: keyof typeof openSections) => {

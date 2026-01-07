@@ -6,6 +6,27 @@ export interface PropuestaConcepto {
   importe: number;
 }
 
+export interface AreaDD {
+  incluido: boolean;
+  importe: number;
+  alcance: string[];
+}
+
+export interface AlcanceDD {
+  legal?: AreaDD;
+  fiscal?: AreaDD;
+  financiera?: AreaDD;
+  laboral?: AreaDD;
+  otras?: AreaDD;
+}
+
+export interface ClausulasAdicionales {
+  limitacion_responsabilidad?: boolean;
+  confidencialidad?: boolean;
+  ley_aplicable?: string;
+  jurisdiccion?: string;
+}
+
 export interface PropuestaHonorarios {
   id: string;
   mandato_id: string;
@@ -26,6 +47,18 @@ export interface PropuestaHonorarios {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  // Campos PSH avanzados
+  cliente_cif?: string;
+  cliente_domicilio?: string;
+  target_nombre?: string;
+  target_cif?: string;
+  target_domicilio?: string;
+  descripcion_transaccion?: string;
+  alcance_dd?: AlcanceDD;
+  clausulas_adicionales?: ClausulasAdicionales;
+  plantilla_tipo?: string;
+  firma_cliente?: string;
+  firma_firma?: string;
 }
 
 export type PropuestaInsert = Omit<PropuestaHonorarios, 'id' | 'created_at' | 'updated_at'>;
