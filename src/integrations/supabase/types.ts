@@ -7753,15 +7753,20 @@ export type Database = {
           created_at: string
           excerpt: string | null
           featured_image_url: string | null
+          fetched_at: string | null
           id: string
           is_featured: boolean | null
+          is_processed: boolean | null
           is_published: boolean | null
           meta_description: string | null
           meta_title: string | null
+          processed_at: string | null
           published_at: string | null
           read_time: number | null
           search_vector: unknown
           slug: string
+          source_name: string | null
+          source_url: string | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -7774,15 +7779,20 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured_image_url?: string | null
+          fetched_at?: string | null
           id?: string
           is_featured?: boolean | null
+          is_processed?: boolean | null
           is_published?: boolean | null
           meta_description?: string | null
           meta_title?: string | null
+          processed_at?: string | null
           published_at?: string | null
           read_time?: number | null
           search_vector?: unknown
           slug: string
+          source_name?: string | null
+          source_url?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -7795,15 +7805,20 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured_image_url?: string | null
+          fetched_at?: string | null
           id?: string
           is_featured?: boolean | null
+          is_processed?: boolean | null
           is_published?: boolean | null
           meta_description?: string | null
           meta_title?: string | null
+          processed_at?: string | null
           published_at?: string | null
           read_time?: number | null
           search_vector?: unknown
           slug?: string
+          source_name?: string | null
+          source_url?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
