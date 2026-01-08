@@ -122,6 +122,7 @@ export interface MandatoEmpresa {
 // ============================================
 export interface Mandato {
   id: string;
+  codigo?: string;
   tipo: MandatoTipo;
   categoria?: MandatoCategoria;
   empresa_principal_id?: string;
