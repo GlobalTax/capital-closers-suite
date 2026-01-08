@@ -210,7 +210,17 @@ export default function Mandatos() {
   });
 
   const columns = [
-    { key: "id", label: "ID", sortable: true, filterable: true },
+    { 
+      key: "id", 
+      label: "ID", 
+      sortable: true, 
+      filterable: true,
+      render: (value: string) => (
+        <span className="font-mono text-xs text-muted-foreground" title={value}>
+          {value?.substring(0, 8)}
+        </span>
+      ),
+    },
     { 
       key: "empresa_principal", 
       label: "Cliente", 
