@@ -1,3 +1,4 @@
+import type { ElementType } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -60,13 +61,13 @@ import { cn } from "@/lib/utils";
 interface MenuItem {
   title: string;
   url: string;
-  icon: React.ElementType;
+  icon: ElementType;
   external?: boolean;
 }
 
 interface MenuGroup {
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   items: MenuItem[];
   defaultOpen?: boolean;
 }
