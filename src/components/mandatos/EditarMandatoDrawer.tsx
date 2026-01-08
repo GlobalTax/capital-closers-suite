@@ -179,10 +179,8 @@ export function EditarMandatoDrawer({
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      await updateMandato(mandato.id, {
-        ...values,
-        weighted_value: Math.round(((values.valor || 0) * (values.probability || 50)) / 100),
-      } as any);
+      // No enviar weighted_value ya que es una columna generada en PostgreSQL
+      await updateMandato(mandato.id, values);
       toast.success("Mandato actualizado correctamente");
       onSuccess?.();
       onOpenChange(false);
