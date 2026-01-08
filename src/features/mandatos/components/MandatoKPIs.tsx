@@ -85,7 +85,7 @@ export function MandatoKPIs({ mandato, checklistProgress = 0, overdueTasks = 0 }
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {mandato.valor ? `€${(mandato.valor / 1000000).toFixed(1)}M` : "N/A"}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ export function MandatoKPIs({ mandato, checklistProgress = 0, overdueTasks = 0 }
           <Percent className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{probability}%</div>
+          <div className="text-2xl font-medium">{probability}%</div>
           <Progress value={probability} className="h-2 mt-2" />
         </CardContent>
       </Card>
@@ -117,7 +117,7 @@ export function MandatoKPIs({ mandato, checklistProgress = 0, overdueTasks = 0 }
           )}
         </CardHeader>
         <CardContent>
-          <div className={cn("text-2xl font-bold", isStagnant && "text-destructive")}>
+          <div className={cn("text-2xl font-medium", isStagnant && "text-destructive")}>
             {daysInStage}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -133,7 +133,7 @@ export function MandatoKPIs({ mandato, checklistProgress = 0, overdueTasks = 0 }
           <ListTodo className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{checklistProgress}%</div>
+          <div className="text-2xl font-medium">{checklistProgress}%</div>
           <Progress value={checklistProgress} className="h-2 mt-2" />
           {overdueTasks > 0 && (
             <p className="text-xs text-destructive mt-1">

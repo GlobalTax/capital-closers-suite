@@ -51,7 +51,7 @@ export function MandatoHeader({ mandato, onEdit, onDelete }: MandatoHeaderProps)
         </Button>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-medium">
               {mandato.empresa_principal?.nombre || "Mandato"}
             </h1>
             <Badge variant={getBadgeVariant(mandato.estado)}>
