@@ -53,7 +53,7 @@ function StatCard({
         {loading ? (
           <Skeleton className="h-8 w-20" />
         ) : (
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="text-2xl font-medium">{value}</div>
         )}
         {description && (
           <p className="text-xs text-muted-foreground mt-1">{description}</p>
@@ -175,7 +175,7 @@ export default function SyncOperations() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Sincronizar Operaciones</h1>
+            <h1 className="text-2xl font-medium tracking-tight">Sincronizar Operaciones</h1>
             <p className="text-muted-foreground">
               Importar operaciones del marketplace Capittal a mandatos de GoDeal
             </p>

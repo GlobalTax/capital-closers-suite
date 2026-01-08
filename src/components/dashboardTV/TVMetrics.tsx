@@ -39,7 +39,7 @@ export function TVMetrics({ data }: TVMetricsProps) {
             <p className="text-sm font-medium text-muted-foreground mb-1">
               Leads Activos
             </p>
-            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+            <p className="text-4xl font-medium text-blue-600 dark:text-blue-400">
               {totalLeads}
             </p>
           </div>
@@ -56,7 +56,7 @@ export function TVMetrics({ data }: TVMetricsProps) {
             <p className="text-sm font-medium text-muted-foreground mb-1">
               Valor en Pipeline
             </p>
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+            <p className="text-3xl font-medium text-green-600 dark:text-green-400">
               {new Intl.NumberFormat('es-ES', { 
                 style: 'currency', 
                 currency: 'EUR',
@@ -78,7 +78,7 @@ export function TVMetrics({ data }: TVMetricsProps) {
             <p className="text-sm font-medium text-muted-foreground mb-1">
               Mandatos en Proceso
             </p>
-            <p className="text-4xl font-bold text-orange-600 dark:text-orange-400">
+            <p className="text-4xl font-medium text-orange-600 dark:text-orange-400">
               {totalMandatos}
             </p>
           </div>
@@ -95,7 +95,7 @@ export function TVMetrics({ data }: TVMetricsProps) {
             <p className="text-sm font-medium text-muted-foreground mb-1">
               Tasa de Conversión
             </p>
-            <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">
+            <p className="text-4xl font-medium text-purple-600 dark:text-purple-400">
               {tasaConversion}%
             </p>
             <p className="text-sm text-muted-foreground mt-1">

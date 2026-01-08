@@ -114,7 +114,7 @@ export function ValuationCard({
         {/* Main Valuation */}
         <div className="text-center py-4 bg-background rounded-lg border">
           <p className="text-sm text-muted-foreground mb-1">Valoración Final</p>
-          <p className="text-4xl font-bold text-purple-600">
+          <p className="text-4xl font-medium text-purple-600">
             {formatCurrency(valuation.final_valuation)}
           </p>
           {(valuation.valuation_range_min || valuation.valuation_range_max) && (

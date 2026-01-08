@@ -41,9 +41,9 @@ export function TVColumn({ title, leads, color, icon: Icon }: TVColumnProps) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <Icon className={`w-8 h-8 ${iconColorClasses[color]}`} />
-            <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+            <h2 className="text-2xl font-medium text-foreground">{title}</h2>
           </div>
-          <Badge variant="secondary" className="text-lg px-4 py-2 font-bold">
+          <Badge variant="secondary" className="text-lg px-4 py-2 font-medium">
             {leads.length}
           </Badge>
         </div>

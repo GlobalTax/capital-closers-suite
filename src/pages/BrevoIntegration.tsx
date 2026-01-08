@@ -58,7 +58,7 @@ function SyncStatusCard({
         <Icon className={`h-4 w-4 ${color}`} />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{synced}/{total}</div>
+        <div className="text-2xl font-medium">{synced}/{total}</div>
         <Progress value={percentage} className="mt-2" />
         <div className="flex justify-between mt-2 text-xs text-muted-foreground">
           <span>{percentage}% sincronizado</span>
@@ -82,22 +82,22 @@ function QueueStatsCard({ stats }: { stats: { pending: number; processing: numbe
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
             <Clock className="h-5 w-5 mx-auto mb-1 text-amber-500" />
-            <div className="text-xl font-bold">{stats.pending}</div>
+            <div className="text-xl font-medium">{stats.pending}</div>
             <div className="text-xs text-muted-foreground">Pendientes</div>
           </div>
           <div className="text-center">
             <Loader2 className="h-5 w-5 mx-auto mb-1 text-blue-500 animate-spin" />
-            <div className="text-xl font-bold">{stats.processing}</div>
+            <div className="text-xl font-medium">{stats.processing}</div>
             <div className="text-xs text-muted-foreground">Procesando</div>
           </div>
           <div className="text-center">
             <CheckCircle className="h-5 w-5 mx-auto mb-1 text-green-500" />
-            <div className="text-xl font-bold">{stats.completed}</div>
+            <div className="text-xl font-medium">{stats.completed}</div>
             <div className="text-xs text-muted-foreground">Completados</div>
           </div>
           <div className="text-center">
             <XCircle className="h-5 w-5 mx-auto mb-1 text-red-500" />
-            <div className="text-xl font-bold">{stats.failed}</div>
+            <div className="text-xl font-medium">{stats.failed}</div>
             <div className="text-xs text-muted-foreground">Fallidos</div>
           </div>
         </div>

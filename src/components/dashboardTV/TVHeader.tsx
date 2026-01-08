@@ -52,7 +52,7 @@ export function TVHeader({ onRefresh, lastUpdate }: TVHeaderProps) {
         <div className="flex items-center justify-between">
           {/* Logo y título */}
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold text-primary">
+            <h1 className="text-3xl font-medium text-primary">
               Capittal CRM
             </h1>
             <span className="text-xl text-muted-foreground">
@@ -62,7 +62,7 @@ export function TVHeader({ onRefresh, lastUpdate }: TVHeaderProps) {
 
           {/* Fecha y hora central */}
           <div className="text-center">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-medium text-foreground">
               {format(currentTime, "HH:mm:ss")}
             </div>
             <div className="text-base text-muted-foreground">

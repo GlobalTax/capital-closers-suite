@@ -15,7 +15,7 @@ export function TimeTrackingStats({ stats }: TimeTrackingStatsProps) {
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {stats.total_hours.toFixed(1)}h
           </div>
           <p className="text-xs text-muted-foreground">
@@ -30,7 +30,7 @@ export function TimeTrackingStats({ stats }: TimeTrackingStatsProps) {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {stats.billable_hours.toFixed(1)}h
           </div>
           <p className="text-xs text-muted-foreground">
@@ -45,7 +45,7 @@ export function TimeTrackingStats({ stats }: TimeTrackingStatsProps) {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {(stats.total_hours / 7).toFixed(1)}h
           </div>
           <p className="text-xs text-muted-foreground">
@@ -60,7 +60,7 @@ export function TimeTrackingStats({ stats }: TimeTrackingStatsProps) {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {stats.hours_by_user.length}
           </div>
           <p className="text-xs text-muted-foreground">

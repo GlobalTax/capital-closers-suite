@@ -342,7 +342,7 @@ export default function Usuarios() {
               )}
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Para confirmar, escribe <span className="font-mono font-bold text-destructive">ELIMINAR</span> en el campo de abajo:</p>
+                <p className="text-sm font-medium">Para confirmar, escribe <span className="font-mono font-medium text-destructive">ELIMINAR</span> en el campo de abajo:</p>
                 <Input
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}

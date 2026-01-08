@@ -137,10 +137,10 @@ export default function MisHoras() {
       {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Hoy</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{todayHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Aprobadas hoy</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Esta Semana</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{thisWeekHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Últimos 7 días</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Facturables</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{billableHours.toFixed(1)}h</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Promedio Diario</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{averageDailyHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Este mes</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Hoy</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{todayHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Aprobadas hoy</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Esta Semana</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{thisWeekHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Últimos 7 días</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Facturables</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{billableHours.toFixed(1)}h</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Promedio Diario</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{averageDailyHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Este mes</p></CardContent></Card>
       </div>
 
       <TimeFilters filters={filters} onChange={setFilters} mandatos={mandatos} showUserFilter={false} />

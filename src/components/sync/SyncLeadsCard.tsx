@@ -49,7 +49,7 @@ export function SyncLeadsCard() {
               <Clock className="w-4 h-4" />
               Pendientes
             </div>
-            <div className="text-2xl font-bold">{stats?.totalPending || 0}</div>
+            <div className="text-2xl font-medium">{stats?.totalPending || 0}</div>
             <div className="text-xs text-muted-foreground mt-1">
               {stats?.pendingValuations || 0} valoraciones, {stats?.pendingContactLeads || 0} contactos, {stats?.pendingGeneralLeads || 0} generales
             </div>
@@ -59,7 +59,7 @@ export function SyncLeadsCard() {
               <CheckCircle2 className="w-4 h-4" />
               Sincronizados hoy
             </div>
-            <div className="text-2xl font-bold text-green-600">{stats?.syncedToday || 0}</div>
+            <div className="text-2xl font-medium text-green-600">{stats?.syncedToday || 0}</div>
             <div className="text-xs text-muted-foreground mt-1">
               Última sync: {stats?.lastSync 
                 ? formatDistanceToNow(new Date(stats.lastSync), { addSuffix: true, locale: es })

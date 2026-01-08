@@ -67,11 +67,11 @@ export function SyncDealsFromBrevoCard() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-2xl font-bold">{result.totalDeals}</p>
+                <p className="text-2xl font-medium">{result.totalDeals}</p>
                 <p className="text-sm text-muted-foreground">Deals en Brevo</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-2xl font-bold">{successRate}%</p>
+                <p className="text-2xl font-medium">{successRate}%</p>
                 <p className="text-sm text-muted-foreground">Tasa de éxito</p>
               </div>
             </div>

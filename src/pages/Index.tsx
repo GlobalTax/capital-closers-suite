@@ -158,7 +158,7 @@ export default function Index() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-medium">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
           Vista general de tu actividad y próximas acciones
         </p>
@@ -171,7 +171,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Interacciones (30d)</p>
-                <p className="text-3xl font-bold mt-2">{stats.totalInteracciones}</p>
+                <p className="text-3xl font-medium mt-2">{stats.totalInteracciones}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Activity className="h-6 w-6 text-primary" />
@@ -185,7 +185,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Próximas Acciones</p>
-                <p className="text-3xl font-bold mt-2">{stats.proximasAcciones}</p>
+                <p className="text-3xl font-medium mt-2">{stats.proximasAcciones}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
                 <Calendar className="h-6 w-6 text-yellow-500" />
@@ -199,7 +199,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Contactos Inactivos</p>
-                <p className="text-3xl font-bold mt-2">{stats.contactosInactivos}</p>
+                <p className="text-3xl font-medium mt-2">{stats.contactosInactivos}</p>
                 <p className="text-xs text-muted-foreground mt-1">+30 días sin actividad</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
@@ -214,7 +214,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Empresas Inactivas</p>
-                <p className="text-3xl font-bold mt-2">{stats.empresasInactivas}</p>
+                <p className="text-3xl font-medium mt-2">{stats.empresasInactivas}</p>
                 <p className="text-xs text-muted-foreground mt-1">+30 días sin actividad</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">

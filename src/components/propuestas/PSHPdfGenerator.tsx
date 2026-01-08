@@ -24,9 +24,9 @@ export function generatePSHPdf(data: PSHData): jsPDF {
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
 
-  const addText = (text: string, fontSize: number, isBold = false, align: "left" | "center" | "right" = "left") => {
+  const addText = (text: string, fontSize: number, isMedium = false, align: "left" | "center" | "right" = "left") => {
     doc.setFontSize(fontSize);
-    doc.setFont("helvetica", isBold ? "bold" : "normal");
+    doc.setFont("helvetica", isMedium ? "bold" : "normal");
     const x = align === "center" ? pageWidth / 2 : align === "right" ? pageWidth - margin : margin;
     doc.text(text, x, y, { align });
     y += fontSize * 0.5;

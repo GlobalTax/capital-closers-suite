@@ -44,7 +44,7 @@ export function TeamTimeStats({ stats, loading }: TeamTimeStatsProps) {
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatHours(stats.total_hours)}</div>
+          <div className="text-2xl font-medium">{formatHours(stats.total_hours)}</div>
           <p className="text-xs text-muted-foreground">
             {stats.total_entries} registros totales
           </p>
@@ -57,7 +57,7 @@ export function TeamTimeStats({ stats, loading }: TeamTimeStatsProps) {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.active_users}</div>
+          <div className="text-2xl font-medium">{stats.active_users}</div>
           <p className="text-xs text-muted-foreground">
             usuarios con tiempo registrado
           </p>
@@ -70,7 +70,7 @@ export function TeamTimeStats({ stats, loading }: TeamTimeStatsProps) {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatHours(stats.billable_hours)}</div>
+          <div className="text-2xl font-medium">{formatHours(stats.billable_hours)}</div>
           <p className="text-xs text-muted-foreground">
             {stats.total_hours > 0 
               ? `${((stats.billable_hours / stats.total_hours) * 100).toFixed(0)}% del total`
@@ -86,7 +86,7 @@ export function TeamTimeStats({ stats, loading }: TeamTimeStatsProps) {
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-2xl font-medium">
             {formatHours(stats.average_hours_per_user)}
           </div>
           <p className="text-xs text-muted-foreground">
