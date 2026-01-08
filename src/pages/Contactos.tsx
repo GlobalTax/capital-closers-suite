@@ -391,7 +391,7 @@ export default function Contactos() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Contactos</p>
-                <p className="text-3xl font-bold mt-2">{kpis.total}</p>
+                <p className="text-3xl font-medium mt-2">{kpis.total}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary" />
@@ -405,7 +405,7 @@ export default function Contactos() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Activos (30 días)</p>
-                <p className="text-3xl font-bold mt-2">{kpis.activos}</p>
+                <p className="text-3xl font-medium mt-2">{kpis.activos}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   en página actual
                 </p>
@@ -422,7 +422,7 @@ export default function Contactos() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Nuevos (30 días)</p>
-                <p className="text-3xl font-bold mt-2">{kpis.nuevos}</p>
+                <p className="text-3xl font-medium mt-2">{kpis.nuevos}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUp className="h-3 w-3 text-green-500" />
                   <p className="text-xs text-green-500">en página actual</p>

@@ -59,7 +59,7 @@ export function PyGDetailView({ statement }: PyGDetailViewProps) {
               </span>
               <span className={`${row.bold ? 'font-semibold' : ''} ${
                 row.negative && row.value ? 'text-destructive' : ''
-              } ${row.primary ? 'text-primary font-bold' : ''}`}>
+              } ${row.primary ? 'text-primary font-medium' : ''}`}>
                 {formatCurrency(row.value)}
               </span>
             </div>

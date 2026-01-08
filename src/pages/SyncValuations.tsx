@@ -69,7 +69,7 @@ export default function SyncValuations() {
             {loadingStats ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{stats?.total_valuations || 0}</div>
+              <div className="text-2xl font-medium">{stats?.total_valuations || 0}</div>
             )}
             <p className="text-xs text-muted-foreground">
               Leads de valoración activos
@@ -86,7 +86,7 @@ export default function SyncValuations() {
             {loadingStats ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{stats?.total_empresas || 0}</div>
+              <div className="text-2xl font-medium">{stats?.total_empresas || 0}</div>
             )}
             <p className="text-xs text-muted-foreground">
               Empresas en el CRM actual
@@ -103,7 +103,7 @@ export default function SyncValuations() {
             {loadingStats ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{stats?.total_contactos || 0}</div>
+              <div className="text-2xl font-medium">{stats?.total_contactos || 0}</div>
             )}
             <p className="text-xs text-muted-foreground">
               {stats?.contactos_with_valuation || 0} vinculados a valoraciones
@@ -120,7 +120,7 @@ export default function SyncValuations() {
             {loadingStats ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold text-orange-500">
+              <div className="text-2xl font-medium text-orange-500">
                 {stats?.valuations_without_empresa || 0}
               </div>
             )}

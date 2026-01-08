@@ -75,7 +75,7 @@ export function SyncFromBrevoCard() {
                   <Users className="h-4 w-4" />
                   <span className="text-xs">Contactos</span>
                 </div>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-2xl font-medium text-foreground">
                   {result.total_brevo_contacts}
                 </div>
                 <div className="text-xs text-muted-foreground">en Brevo</div>
@@ -86,7 +86,7 @@ export function SyncFromBrevoCard() {
                   <Building2 className="h-4 w-4" />
                   <span className="text-xs">Empresas</span>
                 </div>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-2xl font-medium text-foreground">
                   {result.empresas_created}
                 </div>
                 <div className="text-xs text-muted-foreground">nuevas</div>
@@ -103,15 +103,15 @@ export function SyncFromBrevoCard() {
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="bg-green-500/10 text-green-600 dark:text-green-400 rounded p-2">
-                <div className="font-bold text-lg">{result.contactos_created}</div>
+                <div className="font-medium text-lg">{result.contactos_created}</div>
                 <div>Creados</div>
               </div>
               <div className="bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded p-2">
-                <div className="font-bold text-lg">{result.contactos_updated}</div>
+                <div className="font-medium text-lg">{result.contactos_updated}</div>
                 <div>Actualizados</div>
               </div>
               <div className="bg-muted rounded p-2">
-                <div className="font-bold text-lg">{result.contactos_skipped}</div>
+                <div className="font-medium text-lg">{result.contactos_skipped}</div>
                 <div>Omitidos</div>
               </div>
             </div>

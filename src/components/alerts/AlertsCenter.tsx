@@ -134,7 +134,7 @@ export function AlertsCenter() {
             <Badge 
               variant="destructive" 
               className={cn(
-                "absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-[10px] font-bold",
+                "absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-[10px] font-medium",
                 criticalCount > 0 && "animate-pulse"
               )}
             >

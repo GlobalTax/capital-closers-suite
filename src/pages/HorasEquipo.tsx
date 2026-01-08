@@ -104,7 +104,7 @@ export default function HorasEquipo() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold">Acceso Denegado</h2>
+          <h2 className="text-2xl font-medium">Acceso Denegado</h2>
           <p className="text-muted-foreground">
             Solo los Super Administradores pueden acceder a esta sección.
           </p>

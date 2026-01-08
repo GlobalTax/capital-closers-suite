@@ -47,7 +47,7 @@ export function CalendarListView({ events, currentDate }: CalendarListViewProps)
                   <span className="text-xs text-muted-foreground uppercase">
                     {format(date, "EEE", { locale: es })}
                   </span>
-                  <span className="text-xl font-bold">
+                  <span className="text-xl font-medium">
                     {format(date, "d")}
                   </span>
                   <span className="text-xs text-muted-foreground">

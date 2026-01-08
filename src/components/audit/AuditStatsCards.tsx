@@ -39,7 +39,7 @@ export function AuditStatsCards({ stats, loading }: AuditStatsCardsProps) {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalOperations}</div>
+          <div className="text-2xl font-medium">{stats.totalOperations}</div>
           <p className="text-xs text-muted-foreground">Últimos 30 días</p>
         </CardContent>
       </Card>
@@ -50,7 +50,7 @@ export function AuditStatsCards({ stats, loading }: AuditStatsCardsProps) {
           <Plus className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.byAction.INSERT || 0}</div>
+          <div className="text-2xl font-medium">{stats.byAction.INSERT || 0}</div>
           <p className="text-xs text-muted-foreground">Nuevos registros</p>
         </CardContent>
       </Card>
@@ -61,7 +61,7 @@ export function AuditStatsCards({ stats, loading }: AuditStatsCardsProps) {
           <Edit className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.byAction.UPDATE || 0}</div>
+          <div className="text-2xl font-medium">{stats.byAction.UPDATE || 0}</div>
           <p className="text-xs text-muted-foreground">Registros modificados</p>
         </CardContent>
       </Card>
@@ -72,7 +72,7 @@ export function AuditStatsCards({ stats, loading }: AuditStatsCardsProps) {
           <Trash2 className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.byAction.DELETE || 0}</div>
+          <div className="text-2xl font-medium">{stats.byAction.DELETE || 0}</div>
           <p className="text-xs text-muted-foreground">Registros eliminados</p>
         </CardContent>
       </Card>

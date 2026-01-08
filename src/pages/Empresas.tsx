@@ -189,7 +189,7 @@ export default function Empresas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Empresas</p>
-                <p className="text-2xl font-bold">{kpis.total}</p>
+                <p className="text-2xl font-medium">{kpis.total}</p>
               </div>
               <Building2 className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -201,7 +201,7 @@ export default function Empresas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Prioritarias</p>
-                <p className="text-2xl font-bold">{kpis.targets}</p>
+                <p className="text-2xl font-medium">{kpis.targets}</p>
                 <p className="text-xs text-muted-foreground">en página actual</p>
               </div>
               <Star className="h-8 w-8 text-primary" />
@@ -214,7 +214,7 @@ export default function Empresas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Facturación Media</p>
-                <p className="text-2xl font-bold">€{(kpis.facturacionPromedio / 1000000).toFixed(1)}M</p>
+                <p className="text-2xl font-medium">€{(kpis.facturacionPromedio / 1000000).toFixed(1)}M</p>
               </div>
               <TrendingUp className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -226,7 +226,7 @@ export default function Empresas() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Empresas Activas</p>
-                <p className="text-2xl font-bold">{empresas.filter(e => !e.es_target || (e.estado_target && e.estado_target !== 'rechazada')).length}</p>
+                <p className="text-2xl font-medium">{empresas.filter(e => !e.es_target || (e.estado_target && e.estado_target !== 'rechazada')).length}</p>
               </div>
               <Activity className="h-8 w-8 text-muted-foreground" />
             </div>

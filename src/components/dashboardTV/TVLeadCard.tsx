@@ -81,7 +81,7 @@ export function TVLeadCard({ lead }: TVLeadCardProps) {
           
           {/* Valor económico */}
           {lead.valor && (
-            <p className="text-2xl font-bold text-foreground">
+            <p className="text-2xl font-medium text-foreground">
               {new Intl.NumberFormat('es-ES', { 
                 style: 'currency', 
                 currency: 'EUR',

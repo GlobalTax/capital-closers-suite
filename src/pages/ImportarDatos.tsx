@@ -195,7 +195,7 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">📤 Importar Oportunidades</h1>
+          <h1 className="text-3xl font-medium">📤 Importar Oportunidades</h1>
           <p className="text-muted-foreground mt-2">
             Importa oportunidades comerciales desde archivos CSV
           </p>

@@ -58,21 +58,21 @@ export function CostSummaryCard({ mandatoId }: CostSummaryCardProps) {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-muted/50 rounded-lg p-4 text-center">
             <DollarSign className="w-5 h-5 mx-auto text-primary mb-1" />
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-medium">
               €{costData.totalCost.toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground">Coste Total</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-4 text-center">
             <Clock className="w-5 h-5 mx-auto text-blue-500 mb-1" />
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-medium">
               {costData.totalHours}h
             </div>
             <div className="text-xs text-muted-foreground">Total Horas</div>
           </div>
           <div className="bg-muted/50 rounded-lg p-4 text-center">
             <Percent className="w-5 h-5 mx-auto text-green-500 mb-1" />
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-medium">
               {costData.billablePercentage}%
             </div>
             <div className="text-xs text-muted-foreground">Facturable</div>

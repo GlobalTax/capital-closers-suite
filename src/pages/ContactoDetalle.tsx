@@ -110,7 +110,7 @@ export default function ContactoDetalle() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{contacto.nombre} {contacto.apellidos}</h1>
+            <h1 className="text-3xl font-medium">{contacto.nombre} {contacto.apellidos}</h1>
             <p className="text-muted-foreground">
               {contacto.cargo && `${contacto.cargo} `}
               {contacto.empresa_principal && `en ${contacto.empresa_principal.nombre}`}
@@ -224,7 +224,7 @@ export default function ContactoDetalle() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Mandatos</p>
-                <p className="text-2xl font-bold">{mandatos.length}</p>
+                <p className="text-2xl font-medium">{mandatos.length}</p>
               </div>
               <Briefcase className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -248,7 +248,7 @@ export default function ContactoDetalle() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold">€{(valorTotalMandatos / 1000000).toFixed(1)}M</p>
+                <p className="text-2xl font-medium">€{(valorTotalMandatos / 1000000).toFixed(1)}M</p>
               </div>
               <Banknote className="h-8 w-8 text-muted-foreground" />
             </div>

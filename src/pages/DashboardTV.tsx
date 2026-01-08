@@ -48,7 +48,7 @@ export default function DashboardTV() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-2xl font-bold text-destructive mb-4">
+          <p className="text-2xl font-medium text-destructive mb-4">
             Error al cargar el dashboard
           </p>
           <p className="text-muted-foreground mb-6">

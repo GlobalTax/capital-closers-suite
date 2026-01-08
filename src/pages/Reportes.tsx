@@ -111,7 +111,7 @@ export default function Reportes() {
                   <Icon className={`w-5 h-5 ${kpi.color}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  <div className="text-2xl font-medium">{kpi.value}</div>
                   <p className="text-xs text-muted-foreground">{kpi.description}</p>
                 </CardContent>
               </Card>
@@ -180,7 +180,7 @@ export default function Reportes() {
                       <Trophy className="w-5 h-5 text-green-500" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-green-600">{winLossMetrics.winRate}%</div>
+                      <div className="text-2xl font-medium text-green-600">{winLossMetrics.winRate}%</div>
                       <p className="text-xs text-muted-foreground">De {winLossMetrics.totalClosed} cerrados</p>
                     </CardContent>
                   </Card>
@@ -190,7 +190,7 @@ export default function Reportes() {
                       <Trophy className="w-5 h-5 text-green-500" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{winLossMetrics.wonCount}</div>
+                      <div className="text-2xl font-medium">{winLossMetrics.wonCount}</div>
                       <p className="text-xs text-muted-foreground">€{(winLossMetrics.totalWonValue/1000000).toFixed(1)}M total</p>
                     </CardContent>
                   </Card>
@@ -200,7 +200,7 @@ export default function Reportes() {
                       <XCircle className="w-5 h-5 text-destructive" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-destructive">{winLossMetrics.lostCount}</div>
+                      <div className="text-2xl font-medium text-destructive">{winLossMetrics.lostCount}</div>
                       <p className="text-xs text-muted-foreground">{winLossMetrics.lossesByReason.length} razones distintas</p>
                     </CardContent>
                   </Card>
@@ -210,7 +210,7 @@ export default function Reportes() {
                       <AlertTriangle className="w-5 h-5 text-orange-500" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-orange-600">{winLossMetrics.cancelledCount}</div>
+                      <div className="text-2xl font-medium text-orange-600">{winLossMetrics.cancelledCount}</div>
                       <p className="text-xs text-muted-foreground">Mandatos cancelados</p>
                     </CardContent>
                   </Card>
@@ -311,7 +311,7 @@ export default function Reportes() {
                   <DollarSign className="w-5 h-5 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">€{(costMetrics?.totalCost || 0).toLocaleString()}</div>
+                  <div className="text-2xl font-medium">€{(costMetrics?.totalCost || 0).toLocaleString()}</div>
                   <p className="text-xs text-muted-foreground">{costMetrics?.mandatosWithCost || 0} mandatos con coste</p>
                 </CardContent>
               </Card>
@@ -321,7 +321,7 @@ export default function Reportes() {
                   <Clock className="w-5 h-5 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{costMetrics?.totalHours || 0}h</div>
+                  <div className="text-2xl font-medium">{costMetrics?.totalHours || 0}h</div>
                   <p className="text-xs text-muted-foreground">Registradas en el sistema</p>
                 </CardContent>
               </Card>
@@ -331,7 +331,7 @@ export default function Reportes() {
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{costMetrics?.avgBillableRate || 0}%</div>
+                  <div className="text-2xl font-medium text-green-600">{costMetrics?.avgBillableRate || 0}%</div>
                   <p className="text-xs text-muted-foreground">Promedio facturable</p>
                 </CardContent>
               </Card>
@@ -341,7 +341,7 @@ export default function Reportes() {
                   <DollarSign className="w-5 h-5 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-2xl font-medium">
                     €{costMetrics?.totalHours ? Math.round(costMetrics.totalCost / costMetrics.totalHours) : 0}
                   </div>
                   <p className="text-xs text-muted-foreground">Tarifa media aplicada</p>
@@ -442,7 +442,7 @@ export default function Reportes() {
                 <CardHeader><CardTitle className="flex items-center gap-2"><ArrowUpRight className="text-green-500" /> Compra</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between"><span>Deals:</span><Badge>{comparisonMetrics?.compra.count || 0}</Badge></div>
-                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-bold">€{((comparisonMetrics?.compra.totalValue || 0)/1000000).toFixed(1)}M</span></div>
+                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-medium">€{((comparisonMetrics?.compra.totalValue || 0)/1000000).toFixed(1)}M</span></div>
                   <div className="flex justify-between"><span>Conversión:</span><span>{comparisonMetrics?.compra.conversionRate || 0}%</span></div>
                 </CardContent>
               </Card>
@@ -450,7 +450,7 @@ export default function Reportes() {
                 <CardHeader><CardTitle className="flex items-center gap-2"><ArrowDownRight className="text-blue-500" /> Venta</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between"><span>Deals:</span><Badge>{comparisonMetrics?.venta.count || 0}</Badge></div>
-                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-bold">€{((comparisonMetrics?.venta.totalValue || 0)/1000000).toFixed(1)}M</span></div>
+                  <div className="flex justify-between"><span>Valor Total:</span><span className="font-medium">€{((comparisonMetrics?.venta.totalValue || 0)/1000000).toFixed(1)}M</span></div>
                   <div className="flex justify-between"><span>Conversión:</span><span>{comparisonMetrics?.venta.conversionRate || 0}%</span></div>
                 </CardContent>
               </Card>

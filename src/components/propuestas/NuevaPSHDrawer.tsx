@@ -719,7 +719,7 @@ export function NuevaPSHDrawer({
                 <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Total Propuesta</span>
-                    <span className="text-2xl font-bold text-primary">
+                    <span className="text-2xl font-medium text-primary">
                       {formatCurrency(totalGeneral)}
                     </span>
                   </div>

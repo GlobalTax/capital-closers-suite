@@ -56,7 +56,7 @@ export function PropuestaDetailCard({
             />
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold">{formatCurrency(propuesta.importe_total)}</p>
+            <p className="text-2xl font-medium">{formatCurrency(propuesta.importe_total)}</p>
             {propuesta.estructura && (
               <p className="text-sm text-muted-foreground">
                 {ESTRUCTURA_HONORARIOS_LABELS[propuesta.estructura]}
@@ -97,7 +97,7 @@ export function PropuestaDetailCard({
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={2}>Total</TableCell>
-                  <TableCell className="text-right font-bold">
+                  <TableCell className="text-right font-medium">
                     {formatCurrency(propuesta.importe_total)}
                   </TableCell>
                 </TableRow>
