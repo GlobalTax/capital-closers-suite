@@ -7437,6 +7437,7 @@ export type Database = {
           cliente_externo: string | null
           closed_at: string | null
           closed_by: string | null
+          codigo: string | null
           created_at: string | null
           days_in_stage: number | null
           descripcion: string | null
@@ -7487,6 +7488,7 @@ export type Database = {
           cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          codigo?: string | null
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null
@@ -7537,6 +7539,7 @@ export type Database = {
           cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
+          codigo?: string | null
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null

@@ -211,13 +211,26 @@ export default function Mandatos() {
 
   const columns = [
     { 
-      key: "id", 
+      key: "codigo", 
       label: "ID", 
       sortable: true, 
       filterable: true,
-      render: (value: string) => (
-        <span className="font-mono text-xs text-muted-foreground" title={value}>
-          {value?.substring(0, 8)}
+      render: (value: string, row: Mandato) => (
+        <span 
+          className="font-mono text-xs font-medium cursor-pointer hover:text-primary transition-colors" 
+          title="Clic para editar"
+          onClick={(e) => {
+            e.stopPropagation();
+            const newCodigo = prompt("Editar código:", value || "");
+            if (newCodigo !== null && newCodigo !== value) {
+              updateMandato(row.id, { codigo: newCodigo }).then(() => {
+                toast.success("Código actualizado");
+                cargarMandatos();
+              }).catch(() => toast.error("Error al actualizar código"));
+            }
+          }}
+        >
+          {value || row.id.substring(0, 8)}
         </span>
       ),
     },
