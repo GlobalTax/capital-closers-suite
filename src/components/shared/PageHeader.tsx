@@ -1,6 +1,6 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, type LucideIcon } from "lucide-react";
-import React from "react";
 
 interface PageHeaderProps {
   title: string;
@@ -23,18 +23,17 @@ export function PageHeader({
   actions,
   extraActions,
 }: PageHeaderProps) {
-  // Check if icon is a LucideIcon (function component) or a ReactNode
   const renderIcon = () => {
     if (!icon) return null;
     
-    // If it's a function (LucideIcon component), render it
-    if (typeof icon === 'function') {
-      const Icon = icon as LucideIcon;
-      return <Icon className="h-7 w-7 text-foreground" />;
+    // If it's already a rendered element, return it as-is
+    if (React.isValidElement(icon)) {
+      return icon;
     }
     
-    // Otherwise it's already a ReactNode
-    return icon;
+    // Otherwise treat it as a component to instantiate (LucideIcon or forwardRef)
+    const Icon = icon as LucideIcon;
+    return <Icon className="h-7 w-7 text-foreground" />;
   };
 
   return (
