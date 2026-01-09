@@ -127,6 +127,7 @@ export type Database = {
       }
       acquisition_leads: {
         Row: {
+          acquisition_channel_id: string | null
           acquisition_type: string | null
           additional_details: string | null
           brevo_deleted_at: string | null
@@ -169,6 +170,7 @@ export type Database = {
           utm_source: string | null
         }
         Insert: {
+          acquisition_channel_id?: string | null
           acquisition_type?: string | null
           additional_details?: string | null
           brevo_deleted_at?: string | null
@@ -211,6 +213,7 @@ export type Database = {
           utm_source?: string | null
         }
         Update: {
+          acquisition_channel_id?: string | null
           acquisition_type?: string | null
           additional_details?: string | null
           brevo_deleted_at?: string | null
@@ -252,7 +255,15 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "acquisition_leads_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ad_conversions: {
         Row: {
@@ -338,6 +349,42 @@ export type Database = {
           target_user_email?: string | null
           target_user_id?: string | null
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      admin_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          metadata: Json | null
+          read_at: string | null
+          read_by: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          read_by?: string | null
+          title?: string
+          type?: string
         }
         Relationships: []
       }
@@ -480,6 +527,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "admin_videos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -720,6 +774,7 @@ export type Database = {
       }
       advisor_valuations: {
         Row: {
+          acquisition_channel_id: string | null
           cif: string
           company_name: string
           contact_name: string
@@ -751,6 +806,7 @@ export type Database = {
           whatsapp_opt_in: boolean | null
         }
         Insert: {
+          acquisition_channel_id?: string | null
           cif: string
           company_name: string
           contact_name: string
@@ -782,6 +838,7 @@ export type Database = {
           whatsapp_opt_in?: boolean | null
         }
         Update: {
+          acquisition_channel_id?: string | null
           cif?: string
           company_name?: string
           contact_name?: string
@@ -812,7 +869,15 @@ export type Database = {
           user_agent?: string | null
           whatsapp_opt_in?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "advisor_valuations_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_imports: {
         Row: {
@@ -1309,10 +1374,24 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "booking_assignment_history_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "booking_assignment_history_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "booking_assignment_history_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -1817,10 +1896,24 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "calendar_bookings_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "calendar_bookings_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_bookings_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -2003,6 +2096,7 @@ export type Database = {
       }
       collaborator_applications: {
         Row: {
+          acquisition_channel_id: string | null
           assigned_at: string | null
           assigned_to: string | null
           brevo_deleted_at: string | null
@@ -2046,6 +2140,7 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          acquisition_channel_id?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2089,6 +2184,7 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          acquisition_channel_id?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2133,16 +2229,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "collaborator_applications_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "collaborator_applications_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "collaborator_applications_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       company_acquisition_inquiries: {
         Row: {
+          acquisition_channel_id: string | null
           acquisition_type: string | null
           brevo_deleted_at: string | null
           brevo_lists: number[] | null
@@ -2196,6 +2307,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          acquisition_channel_id?: string | null
           acquisition_type?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
@@ -2249,6 +2361,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          acquisition_channel_id?: string | null
           acquisition_type?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
@@ -2303,10 +2416,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "company_acquisition_inquiries_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_acquisition_inquiries_processed_by"
             columns: ["processed_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "fk_acquisition_inquiries_processed_by"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -2322,6 +2449,8 @@ export type Database = {
           deal_type: string | null
           deleted_at: string | null
           description: string
+          description_ca: string | null
+          description_en: string | null
           display_locations: string[] | null
           ebitda_amount: number | null
           ebitda_multiple: number | null
@@ -2340,6 +2469,8 @@ export type Database = {
           revenue_amount: number | null
           sector: string
           short_description: string | null
+          short_description_ca: string | null
+          short_description_en: string | null
           source_lead_id: string | null
           source_lead_type: string | null
           status: string | null
@@ -2359,6 +2490,8 @@ export type Database = {
           deal_type?: string | null
           deleted_at?: string | null
           description: string
+          description_ca?: string | null
+          description_en?: string | null
           display_locations?: string[] | null
           ebitda_amount?: number | null
           ebitda_multiple?: number | null
@@ -2377,6 +2510,8 @@ export type Database = {
           revenue_amount?: number | null
           sector: string
           short_description?: string | null
+          short_description_ca?: string | null
+          short_description_en?: string | null
           source_lead_id?: string | null
           source_lead_type?: string | null
           status?: string | null
@@ -2396,6 +2531,8 @@ export type Database = {
           deal_type?: string | null
           deleted_at?: string | null
           description?: string
+          description_ca?: string | null
+          description_en?: string | null
           display_locations?: string[] | null
           ebitda_amount?: number | null
           ebitda_multiple?: number | null
@@ -2414,6 +2551,8 @@ export type Database = {
           revenue_amount?: number | null
           sector?: string
           short_description?: string | null
+          short_description_ca?: string | null
+          short_description_en?: string | null
           source_lead_id?: string | null
           source_lead_type?: string | null
           status?: string | null
@@ -2432,10 +2571,24 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "company_operations_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "company_operations_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "company_operations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -2523,6 +2676,7 @@ export type Database = {
           status_updated_at: string | null
           time_spent_seconds: number | null
           token_expires_at: string | null
+          token_hash: string | null
           token_used_at: string | null
           unique_token: string | null
           user_agent: string | null
@@ -2617,6 +2771,7 @@ export type Database = {
           status_updated_at?: string | null
           time_spent_seconds?: number | null
           token_expires_at?: string | null
+          token_hash?: string | null
           token_used_at?: string | null
           unique_token?: string | null
           user_agent?: string | null
@@ -2711,6 +2866,7 @@ export type Database = {
           status_updated_at?: string | null
           time_spent_seconds?: number | null
           token_expires_at?: string | null
+          token_hash?: string | null
           token_used_at?: string | null
           unique_token?: string | null
           user_agent?: string | null
@@ -2736,6 +2892,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "company_valuations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -2961,6 +3124,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contact_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -3920,6 +4090,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "documents_previous_version_id_fkey"
             columns: ["previous_version_id"]
             isOneToOne: false
@@ -4872,6 +5049,7 @@ export type Database = {
       }
       general_contact_leads: {
         Row: {
+          acquisition_channel_id: string | null
           ai_company_summary: string | null
           ai_company_summary_at: string | null
           annual_revenue: string | null
@@ -4911,6 +5089,7 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          acquisition_channel_id?: string | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
           annual_revenue?: string | null
@@ -4950,6 +5129,7 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          acquisition_channel_id?: string | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
           annual_revenue?: string | null
@@ -4989,6 +5169,13 @@ export type Database = {
           utm_term?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "general_contact_leads_acquisition_channel_id_fkey"
+            columns: ["acquisition_channel_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "general_contact_leads_crm_contacto_id_fkey"
             columns: ["crm_contacto_id"]
@@ -5121,6 +5308,13 @@ export type Database = {
             columns: ["imported_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "import_logs_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5378,10 +5572,24 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "investor_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "investor_leads_deleted_by_fkey"
             columns: ["deleted_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "investor_leads_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -5441,6 +5649,13 @@ export type Database = {
             columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_application_activities_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5572,6 +5787,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "job_applications_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "job_applications_job_post_id_fkey"
             columns: ["job_post_id"]
             isOneToOne: false
@@ -5583,6 +5805,13 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5702,6 +5931,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_post_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -5846,6 +6082,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "job_posts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -6363,10 +6606,24 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "lead_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "lead_tasks_completed_by_fkey"
             columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "lead_tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -7448,6 +7705,13 @@ export type Database = {
             referencedRelation: "admin_users"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "mandato_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       mandatos: {
@@ -7455,6 +7719,8 @@ export type Database = {
           brevo_deal_id: string | null
           brevo_synced_at: string | null
           categoria: string
+          ccaa_disponible: boolean | null
+          ccaa_fecha: string | null
           cliente_externo: string | null
           closed_at: string | null
           closed_by: string | null
@@ -7462,6 +7728,11 @@ export type Database = {
           created_at: string | null
           days_in_stage: number | null
           descripcion: string | null
+          doc_datapack: string | null
+          doc_im: string | null
+          doc_rod: string | null
+          doc_teaser: string | null
+          doc_valoracion: string | null
           empresa_principal_id: string | null
           es_interno: boolean | null
           estado: string
@@ -7480,11 +7751,15 @@ export type Database = {
           last_activity_at: string | null
           loss_notes: string | null
           loss_reason: Database["public"]["Enums"]["loss_reason_type"] | null
+          nombre_proyecto: string | null
           numero_ofertas_recibidas: number | null
           outcome: Database["public"]["Enums"]["mandato_outcome"] | null
           parent_mandato_id: string | null
           perfil_empresa_buscada: string | null
           pipeline_stage: string | null
+          platform_arx: string | null
+          platform_deale: string | null
+          platform_dealsuite: string | null
           prioridad: string | null
           probability: number | null
           rango_inversion_max: number | null
@@ -7506,6 +7781,8 @@ export type Database = {
           brevo_deal_id?: string | null
           brevo_synced_at?: string | null
           categoria?: string
+          ccaa_disponible?: boolean | null
+          ccaa_fecha?: string | null
           cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -7513,6 +7790,11 @@ export type Database = {
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null
+          doc_datapack?: string | null
+          doc_im?: string | null
+          doc_rod?: string | null
+          doc_teaser?: string | null
+          doc_valoracion?: string | null
           empresa_principal_id?: string | null
           es_interno?: boolean | null
           estado?: string
@@ -7531,11 +7813,15 @@ export type Database = {
           last_activity_at?: string | null
           loss_notes?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
+          nombre_proyecto?: string | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
           parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
+          platform_arx?: string | null
+          platform_deale?: string | null
+          platform_dealsuite?: string | null
           prioridad?: string | null
           probability?: number | null
           rango_inversion_max?: number | null
@@ -7557,6 +7843,8 @@ export type Database = {
           brevo_deal_id?: string | null
           brevo_synced_at?: string | null
           categoria?: string
+          ccaa_disponible?: boolean | null
+          ccaa_fecha?: string | null
           cliente_externo?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -7564,6 +7852,11 @@ export type Database = {
           created_at?: string | null
           days_in_stage?: number | null
           descripcion?: string | null
+          doc_datapack?: string | null
+          doc_im?: string | null
+          doc_rod?: string | null
+          doc_teaser?: string | null
+          doc_valoracion?: string | null
           empresa_principal_id?: string | null
           es_interno?: boolean | null
           estado?: string
@@ -7582,11 +7875,15 @@ export type Database = {
           last_activity_at?: string | null
           loss_notes?: string | null
           loss_reason?: Database["public"]["Enums"]["loss_reason_type"] | null
+          nombre_proyecto?: string | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
           parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
+          platform_arx?: string | null
+          platform_deale?: string | null
+          platform_dealsuite?: string | null
           prioridad?: string | null
           probability?: number | null
           rango_inversion_max?: number | null
@@ -7772,13 +8069,17 @@ export type Database = {
         Row: {
           author_avatar_url: string | null
           author_name: string
+          auto_published: boolean | null
           category: string
           content: string
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           excerpt: string | null
           featured_image_url: string | null
           fetched_at: string | null
           id: string
+          is_deleted: boolean | null
           is_featured: boolean | null
           is_processed: boolean | null
           is_published: boolean | null
@@ -7793,18 +8094,23 @@ export type Database = {
           source_url: string | null
           tags: string[] | null
           title: string
+          title_hash: string | null
           updated_at: string
         }
         Insert: {
           author_avatar_url?: string | null
           author_name?: string
+          auto_published?: boolean | null
           category: string
           content: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
           fetched_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_featured?: boolean | null
           is_processed?: boolean | null
           is_published?: boolean | null
@@ -7819,18 +8125,23 @@ export type Database = {
           source_url?: string | null
           tags?: string[] | null
           title: string
+          title_hash?: string | null
           updated_at?: string
         }
         Update: {
           author_avatar_url?: string | null
           author_name?: string
+          auto_published?: boolean | null
           category?: string
           content?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           excerpt?: string | null
           featured_image_url?: string | null
           fetched_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           is_featured?: boolean | null
           is_processed?: boolean | null
           is_published?: boolean | null
@@ -7845,6 +8156,7 @@ export type Database = {
           source_url?: string | null
           tags?: string[] | null
           title?: string
+          title_hash?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -8318,6 +8630,13 @@ export type Database = {
             columns: ["changed_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "operation_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
           {
@@ -9635,6 +9954,7 @@ export type Database = {
           is_active: boolean | null
           is_deleted: boolean | null
           is_latest: boolean | null
+          language: string
           title: string
           total_downloads: number | null
           updated_at: string | null
@@ -9655,6 +9975,7 @@ export type Database = {
           is_active?: boolean | null
           is_deleted?: boolean | null
           is_latest?: boolean | null
+          language?: string
           title: string
           total_downloads?: number | null
           updated_at?: string | null
@@ -9675,6 +9996,7 @@ export type Database = {
           is_active?: boolean | null
           is_deleted?: boolean | null
           is_latest?: boolean | null
+          language?: string
           title?: string
           total_downloads?: number | null
           updated_at?: string | null
@@ -9754,6 +10076,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "saved_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -9885,6 +10214,13 @@ export type Database = {
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "searcher_leads_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
           },
         ]
@@ -10416,6 +10752,64 @@ export type Database = {
         }
         Relationships: []
       }
+      token_access_log: {
+        Row: {
+          access_ip: unknown
+          accessed_at: string | null
+          failure_reason: string | null
+          id: string
+          success: boolean
+          token_hash_prefix: string | null
+          token_id: string | null
+          user_agent: string | null
+          valuation_id: string | null
+        }
+        Insert: {
+          access_ip?: unknown
+          accessed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          success: boolean
+          token_hash_prefix?: string | null
+          token_id?: string | null
+          user_agent?: string | null
+          valuation_id?: string | null
+        }
+        Update: {
+          access_ip?: unknown
+          accessed_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          success?: boolean
+          token_hash_prefix?: string | null
+          token_id?: string | null
+          user_agent?: string | null
+          valuation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_access_log_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "valuation_share_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_access_log_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_access_log_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tool_ratings: {
         Row: {
           company_sector: string | null
@@ -10673,6 +11067,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      valuation_share_tokens: {
+        Row: {
+          created_at: string | null
+          created_by_ip: unknown
+          expires_at: string
+          id: string
+          last_accessed_at: string | null
+          max_views: number | null
+          revoked_at: string | null
+          token_hash: string
+          valuation_id: string
+          views_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_ip?: unknown
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          max_views?: number | null
+          revoked_at?: string | null
+          token_hash: string
+          valuation_id: string
+          views_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_ip?: unknown
+          expires_at?: string
+          id?: string
+          last_accessed_at?: string | null
+          max_views?: number | null
+          revoked_at?: string | null
+          token_hash?: string
+          valuation_id?: string
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "valuation_share_tokens_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "valuation_share_tokens_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       valuation_sync_log: {
         Row: {
@@ -11234,6 +11682,39 @@ export type Database = {
           },
         ]
       }
+      v_admin_users_safe: {
+        Row: {
+          created_at: string | null
+          email_masked: string | null
+          full_name_masked: string | null
+          id: string | null
+          is_active: boolean | null
+          last_login: string | null
+          role: Database["public"]["Enums"]["admin_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_masked?: never
+          full_name_masked?: never
+          id?: string | null
+          is_active?: boolean | null
+          last_login?: string | null
+          role?: Database["public"]["Enums"]["admin_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_masked?: never
+          full_name_masked?: never
+          id?: string | null
+          is_active?: boolean | null
+          last_login?: string | null
+          role?: Database["public"]["Enums"]["admin_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       v_brevo_sync_status: {
         Row: {
           entity_type: string | null
@@ -11360,75 +11841,24 @@ export type Database = {
       }
       v_empresa_valuations: {
         Row: {
-          activity_description: string | null
-          adjustment_amount: number | null
-          assigned_at: string | null
-          assigned_to: string | null
           cif: string | null
           company_name: string | null
-          competitive_advantage: string | null
-          completion_percentage: number | null
           contact_name: string | null
           created_at: string | null
-          current_step: number | null
-          deleted_at: string | null
-          deleted_by: string | null
-          deletion_reason: string | null
           ebitda: number | null
-          ebitda_multiple_used: number | null
           email: string | null
-          email_message_id: string | null
-          email_opened: boolean | null
-          email_opened_at: string | null
-          email_sent: boolean | null
-          email_sent_at: string | null
-          employee_range: string | null
           empresa_id: string | null
           final_valuation: number | null
-          form_submitted_at: string | null
-          growth_rate: number | null
-          has_adjustments: boolean | null
           id: string | null
           industry: string | null
-          ip_address: unknown
           is_deleted: boolean | null
-          last_activity_at: string | null
-          last_modified_field: string | null
-          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
-          location: string | null
           match_type: string | null
           matched_empresa_id: string | null
           matched_empresa_nombre: string | null
-          net_profit_margin: number | null
-          ownership_participation: string | null
           phone: string | null
-          phone_e164: string | null
-          referrer: string | null
           revenue: number | null
-          source_project: string | null
-          status_updated_at: string | null
-          time_spent_seconds: number | null
-          token_expires_at: string | null
-          token_used_at: string | null
-          unique_token: string | null
-          user_agent: string | null
-          user_id: string | null
-          valuation_range_max: number | null
-          valuation_range_min: number | null
-          valuation_status: string | null
-          whatsapp_opt_in: boolean | null
-          whatsapp_sent: boolean | null
-          whatsapp_sent_at: string | null
-          years_of_operation: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "company_valuations_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "company_valuations_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -11719,6 +12149,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_token_rate_limit: {
+        Args: {
+          p_ip: unknown
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       check_user_admin_role: {
         Args: { check_user_id: string }
         Returns: string
@@ -11752,6 +12190,16 @@ export type Database = {
           p_parent_document_id: string
           p_storage_path: string
           p_uploaded_by?: string
+        }
+        Returns: string
+      }
+      create_share_token: {
+        Args: {
+          p_expires_minutes?: number
+          p_ip?: unknown
+          p_max_views?: number
+          p_token_hash: string
+          p_valuation_id: string
         }
         Returns: string
       }
@@ -12155,6 +12603,14 @@ export type Database = {
           policy_count: number
           security_status: string
           table_name: string
+        }[]
+      }
+      validate_share_token: {
+        Args: { p_ip?: unknown; p_token_hash: string }
+        Returns: {
+          failure_reason: string
+          is_valid: boolean
+          valuation_id: string
         }[]
       }
       validate_strong_password: {

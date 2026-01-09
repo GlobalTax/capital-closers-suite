@@ -43,6 +43,7 @@ const SyncValuations = lazy(() => import("./pages/SyncValuations"));
 const SyncOperations = lazy(() => import("./pages/SyncOperations"));
 const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
 const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
+const PipelineTracker = lazy(() => import("./pages/PipelineTracker"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -59,6 +60,7 @@ function AppContent() {
           <Route path="/" element={<Navigate to="/mandatos" replace />} />
           <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
+          <Route path="/pipeline-tracker" element={<ProtectedRoute><AppLayout><PipelineTracker /></AppLayout></ProtectedRoute>} />
           <Route path="/servicios" element={<ProtectedRoute><AppLayout><Servicios /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos" element={<ProtectedRoute><AppLayout><Contactos /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos/:id" element={<ProtectedRoute><AppLayout><ContactoDetalle /></AppLayout></ProtectedRoute>} />
