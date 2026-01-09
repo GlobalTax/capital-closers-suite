@@ -33,7 +33,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   ShieldCheck,
-  LayoutGrid,
 } from "lucide-react";
 import {
   Sidebar,
@@ -81,7 +80,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
       { title: "Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
-      { title: "Pipeline Tracker", url: "/pipeline-tracker", icon: LayoutGrid },
     ],
   },
   {

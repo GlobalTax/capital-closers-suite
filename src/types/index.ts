@@ -184,24 +184,6 @@ export interface Mandato {
   external_synced_at?: string;
   url_publica?: string;
   
-  // Nombre del proyecto (codename)
-  nombre_proyecto?: string;
-  
-  // Tracking de documentación
-  doc_valoracion?: 'si' | 'no' | 'pendiente' | 'n_a' | null;
-  doc_teaser?: 'si' | 'no' | 'actualizar' | 'pendiente' | null;
-  doc_datapack?: 'si' | 'no' | 'actualizar' | 'pendiente' | null;
-  doc_im?: 'si' | 'no' | 'actualizar' | 'n_a' | 'pendiente' | null;
-  doc_rod?: 'si' | 'no' | 'actualizar' | 'pendiente' | null;
-  
-  // Estado en plataformas de sindicación
-  platform_deale?: 'subido' | 'por_subir' | 'actualizar' | 'n_a' | null;
-  platform_dealsuite?: 'subido' | 'por_subir' | 'actualizar' | 'n_a' | null;
-  platform_arx?: 'subido' | 'por_subir' | 'actualizar' | 'n_a' | null;
-  
-  // Cuentas anuales
-  ccaa_fecha?: string | null;
-  ccaa_disponible?: boolean | null;
 }
 
 // ============================================
