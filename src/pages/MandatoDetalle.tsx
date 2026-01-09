@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, Target, ListTodo, Clock, Receipt } from "lucide-react";
+import { FileText, Target, ListTodo, Clock, Receipt, FilePlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
@@ -20,6 +20,7 @@ import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
 import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
+import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGeneratorDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -36,6 +37,7 @@ export default function MandatoDetalle() {
   const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
   const [timeDialogOpen, setTimeDialogOpen] = useState(false);
   const [timeLoading, setTimeLoading] = useState(false);
+  const [documentGeneratorOpen, setDocumentGeneratorOpen] = useState(false);
   
   const isAdmin = adminUser?.role === 'super_admin' || adminUser?.role === 'admin';
 
@@ -85,6 +87,7 @@ export default function MandatoDetalle() {
         mandato={mandato}
         onEdit={() => setEditarMandatoOpen(true)}
         onDelete={handleEliminar}
+        onGenerateDocument={() => setDocumentGeneratorOpen(true)}
       />
 
       <MandatoKPIs 
@@ -221,6 +224,17 @@ export default function MandatoDetalle() {
         onOpenChange={setEditarMandatoOpen}
         mandato={mandato}
         onSuccess={refetch}
+      />
+
+      <DocumentGeneratorDrawer
+        open={documentGeneratorOpen}
+        onOpenChange={setDocumentGeneratorOpen}
+        mandatoId={id}
+        empresaData={{
+          nombre: mandato.empresa_principal?.nombre,
+          cif: mandato.empresa_principal?.cif,
+        }}
+        mandatoTipo={mandato.tipo}
       />
     </div>
   );
