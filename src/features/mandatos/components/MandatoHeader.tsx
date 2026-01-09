@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FilePlus, MoreVertical } from "lucide-react";
 import type { Mandato } from "@/types";
 import {
   DropdownMenu,
@@ -9,15 +9,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react";
 
 interface MandatoHeaderProps {
   mandato: Mandato;
   onEdit?: () => void;
   onDelete?: () => void;
+  onGenerateDocument?: () => void;
 }
 
-export function MandatoHeader({ mandato, onEdit, onDelete }: MandatoHeaderProps) {
+export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }: MandatoHeaderProps) {
   const navigate = useNavigate();
 
   const getBadgeVariant = (estado: string) => {
@@ -70,6 +70,12 @@ export function MandatoHeader({ mandato, onEdit, onDelete }: MandatoHeaderProps)
       </div>
 
       <div className="flex items-center gap-2">
+        {onGenerateDocument && (
+          <Button variant="outline" onClick={onGenerateDocument}>
+            <FilePlus className="mr-2 h-4 w-4" />
+            Generar Documento
+          </Button>
+        )}
         {onEdit && (
           <Button variant="outline" onClick={onEdit}>
             <Edit className="mr-2 h-4 w-4" />
