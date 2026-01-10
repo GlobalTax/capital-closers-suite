@@ -104,6 +104,7 @@ export default function Mandatos() {
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const { fases } = useKanbanConfig();
 
@@ -462,6 +463,17 @@ export default function Mandatos() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </>
         }
         acciones={
@@ -485,7 +497,7 @@ export default function Mandatos() {
           data={mandatosFiltrados}
           loading={false}
           onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
-          pageSize={10}
+          pageSize={pageSize}
         />
       )}
 
