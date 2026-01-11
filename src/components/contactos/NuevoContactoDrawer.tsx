@@ -65,6 +65,7 @@ interface NuevoContactoDrawerProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   mandatoId?: string;
+  defaultEmpresaId?: string;
 }
 
 export function NuevoContactoDrawer({
@@ -72,6 +73,7 @@ export function NuevoContactoDrawer({
   onOpenChange,
   onSuccess,
   mandatoId,
+  defaultEmpresaId,
 }: NuevoContactoDrawerProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
@@ -85,11 +87,18 @@ export function NuevoContactoDrawer({
       email: "",
       telefono: "",
       cargo: "",
-      empresa_principal_id: "",
+      empresa_principal_id: defaultEmpresaId || "",
       linkedin: "",
       notas: "",
     },
   });
+
+  // Update empresa_principal_id when defaultEmpresaId changes
+  useEffect(() => {
+    if (defaultEmpresaId && open) {
+      form.setValue('empresa_principal_id', defaultEmpresaId);
+    }
+  }, [defaultEmpresaId, open, form]);
 
   useEffect(() => {
     if (open) {

@@ -53,13 +53,15 @@ interface ImportFromApolloDrawerProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   mandatoId?: string;
+  defaultEmpresaId?: string;
 }
 
 export function ImportFromApolloDrawer({ 
   open, 
   onOpenChange, 
   onSuccess,
-  mandatoId 
+  mandatoId,
+  defaultEmpresaId,
 }: ImportFromApolloDrawerProps) {
   const [urls, setUrls] = useState<string[]>(['']);
   const [extractedContacts, setExtractedContacts] = useState<ExtractedContact[]>([]);
@@ -86,6 +88,9 @@ export function ImportFromApolloDrawer({
   };
 
   const findMatchingEmpresa = (empresaNombre: string | undefined): string | undefined => {
+    // If defaultEmpresaId is provided, always use it
+    if (defaultEmpresaId) return defaultEmpresaId;
+    
     if (!empresaNombre) return undefined;
     
     const normalizedSearch = empresaNombre.toLowerCase().trim();
