@@ -14,9 +14,76 @@ const detectUrlType = (url: string): UrlType | null => {
   return null;
 };
 
-const getPromptForType = (urlType: UrlType): string => {
-  if (urlType === "linkedin") {
-    return `Extract contact information from this LinkedIn profile page.
+// Extract Apollo contact ID from various URL formats
+const extractApolloContactId = (url: string): string | null => {
+  // Format 1: https://app.apollo.io/#/contacts/CONTACT_ID
+  const contactMatch = url.match(/\/contacts\/([a-zA-Z0-9]+)/);
+  if (contactMatch) return contactMatch[1];
+
+  // Format 2: https://app.apollo.io/#/people/PERSON_ID
+  const peopleMatch = url.match(/\/people\/([a-zA-Z0-9]+)/);
+  if (peopleMatch) return peopleMatch[1];
+
+  return null;
+};
+
+// Extract contact data using Apollo API
+const extractFromApolloApi = async (contactId: string, apolloApiKey: string) => {
+  console.log(`Fetching contact ${contactId} from Apollo API...`);
+  
+  // Try the people endpoint first
+  const response = await fetch(`https://api.apollo.io/v1/people/${contactId}`, {
+    method: "GET",
+    headers: {
+      "X-Api-Key": apolloApiKey,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    console.log("People endpoint failed, trying contacts endpoint...");
+    // Try the contacts endpoint as fallback
+    const contactResponse = await fetch(`https://api.apollo.io/v1/contacts/${contactId}`, {
+      method: "GET",
+      headers: {
+        "X-Api-Key": apolloApiKey,
+        "Content-Type": "application/json",
+      },
+    });
+    
+    if (!contactResponse.ok) {
+      const errorText = await contactResponse.text();
+      console.error("Apollo API error:", errorText);
+      throw new Error(`Apollo API error: ${contactResponse.status}`);
+    }
+    
+    return await contactResponse.json();
+  }
+
+  return await response.json();
+};
+
+// Map Apollo API response to our contact format
+const mapApolloContact = (data: any) => {
+  const person = data.person || data.contact || data;
+  
+  return {
+    nombre: person.first_name || null,
+    apellidos: person.last_name || null,
+    email: person.email || null,
+    telefono: person.phone_numbers?.[0]?.raw_number || 
+              person.phone_numbers?.[0]?.sanitized_number || 
+              person.phone || null,
+    cargo: person.title || null,
+    empresa: person.organization?.name || 
+             person.organization_name || 
+             person.company || null,
+    linkedin: person.linkedin_url || null,
+  };
+};
+
+const getLinkedInPrompt = (): string => {
+  return `Extract contact information from this LinkedIn profile page.
 LinkedIn profiles typically show:
 - Full name (usually in a large heading)
 - Headline/title (job title, often below the name)
@@ -34,30 +101,6 @@ Return a JSON object with these fields (use null for missing data):
   "cargo": "job title from headline",
   "empresa": "current company name",
   "linkedin": "the profile URL"
-}
-
-Only return the JSON object, no markdown or explanation.`;
-  }
-
-  // Apollo prompt
-  return `Extract contact information from this Apollo.io profile page.
-Look for:
-- Full name
-- Job title/position
-- Company name
-- Email address (Apollo often shows this)
-- Phone number (if available)
-- LinkedIn URL
-
-Return a JSON object with these fields (use null for missing data):
-{
-  "nombre": "first name",
-  "apellidos": "last name(s)",
-  "email": "email@example.com",
-  "telefono": "+1234567890",
-  "cargo": "job title",
-  "empresa": "company name",
-  "linkedin": "linkedin profile URL if available"
 }
 
 Only return the JSON object, no markdown or explanation.`;
@@ -88,7 +131,52 @@ serve(async (req) => {
 
     console.log(`Extracting contact from ${urlType} URL:`, url);
 
-    // Get Firecrawl API key
+    // For Apollo URLs, use the official API
+    if (urlType === "apollo") {
+      const apolloApiKey = Deno.env.get("APOLLO_API_KEY");
+      if (!apolloApiKey) {
+        console.error("APOLLO_API_KEY not configured");
+        return new Response(
+          JSON.stringify({ error: "Apollo API not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const contactId = extractApolloContactId(url);
+      if (!contactId) {
+        console.error("Could not extract contact ID from URL:", url);
+        return new Response(
+          JSON.stringify({ error: "Could not extract contact ID from Apollo URL. URL format should be: app.apollo.io/#/contacts/ID or app.apollo.io/#/people/ID" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("Extracted Apollo contact ID:", contactId);
+
+      try {
+        const apolloData = await extractFromApolloApi(contactId, apolloApiKey);
+        const contact = mapApolloContact(apolloData);
+
+        console.log("Contact extracted successfully from Apollo API:", contact);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            contact,
+            source: "apollo"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (apiError) {
+        console.error("Apollo API error:", apiError);
+        return new Response(
+          JSON.stringify({ error: `Apollo API error: ${apiError instanceof Error ? apiError.message : 'Unknown error'}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // For LinkedIn URLs, continue using Firecrawl + AI
     const firecrawlApiKey = Deno.env.get("FIRECRAWL_API_KEY");
     if (!firecrawlApiKey) {
       console.error("FIRECRAWL_API_KEY not configured");
@@ -98,9 +186,8 @@ serve(async (req) => {
       );
     }
 
-    // Scrape the page with Firecrawl - dynamic wait time based on platform
-    const waitTime = urlType === "apollo" ? 1000 : 1500;
-    console.log(`Scraping with Firecrawl (waitFor: ${waitTime}ms)...`);
+    // Scrape LinkedIn with Firecrawl
+    console.log("Scraping LinkedIn with Firecrawl (waitFor: 1500ms)...");
     const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
@@ -111,7 +198,7 @@ serve(async (req) => {
         url,
         formats: ["markdown"],
         onlyMainContent: true,
-        waitFor: waitTime,
+        waitFor: 1500,
       }),
     });
 
@@ -147,7 +234,7 @@ serve(async (req) => {
       );
     }
 
-    const prompt = getPromptForType(urlType);
+    const prompt = getLinkedInPrompt();
 
     console.log("Extracting with AI...");
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -204,8 +291,8 @@ serve(async (req) => {
       );
     }
 
-    // Add the source URL if not a LinkedIn URL was provided
-    if (urlType === "linkedin" && !contact.linkedin) {
+    // Add the source URL if LinkedIn URL was provided
+    if (!contact.linkedin) {
       contact.linkedin = url;
     }
 
@@ -215,7 +302,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         contact,
-        source: urlType
+        source: "linkedin"
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
