@@ -7,7 +7,7 @@ import { EnrichFromWebDrawer } from "@/components/targets/EnrichFromWebDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { TargetCard } from "@/components/targets/TargetCard";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
-import { ImportFromApolloDrawer } from "@/components/contactos/ImportFromApolloDrawer";
+import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles } from "lucide-react";
@@ -40,9 +40,9 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
   const [nuevoContactoOpen, setNuevoContactoOpen] = useState(false);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
   
-  // Apollo import drawer
-  const [apolloImportOpen, setApolloImportOpen] = useState(false);
-  const [apolloSelectedEmpresaId, setApolloSelectedEmpresaId] = useState<string | null>(null);
+  // Link import drawer (Apollo/LinkedIn)
+  const [linkImportOpen, setLinkImportOpen] = useState(false);
+  const [linkSelectedEmpresaId, setLinkSelectedEmpresaId] = useState<string | null>(null);
   
   // Datos por empresa (interacciones + contactos)
   const [empresaData, setEmpresaData] = useState<Record<string, EmpresaData>>({});
@@ -147,9 +147,9 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
     setNuevoContactoOpen(true);
   };
 
-  const handleImportFromApollo = (empresaId: string) => {
-    setApolloSelectedEmpresaId(empresaId);
-    setApolloImportOpen(true);
+  const handleImportFromLink = (empresaId: string) => {
+    setLinkSelectedEmpresaId(empresaId);
+    setLinkImportOpen(true);
   };
 
   const handleInteraccionUpdate = (empresaId: string) => {
@@ -213,23 +213,23 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
     }
   };
 
-  const handleApolloSuccess = () => {
-    // Reload contactos for apollo selected empresa
-    if (apolloSelectedEmpresaId) {
+  const handleLinkSuccess = () => {
+    // Reload contactos for link import selected empresa
+    if (linkSelectedEmpresaId) {
       setEmpresaData(prev => ({
         ...prev,
-        [apolloSelectedEmpresaId]: {
-          ...prev[apolloSelectedEmpresaId],
+        [linkSelectedEmpresaId]: {
+          ...prev[linkSelectedEmpresaId],
           loadingContactos: true,
         }
       }));
 
-      getContactosByEmpresa(apolloSelectedEmpresaId)
+      getContactosByEmpresa(linkSelectedEmpresaId)
         .then(contactos => {
           setEmpresaData(prev => ({
             ...prev,
-            [apolloSelectedEmpresaId!]: {
-              ...prev[apolloSelectedEmpresaId!],
+            [linkSelectedEmpresaId!]: {
+              ...prev[linkSelectedEmpresaId!],
               contactos,
               loadingContactos: false,
             }
@@ -315,7 +315,7 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
                 isLoadingContactos={data.loadingContactos}
                 mandatoId={mandato.id}
                 onAddContacto={handleAddContacto}
-                onImportFromApollo={handleImportFromApollo}
+                onImportFromApollo={() => handleImportFromLink(empresa.id)}
                 onInteraccionUpdate={() => handleInteraccionUpdate(empresa.id)}
               />
             );
@@ -389,13 +389,12 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
         onSuccess={handleContactoSuccess}
       />
 
-      {/* Apollo import drawer */}
-      <ImportFromApolloDrawer
-        open={apolloImportOpen}
-        onOpenChange={setApolloImportOpen}
+      {/* Link import drawer (Apollo/LinkedIn) */}
+      <ImportFromLinkDrawer
+        open={linkImportOpen}
+        onOpenChange={setLinkImportOpen}
         mandatoId={mandato.id}
-        defaultEmpresaId={apolloSelectedEmpresaId || undefined}
-        onSuccess={handleApolloSuccess}
+        onSuccess={handleLinkSuccess}
       />
     </div>
   );

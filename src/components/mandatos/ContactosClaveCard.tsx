@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserPlus, Mail, Phone, Building2, StickyNote, ChevronDown, Users, Rocket } from "lucide-react";
+import { UserPlus, Mail, Phone, Building2, StickyNote, ChevronDown, Users, Link } from "lucide-react";
 import { MandatoContacto } from "@/types";
 import { getRolColor } from "@/lib/mandato-utils";
 
@@ -71,8 +71,8 @@ export function ContactosClaveCard({ contactos, onAddContacto, onAsociarContacto
             </DropdownMenuItem>
             {onImportApollo && (
               <DropdownMenuItem onClick={onImportApollo}>
-                <Rocket className="h-4 w-4 mr-2" />
-                Importar desde Apollo
+                <Link className="h-4 w-4 mr-2" />
+                Importar desde Link
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
