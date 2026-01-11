@@ -43,6 +43,7 @@ const SyncValuations = lazy(() => import("./pages/SyncValuations"));
 const SyncOperations = lazy(() => import("./pages/SyncOperations"));
 const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
 const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
+const GestorDocumentos = lazy(() => import("./pages/GestorDocumentos"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -66,6 +67,7 @@ function AppContent() {
           <Route path="/empresas/:id" element={<ProtectedRoute><AppLayout><EmpresaDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/tareas" element={<ProtectedRoute><AppLayout><Tareas /></AppLayout></ProtectedRoute>} />
           <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
+          <Route path="/gestor-documentos" element={<ProtectedRoute><AppLayout><GestorDocumentos /></AppLayout></ProtectedRoute>} />
           <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><AppLayout><Calendario /></AppLayout></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
