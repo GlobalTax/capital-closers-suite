@@ -50,7 +50,7 @@ export function FinancialAnalysisSection({
                     <TrendingDown className="h-4 w-4 text-red-600" />
                   )}
                 </div>
-                <span className="text-sm font-semibold text-gray-900">{ratio.value}</span>
+                <span className="text-sm font-medium text-foreground">{ratio.value}</span>
               </div>
               <Progress value={ratio.progress} className="h-2" />
             </div>

@@ -114,7 +114,7 @@ export function TransactionTable({ transactions, onDelete, loading }: Transactio
                     <span className="text-sm text-muted-foreground italic">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right font-semibold">
+                <TableCell className="text-right font-medium">
                   <span
                     className={cn(
                       transaction.transaction_type === "ingreso"

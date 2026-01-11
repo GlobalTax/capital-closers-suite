@@ -68,7 +68,7 @@ export function TaskTimeWidget({ entries }: TaskTimeWidgetProps) {
                   </div>
                 </div>
                 <div className="text-right ml-4">
-                  <div className="font-semibold text-primary">
+                  <div className="font-medium text-primary">
                     {formatHours(task.minutes)}
                   </div>
                 </div>

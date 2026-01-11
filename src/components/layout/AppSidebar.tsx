@@ -284,7 +284,7 @@ export function AppSidebar() {
             <span className="text-primary-foreground font-medium text-lg">C</span>
           </div>
           <div>
-            <h1 className="text-sidebar-foreground font-semibold text-lg">Capittal CRM</h1>
+            <h1 className="text-sidebar-foreground font-medium text-lg">Capittal CRM</h1>
             <p className="text-sidebar-foreground/60 text-xs">Cierre</p>
           </div>
         </div>

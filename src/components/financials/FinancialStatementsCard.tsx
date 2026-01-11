@@ -126,19 +126,19 @@ export function FinancialStatementsCard({ empresaId, empresaNombre }: FinancialS
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-muted/50 rounded-lg p-4">
                       <p className="text-sm text-muted-foreground">Ingresos</p>
-                      <p className="text-xl font-semibold">{formatCurrency(currentStatement.revenue)}</p>
+                      <p className="text-xl font-medium">{formatCurrency(currentStatement.revenue)}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-4">
                       <p className="text-sm text-muted-foreground">EBITDA</p>
-                      <p className="text-xl font-semibold">{formatCurrency(currentStatement.ebitda)}</p>
+                      <p className="text-xl font-medium">{formatCurrency(currentStatement.ebitda)}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-4">
                       <p className="text-sm text-muted-foreground">Beneficio Neto</p>
-                      <p className="text-xl font-semibold">{formatCurrency(currentStatement.net_income)}</p>
+                      <p className="text-xl font-medium">{formatCurrency(currentStatement.net_income)}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-4">
                       <p className="text-sm text-muted-foreground">Total Activo</p>
-                      <p className="text-xl font-semibold">{formatCurrency(currentStatement.total_assets)}</p>
+                      <p className="text-xl font-medium">{formatCurrency(currentStatement.total_assets)}</p>
                     </div>
                   </div>
 

@@ -308,7 +308,7 @@ export function NuevaPropuestaDrawer({
                     <div className="flex justify-end pt-2 border-t">
                       <div className="text-right">
                         <span className="text-sm text-muted-foreground">Total: </span>
-                        <span className="text-lg font-semibold">{formatCurrency(total)}</span>
+                        <span className="text-lg font-medium">{formatCurrency(total)}</span>
                       </div>
                     </div>
                   </div>

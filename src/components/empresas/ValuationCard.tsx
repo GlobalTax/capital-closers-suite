@@ -128,15 +128,15 @@ export function ValuationCard({
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 bg-background rounded-lg border text-center">
             <p className="text-xs text-muted-foreground">Revenue</p>
-            <p className="text-lg font-semibold">{formatCurrency(valuation.revenue)}</p>
+            <p className="text-lg font-medium">{formatCurrency(valuation.revenue)}</p>
           </div>
           <div className="p-3 bg-background rounded-lg border text-center">
             <p className="text-xs text-muted-foreground">EBITDA</p>
-            <p className="text-lg font-semibold">{formatCurrency(valuation.ebitda)}</p>
+            <p className="text-lg font-medium">{formatCurrency(valuation.ebitda)}</p>
           </div>
           <div className="p-3 bg-background rounded-lg border text-center">
             <p className="text-xs text-muted-foreground">Múltiplo</p>
-            <p className="text-lg font-semibold">
+            <p className="text-lg font-medium">
               {valuation.ebitda_multiple_used?.toFixed(1) || "-"}x
             </p>
           </div>

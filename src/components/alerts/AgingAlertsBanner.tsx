@@ -73,7 +73,7 @@ export function AgingAlertsBanner({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className={`h-5 w-5 ${hasCritical ? "text-destructive" : "text-yellow-600"}`} />
-          <h3 className="font-semibold">
+          <h3 className="font-medium">
             {totalCount} Mandato{totalCount !== 1 ? 's' : ''} en Riesgo
           </h3>
           <div className="flex gap-2">

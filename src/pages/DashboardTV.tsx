@@ -56,7 +56,7 @@ export default function DashboardTV() {
           </p>
           <button
             onClick={handleRefresh}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90"
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90"
           >
             Reintentar
           </button>

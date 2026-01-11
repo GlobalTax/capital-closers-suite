@@ -170,7 +170,7 @@ export default function MandatoDetalle() {
 
         <TabsContent value="horas" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Registro de Horas</h3>
+            <h3 className="text-lg font-medium">Registro de Horas</h3>
             <Button onClick={() => setTimeDialogOpen(true)}>
               <Clock className="w-4 h-4 mr-2" />
               Registrar Tiempo

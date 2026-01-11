@@ -132,7 +132,7 @@ function KanbanColumn({
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold">{label}</h3>
+        <h3 className="font-medium">{label}</h3>
         <Badge variant="secondary">{tareas.length}</Badge>
       </div>
 
@@ -397,7 +397,7 @@ export default function Tareas() {
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-semibold">Tareas</h1>
+            <h1 className="text-3xl font-medium">Tareas</h1>
             <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
           </div>
         </div>
@@ -421,7 +421,7 @@ export default function Tareas() {
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold">Tareas</h1>
+          <h1 className="text-3xl font-medium">Tareas</h1>
           <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
         </div>
         <Button onClick={() => setDrawerOpen(true)}>
