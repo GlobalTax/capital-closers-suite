@@ -175,5 +175,5 @@ export function downloadNDAPdf(data: NDAData, filename?: string): void {
 
 export function previewNDAPdf(data: NDAData): string {
   const doc = generateNDAPdf(data);
-  return doc.output('bloburl') as unknown as string;
+  return doc.output('dataurlstring');
 }

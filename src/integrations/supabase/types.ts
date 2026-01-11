@@ -10871,6 +10871,99 @@ export type Database = {
           },
         ]
       }
+      sf_ai_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input_data: Json | null
+          output_data: Json | null
+          prompt_key: string
+          success: boolean | null
+          tokens_used: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          prompt_key: string
+          success?: boolean | null
+          tokens_used?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          prompt_key?: string
+          success?: boolean | null
+          tokens_used?: number | null
+        }
+        Relationships: []
+      }
+      sf_ai_prompts: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          max_tokens: number | null
+          model: string | null
+          name: string
+          output_schema: Json | null
+          system_prompt: string
+          temperature: number | null
+          updated_at: string | null
+          user_prompt_template: string
+          variables: string[] | null
+          version: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          max_tokens?: number | null
+          model?: string | null
+          name: string
+          output_schema?: Json | null
+          system_prompt: string
+          temperature?: number | null
+          updated_at?: string | null
+          user_prompt_template: string
+          variables?: string[] | null
+          version?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          max_tokens?: number | null
+          model?: string | null
+          name?: string
+          output_schema?: Json | null
+          system_prompt?: string
+          temperature?: number | null
+          updated_at?: string | null
+          user_prompt_template?: string
+          variables?: string[] | null
+          version?: number | null
+        }
+        Relationships: []
+      }
       sf_backers: {
         Row: {
           country: string | null
@@ -10963,25 +11056,31 @@ export type Database = {
           cities: string[] | null
           country_base: string | null
           created_at: string
+          data_quality: Json | null
           deal_size_max: number | null
           deal_size_min: number | null
           description: string | null
           ebitda_max: number | null
           ebitda_min: number | null
+          entity_type: string | null
           founded_year: number | null
           geography_focus: string[] | null
           id: string
           investment_style: string | null
+          last_scraped_at: string | null
           name: string
           notes_internal: string | null
           revenue_max: number | null
           revenue_min: number | null
+          scrape_source_urls: string[] | null
           searcher_lead_id: string | null
           sector_exclusions: string[] | null
           sector_focus: string[] | null
+          size_criteria: Json | null
           source_last_verified_at: string | null
           source_url: string | null
           status: string | null
+          transaction_preferences: Json | null
           updated_at: string
           website: string | null
         }
@@ -10989,25 +11088,31 @@ export type Database = {
           cities?: string[] | null
           country_base?: string | null
           created_at?: string
+          data_quality?: Json | null
           deal_size_max?: number | null
           deal_size_min?: number | null
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          entity_type?: string | null
           founded_year?: number | null
           geography_focus?: string[] | null
           id?: string
           investment_style?: string | null
+          last_scraped_at?: string | null
           name: string
           notes_internal?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
+          scrape_source_urls?: string[] | null
           searcher_lead_id?: string | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
+          size_criteria?: Json | null
           source_last_verified_at?: string | null
           source_url?: string | null
           status?: string | null
+          transaction_preferences?: Json | null
           updated_at?: string
           website?: string | null
         }
@@ -11015,25 +11120,31 @@ export type Database = {
           cities?: string[] | null
           country_base?: string | null
           created_at?: string
+          data_quality?: Json | null
           deal_size_max?: number | null
           deal_size_min?: number | null
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          entity_type?: string | null
           founded_year?: number | null
           geography_focus?: string[] | null
           id?: string
           investment_style?: string | null
+          last_scraped_at?: string | null
           name?: string
           notes_internal?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
+          scrape_source_urls?: string[] | null
           searcher_lead_id?: string | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
+          size_criteria?: Json | null
           source_last_verified_at?: string | null
           source_url?: string | null
           status?: string | null
+          transaction_preferences?: Json | null
           updated_at?: string
           website?: string | null
         }
@@ -11227,6 +11338,126 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sf_scraped_urls: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          domain: string | null
+          entity_type: string | null
+          extracted_at: string | null
+          extraction_error: string | null
+          extraction_status: string | null
+          fund_id: string | null
+          id: string
+          is_relevant: boolean | null
+          query_id: string | null
+          raw_content: string | null
+          raw_snippet: string | null
+          raw_title: string | null
+          scraped_at: string | null
+          stage: string | null
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          domain?: string | null
+          entity_type?: string | null
+          extracted_at?: string | null
+          extraction_error?: string | null
+          extraction_status?: string | null
+          fund_id?: string | null
+          id?: string
+          is_relevant?: boolean | null
+          query_id?: string | null
+          raw_content?: string | null
+          raw_snippet?: string | null
+          raw_title?: string | null
+          scraped_at?: string | null
+          stage?: string | null
+          url: string
+          url_hash: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          domain?: string | null
+          entity_type?: string | null
+          extracted_at?: string | null
+          extraction_error?: string | null
+          extraction_status?: string | null
+          fund_id?: string | null
+          id?: string
+          is_relevant?: boolean | null
+          query_id?: string | null
+          raw_content?: string | null
+          raw_snippet?: string | null
+          raw_title?: string | null
+          scraped_at?: string | null
+          stage?: string | null
+          url?: string
+          url_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_scraped_urls_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sf_scraped_urls_query_id_fkey"
+            columns: ["query_id"]
+            isOneToOne: false
+            referencedRelation: "sf_search_queries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_search_queries: {
+        Row: {
+          country: string
+          country_code: string
+          created_at: string | null
+          id: string
+          intent: string | null
+          is_active: boolean | null
+          last_executed_at: string | null
+          priority: number | null
+          query: string
+          results_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          country: string
+          country_code: string
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          priority?: number | null
+          query: string
+          results_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          country?: string
+          country_code?: string
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          is_active?: boolean | null
+          last_executed_at?: string | null
+          priority?: number | null
+          query?: string
+          results_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tareas: {
         Row: {

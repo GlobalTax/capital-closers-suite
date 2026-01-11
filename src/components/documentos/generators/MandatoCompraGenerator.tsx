@@ -230,5 +230,5 @@ export function downloadMandatoCompraPdf(data: MandatoCompraData, filename?: str
 
 export function previewMandatoCompraPdf(data: MandatoCompraData): string {
   const doc = generateMandatoCompraPdf(data);
-  return doc.output('bloburl') as unknown as string;
+  return doc.output('dataurlstring');
 }
