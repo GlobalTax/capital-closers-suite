@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUIStore } from "@/stores/useUIStore";
 
@@ -6,9 +6,14 @@ export function useKeyboardShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleCommandPalette, closeDrawer, isDrawerOpen } = useUIStore();
+  const gKeyPressed = useRef(false);
+  const gKeyTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      const isTyping = activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA";
+
       // ⌘/Ctrl+K - Abrir Command Palette
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
@@ -16,13 +21,61 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Ignorar atajos si está escribiendo
+      if (isTyping) return;
+
+      // G + tecla - Navegación rápida (estilo Vim/GitHub)
+      if (e.key === "g" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        gKeyPressed.current = true;
+        gKeyTimer.current = setTimeout(() => {
+          gKeyPressed.current = false;
+        }, 500);
+        return;
+      }
+
+      if (gKeyPressed.current) {
+        e.preventDefault();
+        gKeyPressed.current = false;
+        clearTimeout(gKeyTimer.current);
+
+        switch (e.key) {
+          case "m":
+            navigate("/mandatos");
+            break;
+          case "c":
+            navigate("/contactos");
+            break;
+          case "e":
+            navigate("/empresas");
+            break;
+          case "t":
+            navigate("/tareas");
+            break;
+          case "d":
+            navigate("/documentos");
+            break;
+          case "r":
+            navigate("/reportes");
+            break;
+          case "h":
+            navigate("/");
+            break;
+        }
+        return;
+      }
+
+      // F - Toggle panel de filtros
+      if (e.key === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const filterButton = document.querySelector('[data-filter-toggle]') as HTMLButtonElement;
+        if (filterButton) {
+          filterButton.click();
+        }
+        return;
+      }
+
       // N - Nuevo (contextual)
       if (e.key === "n" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const activeElement = document.activeElement;
-        if (activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA") {
-          return;
-        }
-
         e.preventDefault();
         const path = location.pathname;
         
@@ -40,11 +93,6 @@ export function useKeyboardShortcuts() {
 
       // / - Focus en búsqueda
       if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
-        const activeElement = document.activeElement;
-        if (activeElement?.tagName === "INPUT" || activeElement?.tagName === "TEXTAREA") {
-          return;
-        }
-
         e.preventDefault();
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
         if (searchInput) {
@@ -63,6 +111,9 @@ export function useKeyboardShortcuts() {
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleCommandPalette, closeDrawer, isDrawerOpen, location.pathname]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(gKeyTimer.current);
+    };
+  }, [toggleCommandPalette, closeDrawer, isDrawerOpen, location.pathname, navigate]);
 }
