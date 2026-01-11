@@ -8100,12 +8100,16 @@ export type Database = {
       }
       news_articles: {
         Row: {
+          ai_metadata: Json | null
           author_avatar_url: string | null
           author_name: string
           auto_published: boolean | null
+          buyer: string | null
           category: string
           content: string
           created_at: string
+          deal_type: string | null
+          deal_value: string | null
           deleted_at: string | null
           deleted_by: string | null
           excerpt: string | null
@@ -8121,22 +8125,30 @@ export type Database = {
           processed_at: string | null
           published_at: string | null
           read_time: number | null
+          rejection_reason: string | null
+          relevance_score: number | null
           search_vector: unknown
+          seller: string | null
           slug: string
           source_name: string | null
           source_url: string | null
           tags: string[] | null
+          target_company: string | null
           title: string
           title_hash: string | null
           updated_at: string
         }
         Insert: {
+          ai_metadata?: Json | null
           author_avatar_url?: string | null
           author_name?: string
           auto_published?: boolean | null
+          buyer?: string | null
           category: string
           content: string
           created_at?: string
+          deal_type?: string | null
+          deal_value?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           excerpt?: string | null
@@ -8152,22 +8164,30 @@ export type Database = {
           processed_at?: string | null
           published_at?: string | null
           read_time?: number | null
+          rejection_reason?: string | null
+          relevance_score?: number | null
           search_vector?: unknown
+          seller?: string | null
           slug: string
           source_name?: string | null
           source_url?: string | null
           tags?: string[] | null
+          target_company?: string | null
           title: string
           title_hash?: string | null
           updated_at?: string
         }
         Update: {
+          ai_metadata?: Json | null
           author_avatar_url?: string | null
           author_name?: string
           auto_published?: boolean | null
+          buyer?: string | null
           category?: string
           content?: string
           created_at?: string
+          deal_type?: string | null
+          deal_value?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           excerpt?: string | null
@@ -8183,11 +8203,15 @@ export type Database = {
           processed_at?: string | null
           published_at?: string | null
           read_time?: number | null
+          rejection_reason?: string | null
+          relevance_score?: number | null
           search_vector?: unknown
+          seller?: string | null
           slug?: string
           source_name?: string | null
           source_url?: string | null
           tags?: string[] | null
+          target_company?: string | null
           title?: string
           title_hash?: string | null
           updated_at?: string
