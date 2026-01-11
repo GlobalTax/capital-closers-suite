@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Columns3 } from "lucide-react";
 
-interface ColumnConfig {
+export interface ColumnConfig {
   key: string;
   label: string;
   visible: boolean;

@@ -24,6 +24,8 @@ export interface Column<T extends TableRecord = TableRecord> {
   filterable?: boolean;
 }
 
+export type ViewDensity = "compact" | "comfortable";
+
 interface DataTableEnhancedProps<T extends TableRecord = TableRecord> {
   columns: Column<T>[];
   data: T[];
@@ -36,6 +38,8 @@ interface DataTableEnhancedProps<T extends TableRecord = TableRecord> {
   rowClassName?: (row: T) => string;
   /** Paginación server-side - si se proporciona, se usa en lugar de la local */
   serverPagination?: ServerPaginationProps;
+  /** Densidad de la tabla - compact o comfortable */
+  density?: ViewDensity;
 }
 
 export function DataTableEnhanced<T extends TableRecord = TableRecord>({
@@ -49,6 +53,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
   pageSize = 10,
   rowClassName,
   serverPagination,
+  density = "comfortable",
 }: DataTableEnhancedProps<T>) {
   const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -245,7 +250,12 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                         </TableCell>
                       )}
                       {columns.map((column) => (
-                        <TableCell key={column.key}>
+                        <TableCell 
+                          key={column.key}
+                          className={cn(
+                            density === "compact" ? "py-2" : "py-3"
+                          )}
+                        >
                           {column.render ? column.render((row as any)[column.key], row) : String((row as any)[column.key] ?? '')}
                         </TableCell>
                       ))}

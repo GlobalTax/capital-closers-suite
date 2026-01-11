@@ -3906,10 +3906,13 @@ export type Database = {
           id: string
           investment_stage: string[] | null
           is_deleted: boolean | null
+          last_scraped_at: string | null
           name: string
           notes_internal: string | null
           revenue_max: number | null
           revenue_min: number | null
+          scrape_data: Json | null
+          scrape_source_urls: string[] | null
           sector_exclusions: string[] | null
           sector_focus: string[] | null
           source_last_verified_at: string | null
@@ -3938,10 +3941,13 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_scraped_at?: string | null
           name: string
           notes_internal?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
+          scrape_data?: Json | null
+          scrape_source_urls?: string[] | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
           source_last_verified_at?: string | null
@@ -3970,10 +3976,13 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_scraped_at?: string | null
           name?: string
           notes_internal?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
+          scrape_data?: Json | null
+          scrape_source_urls?: string[] | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
           source_last_verified_at?: string | null
@@ -5792,6 +5801,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fund_news: {
+        Row: {
+          ai_summary: string | null
+          content_preview: string | null
+          created_at: string | null
+          fund_id: string
+          fund_type: string
+          id: string
+          is_material_change: boolean | null
+          is_processed: boolean | null
+          metadata: Json | null
+          news_date: string | null
+          news_type: string | null
+          relevance_score: number | null
+          source_name: string | null
+          title: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          content_preview?: string | null
+          created_at?: string | null
+          fund_id: string
+          fund_type: string
+          id?: string
+          is_material_change?: boolean | null
+          is_processed?: boolean | null
+          metadata?: Json | null
+          news_date?: string | null
+          news_type?: string | null
+          relevance_score?: number | null
+          source_name?: string | null
+          title: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          ai_summary?: string | null
+          content_preview?: string | null
+          created_at?: string | null
+          fund_id?: string
+          fund_type?: string
+          id?: string
+          is_material_change?: boolean | null
+          is_processed?: boolean | null
+          metadata?: Json | null
+          news_date?: string | null
+          news_type?: string | null
+          relevance_score?: number | null
+          source_name?: string | null
+          title?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: []
       }
       general_contact_leads: {
         Row: {
