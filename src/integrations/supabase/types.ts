@@ -10806,6 +10806,428 @@ export type Database = {
         }
         Relationships: []
       }
+      sf_acquisitions: {
+        Row: {
+          cnae: string | null
+          company_name: string
+          country: string | null
+          created_at: string
+          deal_type: string | null
+          deal_year: number | null
+          description: string | null
+          exit_year: number | null
+          fund_id: string
+          id: string
+          notes: string | null
+          region: string | null
+          sector: string | null
+          source_url: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnae?: string | null
+          company_name: string
+          country?: string | null
+          created_at?: string
+          deal_type?: string | null
+          deal_year?: number | null
+          description?: string | null
+          exit_year?: number | null
+          fund_id: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          sector?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnae?: string | null
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          deal_type?: string | null
+          deal_year?: number | null
+          description?: string | null
+          exit_year?: number | null
+          fund_id?: string
+          id?: string
+          notes?: string | null
+          region?: string | null
+          sector?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_acquisitions_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_backers: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          notes: string | null
+          type: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          notes?: string | null
+          type?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          notes?: string | null
+          type?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      sf_fund_backers: {
+        Row: {
+          backer_id: string
+          confidence_level: string | null
+          created_at: string
+          fund_id: string
+          id: string
+          notes: string | null
+          since_year: number | null
+          source_url: string | null
+          support_type: string | null
+        }
+        Insert: {
+          backer_id: string
+          confidence_level?: string | null
+          created_at?: string
+          fund_id: string
+          id?: string
+          notes?: string | null
+          since_year?: number | null
+          source_url?: string | null
+          support_type?: string | null
+        }
+        Update: {
+          backer_id?: string
+          confidence_level?: string | null
+          created_at?: string
+          fund_id?: string
+          id?: string
+          notes?: string | null
+          since_year?: number | null
+          source_url?: string | null
+          support_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_fund_backers_backer_id_fkey"
+            columns: ["backer_id"]
+            isOneToOne: false
+            referencedRelation: "sf_backers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sf_fund_backers_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_funds: {
+        Row: {
+          cities: string[] | null
+          country_base: string | null
+          created_at: string
+          deal_size_max: number | null
+          deal_size_min: number | null
+          description: string | null
+          ebitda_max: number | null
+          ebitda_min: number | null
+          founded_year: number | null
+          geography_focus: string[] | null
+          id: string
+          investment_style: string | null
+          name: string
+          notes_internal: string | null
+          revenue_max: number | null
+          revenue_min: number | null
+          searcher_lead_id: string | null
+          sector_exclusions: string[] | null
+          sector_focus: string[] | null
+          source_last_verified_at: string | null
+          source_url: string | null
+          status: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string
+          deal_size_max?: number | null
+          deal_size_min?: number | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          founded_year?: number | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_style?: string | null
+          name: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          searcher_lead_id?: string | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_last_verified_at?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string
+          deal_size_max?: number | null
+          deal_size_min?: number | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          founded_year?: number | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_style?: string | null
+          name?: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          searcher_lead_id?: string | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_last_verified_at?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_funds_searcher_lead_id_fkey"
+            columns: ["searcher_lead_id"]
+            isOneToOne: false
+            referencedRelation: "searcher_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_matches: {
+        Row: {
+          created_at: string
+          crm_entity_id: string
+          crm_entity_type: string
+          fund_id: string
+          id: string
+          last_scored_at: string | null
+          match_reasons: Json | null
+          match_score: number | null
+          owner_user_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crm_entity_id: string
+          crm_entity_type: string
+          fund_id: string
+          id?: string
+          last_scored_at?: string | null
+          match_reasons?: Json | null
+          match_score?: number | null
+          owner_user_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crm_entity_id?: string
+          crm_entity_type?: string
+          fund_id?: string
+          id?: string
+          last_scored_at?: string | null
+          match_reasons?: Json | null
+          match_score?: number | null
+          owner_user_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_matches_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_outreach: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          crm_entity_id: string | null
+          crm_entity_type: string | null
+          external_thread_url: string | null
+          fund_id: string
+          id: string
+          message_preview: string | null
+          notes: string | null
+          person_id: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          template_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          crm_entity_id?: string | null
+          crm_entity_type?: string | null
+          external_thread_url?: string | null
+          fund_id: string
+          id?: string
+          message_preview?: string | null
+          notes?: string | null
+          person_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          crm_entity_id?: string | null
+          crm_entity_type?: string | null
+          external_thread_url?: string | null
+          fund_id?: string
+          id?: string
+          message_preview?: string | null
+          notes?: string | null
+          person_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string | null
+          template_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_outreach_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sf_outreach_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "sf_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sf_people: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          fund_id: string
+          id: string
+          is_primary_contact: boolean | null
+          languages: string[] | null
+          linkedin_url: string | null
+          location: string | null
+          notes: string | null
+          phone: string | null
+          role: string | null
+          school: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          fund_id: string
+          id?: string
+          is_primary_contact?: boolean | null
+          languages?: string[] | null
+          linkedin_url?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          school?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          fund_id?: string
+          id?: string
+          is_primary_contact?: boolean | null
+          languages?: string[] | null
+          linkedin_url?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          school?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sf_people_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "sf_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tareas: {
         Row: {
           asignado_a: string | null

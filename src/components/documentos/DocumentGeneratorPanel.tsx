@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { 
   Shield, 
   FileText, 
@@ -19,8 +20,10 @@ import {
   Save,
   Loader2,
   ChevronLeft,
-  ChevronRight,
   ArrowRight,
+  Building2,
+  Link2,
+  AlertCircle,
 } from 'lucide-react';
 import { useDocumentGenerator } from '@/hooks/useDocumentGenerator';
 import { 
@@ -32,6 +35,11 @@ import {
   DD_ALCANCE_OPTIONS,
 } from '@/types/document-generators';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
+import { MandatoSelect } from '@/components/shared/MandatoSelect';
+import { EmpresaSelect } from '@/components/shared/EmpresaSelect';
+import { useMandatos } from '@/hooks/queries/useMandatos';
+import type { Empresa } from '@/types';
 
 interface DocumentGeneratorPanelProps {
   mandatoId?: string;
@@ -56,7 +64,7 @@ const DOCUMENT_ICONS: Record<DocumentType, typeof Shield> = {
 };
 
 export function DocumentGeneratorPanel({
-  mandatoId,
+  mandatoId: initialMandatoId,
   empresaNombre,
   empresaData,
   onDocumentSaved,
@@ -64,6 +72,10 @@ export function DocumentGeneratorPanel({
   const [step, setStep] = useState<Step>('select');
   const [selectedType, setSelectedType] = useState<DocumentType | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [selectedMandatoId, setSelectedMandatoId] = useState<string>(initialMandatoId || '');
+  const [linkedEmpresas, setLinkedEmpresas] = useState<Record<string, string>>({});
+  
+  const { data: mandatos = [] } = useMandatos();
   
   const { 
     isGenerating, 
@@ -75,6 +87,9 @@ export function DocumentGeneratorPanel({
     clearPreview,
   } = useDocumentGenerator();
 
+  // Get selected mandato details
+  const selectedMandato = mandatos.find(m => m.id === selectedMandatoId);
+
   // Initialize form with default values when type is selected
   useEffect(() => {
     if (selectedType) {
@@ -84,49 +99,57 @@ export function DocumentGeneratorPanel({
         ...DEFAULT_VALUES,
       };
 
-      // Pre-fill with empresa data if available
-      if (empresaData || empresaNombre) {
+      // Pre-fill with mandato data if selected
+      if (selectedMandato) {
+        const empresa = selectedMandato.empresa_principal;
+        if (empresa) {
+          if (selectedType === 'nda') {
+            defaults.empresa_nombre = empresa.nombre || '';
+            defaults.empresa_cif = empresa.cif || '';
+            defaults.empresa_domicilio = empresa.ubicacion || '';
+          } else if (selectedType === 'mandato_venta') {
+            defaults.target_nombre = empresa.nombre || '';
+            defaults.cliente_nombre = empresa.nombre || '';
+            defaults.cliente_cif = empresa.cif || '';
+            defaults.cliente_domicilio = empresa.ubicacion || '';
+            defaults.servicios = [...SERVICIOS_MANDATO_VENTA];
+            defaults.exclusividad = true;
+            defaults.renovacion_automatica = true;
+          } else if (selectedType === 'mandato_compra') {
+            defaults.cliente_nombre = empresa.nombre || '';
+            defaults.cliente_cif = empresa.cif || '';
+            defaults.cliente_domicilio = empresa.ubicacion || '';
+            defaults.servicios = [...SERVICIOS_MANDATO_COMPRA];
+            defaults.sectores_objetivo = [];
+            defaults.geografia_objetivo = ['España'];
+            defaults.exclusividad = true;
+            defaults.renovacion_automatica = true;
+          } else if (selectedType === 'loi') {
+            defaults.target_nombre = empresa.nombre || '';
+            defaults.vendedor_nombre = empresa.nombre || '';
+            defaults.vendedor_cif = empresa.cif || '';
+            defaults.vendedor_domicilio = empresa.ubicacion || '';
+            defaults.dd_alcance = [...DD_ALCANCE_OPTIONS.slice(0, 4)];
+            defaults.exclusividad = true;
+            defaults.vinculante = false;
+            defaults.porcentaje_adquisicion = 100;
+          }
+          setLinkedEmpresas(prev => ({ ...prev, empresa_principal: empresa.id }));
+        }
+      } else if (empresaData || empresaNombre) {
+        // Pre-fill with empresa data if available (legacy prop support)
         const nombre = empresaData?.nombre || empresaNombre || '';
         if (selectedType === 'nda') {
           defaults.empresa_nombre = nombre;
           defaults.empresa_cif = empresaData?.cif || '';
           defaults.empresa_domicilio = empresaData?.domicilio || '';
           defaults.empresa_representante = empresaData?.representante || '';
-        } else if (selectedType === 'mandato_venta') {
-          defaults.target_nombre = nombre;
-          defaults.cliente_nombre = nombre;
-          defaults.cliente_cif = empresaData?.cif || '';
-          defaults.cliente_domicilio = empresaData?.domicilio || '';
-          defaults.cliente_representante = empresaData?.representante || '';
-          defaults.servicios = [...SERVICIOS_MANDATO_VENTA];
-          defaults.exclusividad = true;
-          defaults.renovacion_automatica = true;
-        } else if (selectedType === 'mandato_compra') {
-          defaults.cliente_nombre = nombre;
-          defaults.cliente_cif = empresaData?.cif || '';
-          defaults.cliente_domicilio = empresaData?.domicilio || '';
-          defaults.cliente_representante = empresaData?.representante || '';
-          defaults.servicios = [...SERVICIOS_MANDATO_COMPRA];
-          defaults.sectores_objetivo = [];
-          defaults.geografia_objetivo = ['España'];
-          defaults.exclusividad = true;
-          defaults.renovacion_automatica = true;
-        } else if (selectedType === 'loi') {
-          defaults.target_nombre = nombre;
-          defaults.vendedor_nombre = nombre;
-          defaults.vendedor_cif = empresaData?.cif || '';
-          defaults.vendedor_domicilio = empresaData?.domicilio || '';
-          defaults.vendedor_representante = empresaData?.representante || '';
-          defaults.dd_alcance = [...DD_ALCANCE_OPTIONS.slice(0, 4)];
-          defaults.exclusividad = true;
-          defaults.vinculante = false;
-          defaults.porcentaje_adquisicion = 100;
         }
       }
 
       setFormData(defaults);
     }
-  }, [selectedType, empresaData, empresaNombre]);
+  }, [selectedType, selectedMandato, empresaData, empresaNombre]);
 
   const handleSelectType = (type: DocumentType) => {
     setSelectedType(type);
@@ -141,6 +164,7 @@ export function DocumentGeneratorPanel({
       setStep('select');
       setSelectedType(null);
       setFormData({});
+      setLinkedEmpresas({});
     }
   };
 
@@ -148,11 +172,43 @@ export function DocumentGeneratorPanel({
     setStep('select');
     setSelectedType(null);
     setFormData({});
+    setLinkedEmpresas({});
     clearPreview();
+  };
+
+  // Validation before preview
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+
+    if (selectedType === 'nda') {
+      if (!formData.empresa_nombre?.trim()) errors.push('Nombre de la parte reveladora');
+      if (!formData.contraparte_nombre?.trim()) errors.push('Nombre de la parte receptora');
+    } else if (selectedType === 'mandato_venta') {
+      if (!formData.cliente_nombre?.trim()) errors.push('Nombre del cliente');
+      if (!formData.target_nombre?.trim()) errors.push('Nombre del target');
+    } else if (selectedType === 'mandato_compra') {
+      if (!formData.cliente_nombre?.trim()) errors.push('Nombre del cliente');
+    } else if (selectedType === 'loi') {
+      if (!formData.comprador_nombre?.trim()) errors.push('Nombre del comprador');
+      if (!formData.vendedor_nombre?.trim()) errors.push('Nombre del vendedor');
+      if (!formData.precio_indicativo) errors.push('Precio indicativo');
+    }
+
+    if (errors.length > 0) {
+      toast({
+        title: "Campos requeridos",
+        description: `Por favor completa: ${errors.join(', ')}`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handlePreview = () => {
     if (!selectedType) return;
+    if (!validateForm()) return;
     generatePreview(selectedType, formData as any);
     setStep('preview');
   };
@@ -163,8 +219,8 @@ export function DocumentGeneratorPanel({
   };
 
   const handleSave = async () => {
-    if (!selectedType || !mandatoId) return;
-    const success = await saveToMandato(selectedType, formData as any, mandatoId);
+    if (!selectedType || !selectedMandatoId) return;
+    const success = await saveToMandato(selectedType, formData as any, selectedMandatoId);
     if (success) {
       onDocumentSaved?.();
       handleReset();
@@ -175,33 +231,108 @@ export function DocumentGeneratorPanel({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Handle empresa selection for different roles
+  const handleEmpresaSelect = (role: string, empresaId: string | undefined, empresa: Empresa | undefined) => {
+    if (!empresa) {
+      // Clear the linked empresa for this role
+      setLinkedEmpresas(prev => {
+        const next = { ...prev };
+        delete next[role];
+        return next;
+      });
+      return;
+    }
+
+    // Update linked empresas
+    setLinkedEmpresas(prev => ({ ...prev, [role]: empresaId! }));
+
+    // Auto-fill form fields based on role
+    if (role === 'empresa' || role === 'reveladora') {
+      updateFormData('empresa_nombre', empresa.nombre || '');
+      updateFormData('empresa_cif', empresa.cif || '');
+      updateFormData('empresa_domicilio', empresa.ubicacion || '');
+    } else if (role === 'contraparte' || role === 'receptora') {
+      updateFormData('contraparte_nombre', empresa.nombre || '');
+      updateFormData('contraparte_cif', empresa.cif || '');
+      updateFormData('contraparte_domicilio', empresa.ubicacion || '');
+    } else if (role === 'cliente') {
+      updateFormData('cliente_nombre', empresa.nombre || '');
+      updateFormData('cliente_cif', empresa.cif || '');
+      updateFormData('cliente_domicilio', empresa.ubicacion || '');
+    } else if (role === 'target') {
+      updateFormData('target_nombre', empresa.nombre || '');
+      updateFormData('target_cif', empresa.cif || '');
+    } else if (role === 'comprador') {
+      updateFormData('comprador_nombre', empresa.nombre || '');
+      updateFormData('comprador_cif', empresa.cif || '');
+      updateFormData('comprador_domicilio', empresa.ubicacion || '');
+    } else if (role === 'vendedor') {
+      updateFormData('vendedor_nombre', empresa.nombre || '');
+      updateFormData('vendedor_cif', empresa.cif || '');
+      updateFormData('vendedor_domicilio', empresa.ubicacion || '');
+    }
+  };
+
+  const renderLinkedBadge = (role: string) => {
+    if (linkedEmpresas[role]) {
+      return (
+        <Badge variant="outline" className="gap-1 text-xs bg-primary/5">
+          <Link2 className="h-3 w-3" />
+          Vinculado
+        </Badge>
+      );
+    }
+    return null;
+  };
+
   const renderTypeSelector = () => (
-    <div className="grid md:grid-cols-2 gap-4">
-      {DOCUMENT_CONFIGS.filter(c => c.type !== 'psh').map((config) => {
-        const Icon = DOCUMENT_ICONS[config.type];
-        return (
-          <Card
-            key={config.type}
-            className="cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-all group"
-            onClick={() => handleSelectType(config.type)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <Icon className="h-5 w-5 text-primary" />
+    <div className="space-y-6">
+      {/* Mandato selector */}
+      <div className="p-4 rounded-lg border bg-muted/30">
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm font-medium">Vincular a Mandato (opcional)</Label>
+        </div>
+        <MandatoSelect
+          value={selectedMandatoId}
+          onValueChange={setSelectedMandatoId}
+          placeholder="Seleccionar mandato para pre-rellenar datos..."
+          includeGeneralWork={false}
+        />
+        {selectedMandato && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Los datos de <strong>{selectedMandato.empresa_principal?.nombre}</strong> se usarán para pre-rellenar el formulario
+          </p>
+        )}
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {DOCUMENT_CONFIGS.filter(c => c.type !== 'psh').map((config) => {
+          const Icon = DOCUMENT_ICONS[config.type];
+          return (
+            <Card
+              key={config.type}
+              className="cursor-pointer hover:border-primary/50 hover:bg-accent/50 transition-all group"
+              onClick={() => handleSelectType(config.type)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base">{config.label}</CardTitle>
                 </div>
-                <CardTitle className="text-base">{config.label}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>{config.description}</CardDescription>
-              <div className="flex items-center gap-1 text-primary text-sm mt-3">
-                Seleccionar <ArrowRight className="h-4 w-4" />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{config.description}</CardDescription>
+                <div className="flex items-center gap-1 text-primary text-sm mt-3">
+                  Seleccionar <ArrowRight className="h-4 w-4" />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -213,7 +344,7 @@ export function DocumentGeneratorPanel({
     required?: boolean
   ) => (
     <div className="space-y-2">
-      <Label>{label}{required && ' *'}</Label>
+      <Label>{label}{required && <span className="text-destructive ml-1">*</span>}</Label>
       {type === 'textarea' ? (
         <Textarea 
           value={formData[field] || ''} 
@@ -231,6 +362,39 @@ export function DocumentGeneratorPanel({
     </div>
   );
 
+  const renderEmpresaSection = (
+    title: string,
+    role: string,
+    fields: { nombre: string; cif: string; domicilio: string; representante: string },
+    required: boolean = false
+  ) => (
+    <>
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium">{title}</h4>
+        {renderLinkedBadge(role)}
+      </div>
+      <div className="p-3 rounded-lg border bg-muted/20 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm text-muted-foreground">Buscar en catálogo</Label>
+        </div>
+        <EmpresaSelect
+          value={linkedEmpresas[role]}
+          onValueChange={(id, empresa) => handleEmpresaSelect(role, id, empresa)}
+          placeholder="Seleccionar empresa del catálogo..."
+        />
+      </div>
+      <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-4">
+          {renderFormField('Nombre empresa', fields.nombre, 'text', '', required)}
+          {renderFormField('CIF', fields.cif)}
+        </div>
+        {renderFormField('Domicilio', fields.domicilio)}
+        {renderFormField('Representante', fields.representante)}
+      </div>
+    </>
+  );
+
   const renderNDAForm = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
@@ -239,26 +403,20 @@ export function DocumentGeneratorPanel({
       </div>
 
       <Separator />
-      <h4 className="font-medium">Parte Reveladora</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre empresa', 'empresa_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'empresa_cif')}
-        </div>
-        {renderFormField('Domicilio', 'empresa_domicilio')}
-        {renderFormField('Representante', 'empresa_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Parte Reveladora',
+        'reveladora',
+        { nombre: 'empresa_nombre', cif: 'empresa_cif', domicilio: 'empresa_domicilio', representante: 'empresa_representante' },
+        true
+      )}
 
       <Separator />
-      <h4 className="font-medium">Parte Receptora</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre empresa', 'contraparte_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'contraparte_cif')}
-        </div>
-        {renderFormField('Domicilio', 'contraparte_domicilio')}
-        {renderFormField('Representante', 'contraparte_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Parte Receptora',
+        'receptora',
+        { nombre: 'contraparte_nombre', cif: 'contraparte_cif', domicilio: 'contraparte_domicilio', representante: 'contraparte_representante' },
+        true
+      )}
 
       <Separator />
       <h4 className="font-medium">Detalles del NDA</h4>
@@ -308,18 +466,30 @@ export function DocumentGeneratorPanel({
       </div>
 
       <Separator />
-      <h4 className="font-medium">Cliente (Vendedor)</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre', 'cliente_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'cliente_cif')}
-        </div>
-        {renderFormField('Domicilio', 'cliente_domicilio')}
-        {renderFormField('Representante', 'cliente_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Cliente (Vendedor)',
+        'cliente',
+        { nombre: 'cliente_nombre', cif: 'cliente_cif', domicilio: 'cliente_domicilio', representante: 'cliente_representante' },
+        true
+      )}
 
       <Separator />
-      <h4 className="font-medium">Empresa Objetivo (Target)</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium">Empresa Objetivo (Target)</h4>
+        {renderLinkedBadge('target')}
+      </div>
+      <div className="p-3 rounded-lg border bg-muted/20 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm text-muted-foreground">Buscar en catálogo</Label>
+        </div>
+        <EmpresaSelect
+          value={linkedEmpresas['target']}
+          onValueChange={(id, empresa) => handleEmpresaSelect('target', id, empresa)}
+          placeholder="Seleccionar target del catálogo..."
+          filterTarget={true}
+        />
+      </div>
       <div className="grid gap-4">
         <div className="grid grid-cols-2 gap-4">
           {renderFormField('Nombre', 'target_nombre', 'text', '', true)}
@@ -390,15 +560,12 @@ export function DocumentGeneratorPanel({
       </div>
 
       <Separator />
-      <h4 className="font-medium">Cliente (Comprador)</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre', 'cliente_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'cliente_cif')}
-        </div>
-        {renderFormField('Domicilio', 'cliente_domicilio')}
-        {renderFormField('Representante', 'cliente_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Cliente (Comprador)',
+        'cliente',
+        { nombre: 'cliente_nombre', cif: 'cliente_cif', domicilio: 'cliente_domicilio', representante: 'cliente_representante' },
+        true
+      )}
 
       <Separator />
       <h4 className="font-medium">Criterios de Búsqueda</h4>
@@ -463,29 +630,49 @@ export function DocumentGeneratorPanel({
       </div>
 
       <Separator />
-      <h4 className="font-medium">Comprador</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre', 'comprador_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'comprador_cif')}
-        </div>
-        {renderFormField('Domicilio', 'comprador_domicilio')}
-        {renderFormField('Representante', 'comprador_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Comprador',
+        'comprador',
+        { nombre: 'comprador_nombre', cif: 'comprador_cif', domicilio: 'comprador_domicilio', representante: 'comprador_representante' },
+        true
+      )}
 
       <Separator />
-      <h4 className="font-medium">Vendedor</h4>
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-4">
-          {renderFormField('Nombre', 'vendedor_nombre', 'text', '', true)}
-          {renderFormField('CIF', 'vendedor_cif')}
-        </div>
-        {renderFormField('Domicilio', 'vendedor_domicilio')}
-        {renderFormField('Representante', 'vendedor_representante')}
-      </div>
+      {renderEmpresaSection(
+        'Vendedor',
+        'vendedor',
+        { nombre: 'vendedor_nombre', cif: 'vendedor_cif', domicilio: 'vendedor_domicilio', representante: 'vendedor_representante' },
+        true
+      )}
 
       <Separator />
-      <h4 className="font-medium">Objeto de la Transacción</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium">Objeto de la Transacción</h4>
+        {renderLinkedBadge('target_loi')}
+      </div>
+      <div className="p-3 rounded-lg border bg-muted/20 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm text-muted-foreground">Buscar en catálogo</Label>
+        </div>
+        <EmpresaSelect
+          value={linkedEmpresas['target_loi']}
+          onValueChange={(id, empresa) => {
+            if (empresa) {
+              setLinkedEmpresas(prev => ({ ...prev, target_loi: id! }));
+              updateFormData('target_nombre', empresa.nombre || '');
+            } else {
+              setLinkedEmpresas(prev => {
+                const next = { ...prev };
+                delete next.target_loi;
+                return next;
+              });
+            }
+          }}
+          placeholder="Seleccionar target del catálogo..."
+          filterTarget={true}
+        />
+      </div>
       <div className="grid gap-4">
         <div className="grid grid-cols-2 gap-4">
           {renderFormField('Nombre Target', 'target_nombre', 'text', '', true)}
@@ -582,7 +769,7 @@ export function DocumentGeneratorPanel({
               <ChevronLeft className="h-4 w-4" />
             </Button>
           )}
-          <div>
+          <div className="flex-1">
             <CardTitle>{getStepTitle()}</CardTitle>
             {step === 'select' && (
               <CardDescription className="mt-1">
@@ -590,6 +777,12 @@ export function DocumentGeneratorPanel({
               </CardDescription>
             )}
           </div>
+          {step === 'form' && Object.keys(linkedEmpresas).length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              <Link2 className="h-3 w-3" />
+              {Object.keys(linkedEmpresas).length} empresas vinculadas
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -630,7 +823,7 @@ export function DocumentGeneratorPanel({
                   <Download className="mr-2 h-4 w-4" />
                   Descargar
                 </Button>
-                {mandatoId && (
+                {selectedMandatoId && (
                   <Button onClick={handleSave} disabled={isSaving}>
                     {isSaving ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

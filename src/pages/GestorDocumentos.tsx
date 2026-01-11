@@ -96,7 +96,7 @@ export default function GestorDocumentos() {
           storage_path,
           mandato_id,
           mandatos:mandato_id (
-            empresa_principal:empresas!mandatos_empresa_id_fkey (
+            empresa_principal:empresa_principal_id (
               nombre
             )
           )
