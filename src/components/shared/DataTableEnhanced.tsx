@@ -202,15 +202,15 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRow key={idx}>
+                  <TableRow key={idx} className="animate-pulse">
                     {selectable && (
                       <TableCell>
-                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-4 bg-muted animate-shimmer" />
                       </TableCell>
                     )}
                     {columns.map((column) => (
                       <TableCell key={column.key}>
-                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full bg-muted animate-shimmer" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -219,7 +219,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                 <TableRow>
                   <TableCell
                     colSpan={columns.length + (selectable ? 1 : 0)}
-                    className="text-center text-muted-foreground py-8"
+                    className="text-center text-muted-foreground py-12"
                   >
                     No hay datos disponibles
                   </TableCell>
@@ -232,11 +232,16 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                   return (
                     <TableRow
                       key={rowId}
+                      data-state={isSelected ? "selected" : undefined}
                       className={cn(
-                        onRowClick ? "cursor-pointer" : "",
+                        "transition-all duration-150",
+                        onRowClick && "cursor-pointer",
+                        isSelected 
+                          ? "bg-primary/5 border-l-2 border-l-primary" 
+                          : "hover:bg-muted/50",
                         customClass
                       )}
-                      onClick={() => !selectable && onRowClick?.(row)}
+                      onClick={() => onRowClick?.(row)}
                     >
                       {selectable && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -244,6 +249,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                             checked={isSelected}
                             onCheckedChange={(checked) => handleSelectRow(rowId, checked as boolean)}
                             aria-label={`Seleccionar ${(row as any).nombre || rowId}`}
+                            className="transition-transform duration-150 data-[state=checked]:scale-110"
                           />
                         </TableCell>
                       )}
@@ -264,8 +270,13 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
       {!loading && totalCount > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)} de {totalCount} registros
-            {externalSelectedRows.length > 0 && ` • ${externalSelectedRows.length} seleccionados`}
+            <span className="font-medium text-foreground">{startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)}</span>
+            {" "}de{" "}
+            <span className="font-medium text-foreground">{totalCount}</span>
+            {" "}registros
+            {externalSelectedRows.length > 0 && (
+              <span className="ml-2 text-primary font-medium">• {externalSelectedRows.length} seleccionados</span>
+            )}
           </p>
           <div className="flex items-center gap-2">
             <Button

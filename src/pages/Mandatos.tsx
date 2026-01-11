@@ -494,18 +494,6 @@ export default function Mandatos() {
         <div className={cn("flex-1 min-w-0", filterPanelOpen && vistaActual === "tabla" && "pl-4")}>
           {/* Barra de herramientas */}
           <div className="flex items-center gap-3 mb-4">
-            {/* Botón de filtros cuando está colapsado */}
-            {vistaActual === "tabla" && !filterPanelOpen && (
-              <FilterPanel
-                sections={filterSections}
-                values={filterValues}
-                onChange={handleFilterChange}
-                onClearAll={clearAllFilters}
-                isOpen={false}
-                onToggle={() => setFilterPanelOpen(true)}
-              />
-            )}
-            
             {/* Búsqueda */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
