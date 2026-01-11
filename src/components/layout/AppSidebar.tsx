@@ -45,6 +45,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Collapsible,
@@ -57,6 +58,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MenuItem {
   title: string;
@@ -147,6 +153,8 @@ export function AppSidebar() {
   const { adminUser, logout } = useAuth();
   const { theme, setTheme, actualTheme } = useTheme();
   const location = useLocation();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -207,6 +215,45 @@ export function AppSidebar() {
   const renderMenuGroup = (group: MenuGroup, key: string) => {
     const groupIsActive = isGroupActive(group);
     
+    // Collapsed mode: show items directly with tooltips
+    if (isCollapsed) {
+      return (
+        <SidebarGroup key={key} className="p-0 px-2">
+          <SidebarMenu>
+            {group.items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild tooltip={item.title}>
+                  {item.external ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center p-2 rounded-md transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    >
+                      <item.icon className="w-5 h-5" />
+                    </a>
+                  ) : (
+                    <NavLink
+                      to={item.url}
+                      className={cn(
+                        "flex items-center justify-center p-2 rounded-md transition-colors",
+                        isItemActive(item)
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                    </NavLink>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      );
+    }
+
+    // Expanded mode: show collapsible groups with labels
     return (
       <Collapsible
         key={key}
@@ -277,16 +324,18 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-6">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className={cn("p-4", isCollapsed && "p-2")}>
+        <div className={cn("flex items-center gap-2", isCollapsed && "justify-center")}>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
             <span className="text-primary-foreground font-medium text-lg">C</span>
           </div>
-          <div>
-            <h1 className="text-sidebar-foreground font-medium text-lg">Capittal CRM</h1>
-            <p className="text-sidebar-foreground/60 text-xs">Cierre</p>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-sidebar-foreground font-medium text-lg">Capittal CRM</h1>
+              <p className="text-sidebar-foreground/60 text-xs">Cierre</p>
+            </div>
+          )}
         </div>
       </SidebarHeader>
       
@@ -294,55 +343,119 @@ export function AppSidebar() {
         {groupsToRender.map((group, index) => renderMenuGroup(group, `group-${index}`))}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 px-2">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                {getInitials(adminUser?.full_name || null)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
+      <SidebarFooter className={cn("p-4 border-t border-sidebar-border", isCollapsed && "p-2")}>
+        {isCollapsed ? (
+          // Collapsed mode: show only icons with tooltips
+          <div className="flex flex-col items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getInitials(adminUser?.full_name || null)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="right">
                 {adminUser?.full_name || 'Usuario'}
-              </p>
-              <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(adminUser?.role || '')}`}>
-                {getRoleLabel(adminUser?.role || '')}
-              </Badge>
-            </div>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <NavLink to="/perfil">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    <User className="h-4 w-4" />
+                  </Button>
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right">Mi Perfil</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setTheme(actualTheme === 'dark' ? 'light' : 'dark')}
+                  className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+                >
+                  {actualTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {actualTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={logout}
+                  className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Cerrar Sesión</TooltipContent>
+            </Tooltip>
           </div>
-          
-          <NavLink to="/perfil">
+        ) : (
+          // Expanded mode: show full user info and buttons
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 px-2">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  {getInitials(adminUser?.full_name || null)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  {adminUser?.full_name || 'Usuario'}
+                </p>
+                <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(adminUser?.role || '')}`}>
+                  {getRoleLabel(adminUser?.role || '')}
+                </Badge>
+              </div>
+            </div>
+            
+            <NavLink to="/perfil">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                <User className="h-4 w-4" />
+                Mi Perfil
+              </Button>
+            </NavLink>
+            
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => setTheme(actualTheme === 'dark' ? 'light' : 'dark')}
               className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
             >
-              <User className="h-4 w-4" />
-              Mi Perfil
+              {actualTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {actualTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
             </Button>
-          </NavLink>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setTheme(actualTheme === 'dark' ? 'light' : 'dark')}
-            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            {actualTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {actualTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <LogOut className="h-4 w-4" />
-            Cerrar Sesión
-          </Button>
-        </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar Sesión
+            </Button>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
