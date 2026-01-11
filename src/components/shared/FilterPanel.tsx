@@ -114,20 +114,25 @@ export function FilterPanel({
 
   if (!isOpen) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onToggle}
-        className="gap-2 h-9"
-      >
-        <SlidersHorizontal className="h-4 w-4" />
-        Filtros
-        {totalActiveFilters > 0 && (
-          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-            {totalActiveFilters}
-          </Badge>
-        )}
-      </Button>
+      <div className="shrink-0 w-12 flex flex-col items-center py-4 border-r border-border bg-card/50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          className="h-10 w-10 relative group"
+          title="Abrir filtros"
+        >
+          <SlidersHorizontal className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+          {totalActiveFilters > 0 && (
+            <Badge 
+              variant="default" 
+              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-medium"
+            >
+              {totalActiveFilters}
+            </Badge>
+          )}
+        </Button>
+      </div>
     );
   }
 
