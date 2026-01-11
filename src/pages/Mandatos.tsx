@@ -1,15 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
-import { Toolbar } from "@/components/shared/Toolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
 import { MandatoCard } from "@/components/mandatos/MandatoCard";
 import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
+import { FilterPanel, type FilterSection } from "@/components/shared/FilterPanel";
+import { FilterChips } from "@/components/shared/FilterChips";
+import { ActionCell, type ActionItem } from "@/components/shared/ActionCell";
+import { BulkActionsBar, commonBulkActions } from "@/components/shared/BulkActionsBar";
+import { useFilters } from "@/hooks/useFilters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -17,13 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { fetchMandatos, deleteMandato, updateMandato } from "@/services/mandatos";
 import { exportToCSV, cn } from "@/lib/utils";
 import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
@@ -32,10 +30,10 @@ import { toast } from "sonner";
 import {
   Search,
   Download,
-  MoreVertical,
   FileText,
   Pencil,
   Trash2,
+  Eye,
   Table as TableIcon,
   Columns,
   Plus,
@@ -92,21 +90,55 @@ function KanbanColumn({
   );
 }
 
+// Definir secciones de filtros
+const filterSections: FilterSection[] = [
+  {
+    id: "estado",
+    label: "Estado",
+    type: "checkbox",
+    defaultOpen: true,
+    options: MANDATO_ESTADOS.map((estado) => ({
+      value: estado,
+      label: estado,
+    })),
+  },
+  {
+    id: "tipo",
+    label: "Tipo",
+    type: "checkbox",
+    defaultOpen: true,
+    options: MANDATO_TIPOS.map((tipo) => ({
+      value: tipo,
+      label: tipo === "venta" ? "Venta" : "Compra",
+    })),
+  },
+];
+
 export default function Mandatos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
-  const [filtroTipo, setFiltroTipo] = useState<string>(searchParams.get("tipo") || "todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { fases } = useKanbanConfig();
+
+  // Hook de filtros Apollo-style
+  const {
+    values: filterValues,
+    handleChange: handleFilterChange,
+    handleRemove: handleFilterRemove,
+    clearAll: clearAllFilters,
+    chips: filterChips,
+    hasActiveFilters,
+  } = useFilters({ sections: filterSections });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -121,11 +153,8 @@ export default function Mandatos() {
   // Actualizar filtros cuando cambian los query params
   useEffect(() => {
     const tipoParam = searchParams.get("tipo");
-    
     if (tipoParam && (tipoParam === "compra" || tipoParam === "venta")) {
-      setFiltroTipo(tipoParam);
-    } else if (!tipoParam) {
-      setFiltroTipo("todos");
+      handleFilterChange("tipo", [tipoParam]);
     }
   }, [searchParams]);
 
@@ -152,12 +181,38 @@ export default function Mandatos() {
     }
   };
 
-  const handleExportCSV = () => {
-    const exportData = mandatosFiltrados.map((m) => ({
-      ID: m.id,
+  const handleBulkDelete = async () => {
+    if (!confirm(`¿Eliminar ${selectedRows.length} mandatos seleccionados?`)) return;
+    
+    try {
+      await Promise.all(selectedRows.map((id) => deleteMandato(id)));
+      toast.success(`${selectedRows.length} mandatos eliminados`);
+      setSelectedRows([]);
+      cargarMandatos();
+    } catch (error) {
+      toast.error("Error al eliminar mandatos");
+    }
+  };
+
+  const handleBulkExport = () => {
+    const selectedMandatos = mandatos.filter((m) => selectedRows.includes(m.id));
+    const exportData = selectedMandatos.map((m) => ({
+      ID: m.codigo || m.id.substring(0, 8),
       Tipo: m.tipo,
       Estado: m.estado,
-      Descripción: m.descripcion,
+      Cliente: m.empresa_principal?.nombre || "",
+      Fecha: m.created_at,
+    }));
+    exportToCSV(exportData, `mandatos-seleccionados-${new Date().toISOString().split("T")[0]}`);
+    toast.success(`${selectedRows.length} mandatos exportados`);
+  };
+
+  const handleExportCSV = () => {
+    const exportData = mandatosFiltrados.map((m) => ({
+      ID: m.codigo || m.id.substring(0, 8),
+      Tipo: m.tipo,
+      Estado: m.estado,
+      Cliente: m.empresa_principal?.nombre || "",
       Fecha: m.created_at,
     }));
     exportToCSV(exportData, `mandatos-${new Date().toISOString().split("T")[0]}`);
@@ -194,21 +249,50 @@ export default function Mandatos() {
     }
   };
 
-  // Filtros combinados
-  const mandatosFiltrados = mandatos.filter((mandato) => {
-    const empresaNombre = mandato.empresa_principal?.nombre || "";
-    const matchSearch =
-      searchQuery === "" ||
-      empresaNombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mandato.id.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filtros combinados con el nuevo sistema
+  const mandatosFiltrados = useMemo(() => {
+    return mandatos.filter((mandato) => {
+      const empresaNombre = mandato.empresa_principal?.nombre || "";
+      const matchSearch =
+        searchQuery === "" ||
+        empresaNombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mandato.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mandato.codigo && mandato.codigo.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchEstado =
-      filtroEstado === "todos" || mandato.estado === filtroEstado;
+      // Filtros del panel
+      const estadoFilter = filterValues.estado || [];
+      const tipoFilter = filterValues.tipo || [];
+      
+      const matchEstado = estadoFilter.length === 0 || estadoFilter.includes(mandato.estado);
+      const matchTipo = tipoFilter.length === 0 || tipoFilter.includes(mandato.tipo);
 
-    const matchTipo = filtroTipo === "todos" || mandato.tipo === filtroTipo;
+      return matchSearch && matchEstado && matchTipo;
+    });
+  }, [mandatos, searchQuery, filterValues]);
 
-    return matchSearch && matchEstado && matchTipo;
-  });
+  // Acciones inline para cada fila
+  const getRowActions = (row: Mandato): ActionItem[] => [
+    {
+      icon: Eye,
+      label: "Ver detalle",
+      onClick: () => navigate(`/mandatos/${row.id}`),
+    },
+    {
+      icon: Pencil,
+      label: "Editar",
+      onClick: () => toast.info("Edición disponible próximamente"),
+    },
+    {
+      icon: Trash2,
+      label: "Eliminar",
+      onClick: () => {
+        if (confirm("¿Estás seguro de eliminar este mandato?")) {
+          handleDelete(row.id);
+        }
+      },
+      variant: "destructive",
+    },
+  ];
 
   const columns = [
     { 
@@ -239,7 +323,9 @@ export default function Mandatos() {
       key: "empresa_principal", 
       label: "Cliente", 
       sortable: true, 
-      render: (value: any) => value?.nombre || "Sin asignar"
+      render: (value: any) => (
+        <span className="font-medium">{value?.nombre || "Sin asignar"}</span>
+      )
     },
     {
       key: "tipo",
@@ -295,47 +381,9 @@ export default function Mandatos() {
     },
     {
       key: "actions",
-      label: "Acciones",
+      label: "",
       render: (_: any, row: Mandato) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-background">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/mandatos/${row.id}`);
-              }}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Ver detalle
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.info("Edición disponible próximamente");
-              }}
-            >
-              <Pencil className="w-4 h-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm("¿Estás seguro de eliminar este mandato?")) {
-                  handleDelete(row.id);
-                }
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ActionCell actions={getRowActions(row)} />
       ),
     },
   ];
@@ -378,29 +426,34 @@ export default function Mandatos() {
   }
 
   return (
-    <div>
+    <div className="h-full">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-medium text-foreground">Mandatos M&A</h1>
           <p className="text-muted-foreground mt-1">
-            Gestiona operaciones de compra y venta de empresas
+            {mandatosFiltrados.length} de {mandatos.length} mandatos
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex border rounded-lg p-1">
+          <div className="flex border rounded-lg p-1 bg-muted/30">
             <Button
               variant={vistaActual === "tabla" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setVistaActual("tabla")}
+              className="gap-1.5"
             >
               <TableIcon className="w-4 h-4" />
+              Tabla
             </Button>
             <Button
               variant={vistaActual === "kanban" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setVistaActual("kanban")}
+              className="gap-1.5"
             >
               <Columns className="w-4 h-4" />
+              Kanban
             </Button>
           </div>
           {vistaActual === "kanban" && (
@@ -411,7 +464,7 @@ export default function Mandatos() {
               className="gap-2"
             >
               <Settings className="w-4 h-4" />
-              Configurar Fases
+              Configurar
             </Button>
           )}
           <Button onClick={() => setDrawerOpen(true)} className="gap-2">
@@ -423,111 +476,132 @@ export default function Mandatos() {
 
       <AgingAlertsBanner variant="expanded" maxItems={5} />
 
-      <Toolbar
-        filtros={
-          <>
-            <div className="relative flex-1 max-w-sm">
+      {/* Layout principal con panel de filtros */}
+      <div className="flex gap-0">
+        {/* Panel de filtros lateral */}
+        {vistaActual === "tabla" && (
+          <FilterPanel
+            sections={filterSections}
+            values={filterValues}
+            onChange={handleFilterChange}
+            onClearAll={clearAllFilters}
+            isOpen={filterPanelOpen}
+            onToggle={() => setFilterPanelOpen(!filterPanelOpen)}
+          />
+        )}
+
+        {/* Contenido principal */}
+        <div className={cn("flex-1 min-w-0", filterPanelOpen && vistaActual === "tabla" && "pl-4")}>
+          {/* Barra de herramientas */}
+          <div className="flex items-center gap-3 mb-4">
+            {/* Botón de filtros cuando está colapsado */}
+            {vistaActual === "tabla" && !filterPanelOpen && (
+              <FilterPanel
+                sections={filterSections}
+                values={filterValues}
+                onChange={handleFilterChange}
+                onClearAll={clearAllFilters}
+                isOpen={false}
+                onToggle={() => setFilterPanelOpen(true)}
+              />
+            )}
+            
+            {/* Búsqueda */}
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente, empresa o ID..."
+                placeholder="Buscar por cliente, código o ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9"
               />
             </div>
 
-            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="todos">Todos</SelectItem>
-                {MANDATO_TIPOS.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {tipo === "venta" ? "Venta" : "Compra"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filtroEstado} onValueChange={setFiltroEstado}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="todos">Todos estados</SelectItem>
-                {MANDATO_ESTADOS.map((estado) => (
-                  <SelectItem key={estado} value={estado}>
-                    {estado}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
+            {/* Page size */}
             <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-              <SelectTrigger className="w-[100px]">
+              <SelectTrigger className="w-[100px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="10">10 / pág</SelectItem>
+                <SelectItem value="20">20 / pág</SelectItem>
+                <SelectItem value="50">50 / pág</SelectItem>
               </SelectContent>
             </Select>
-          </>
-        }
-        acciones={
-          <>
-            <Button variant="outline" onClick={() => navigate("/importar-datos")}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
-            <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </>
-        }
-      />
 
-      {/* Vista Tabla */}
-      {vistaActual === "tabla" && (
-        <DataTableEnhanced
-          columns={columns}
-          data={mandatosFiltrados}
-          loading={false}
-          onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
-          pageSize={pageSize}
-        />
-      )}
-
-      {/* Vista Kanban */}
-      {vistaActual === "kanban" && (
-        <DndContext
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {fases.map((fase) => {
-              const mandatosColumna = getMandatosPorEstado(fase.fase_id as MandatoEstado);
-              return (
-                <KanbanColumn
-                  key={fase.id}
-                  id={fase.fase_id}
-                  label={fase.label}
-                  color={fase.color}
-                  mandatos={mandatosColumna}
-                />
-              );
-            })}
+            {/* Acciones */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/importar-datos")} className="h-9">
+                <Upload className="w-4 h-4 mr-2" />
+                Importar
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+            </div>
           </div>
-          
-          <DragOverlay>
-            {mandatoArrastrado ? <MandatoCard mandato={mandatoArrastrado} /> : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+
+          {/* Filter chips */}
+          <FilterChips
+            chips={filterChips}
+            onRemove={handleFilterRemove}
+            onClearAll={clearAllFilters}
+          />
+
+          {/* Vista Tabla */}
+          {vistaActual === "tabla" && (
+            <DataTableEnhanced
+              columns={columns}
+              data={mandatosFiltrados}
+              loading={false}
+              onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
+              pageSize={pageSize}
+              selectable
+              selectedRows={selectedRows}
+              onSelectionChange={setSelectedRows}
+            />
+          )}
+
+          {/* Vista Kanban */}
+          {vistaActual === "kanban" && (
+            <DndContext
+              sensors={sensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {fases.map((fase) => {
+                  const mandatosColumna = getMandatosPorEstado(fase.fase_id as MandatoEstado);
+                  return (
+                    <KanbanColumn
+                      key={fase.id}
+                      id={fase.fase_id}
+                      label={fase.label}
+                      color={fase.color}
+                      mandatos={mandatosColumna}
+                    />
+                  );
+                })}
+              </div>
+              
+              <DragOverlay>
+                {mandatoArrastrado ? <MandatoCard mandato={mandatoArrastrado} /> : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
+      </div>
+
+      {/* Barra de acciones bulk */}
+      <BulkActionsBar
+        selectedCount={selectedRows.length}
+        onClearSelection={() => setSelectedRows([])}
+        actions={[
+          commonBulkActions.export(handleBulkExport),
+          commonBulkActions.delete(handleBulkDelete),
+        ]}
+      />
 
       <NuevoMandatoDrawer
         open={drawerOpen}
