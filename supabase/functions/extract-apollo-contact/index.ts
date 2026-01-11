@@ -1,21 +1,70 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-interface ApolloContactData {
-  nombre: string;
-  apellidos?: string;
-  cargo?: string;
-  email?: string;
-  telefono?: string;
-  empresa_nombre?: string;
-  linkedin?: string;
-  apollo_url: string;
+type UrlType = "apollo" | "linkedin";
+
+const detectUrlType = (url: string): UrlType | null => {
+  if (url.includes("apollo.io")) return "apollo";
+  if (url.includes("linkedin.com/in")) return "linkedin";
+  return null;
+};
+
+const getPromptForType = (urlType: UrlType): string => {
+  if (urlType === "linkedin") {
+    return `Extract contact information from this LinkedIn profile page.
+LinkedIn profiles typically show:
+- Full name (usually in a large heading)
+- Headline/title (job title, often below the name)
+- Current company (in the headline or experience section)
+- Location
+
+Note: LinkedIn does NOT show email or phone publicly.
+
+Return a JSON object with these fields (use null for missing data):
+{
+  "nombre": "first name",
+  "apellidos": "last name(s)",
+  "email": null,
+  "telefono": null,
+  "cargo": "job title from headline",
+  "empresa": "current company name",
+  "linkedin": "the profile URL"
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+Only return the JSON object, no markdown or explanation.`;
+  }
+
+  // Apollo prompt
+  return `Extract contact information from this Apollo.io profile page.
+Look for:
+- Full name
+- Job title/position
+- Company name
+- Email address (Apollo often shows this)
+- Phone number (if available)
+- LinkedIn URL
+
+Return a JSON object with these fields (use null for missing data):
+{
+  "nombre": "first name",
+  "apellidos": "last name(s)",
+  "email": "email@example.com",
+  "telefono": "+1234567890",
+  "cargo": "job title",
+  "empresa": "company name",
+  "linkedin": "linkedin profile URL if available"
+}
+
+Only return the JSON object, no markdown or explanation.`;
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -24,204 +73,156 @@ Deno.serve(async (req) => {
 
     if (!url) {
       return new Response(
-        JSON.stringify({ success: false, error: 'URL is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "URL is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate Apollo URL
-    if (!url.includes('apollo.io')) {
+    const urlType = detectUrlType(url);
+    if (!urlType) {
       return new Response(
-        JSON.stringify({ success: false, error: 'URL must be an Apollo.io link' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "URL must be from Apollo.io or LinkedIn (linkedin.com/in/...)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const firecrawlKey = Deno.env.get('FIRECRAWL_API_KEY');
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    console.log(`Extracting contact from ${urlType} URL:`, url);
 
-    if (!firecrawlKey) {
-      console.error('FIRECRAWL_API_KEY not configured');
+    // Get Firecrawl API key
+    const firecrawlApiKey = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!firecrawlApiKey) {
+      console.error("FIRECRAWL_API_KEY not configured");
       return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl connector not configured. Please enable it in Settings.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Firecrawl not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!lovableKey) {
-      console.error('LOVABLE_API_KEY not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Lovable AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Format URL
-    let formattedUrl = url.trim();
-    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
-      formattedUrl = `https://${formattedUrl}`;
-    }
-
-    console.log('Scraping Apollo URL:', formattedUrl);
-
-    // Step 1: Scrape the Apollo page using Firecrawl
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
+    // Scrape the page with Firecrawl
+    console.log("Scraping with Firecrawl...");
+    const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${firecrawlKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${firecrawlApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        url: formattedUrl,
-        formats: ['markdown'],
+        url,
+        formats: ["markdown"],
         onlyMainContent: true,
-        waitFor: 3000, // Apollo pages may need time to load
+        waitFor: 3000, // Wait longer for dynamic content
       }),
     });
 
+    if (!scrapeResponse.ok) {
+      const errorText = await scrapeResponse.text();
+      console.error("Firecrawl error:", errorText);
+      return new Response(
+        JSON.stringify({ error: "Failed to scrape page" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const scrapeData = await scrapeResponse.json();
-
-    if (!scrapeResponse.ok || !scrapeData.success) {
-      console.error('Firecrawl error:', scrapeData);
-      return new Response(
-        JSON.stringify({ success: false, error: scrapeData.error || 'Failed to scrape Apollo page' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const markdown = scrapeData.data?.markdown || scrapeData.markdown;
+
     if (!markdown) {
+      console.error("No content extracted from page");
       return new Response(
-        JSON.stringify({ success: false, error: 'No content extracted from page' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Could not extract content from page" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log('Page scraped, extracting contact data with AI...');
+    console.log("Content extracted, length:", markdown.length);
 
-    // Step 2: Use AI to extract structured contact data
-    const aiPrompt = `Extract contact information from this Apollo.io profile page content.
+    // Use Lovable AI to extract structured data
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "AI service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-IMPORTANT: Return ONLY a valid JSON object with no additional text or explanation.
+    const prompt = getPromptForType(urlType);
 
-Return this exact JSON structure:
-{
-  "nombre": "First name only",
-  "apellidos": "Last name(s)",
-  "cargo": "Job title/position",
-  "email": "Email address if visible, null if not",
-  "telefono": "Phone number if visible, null if not",
-  "empresa_nombre": "Company name",
-  "linkedin": "LinkedIn profile URL if visible, null if not"
-}
-
-If a field is not found, use null for that field.
-For "nombre", extract ONLY the first name.
-For "apellidos", extract the rest of the name (last names).
-
-Page content:
-${markdown.substring(0, 8000)}`;
-
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
+    console.log("Extracting with AI...");
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${lovableKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: "google/gemini-2.5-flash",
         messages: [
-          { role: 'system', content: 'You are a data extraction assistant. Extract contact information from Apollo.io profile pages and return ONLY valid JSON. No explanations or markdown formatting.' },
-          { role: 'user', content: aiPrompt }
+          { role: "system", content: prompt },
+          { role: "user", content: `Here is the page content:\n\n${markdown.slice(0, 8000)}` },
         ],
-        temperature: 0.1,
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Rate limit exceeded. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'AI credits exhausted. Please add credits in Settings.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
+      console.error("AI extraction error:", errorText);
       return new Response(
-        JSON.stringify({ success: false, error: 'AI extraction failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "AI extraction failed" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content;
+    const content = aiData.choices?.[0]?.message?.content;
 
-    if (!aiContent) {
+    if (!content) {
+      console.error("No AI response content");
       return new Response(
-        JSON.stringify({ success: false, error: 'AI returned empty response' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "AI did not return data" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Parse the AI response - handle possible markdown code blocks
-    let extractedData: Partial<ApolloContactData>;
+    // Parse the JSON response
+    let contact;
     try {
-      let jsonStr = aiContent.trim();
-      // Remove markdown code blocks if present
-      if (jsonStr.startsWith('```json')) {
-        jsonStr = jsonStr.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-      } else if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/^```\n?/, '').replace(/\n?```$/, '');
+      // Clean up the response (remove markdown code blocks if present)
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith("```json")) {
+        cleanContent = cleanContent.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+      } else if (cleanContent.startsWith("```")) {
+        cleanContent = cleanContent.replace(/^```\n?/, "").replace(/\n?```$/, "");
       }
-      extractedData = JSON.parse(jsonStr);
+      contact = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiContent);
+      console.error("Failed to parse AI response:", content);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to parse extracted data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Failed to parse contact data", raw: content }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate that we got at least a name
-    if (!extractedData.nombre) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Could not extract contact name from page' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Add the source URL if not a LinkedIn URL was provided
+    if (urlType === "linkedin" && !contact.linkedin) {
+      contact.linkedin = url;
     }
 
-    const result: ApolloContactData = {
-      nombre: extractedData.nombre,
-      apellidos: extractedData.apellidos || undefined,
-      cargo: extractedData.cargo || undefined,
-      email: extractedData.email || undefined,
-      telefono: extractedData.telefono || undefined,
-      empresa_nombre: extractedData.empresa_nombre || undefined,
-      linkedin: extractedData.linkedin || undefined,
-      apollo_url: formattedUrl,
-    };
-
-    console.log('Contact extracted successfully:', result.nombre, result.apellidos);
+    console.log("Contact extracted successfully:", contact);
 
     return new Response(
-      JSON.stringify({ success: true, data: result }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true, 
+        contact,
+        source: urlType
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
-    console.error('Error extracting Apollo contact:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to extract contact';
+    console.error("Error in extract-apollo-contact:", error);
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

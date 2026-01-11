@@ -13,8 +13,8 @@ import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
-import { ImportFromApolloDrawer } from "@/components/contactos/ImportFromApolloDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Rocket } from "lucide-react";
+import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Link } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useContactosPaginated } from "@/hooks/queries/useContactos";
@@ -49,7 +49,7 @@ export default function Contactos() {
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
-  const [apolloImportOpen, setApolloImportOpen] = useState(false);
+  const [linkImportOpen, setLinkImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, InteraccionData>>({});
   const [filtroAccion, setFiltroAccion] = useState<FiltroAccion>('todos');
 
@@ -385,9 +385,9 @@ export default function Contactos() {
         onAction={() => setDrawerOpen(true)}
         extraActions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setApolloImportOpen(true)}>
-              <Rocket className="h-4 w-4 mr-2" />
-              Importar Apollo
+            <Button variant="outline" onClick={() => setLinkImportOpen(true)}>
+              <Link className="h-4 w-4 mr-2" />
+              Importar desde Link
             </Button>
             <Button variant="outline" onClick={() => setAiImportOpen(true)}>
               <Sparkles className="h-4 w-4 mr-2" />
@@ -511,9 +511,9 @@ export default function Contactos() {
         onSuccess={() => refetch()}
       />
 
-      <ImportFromApolloDrawer
-        open={apolloImportOpen}
-        onOpenChange={setApolloImportOpen}
+      <ImportFromLinkDrawer
+        open={linkImportOpen}
+        onOpenChange={setLinkImportOpen}
         onSuccess={() => refetch()}
       />
     </PageTransition>
