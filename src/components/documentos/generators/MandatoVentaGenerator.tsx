@@ -209,5 +209,5 @@ export function downloadMandatoVentaPdf(data: MandatoVentaData, filename?: strin
 
 export function previewMandatoVentaPdf(data: MandatoVentaData): string {
   const doc = generateMandatoVentaPdf(data);
-  return doc.output('bloburl') as unknown as string;
+  return doc.output('dataurlstring');
 }

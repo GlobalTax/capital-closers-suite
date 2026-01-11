@@ -739,16 +739,28 @@ export function DocumentGeneratorPanel({
   const renderPreview = () => (
     <div className="flex flex-col h-[600px]">
       {previewUrl ? (
-        <iframe 
-          src={previewUrl} 
+        <object 
+          data={previewUrl} 
+          type="application/pdf"
           className="flex-1 w-full border rounded-lg"
           title="Vista previa del documento"
-        />
-      ) : (
+        >
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 h-full bg-muted/20 rounded-lg border">
+            <AlertCircle className="h-12 w-12 text-muted-foreground" />
+            <p className="text-muted-foreground text-center">
+              Tu navegador no puede mostrar la vista previa del PDF.
+            </p>
+            <Button onClick={handleDownload} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Descargar para ver
+            </Button>
+          </div>
+        </object>
+      ) : isGenerating ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      )}
+      ) : null}
     </div>
   );
 

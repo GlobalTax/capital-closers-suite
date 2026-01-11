@@ -235,5 +235,5 @@ export function downloadLOIPdf(data: LOIData, filename?: string): void {
 
 export function previewLOIPdf(data: LOIData): string {
   const doc = generateLOIPdf(data);
-  return doc.output('bloburl') as unknown as string;
+  return doc.output('dataurlstring');
 }
