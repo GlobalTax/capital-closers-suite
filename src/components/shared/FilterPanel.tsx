@@ -114,15 +114,16 @@ export function FilterPanel({
 
   if (!isOpen) {
     return (
-      <div className="shrink-0 w-12 flex flex-col items-center py-4 border-r border-border bg-card/50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="h-10 w-10 relative group"
-          title="Abrir filtros"
-        >
-          <SlidersHorizontal className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+      <div 
+        className="shrink-0 w-12 flex flex-col items-center py-4 border-r border-border bg-card/50 cursor-pointer hover:bg-accent/50 transition-colors"
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && onToggle()}
+        title="Abrir filtros"
+      >
+        <div className="h-10 w-10 relative flex items-center justify-center">
+          <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
           {totalActiveFilters > 0 && (
             <Badge 
               variant="default" 
@@ -131,7 +132,7 @@ export function FilterPanel({
               {totalActiveFilters}
             </Badge>
           )}
-        </Button>
+        </div>
       </div>
     );
   }
