@@ -106,7 +106,7 @@ const filterSections: FilterSection[] = [
     id: "tipo",
     label: "Tipo",
     type: "checkbox",
-    defaultOpen: true,
+    defaultOpen: false,
     options: MANDATO_TIPOS.map((tipo) => ({
       value: tipo,
       label: tipo === "venta" ? "Venta" : "Compra",
