@@ -19,7 +19,7 @@ import {
   Calendar,
   DollarSign,
   Plus,
-  Sparkles,
+  Link2,
   User,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -35,7 +35,7 @@ interface TargetCardProps {
   isLoadingContactos: boolean;
   mandatoId: string;
   onAddContacto: (empresaId: string) => void;
-  onImportFromApollo: (empresaId: string) => void;
+  onImportFromLink: (empresaId: string) => void;
   onInteraccionUpdate: () => void;
 }
 
@@ -47,7 +47,7 @@ export function TargetCard({
   isLoadingContactos,
   mandatoId,
   onAddContacto,
-  onImportFromApollo,
+  onImportFromLink,
   onInteraccionUpdate,
 }: TargetCardProps) {
   const navigate = useNavigate();
@@ -191,10 +191,11 @@ export function TargetCard({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onImportFromApollo(empresa.id)}
+            onClick={() => onImportFromLink(empresa.id)}
+            title="Importar desde Apollo.io o LinkedIn"
           >
-            <Sparkles className="h-4 w-4 mr-1" />
-            Apollo
+            <Link2 className="h-4 w-4 mr-1" />
+            Link
           </Button>
         </div>
       </div>
@@ -242,10 +243,10 @@ export function TargetCard({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onImportFromApollo(empresa.id)}
+                        onClick={() => onImportFromLink(empresa.id)}
                       >
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        Importar de Apollo
+                        <Link2 className="h-3 w-3 mr-1" />
+                        Importar desde Link
                       </Button>
                     </div>
                   </div>

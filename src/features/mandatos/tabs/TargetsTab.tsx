@@ -10,7 +10,7 @@ import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer"
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search, Building2, Globe, Sparkles } from "lucide-react";
+import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
 import { fetchInteraccionesByEmpresa, getContactosByEmpresa } from "@/services/interacciones";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import type { Interaccion } from "@/services/interacciones";
@@ -273,6 +273,18 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
             <Globe className="w-4 h-4 mr-2" />
             IA Web
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setLinkSelectedEmpresaId(null);
+              setLinkImportOpen(true);
+            }}
+            title="Importar contactos desde Apollo.io o LinkedIn"
+          >
+            <Link2 className="w-4 h-4 mr-2" />
+            Link
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setAsociarEmpresaOpen(true)}>
             <Search className="w-4 h-4 mr-2" />
             Buscar
@@ -315,7 +327,7 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
                 isLoadingContactos={data.loadingContactos}
                 mandatoId={mandato.id}
                 onAddContacto={handleAddContacto}
-                onImportFromApollo={() => handleImportFromLink(empresa.id)}
+                onImportFromLink={() => handleImportFromLink(empresa.id)}
                 onInteraccionUpdate={() => handleInteraccionUpdate(empresa.id)}
               />
             );
