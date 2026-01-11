@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
@@ -13,6 +13,9 @@ import { FilterPanel, type FilterSection } from "@/components/shared/FilterPanel
 import { FilterChips } from "@/components/shared/FilterChips";
 import { ActionCell, type ActionItem } from "@/components/shared/ActionCell";
 import { BulkActionsBar, commonBulkActions } from "@/components/shared/BulkActionsBar";
+import { ColumnToggle, type ColumnConfig } from "@/components/shared/ColumnToggle";
+import { ViewDensityToggle, useViewDensity } from "@/components/shared/ViewDensityToggle";
+import { type ViewDensity } from "@/components/shared/DataTableEnhanced";
 import { useFilters } from "@/hooks/useFilters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +46,50 @@ import {
   Upload,
   Clock,
   AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Users,
+  TrendingUp,
+  Calendar,
+  Trophy,
+  XCircle,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useKanbanConfig } from "@/hooks/useKanbanConfig";
 import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
 import { useUndoableAction } from "@/hooks/useUndoableAction";
+import { differenceInDays, format } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Configuración de columnas disponibles
+const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { key: "codigo", label: "ID", visible: true, locked: true },
+  { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
+  { key: "tipo", label: "Tipo", visible: true },
+  { key: "estado", label: "Estado", visible: true },
+  { key: "categoria", label: "Categoría", visible: false },
+  { key: "prioridad", label: "Prioridad", visible: false },
+  { key: "valor", label: "Valor Deal", visible: false },
+  { key: "valoracion_esperada", label: "Valoración", visible: false },
+  { key: "fecha_inicio", label: "Inicio", visible: false },
+  { key: "fecha_cierre", label: "Fecha Cierre", visible: false },
+  { key: "empresas", label: "Targets", visible: true },
+  { key: "contactos", label: "Contactos", visible: false },
+  { key: "honorarios_aceptados", label: "Fee", visible: false },
+  { key: "total_ingresos", label: "Ingresos", visible: false },
+  { key: "balance_neto", label: "Balance", visible: false },
+  { key: "outcome", label: "Resultado", visible: false },
+  { key: "last_activity_at", label: "Última actividad", visible: true },
+  { key: "actions", label: "", visible: true, locked: true },
+];
 
 function KanbanColumn({ 
   id, 
@@ -107,6 +148,114 @@ const filterSections: FilterSection[] = [
   },
 ];
 
+// Función para formatear moneda
+const formatCurrency = (value: number | null | undefined): string => {
+  if (!value) return "—";
+  if (value >= 1000000) {
+    return `€${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    return `€${(value / 1000).toFixed(0)}K`;
+  }
+  return `€${value.toLocaleString("es-ES")}`;
+};
+
+// Componente para prioridad
+function PriorityBadge({ priority }: { priority: string | null | undefined }) {
+  if (!priority) return <span className="text-muted-foreground">—</span>;
+  
+  const config: Record<string, { color: string; icon: typeof ArrowUp; label: string }> = {
+    urgente: { color: "text-red-500", icon: AlertTriangle, label: "Urgente" },
+    alta: { color: "text-orange-500", icon: ArrowUp, label: "Alta" },
+    media: { color: "text-yellow-600", icon: Minus, label: "Media" },
+    baja: { color: "text-green-500", icon: ArrowDown, label: "Baja" },
+  };
+  
+  const cfg = config[priority] || config.media;
+  const Icon = cfg.icon;
+  
+  return (
+    <div className={cn("flex items-center gap-1.5", cfg.color)}>
+      <Icon className="w-3.5 h-3.5" />
+      <span className="text-xs font-medium">{cfg.label}</span>
+    </div>
+  );
+}
+
+// Componente para resultado (outcome)
+function OutcomeBadge({ outcome }: { outcome: string | null | undefined }) {
+  if (!outcome || outcome === "open") {
+    return <Badge variant="outline" className="text-xs">Abierto</Badge>;
+  }
+  
+  const variants: Record<string, string> = {
+    won: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    lost: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    cancelled: "bg-muted text-muted-foreground",
+  };
+  
+  const labels: Record<string, string> = {
+    won: "Ganado",
+    lost: "Perdido",
+    cancelled: "Cancelado",
+  };
+  
+  const icons: Record<string, typeof Trophy> = {
+    won: Trophy,
+    lost: XCircle,
+    cancelled: XCircle,
+  };
+  
+  const Icon = icons[outcome] || XCircle;
+  
+  return (
+    <Badge className={cn("text-xs gap-1", variants[outcome])}>
+      <Icon className="w-3 h-3" />
+      {labels[outcome] || outcome}
+    </Badge>
+  );
+}
+
+// Componente para fecha de cierre con indicador de urgencia
+function CloseDateBadge({ date }: { date: string | null | undefined }) {
+  if (!date) return <span className="text-muted-foreground">—</span>;
+  
+  const targetDate = new Date(date);
+  const days = differenceInDays(targetDate, new Date());
+  
+  if (days < 0) {
+    return (
+      <Badge variant="destructive" className="text-xs gap-1">
+        <AlertTriangle className="w-3 h-3" />
+        Vencido
+      </Badge>
+    );
+  }
+  
+  if (days <= 7) {
+    return (
+      <Badge className="text-xs gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+        <Calendar className="w-3 h-3" />
+        {days}d
+      </Badge>
+    );
+  }
+  
+  if (days <= 30) {
+    return (
+      <Badge variant="outline" className="text-xs gap-1">
+        <Calendar className="w-3 h-3" />
+        {days}d
+      </Badge>
+    );
+  }
+  
+  return (
+    <span className="text-sm text-muted-foreground">
+      {format(targetDate, "d MMM", { locale: es })}
+    </span>
+  );
+}
+
 export default function Mandatos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -120,6 +269,27 @@ export default function Mandatos() {
   const [pageSize, setPageSize] = useState<number>(20);
   const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  // Columnas personalizables - cargar desde localStorage
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
+    const saved = localStorage.getItem("mandatos-columns");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Merge con DEFAULT_COLUMNS para incluir nuevas columnas
+        return DEFAULT_COLUMNS.map(defaultCol => {
+          const savedCol = parsed.find((c: ColumnConfig) => c.key === defaultCol.key);
+          return savedCol ? { ...defaultCol, visible: savedCol.visible } : defaultCol;
+        });
+      } catch {
+        return DEFAULT_COLUMNS;
+      }
+    }
+    return DEFAULT_COLUMNS;
+  });
+
+  // Densidad de vista
+  const [viewDensity, setViewDensity] = useViewDensity("mandatos-density", "comfortable");
 
   const { fases } = useKanbanConfig();
   const { executeWithUndo } = useUndoableAction();
@@ -226,6 +396,11 @@ export default function Mandatos() {
     toast.success("Mandatos exportados a CSV");
   };
 
+  const handleColumnChange = useCallback((newConfig: ColumnConfig[]) => {
+    setColumnConfig(newConfig);
+    localStorage.setItem("mandatos-columns", JSON.stringify(newConfig));
+  }, []);
+
   const getMandatosPorEstado = (estado: MandatoEstado) => {
     return mandatosFiltrados.filter((m) => m.estado === estado);
   };
@@ -297,32 +472,41 @@ export default function Mandatos() {
     },
   ];
 
-  const columns = [
-    { 
+  // Definiciones de todas las columnas con sus renders
+  const allColumnDefinitions = useMemo(() => ({
+    codigo: { 
       key: "codigo", 
       label: "ID", 
       sortable: true, 
       filterable: true,
       render: (value: string, row: Mandato) => (
-        <span 
-          className="font-mono text-xs font-medium cursor-pointer hover:text-primary transition-colors" 
-          title="Clic para editar"
-          onClick={(e) => {
-            e.stopPropagation();
-            const newCodigo = prompt("Editar código:", value || "");
-            if (newCodigo !== null && newCodigo !== value) {
-              updateMandato(row.id, { codigo: newCodigo }).then(() => {
-                toast.success("Código actualizado");
-                cargarMandatos();
-              }).catch(() => toast.error("Error al actualizar código"));
-            }
-          }}
-        >
-          {value || row.id.substring(0, 8)}
-        </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span 
+                className="font-mono text-xs font-medium cursor-pointer hover:text-primary transition-colors" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newCodigo = prompt("Editar código:", value || "");
+                  if (newCodigo !== null && newCodigo !== value) {
+                    updateMandato(row.id, { codigo: newCodigo }).then(() => {
+                      toast.success("Código actualizado");
+                      cargarMandatos();
+                    }).catch(() => toast.error("Error al actualizar código"));
+                  }
+                }}
+              >
+                {value || row.id.substring(0, 8)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">UUID: {row.id.substring(0, 8)}...</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ),
     },
-    { 
+    empresa_principal: { 
       key: "empresa_principal", 
       label: "Cliente", 
       sortable: true, 
@@ -330,7 +514,7 @@ export default function Mandatos() {
         <span className="font-medium">{value?.nombre || "Sin asignar"}</span>
       )
     },
-    {
+    tipo: {
       key: "tipo",
       label: "Tipo",
       sortable: true,
@@ -340,7 +524,7 @@ export default function Mandatos() {
         </Badge>
       ),
     },
-    {
+    estado: {
       key: "estado",
       label: "Estado",
       sortable: true,
@@ -348,15 +532,122 @@ export default function Mandatos() {
         <BadgeStatus status={value as any} type="mandato" />
       ),
     },
-    {
+    categoria: {
+      key: "categoria",
+      label: "Categoría",
+      sortable: true,
+      render: (value: string) => value ? (
+        <Badge variant="outline" className="text-xs">{value}</Badge>
+      ) : <span className="text-muted-foreground">—</span>,
+    },
+    prioridad: {
+      key: "prioridad",
+      label: "Prioridad",
+      sortable: true,
+      render: (value: string) => <PriorityBadge priority={value} />,
+    },
+    valor: {
+      key: "valor",
+      label: "Valor Deal",
+      sortable: true,
+      render: (value: number) => (
+        <span className="font-mono text-sm tabular-nums">
+          {formatCurrency(value)}
+        </span>
+      ),
+    },
+    valoracion_esperada: {
+      key: "valoracion_esperada",
+      label: "Valoración",
+      sortable: true,
+      render: (value: number) => (
+        <span className="font-mono text-sm tabular-nums text-primary">
+          {formatCurrency(value)}
+        </span>
+      ),
+    },
+    fecha_inicio: {
+      key: "fecha_inicio",
+      label: "Inicio",
+      sortable: true,
+      render: (value: string) => value ? (
+        <span className="text-sm text-muted-foreground">
+          {format(new Date(value), "d MMM yy", { locale: es })}
+        </span>
+      ) : <span className="text-muted-foreground">—</span>,
+    },
+    fecha_cierre: {
+      key: "fecha_cierre",
+      label: "Fecha Cierre",
+      sortable: true,
+      render: (value: string) => <CloseDateBadge date={value} />,
+    },
+    empresas: {
       key: "empresas",
       label: "Targets",
       sortable: false,
       render: (value: any[]) => (
-        <span className="text-muted-foreground">{value?.length || 0}</span>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>{value?.length || 0}</span>
+        </div>
       ),
     },
-    {
+    contactos: {
+      key: "contactos",
+      label: "Contactos",
+      sortable: false,
+      render: (value: any[]) => (
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Users className="w-3.5 h-3.5" />
+          <span>{value?.length || 0}</span>
+        </div>
+      ),
+    },
+    honorarios_aceptados: {
+      key: "honorarios_aceptados",
+      label: "Fee",
+      sortable: true,
+      render: (value: number) => (
+        <span className="font-mono text-sm tabular-nums text-green-600 dark:text-green-400">
+          {formatCurrency(value)}
+        </span>
+      ),
+    },
+    total_ingresos: {
+      key: "total_ingresos",
+      label: "Ingresos",
+      sortable: true,
+      render: (value: number) => (
+        <span className="font-mono text-sm tabular-nums text-green-600 dark:text-green-400">
+          {formatCurrency(value)}
+        </span>
+      ),
+    },
+    balance_neto: {
+      key: "balance_neto",
+      label: "Balance",
+      sortable: true,
+      render: (value: number) => {
+        if (!value) return <span className="text-muted-foreground">—</span>;
+        const isPositive = value >= 0;
+        return (
+          <span className={cn(
+            "font-mono text-sm tabular-nums",
+            isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+          )}>
+            {isPositive ? "+" : ""}{formatCurrency(value)}
+          </span>
+        );
+      },
+    },
+    outcome: {
+      key: "outcome",
+      label: "Resultado",
+      sortable: true,
+      render: (value: string) => <OutcomeBadge outcome={value} />,
+    },
+    last_activity_at: {
       key: "last_activity_at",
       label: "Última actividad",
       sortable: true,
@@ -382,14 +673,26 @@ export default function Mandatos() {
         );
       },
     },
-    {
+    actions: {
       key: "actions",
       label: "",
       render: (_: any, row: Mandato) => (
         <ActionCell actions={getRowActions(row)} />
       ),
     },
-  ];
+  }), []);
+
+  // Filtrar y ordenar columnas según configuración
+  const visibleColumns = useMemo(() => {
+    return columnConfig
+      .filter(col => col.visible)
+      .map(col => allColumnDefinitions[col.key as keyof typeof allColumnDefinitions])
+      .filter(Boolean);
+  }, [columnConfig, allColumnDefinitions]);
+
+  // Contar columnas visibles para mostrar en UI
+  const visibleCount = columnConfig.filter(c => c.visible).length;
+  const totalCount = columnConfig.length;
 
   if (loading) {
     return (
@@ -520,6 +823,24 @@ export default function Mandatos() {
               </SelectContent>
             </Select>
 
+            {/* Columnas Toggle - solo en vista tabla */}
+            {vistaActual === "tabla" && (
+              <ColumnToggle
+                columns={columnConfig}
+                onChange={handleColumnChange}
+                storageKey="mandatos-columns"
+              />
+            )}
+
+            {/* Densidad Toggle - solo en vista tabla */}
+            {vistaActual === "tabla" && (
+              <ViewDensityToggle
+                value={viewDensity}
+                onChange={setViewDensity}
+                storageKey="mandatos-density"
+              />
+            )}
+
             {/* Acciones */}
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => navigate("/importar-datos")} className="h-9">
@@ -543,7 +864,7 @@ export default function Mandatos() {
           {/* Vista Tabla */}
           {vistaActual === "tabla" && (
             <DataTableEnhanced
-              columns={columns}
+              columns={visibleColumns}
               data={mandatosFiltrados}
               loading={false}
               onRowClick={(row) => navigate(`/mandatos/${row.id}`)}
@@ -551,6 +872,7 @@ export default function Mandatos() {
               selectable
               selectedRows={selectedRows}
               onSelectionChange={setSelectedRows}
+              density={viewDensity}
             />
           )}
 
