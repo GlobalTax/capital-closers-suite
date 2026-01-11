@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { PageTransition } from "@/components/shared/PageTransition";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
@@ -46,6 +48,7 @@ import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSe
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useKanbanConfig } from "@/hooks/useKanbanConfig";
 import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
+import { useUndoableAction } from "@/hooks/useUndoableAction";
 
 function KanbanColumn({ 
   id, 
@@ -129,6 +132,10 @@ export default function Mandatos() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const { fases } = useKanbanConfig();
+  const { executeWithUndo } = useUndoableAction();
+
+  // Restauración de scroll
+  useScrollRestoration();
 
   // Hook de filtros Apollo-style
   const {
@@ -172,13 +179,23 @@ export default function Mandatos() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteMandato(id);
-      toast.success("Mandato eliminado");
-      cargarMandatos();
-    } catch (error) {
-      toast.error("Error al eliminar el mandato");
-    }
+    const mandato = mandatos.find(m => m.id === id);
+    const nombreMandato = mandato?.codigo || mandato?.empresa_principal?.nombre || id.substring(0, 8);
+    
+    executeWithUndo({
+      message: `Eliminando mandato ${nombreMandato}...`,
+      undoMessage: "Eliminación cancelada",
+      duration: 5000,
+      action: async () => {
+        try {
+          await deleteMandato(id);
+          toast.success("Mandato eliminado");
+          cargarMandatos();
+        } catch (error) {
+          toast.error("Error al eliminar el mandato");
+        }
+      },
+    });
   };
 
   const handleBulkDelete = async () => {
@@ -285,11 +302,7 @@ export default function Mandatos() {
     {
       icon: Trash2,
       label: "Eliminar",
-      onClick: () => {
-        if (confirm("¿Estás seguro de eliminar este mandato?")) {
-          handleDelete(row.id);
-        }
-      },
+      onClick: () => handleDelete(row.id),
       variant: "destructive",
     },
   ];
@@ -390,7 +403,7 @@ export default function Mandatos() {
 
   if (loading) {
     return (
-      <div>
+      <PageTransition>
         <PageHeader
           title="Mandatos M&A"
           description="Gestiona operaciones de compra y venta de empresas"
@@ -398,13 +411,13 @@ export default function Mandatos() {
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Cargando mandatos...</p>
         </div>
-      </div>
+      </PageTransition>
     );
   }
 
   if (mandatos.length === 0) {
     return (
-      <div>
+      <PageTransition>
         <PageHeader
           title="Mandatos M&A"
           description="Gestiona operaciones de compra y venta de empresas"
@@ -421,12 +434,12 @@ export default function Mandatos() {
           onOpenChange={setDrawerOpen}
           onSuccess={cargarMandatos}
         />
-      </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="h-full">
+    <PageTransition className="h-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -601,6 +614,6 @@ export default function Mandatos() {
         open={configDialogOpen}
         onOpenChange={setConfigDialogOpen}
       />
-    </div>
+    </PageTransition>
   );
 }

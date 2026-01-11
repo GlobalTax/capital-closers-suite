@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { PageTransition } from "@/components/shared/PageTransition";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,9 @@ export default function Empresas() {
   useEmpresasRealtime();
 
   const empresas = result?.data || [];
+
+  // Restauración de scroll
+  useScrollRestoration();
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
@@ -151,7 +156,7 @@ export default function Empresas() {
 
   if (isLoading && !result) {
     return (
-      <div>
+      <PageTransition>
         <PageHeader title="Empresas" description="Base de datos de empresas de interés" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {[1, 2, 3, 4].map(i => (
@@ -163,12 +168,12 @@ export default function Empresas() {
           ))}
         </div>
         <Skeleton className="h-96 w-full" />
-      </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div>
+    <PageTransition>
       <PageHeader
         title="Empresas"
         description="Base de datos de empresas de interés"
@@ -284,6 +289,6 @@ export default function Empresas() {
         defaultMode="empresa"
         onSuccess={() => {}}
       />
-    </div>
+    </PageTransition>
   );
 }

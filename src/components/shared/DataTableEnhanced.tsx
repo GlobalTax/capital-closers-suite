@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { cn } from "@/lib/utils";
 import type { TableRecord } from "@/types/database";
 import type { ServerPaginationProps } from "@/types/pagination";
@@ -201,20 +201,11 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
             </TableHeader>
             <TableBody>
               {loading ? (
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <TableRow key={idx} className="animate-pulse">
-                    {selectable && (
-                      <TableCell>
-                        <Skeleton className="h-4 w-4 bg-muted animate-shimmer" />
-                      </TableCell>
-                    )}
-                    {columns.map((column) => (
-                      <TableCell key={column.key}>
-                        <Skeleton className="h-4 w-full bg-muted animate-shimmer" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                <TableSkeleton 
+                  columns={columns.length} 
+                  rows={5} 
+                  hasCheckbox={selectable} 
+                />
               ) : paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell
