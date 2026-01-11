@@ -8,12 +8,19 @@ export default {
     fontFamily: {
       sans: [
         'ABC Diatype',
-        'Inter',
+        'system-ui',
         '-apple-system',
-        'BlinkMacSystemFont',
         'Segoe UI',
         'Roboto',
+        'Ubuntu',
+        'Cantarell',
+        'Noto Sans',
         'sans-serif',
+        'Helvetica',
+        'Arial',
+        'Apple Color Emoji',
+        'Segoe UI Emoji',
+        'Segoe UI Symbol',
       ],
     },
     container: {
