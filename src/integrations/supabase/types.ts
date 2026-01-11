@@ -130,6 +130,13 @@ export type Database = {
           acquisition_channel_id: string | null
           acquisition_type: string | null
           additional_details: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           brevo_deleted_at: string | null
           brevo_lists: number[] | null
           brevo_unsubscribed_lists: number[] | null
@@ -144,6 +151,7 @@ export type Database = {
           email_clicked: boolean | null
           email_delivered: boolean | null
           email_delivered_at: string | null
+          email_domain: string | null
           email_opens_count: number | null
           email_sent: boolean | null
           email_sent_at: string | null
@@ -173,6 +181,13 @@ export type Database = {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
           additional_details?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
@@ -187,6 +202,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_opens_count?: number | null
           email_sent?: boolean | null
           email_sent_at?: string | null
@@ -216,6 +232,13 @@ export type Database = {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
           additional_details?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
@@ -230,6 +253,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_opens_count?: number | null
           email_sent?: boolean | null
           email_sent_at?: string | null
@@ -808,6 +832,13 @@ export type Database = {
       advisor_valuations: {
         Row: {
           acquisition_channel_id: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           cif: string
           company_name: string
           contact_name: string
@@ -818,6 +849,7 @@ export type Database = {
           ebitda_range_min: number | null
           ebitda_valuation: number | null
           email: string
+          email_domain: string | null
           email_sent: boolean | null
           email_sent_at: string | null
           employee_range: string
@@ -840,6 +872,13 @@ export type Database = {
         }
         Insert: {
           acquisition_channel_id?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           cif: string
           company_name: string
           contact_name: string
@@ -850,6 +889,7 @@ export type Database = {
           ebitda_range_min?: number | null
           ebitda_valuation?: number | null
           email: string
+          email_domain?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           employee_range: string
@@ -872,6 +912,13 @@ export type Database = {
         }
         Update: {
           acquisition_channel_id?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           cif?: string
           company_name?: string
           contact_name?: string
@@ -882,6 +929,7 @@ export type Database = {
           ebitda_range_min?: number | null
           ebitda_valuation?: number | null
           email?: string
+          email_domain?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           employee_range?: string
@@ -2130,6 +2178,13 @@ export type Database = {
       collaborator_applications: {
         Row: {
           acquisition_channel_id: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           assigned_at: string | null
           assigned_to: string | null
           brevo_deleted_at: string | null
@@ -2146,6 +2201,7 @@ export type Database = {
           email_clicked: boolean | null
           email_delivered: boolean | null
           email_delivered_at: string | null
+          email_domain: string | null
           email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
@@ -2165,6 +2221,7 @@ export type Database = {
           last_email_click_at: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           motivation: string | null
+          notes: string | null
           phone: string
           profession: string
           status: string
@@ -2174,6 +2231,13 @@ export type Database = {
         }
         Insert: {
           acquisition_channel_id?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2190,6 +2254,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2209,6 +2274,7 @@ export type Database = {
           last_email_click_at?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
+          notes?: string | null
           phone: string
           profession: string
           status?: string
@@ -2218,6 +2284,13 @@ export type Database = {
         }
         Update: {
           acquisition_channel_id?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2234,6 +2307,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2253,6 +2327,7 @@ export type Database = {
           last_email_click_at?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
+          notes?: string | null
           phone?: string
           profession?: string
           status?: string
@@ -2288,6 +2363,13 @@ export type Database = {
         Row: {
           acquisition_channel_id: string | null
           acquisition_type: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           brevo_deleted_at: string | null
           brevo_lists: number[] | null
           brevo_unsubscribed_lists: number[] | null
@@ -2302,6 +2384,7 @@ export type Database = {
           email_clicked: boolean | null
           email_delivered: boolean | null
           email_delivered_at: string | null
+          email_domain: string | null
           email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
@@ -2342,6 +2425,13 @@ export type Database = {
         Insert: {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
@@ -2356,6 +2446,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2396,6 +2487,13 @@ export type Database = {
         Update: {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           brevo_deleted_at?: string | null
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
@@ -2410,6 +2508,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2633,6 +2732,13 @@ export type Database = {
           adjustment_amount: number | null
           ai_company_summary: string | null
           ai_company_summary_at: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           assigned_at: string | null
           assigned_to: string | null
           brevo_deleted_at: string | null
@@ -2663,6 +2769,7 @@ export type Database = {
           email_clicked: boolean | null
           email_delivered: boolean | null
           email_delivered_at: string | null
+          email_domain: string | null
           email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
@@ -2728,6 +2835,13 @@ export type Database = {
           adjustment_amount?: number | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2758,6 +2872,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2823,6 +2938,13 @@ export type Database = {
           adjustment_amount?: number | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -2853,6 +2975,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -2962,6 +3085,13 @@ export type Database = {
           acquisition_channel_id: string | null
           ai_company_summary: string | null
           ai_company_summary_at: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           assigned_at: string | null
           assigned_to: string | null
           brevo_deleted_at: string | null
@@ -2987,6 +3117,7 @@ export type Database = {
           email_clicked: boolean | null
           email_delivered: boolean | null
           email_delivered_at: string | null
+          email_domain: string | null
           email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
@@ -3011,6 +3142,7 @@ export type Database = {
           last_email_click_at: string | null
           lead_entry_date: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
+          notes: string | null
           phone: string | null
           referral: string | null
           sectors_of_interest: string | null
@@ -3024,6 +3156,13 @@ export type Database = {
           acquisition_channel_id?: string | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -3049,6 +3188,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -3073,6 +3213,7 @@ export type Database = {
           last_email_click_at?: string | null
           lead_entry_date?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          notes?: string | null
           phone?: string | null
           referral?: string | null
           sectors_of_interest?: string | null
@@ -3086,6 +3227,13 @@ export type Database = {
           acquisition_channel_id?: string | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           brevo_deleted_at?: string | null
@@ -3111,6 +3259,7 @@ export type Database = {
           email_clicked?: boolean | null
           email_delivered?: boolean | null
           email_delivered_at?: string | null
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -3135,6 +3284,7 @@ export type Database = {
           last_email_click_at?: string | null
           lead_entry_date?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          notes?: string | null
           phone?: string | null
           referral?: string | null
           sectors_of_interest?: string | null
@@ -5086,6 +5236,13 @@ export type Database = {
           ai_company_summary: string | null
           ai_company_summary_at: string | null
           annual_revenue: string | null
+          apollo_candidates: Json | null
+          apollo_error: string | null
+          apollo_last_enriched_at: string | null
+          apollo_org_data: Json | null
+          apollo_org_id: string | null
+          apollo_people_data: Json | null
+          apollo_status: string | null
           cif: string | null
           company: string
           country: string | null
@@ -5098,6 +5255,7 @@ export type Database = {
           deletion_reason: string | null
           ebitda: string | null
           email: string
+          email_domain: string | null
           email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
@@ -5109,6 +5267,7 @@ export type Database = {
           ip_address: unknown
           is_deleted: boolean | null
           message: string
+          notes: string | null
           page_origin: string
           phone: string | null
           referrer: string | null
@@ -5126,6 +5285,13 @@ export type Database = {
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
           annual_revenue?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           cif?: string | null
           company: string
           country?: string | null
@@ -5138,6 +5304,7 @@ export type Database = {
           deletion_reason?: string | null
           ebitda?: string | null
           email: string
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -5149,6 +5316,7 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           message: string
+          notes?: string | null
           page_origin: string
           phone?: string | null
           referrer?: string | null
@@ -5166,6 +5334,13 @@ export type Database = {
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
           annual_revenue?: string | null
+          apollo_candidates?: Json | null
+          apollo_error?: string | null
+          apollo_last_enriched_at?: string | null
+          apollo_org_data?: Json | null
+          apollo_org_id?: string | null
+          apollo_people_data?: Json | null
+          apollo_status?: string | null
           cif?: string | null
           company?: string
           country?: string | null
@@ -5178,6 +5353,7 @@ export type Database = {
           deletion_reason?: string | null
           ebitda?: string | null
           email?: string
+          email_domain?: string | null
           email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
@@ -5189,6 +5365,7 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           message?: string
+          notes?: string | null
           page_origin?: string
           phone?: string | null
           referrer?: string | null
