@@ -452,7 +452,7 @@ export function NuevaPSHDrawer({
                       <span className="font-medium">3. Alcance de Due Diligence</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-primary">
+                      <span className="text-sm font-medium text-primary">
                         {formatCurrency(totalDD)}
                       </span>
                       <ChevronDown

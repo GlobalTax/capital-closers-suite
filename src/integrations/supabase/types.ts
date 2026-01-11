@@ -3669,6 +3669,66 @@ export type Database = {
           },
         ]
       }
+      cr_apollo_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          credits_used: number | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          import_results: Json | null
+          import_type: string | null
+          imported_count: number | null
+          preview_data: Json | null
+          search_criteria: Json | null
+          skipped_count: number | null
+          started_at: string | null
+          status: string | null
+          total_results: number | null
+          updated_count: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          import_results?: Json | null
+          import_type?: string | null
+          imported_count?: number | null
+          preview_data?: Json | null
+          search_criteria?: Json | null
+          skipped_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_results?: number | null
+          updated_count?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          import_results?: Json | null
+          import_type?: string | null
+          imported_count?: number | null
+          preview_data?: Json | null
+          search_criteria?: Json | null
+          skipped_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          total_results?: number | null
+          updated_count?: number | null
+        }
+        Relationships: []
+      }
       cr_deals: {
         Row: {
           company_name: string

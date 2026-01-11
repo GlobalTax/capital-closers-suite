@@ -72,7 +72,7 @@ export function TVLeadCard({ lead }: TVLeadCardProps) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-semibold text-foreground truncate mb-1">
+          <h3 className="text-xl font-medium text-foreground truncate mb-1">
             {lead.titulo}
           </h3>
           <p className="text-base text-muted-foreground truncate mb-2">

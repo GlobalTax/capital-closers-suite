@@ -90,7 +90,7 @@ export function InformacionFinancieraEmpresa({ empresa, loading }: InformacionFi
                 <kpi.icon className="h-4 w-4" />
                 <p className="text-sm">{kpi.label}</p>
               </div>
-              <p className="text-lg font-semibold">{kpi.value}</p>
+              <p className="text-lg font-medium">{kpi.value}</p>
             </div>
           ))}
         </div>

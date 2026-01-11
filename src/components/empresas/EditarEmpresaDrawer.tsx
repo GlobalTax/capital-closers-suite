@@ -235,7 +235,7 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-4">Datos Financieros</h3>
+                <h3 className="font-medium mb-4">Datos Financieros</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}

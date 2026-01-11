@@ -247,7 +247,7 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Empresas Target</h3>
+          <h3 className="text-lg font-medium">Empresas Target</h3>
           <p className="text-sm text-muted-foreground">
             Gestiona las empresas objetivo asociadas a este mandato
           </p>

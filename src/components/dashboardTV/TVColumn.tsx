@@ -50,7 +50,7 @@ export function TVColumn({ title, leads, color, icon: Icon }: TVColumnProps) {
 
         {/* Métricas */}
         {totalValor > 0 && (
-          <p className="text-lg font-semibold text-foreground mt-2">
+          <p className="text-lg font-medium text-foreground mt-2">
             Total: {new Intl.NumberFormat('es-ES', { 
               style: 'currency', 
               currency: 'EUR',
@@ -64,7 +64,7 @@ export function TVColumn({ title, leads, color, icon: Icon }: TVColumnProps) {
         {isSaturated && (
           <div className="mt-3 flex items-center gap-2 text-destructive">
             <AlertTriangle className="w-5 h-5" />
-            <span className="text-sm font-semibold">Columna saturada</span>
+            <span className="text-sm font-medium">Columna saturada</span>
           </div>
         )}
 

@@ -72,7 +72,7 @@ export function SectorComparables({
                       EBITDA
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-semibold">
+                      <span className="text-lg font-medium">
                         {sector.ebitda_multiple_median.toFixed(1)}x
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -98,7 +98,7 @@ export function SectorComparables({
                       Revenue
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-semibold">
+                      <span className="text-lg font-medium">
                         {sector.revenue_multiple_median.toFixed(1)}x
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -114,7 +114,7 @@ export function SectorComparables({
                       Beneficio Neto
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-semibold">
+                      <span className="text-lg font-medium">
                         {sector.net_profit_multiple_median.toFixed(1)}x
                       </span>
                       <span className="text-xs text-muted-foreground">

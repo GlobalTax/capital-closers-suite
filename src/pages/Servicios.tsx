@@ -68,7 +68,7 @@ function KanbanColumn({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm uppercase text-muted-foreground">
+        <h3 className="font-medium text-sm uppercase text-muted-foreground">
           {label}
         </h3>
         <Badge variant="outline">{servicios.length}</Badge>
@@ -351,7 +351,7 @@ export default function Servicios() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold text-foreground">Servicios</h1>
+          <h1 className="text-3xl font-medium text-foreground">Servicios</h1>
           <p className="text-muted-foreground mt-1">
             Gestiona proyectos de Due Diligence, SPA, Valoraciones y Asesoría
           </p>

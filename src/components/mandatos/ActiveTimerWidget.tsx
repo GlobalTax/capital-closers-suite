@@ -50,7 +50,7 @@ export function ActiveTimerWidget({ activeTimer, onStop }: ActiveTimerWidgetProp
             
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold">Timer Activo</h3>
+                <h3 className="font-medium">Timer Activo</h3>
                 <Badge variant="outline" className="bg-background">
                   <Clock className="mr-1 h-3 w-3" />
                   {formatElapsed(elapsed)}

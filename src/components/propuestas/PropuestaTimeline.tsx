@@ -79,7 +79,7 @@ export function PropuestaTimeline({ propuestas, onSelect, selectedId }: Propuest
                     {propuesta.estado}
                   </span>
                 </div>
-                <span className="font-semibold">{formatCurrency(propuesta.importe_total)}</span>
+                <span className="font-medium">{formatCurrency(propuesta.importe_total)}</span>
               </div>
 
               <p className="text-sm text-muted-foreground mt-1 line-clamp-1">

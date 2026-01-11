@@ -58,7 +58,7 @@ export function CalendarWeekView({
                   </p>
                   <p
                     className={cn(
-                      "text-lg font-semibold mt-1",
+                      "text-lg font-medium mt-1",
                       dayIsToday && "bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center mx-auto"
                     )}
                   >
