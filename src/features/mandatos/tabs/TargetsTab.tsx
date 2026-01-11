@@ -2,29 +2,30 @@ import { useState, useEffect } from "react";
 import { EmpresasAsociadasCard } from "@/components/mandatos/EmpresasAsociadasCard";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { AsociarEmpresaDialog } from "@/components/empresas/AsociarEmpresaDialog";
-import { InteraccionTimeline } from "@/components/targets/InteraccionTimeline";
 import { QuickAddTarget } from "@/components/targets/QuickAddTarget";
 import { EnrichFromWebDrawer } from "@/components/targets/EnrichFromWebDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
+import { TargetCard } from "@/components/targets/TargetCard";
+import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
+import { ImportFromApolloDrawer } from "@/components/contactos/ImportFromApolloDrawer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, MessageSquare, Building2, Globe, Sparkles } from "lucide-react";
-import { fetchInteraccionesByEmpresa } from "@/services/interacciones";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, Search, Building2, Globe, Sparkles } from "lucide-react";
+import { fetchInteraccionesByEmpresa, getContactosByEmpresa } from "@/services/interacciones";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import type { Interaccion } from "@/services/interacciones";
-import type { Mandato } from "@/types";
+import type { Mandato, Contacto } from "@/types";
 
 interface TargetsTabProps {
   mandato: Mandato;
   onRefresh: () => void;
 }
 
-interface EmpresaInteracciones {
-  [empresaId: string]: {
-    interacciones: Interaccion[];
-    loading: boolean;
-  };
+interface EmpresaData {
+  interacciones: Interaccion[];
+  contactos: Contacto[];
+  loadingInteracciones: boolean;
+  loadingContactos: boolean;
 }
 
 export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
@@ -34,55 +35,95 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
   const [aiImportOpen, setAiImportOpen] = useState(false);
   const [enrichInitialName, setEnrichInitialName] = useState("");
   const [enrichInitialUrl, setEnrichInitialUrl] = useState("");
+  
+  // Nuevo contacto drawer
+  const [nuevoContactoOpen, setNuevoContactoOpen] = useState(false);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
-  const [interaccionDialogOpen, setInteraccionDialogOpen] = useState(false);
-  const [empresaInteracciones, setEmpresaInteracciones] = useState<EmpresaInteracciones>({});
-  const [expandedEmpresa, setExpandedEmpresa] = useState<string | null>(null);
+  
+  // Apollo import drawer
+  const [apolloImportOpen, setApolloImportOpen] = useState(false);
+  const [apolloSelectedEmpresaId, setApolloSelectedEmpresaId] = useState<string | null>(null);
+  
+  // Datos por empresa (interacciones + contactos)
+  const [empresaData, setEmpresaData] = useState<Record<string, EmpresaData>>({});
 
-  // Cargar interacciones de la empresa expandida
+  const targetEmpresas = mandato.empresas?.filter(e => e.rol === 'target') || [];
+  const otrasEmpresas = mandato.empresas?.filter(e => e.rol !== 'target') || [];
+
+  // Cargar datos de todas las empresas target
   useEffect(() => {
-    if (!expandedEmpresa) return;
-    
-    const loadInteracciones = async () => {
-      setEmpresaInteracciones(prev => ({
-        ...prev,
-        [expandedEmpresa]: { ...prev[expandedEmpresa], loading: true, interacciones: prev[expandedEmpresa]?.interacciones || [] }
-      }));
+    const loadAllData = async () => {
+      for (const me of targetEmpresas) {
+        const empresaId = me.empresa?.id;
+        if (!empresaId) continue;
+        
+        // Skip if already loaded
+        if (empresaData[empresaId]?.interacciones?.length > 0 || 
+            empresaData[empresaId]?.contactos?.length > 0) {
+          continue;
+        }
 
-      try {
-        const data = await fetchInteraccionesByEmpresa(expandedEmpresa);
-        setEmpresaInteracciones(prev => ({
+        // Initialize loading state
+        setEmpresaData(prev => ({
           ...prev,
-          [expandedEmpresa]: { interacciones: data, loading: false }
+          [empresaId]: {
+            interacciones: prev[empresaId]?.interacciones || [],
+            contactos: prev[empresaId]?.contactos || [],
+            loadingInteracciones: true,
+            loadingContactos: true,
+          }
         }));
-      } catch (error) {
-        console.error("Error cargando interacciones:", error);
-        setEmpresaInteracciones(prev => ({
-          ...prev,
-          [expandedEmpresa]: { interacciones: [], loading: false }
-        }));
+
+        // Load interacciones
+        try {
+          const interacciones = await fetchInteraccionesByEmpresa(empresaId);
+          setEmpresaData(prev => ({
+            ...prev,
+            [empresaId]: {
+              ...prev[empresaId],
+              interacciones,
+              loadingInteracciones: false,
+            }
+          }));
+        } catch (error) {
+          console.error("Error cargando interacciones:", error);
+          setEmpresaData(prev => ({
+            ...prev,
+            [empresaId]: {
+              ...prev[empresaId],
+              loadingInteracciones: false,
+            }
+          }));
+        }
+
+        // Load contactos
+        try {
+          const contactos = await getContactosByEmpresa(empresaId);
+          setEmpresaData(prev => ({
+            ...prev,
+            [empresaId]: {
+              ...prev[empresaId],
+              contactos,
+              loadingContactos: false,
+            }
+          }));
+        } catch (error) {
+          console.error("Error cargando contactos:", error);
+          setEmpresaData(prev => ({
+            ...prev,
+            [empresaId]: {
+              ...prev[empresaId],
+              loadingContactos: false,
+            }
+          }));
+        }
       }
     };
 
-    loadInteracciones();
-  }, [expandedEmpresa]);
-
-  const handleOpenInteraccionDialog = (empresaId: string) => {
-    setSelectedEmpresaId(empresaId);
-    setInteraccionDialogOpen(true);
-  };
-
-  const handleInteraccionSuccess = () => {
-    // Recargar interacciones de la empresa seleccionada
-    if (selectedEmpresaId) {
-      setExpandedEmpresa(null);
-      setTimeout(() => setExpandedEmpresa(selectedEmpresaId), 100);
+    if (targetEmpresas.length > 0) {
+      loadAllData();
     }
-  };
-
-  const toggleEmpresaExpanded = (empresaId: string) => {
-    setExpandedEmpresa(prev => prev === empresaId ? null : empresaId);
-  };
+  }, [targetEmpresas.map(e => e.empresa?.id).join(',')]);
 
   const handleEnrichFromWeb = (name: string, url?: string) => {
     setEnrichInitialName(name);
@@ -91,7 +132,6 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
   };
 
   const handleAIImportSuccess = async (data: { empresaId?: string; contactoId?: string }) => {
-    // If empresa was created, associate it as target
     if (data.empresaId) {
       try {
         await addEmpresaToMandato(mandato.id, data.empresaId, "target");
@@ -102,8 +142,105 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
     }
   };
 
-  const targetEmpresas = mandato.empresas?.filter(e => e.rol === 'target') || [];
-  const otrasEmpresas = mandato.empresas?.filter(e => e.rol !== 'target') || [];
+  const handleAddContacto = (empresaId: string) => {
+    setSelectedEmpresaId(empresaId);
+    setNuevoContactoOpen(true);
+  };
+
+  const handleImportFromApollo = (empresaId: string) => {
+    setApolloSelectedEmpresaId(empresaId);
+    setApolloImportOpen(true);
+  };
+
+  const handleInteraccionUpdate = (empresaId: string) => {
+    // Reload interacciones for this empresa
+    setEmpresaData(prev => ({
+      ...prev,
+      [empresaId]: {
+        ...prev[empresaId],
+        loadingInteracciones: true,
+      }
+    }));
+
+    fetchInteraccionesByEmpresa(empresaId)
+      .then(interacciones => {
+        setEmpresaData(prev => ({
+          ...prev,
+          [empresaId]: {
+            ...prev[empresaId],
+            interacciones,
+            loadingInteracciones: false,
+          }
+        }));
+      })
+      .catch(error => {
+        console.error("Error recargando interacciones:", error);
+        setEmpresaData(prev => ({
+          ...prev,
+          [empresaId]: {
+            ...prev[empresaId],
+            loadingInteracciones: false,
+          }
+        }));
+      });
+  };
+
+  const handleContactoSuccess = () => {
+    // Reload contactos for selected empresa
+    if (selectedEmpresaId) {
+      setEmpresaData(prev => ({
+        ...prev,
+        [selectedEmpresaId]: {
+          ...prev[selectedEmpresaId],
+          loadingContactos: true,
+        }
+      }));
+
+      getContactosByEmpresa(selectedEmpresaId)
+        .then(contactos => {
+          setEmpresaData(prev => ({
+            ...prev,
+            [selectedEmpresaId!]: {
+              ...prev[selectedEmpresaId!],
+              contactos,
+              loadingContactos: false,
+            }
+          }));
+        })
+        .catch(error => {
+          console.error("Error recargando contactos:", error);
+        });
+    }
+  };
+
+  const handleApolloSuccess = () => {
+    // Reload contactos for apollo selected empresa
+    if (apolloSelectedEmpresaId) {
+      setEmpresaData(prev => ({
+        ...prev,
+        [apolloSelectedEmpresaId]: {
+          ...prev[apolloSelectedEmpresaId],
+          loadingContactos: true,
+        }
+      }));
+
+      getContactosByEmpresa(apolloSelectedEmpresaId)
+        .then(contactos => {
+          setEmpresaData(prev => ({
+            ...prev,
+            [apolloSelectedEmpresaId!]: {
+              ...prev[apolloSelectedEmpresaId!],
+              contactos,
+              loadingContactos: false,
+            }
+          }));
+        })
+        .catch(error => {
+          console.error("Error recargando contactos:", error);
+        });
+    }
+    onRefresh();
+  };
 
   return (
     <div className="space-y-6">
@@ -154,64 +291,35 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
         onEnrichFromWeb={handleEnrichFromWeb}
       />
 
-      {/* Lista de empresas target con interacciones */}
+      {/* Lista de empresas target con el nuevo TargetCard */}
       {targetEmpresas.length > 0 ? (
         <div className="space-y-4">
-          {targetEmpresas.map((me) => (
-            <Card key={me.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{me.empresa?.nombre}</CardTitle>
-                      {me.empresa?.sector && (
-                        <p className="text-xs text-muted-foreground">{me.empresa.sector}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {empresaInteracciones[me.empresa?.id || '']?.interacciones?.length || 0} interacciones
-                    </Badge>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => me.empresa && handleOpenInteraccionDialog(me.empresa.id)}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-1" />
-                      Nueva
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => me.empresa && toggleEmpresaExpanded(me.empresa.id)}
-                    >
-                      {expandedEmpresa === me.empresa?.id ? "Ocultar" : "Ver Timeline"}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              {expandedEmpresa === me.empresa?.id && (
-                <CardContent className="pt-0">
-                  <InteraccionTimeline
-                    interacciones={empresaInteracciones[me.empresa?.id || '']?.interacciones || []}
-                    empresaId={me.empresa?.id || ''}
-                    mandatoId={mandato.id}
-                    onUpdate={() => {
-                      if (me.empresa) {
-                        setExpandedEmpresa(null);
-                        setTimeout(() => setExpandedEmpresa(me.empresa!.id), 100);
-                      }
-                    }}
-                  />
-                </CardContent>
-              )}
-            </Card>
-          ))}
+          {targetEmpresas.map((me) => {
+            const empresa = me.empresa;
+            if (!empresa) return null;
+            
+            const data = empresaData[empresa.id] || {
+              interacciones: [],
+              contactos: [],
+              loadingInteracciones: false,
+              loadingContactos: false,
+            };
+
+            return (
+              <TargetCard
+                key={me.id}
+                empresa={empresa}
+                interacciones={data.interacciones}
+                contactos={data.contactos}
+                isLoadingInteracciones={data.loadingInteracciones}
+                isLoadingContactos={data.loadingContactos}
+                mandatoId={mandato.id}
+                onAddContacto={handleAddContacto}
+                onImportFromApollo={handleImportFromApollo}
+                onInteraccionUpdate={() => handleInteraccionUpdate(empresa.id)}
+              />
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -270,6 +378,24 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
         onOpenChange={setAiImportOpen}
         mandatoId={mandato.id}
         onSuccess={handleAIImportSuccess}
+      />
+
+      {/* Nuevo contacto drawer */}
+      <NuevoContactoDrawer
+        open={nuevoContactoOpen}
+        onOpenChange={setNuevoContactoOpen}
+        mandatoId={mandato.id}
+        defaultEmpresaId={selectedEmpresaId || undefined}
+        onSuccess={handleContactoSuccess}
+      />
+
+      {/* Apollo import drawer */}
+      <ImportFromApolloDrawer
+        open={apolloImportOpen}
+        onOpenChange={setApolloImportOpen}
+        mandatoId={mandato.id}
+        defaultEmpresaId={apolloSelectedEmpresaId || undefined}
+        onSuccess={handleApolloSuccess}
       />
     </div>
   );

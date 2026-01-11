@@ -106,3 +106,28 @@ export const getProximasAcciones = async (): Promise<Interaccion[]> => {
   if (error) throw error;
   return (data || []) as Interaccion[];
 };
+
+export const getLastInteraccionByContacto = async (contactoId: string): Promise<Interaccion | null> => {
+  const { data, error } = await supabase
+    .from('interacciones')
+    .select('*')
+    .eq('contacto_id', contactoId)
+    .order('fecha', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return data as Interaccion | null;
+};
+
+export const getContactosByEmpresa = async (empresaId: string): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('contactos')
+    .select('*')
+    .eq('empresa_principal_id', empresaId)
+    .is('merged_into_contacto_id', null)
+    .order('nombre', { ascending: true });
+  
+  if (error) throw error;
+  return data || [];
+};
