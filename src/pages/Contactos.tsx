@@ -11,7 +11,8 @@ import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX } from "lucide-react";
+import { ImportFromApolloDrawer } from "@/components/contactos/ImportFromApolloDrawer";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Rocket } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { useContactosPaginated } from "@/hooks/queries/useContactos";
@@ -46,6 +47,7 @@ export default function Contactos() {
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
+  const [apolloImportOpen, setApolloImportOpen] = useState(false);
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, InteraccionData>>({});
   const [filtroAccion, setFiltroAccion] = useState<FiltroAccion>('todos');
 
@@ -377,10 +379,16 @@ export default function Contactos() {
         actionLabel="Nuevo Contacto"
         onAction={() => setDrawerOpen(true)}
         extraActions={
-          <Button variant="outline" onClick={() => setAiImportOpen(true)}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Importar con IA
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setApolloImportOpen(true)}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Importar Apollo
+            </Button>
+            <Button variant="outline" onClick={() => setAiImportOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Importar con IA
+            </Button>
+          </div>
         }
       />
 
@@ -495,6 +503,12 @@ export default function Contactos() {
         open={aiImportOpen}
         onOpenChange={setAiImportOpen}
         defaultMode="contacto"
+        onSuccess={() => refetch()}
+      />
+
+      <ImportFromApolloDrawer
+        open={apolloImportOpen}
+        onOpenChange={setApolloImportOpen}
         onSuccess={() => refetch()}
       />
     </div>
