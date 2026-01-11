@@ -17,7 +17,7 @@
   :root {
     /* Apollo.io Style - Clean and Minimal */
     --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
@@ -152,7 +152,11 @@
   }
 
   body {
-    @apply bg-background text-foreground text-sm leading-5 font-normal;
+    @apply bg-background text-foreground;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    letter-spacing: normal;
   }
 }
 
