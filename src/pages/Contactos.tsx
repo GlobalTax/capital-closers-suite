@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { PageTransition } from "@/components/shared/PageTransition";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -52,6 +54,9 @@ export default function Contactos() {
   const [filtroAccion, setFiltroAccion] = useState<FiltroAccion>('todos');
 
   const contactos = result?.data || [];
+
+  // Restauración de scroll
+  useScrollRestoration();
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
@@ -372,7 +377,7 @@ export default function Contactos() {
   ];
 
   return (
-    <div className="space-y-6">
+    <PageTransition className="space-y-6">
       <PageHeader
         title="Contactos"
         description="Gestiona tus contactos profesionales"
@@ -511,6 +516,6 @@ export default function Contactos() {
         onOpenChange={setApolloImportOpen}
         onSuccess={() => refetch()}
       />
-    </div>
+    </PageTransition>
   );
 }
