@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,8 @@ export function DocumentGeneratorPanel({
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [selectedMandatoId, setSelectedMandatoId] = useState<string>(initialMandatoId || '');
   const [linkedEmpresas, setLinkedEmpresas] = useState<Record<string, string>>({});
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const lastInitializedRef = useRef<{ type: DocumentType | null; mandatoId: string }>({ type: null, mandatoId: '' });
   
   const { data: mandatos = [] } = useMandatos();
   
@@ -91,65 +93,76 @@ export function DocumentGeneratorPanel({
   const selectedMandato = mandatos.find(m => m.id === selectedMandatoId);
 
   // Initialize form with default values when type is selected
+  // Only re-initialize if the type or mandatoId actually changed (user action)
   useEffect(() => {
-    if (selectedType) {
-      const defaults: Record<string, any> = {
-        fecha: format(new Date(), 'yyyy-MM-dd'),
-        lugar: 'Madrid',
-        ...DEFAULT_VALUES,
-      };
-
-      // Pre-fill with mandato data if selected
-      if (selectedMandato) {
-        const empresa = selectedMandato.empresa_principal;
-        if (empresa) {
-          if (selectedType === 'nda') {
-            defaults.empresa_nombre = empresa.nombre || '';
-            defaults.empresa_cif = empresa.cif || '';
-            defaults.empresa_domicilio = empresa.ubicacion || '';
-          } else if (selectedType === 'mandato_venta') {
-            defaults.target_nombre = empresa.nombre || '';
-            defaults.cliente_nombre = empresa.nombre || '';
-            defaults.cliente_cif = empresa.cif || '';
-            defaults.cliente_domicilio = empresa.ubicacion || '';
-            defaults.servicios = [...SERVICIOS_MANDATO_VENTA];
-            defaults.exclusividad = true;
-            defaults.renovacion_automatica = true;
-          } else if (selectedType === 'mandato_compra') {
-            defaults.cliente_nombre = empresa.nombre || '';
-            defaults.cliente_cif = empresa.cif || '';
-            defaults.cliente_domicilio = empresa.ubicacion || '';
-            defaults.servicios = [...SERVICIOS_MANDATO_COMPRA];
-            defaults.sectores_objetivo = [];
-            defaults.geografia_objetivo = ['España'];
-            defaults.exclusividad = true;
-            defaults.renovacion_automatica = true;
-          } else if (selectedType === 'loi') {
-            defaults.target_nombre = empresa.nombre || '';
-            defaults.vendedor_nombre = empresa.nombre || '';
-            defaults.vendedor_cif = empresa.cif || '';
-            defaults.vendedor_domicilio = empresa.ubicacion || '';
-            defaults.dd_alcance = [...DD_ALCANCE_OPTIONS.slice(0, 4)];
-            defaults.exclusividad = true;
-            defaults.vinculante = false;
-            defaults.porcentaje_adquisicion = 100;
-          }
-          setLinkedEmpresas(prev => ({ ...prev, empresa_principal: empresa.id }));
-        }
-      } else if (empresaData || empresaNombre) {
-        // Pre-fill with empresa data if available (legacy prop support)
-        const nombre = empresaData?.nombre || empresaNombre || '';
-        if (selectedType === 'nda') {
-          defaults.empresa_nombre = nombre;
-          defaults.empresa_cif = empresaData?.cif || '';
-          defaults.empresa_domicilio = empresaData?.domicilio || '';
-          defaults.empresa_representante = empresaData?.representante || '';
-        }
-      }
-
-      setFormData(defaults);
+    if (!selectedType) return;
+    
+    // Check if we should skip initialization (already initialized with same params)
+    const typeChanged = selectedType !== lastInitializedRef.current.type;
+    const mandatoChanged = selectedMandatoId !== lastInitializedRef.current.mandatoId;
+    
+    if (isFormInitialized && !typeChanged && !mandatoChanged) {
+      return; // Already initialized, no intentional change - preserve user edits
     }
-  }, [selectedType, selectedMandato, empresaData, empresaNombre]);
+
+    const defaults: Record<string, any> = {
+      fecha: format(new Date(), 'yyyy-MM-dd'),
+      lugar: 'Madrid',
+      ...DEFAULT_VALUES,
+    };
+
+    // Pre-fill with mandato data if selected
+    if (selectedMandato) {
+      const empresa = selectedMandato.empresa_principal;
+      if (empresa) {
+        if (selectedType === 'nda') {
+          defaults.empresa_nombre = empresa.nombre || '';
+          defaults.empresa_cif = empresa.cif || '';
+          defaults.empresa_domicilio = empresa.ubicacion || '';
+        } else if (selectedType === 'mandato_venta') {
+          defaults.target_nombre = empresa.nombre || '';
+          defaults.cliente_nombre = empresa.nombre || '';
+          defaults.cliente_cif = empresa.cif || '';
+          defaults.cliente_domicilio = empresa.ubicacion || '';
+          defaults.servicios = [...SERVICIOS_MANDATO_VENTA];
+          defaults.exclusividad = true;
+          defaults.renovacion_automatica = true;
+        } else if (selectedType === 'mandato_compra') {
+          defaults.cliente_nombre = empresa.nombre || '';
+          defaults.cliente_cif = empresa.cif || '';
+          defaults.cliente_domicilio = empresa.ubicacion || '';
+          defaults.servicios = [...SERVICIOS_MANDATO_COMPRA];
+          defaults.sectores_objetivo = [];
+          defaults.geografia_objetivo = ['España'];
+          defaults.exclusividad = true;
+          defaults.renovacion_automatica = true;
+        } else if (selectedType === 'loi') {
+          defaults.target_nombre = empresa.nombre || '';
+          defaults.vendedor_nombre = empresa.nombre || '';
+          defaults.vendedor_cif = empresa.cif || '';
+          defaults.vendedor_domicilio = empresa.ubicacion || '';
+          defaults.dd_alcance = [...DD_ALCANCE_OPTIONS.slice(0, 4)];
+          defaults.exclusividad = true;
+          defaults.vinculante = false;
+          defaults.porcentaje_adquisicion = 100;
+        }
+        setLinkedEmpresas(prev => ({ ...prev, empresa_principal: empresa.id }));
+      }
+    } else if (empresaData || empresaNombre) {
+      // Pre-fill with empresa data if available (legacy prop support)
+      const nombre = empresaData?.nombre || empresaNombre || '';
+      if (selectedType === 'nda') {
+        defaults.empresa_nombre = nombre;
+        defaults.empresa_cif = empresaData?.cif || '';
+        defaults.empresa_domicilio = empresaData?.domicilio || '';
+        defaults.empresa_representante = empresaData?.representante || '';
+      }
+    }
+
+    setFormData(defaults);
+    setIsFormInitialized(true);
+    lastInitializedRef.current = { type: selectedType, mandatoId: selectedMandatoId };
+  }, [selectedType, selectedMandatoId, selectedMandato, empresaData, empresaNombre, isFormInitialized]);
 
   const handleSelectType = (type: DocumentType) => {
     setSelectedType(type);
@@ -165,6 +178,8 @@ export function DocumentGeneratorPanel({
       setSelectedType(null);
       setFormData({});
       setLinkedEmpresas({});
+      setIsFormInitialized(false);
+      lastInitializedRef.current = { type: null, mandatoId: '' };
     }
   };
 
@@ -173,6 +188,8 @@ export function DocumentGeneratorPanel({
     setSelectedType(null);
     setFormData({});
     setLinkedEmpresas({});
+    setIsFormInitialized(false);
+    lastInitializedRef.current = { type: null, mandatoId: '' };
     clearPreview();
   };
 
