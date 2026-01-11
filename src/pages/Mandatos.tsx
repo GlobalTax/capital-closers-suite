@@ -105,16 +105,6 @@ const filterSections: FilterSection[] = [
       label: estado,
     })),
   },
-  {
-    id: "tipo",
-    label: "Tipo",
-    type: "checkbox",
-    defaultOpen: false,
-    options: MANDATO_TIPOS.map((tipo) => ({
-      value: tipo,
-      label: tipo === "venta" ? "Venta" : "Compra",
-    })),
-  },
 ];
 
 export default function Mandatos() {
