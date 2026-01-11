@@ -93,7 +93,7 @@ export function TargetCard({
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => navigate(`/empresas/${empresa.id}`)}
-                  className="text-base font-semibold hover:text-primary hover:underline transition-colors text-left truncate"
+                  className="text-base font-medium hover:text-primary hover:underline transition-colors text-left truncate"
                 >
                   {empresa.nombre}
                 </button>

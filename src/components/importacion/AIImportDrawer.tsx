@@ -216,7 +216,7 @@ export function AIImportDrawer({
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">Datos de Empresa</h3>
+                    <h3 className="font-medium">Datos de Empresa</h3>
                     {hasEmpresaData && (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     )}
@@ -288,7 +288,7 @@ export function AIImportDrawer({
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">Datos de Contacto</h3>
+                    <h3 className="font-medium">Datos de Contacto</h3>
                     {hasContactoData && (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     )}

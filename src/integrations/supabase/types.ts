@@ -3669,6 +3669,509 @@ export type Database = {
           },
         ]
       }
+      cr_deals: {
+        Row: {
+          company_name: string
+          country: string | null
+          created_at: string
+          deal_type: string | null
+          deal_value: number | null
+          deal_year: number | null
+          deleted_at: string | null
+          description: string | null
+          fund_id: string
+          id: string
+          is_deleted: boolean | null
+          notes: string | null
+          portfolio_id: string | null
+          sector: string | null
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          country?: string | null
+          created_at?: string
+          deal_type?: string | null
+          deal_value?: number | null
+          deal_year?: number | null
+          deleted_at?: string | null
+          description?: string | null
+          fund_id: string
+          id?: string
+          is_deleted?: boolean | null
+          notes?: string | null
+          portfolio_id?: string | null
+          sector?: string | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          deal_type?: string | null
+          deal_value?: number | null
+          deal_year?: number | null
+          deleted_at?: string | null
+          description?: string | null
+          fund_id?: string
+          id?: string
+          is_deleted?: boolean | null
+          notes?: string | null
+          portfolio_id?: string | null
+          sector?: string | null
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_deals_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cr_deals_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "cr_portfolio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_fund_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          field_name: string | null
+          fund_id: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          field_name?: string | null
+          fund_id: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          field_name?: string | null
+          fund_id?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_fund_audit_log_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_fund_lps: {
+        Row: {
+          commitment_size: number | null
+          created_at: string
+          fund_id: string
+          id: string
+          lp_id: string
+          notes: string | null
+          since_year: number | null
+        }
+        Insert: {
+          commitment_size?: number | null
+          created_at?: string
+          fund_id: string
+          id?: string
+          lp_id: string
+          notes?: string | null
+          since_year?: number | null
+        }
+        Update: {
+          commitment_size?: number | null
+          created_at?: string
+          fund_id?: string
+          id?: string
+          lp_id?: string
+          notes?: string | null
+          since_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_fund_lps_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cr_fund_lps_lp_id_fkey"
+            columns: ["lp_id"]
+            isOneToOne: false
+            referencedRelation: "cr_lps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_funds: {
+        Row: {
+          aum: number | null
+          cities: string[] | null
+          country_base: string | null
+          created_at: string
+          current_fund_number: number | null
+          current_fund_size: number | null
+          deal_types: string[] | null
+          deleted_at: string | null
+          description: string | null
+          ebitda_max: number | null
+          ebitda_min: number | null
+          founded_year: number | null
+          fund_type: string | null
+          geography_focus: string[] | null
+          id: string
+          investment_stage: string[] | null
+          is_deleted: boolean | null
+          name: string
+          notes_internal: string | null
+          revenue_max: number | null
+          revenue_min: number | null
+          sector_exclusions: string[] | null
+          sector_focus: string[] | null
+          source_last_verified_at: string | null
+          source_url: string | null
+          status: string | null
+          ticket_max: number | null
+          ticket_min: number | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          aum?: number | null
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string
+          current_fund_number?: number | null
+          current_fund_size?: number | null
+          deal_types?: string[] | null
+          deleted_at?: string | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          founded_year?: number | null
+          fund_type?: string | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_stage?: string[] | null
+          is_deleted?: boolean | null
+          name: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_last_verified_at?: string | null
+          source_url?: string | null
+          status?: string | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          aum?: number | null
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string
+          current_fund_number?: number | null
+          current_fund_size?: number | null
+          deal_types?: string[] | null
+          deleted_at?: string | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          founded_year?: number | null
+          fund_type?: string | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_stage?: string[] | null
+          is_deleted?: boolean | null
+          name?: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_last_verified_at?: string | null
+          source_url?: string | null
+          status?: string | null
+          ticket_max?: number | null
+          ticket_min?: number | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      cr_lps: {
+        Row: {
+          aum: number | null
+          contact_email: string | null
+          contact_name: string | null
+          country: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          is_deleted: boolean | null
+          name: string
+          notes: string | null
+          type: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          aum?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          country?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          name: string
+          notes?: string | null
+          type?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          aum?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          country?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          name?: string
+          notes?: string | null
+          type?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      cr_matches: {
+        Row: {
+          contacted_at: string | null
+          created_at: string
+          crm_entity_id: string
+          crm_entity_type: string
+          fund_id: string
+          id: string
+          last_scored_at: string | null
+          match_reasons: Json | null
+          match_score: number | null
+          notes: string | null
+          owner_user_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          contacted_at?: string | null
+          created_at?: string
+          crm_entity_id: string
+          crm_entity_type: string
+          fund_id: string
+          id?: string
+          last_scored_at?: string | null
+          match_reasons?: Json | null
+          match_score?: number | null
+          notes?: string | null
+          owner_user_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contacted_at?: string | null
+          created_at?: string
+          crm_entity_id?: string
+          crm_entity_type?: string
+          fund_id?: string
+          id?: string
+          last_scored_at?: string | null
+          match_reasons?: Json | null
+          match_score?: number | null
+          notes?: string | null
+          owner_user_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_matches_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_people: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          full_name: string
+          fund_id: string
+          id: string
+          is_deleted: boolean | null
+          is_email_verified: boolean | null
+          is_primary_contact: boolean | null
+          linkedin_url: string | null
+          location: string | null
+          notes: string | null
+          phone: string | null
+          role: string | null
+          sector_expertise: string[] | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name: string
+          fund_id: string
+          id?: string
+          is_deleted?: boolean | null
+          is_email_verified?: boolean | null
+          is_primary_contact?: boolean | null
+          linkedin_url?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          sector_expertise?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          full_name?: string
+          fund_id?: string
+          id?: string
+          is_deleted?: boolean | null
+          is_email_verified?: boolean | null
+          is_primary_contact?: boolean | null
+          linkedin_url?: string | null
+          location?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          sector_expertise?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_people_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cr_portfolio: {
+        Row: {
+          company_name: string
+          country: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          exit_type: string | null
+          exit_year: number | null
+          fund_id: string
+          id: string
+          investment_type: string | null
+          investment_year: number | null
+          is_deleted: boolean | null
+          notes: string | null
+          ownership_type: string | null
+          sector: string | null
+          source_url: string | null
+          status: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company_name: string
+          country?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          exit_type?: string | null
+          exit_year?: number | null
+          fund_id: string
+          id?: string
+          investment_type?: string | null
+          investment_year?: number | null
+          is_deleted?: boolean | null
+          notes?: string | null
+          ownership_type?: string | null
+          sector?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          exit_type?: string | null
+          exit_year?: number | null
+          fund_id?: string
+          id?: string
+          investment_type?: string | null
+          investment_year?: number | null
+          is_deleted?: boolean | null
+          notes?: string | null
+          ownership_type?: string | null
+          sector?: string | null
+          source_url?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cr_portfolio_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_sync_log: {
         Row: {
           completed_at: string | null

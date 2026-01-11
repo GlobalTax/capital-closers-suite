@@ -125,7 +125,7 @@ export function EmpresasAsociadasCard({ empresas, onAddEmpresa, mandatoId, onRef
                         <Building2 className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold">{me.empresa?.nombre}</h4>
+                        <h4 className="font-medium">{me.empresa?.nombre}</h4>
                         {me.empresa?.cif && (
                           <p className="text-xs text-muted-foreground">CIF: {me.empresa.cif}</p>
                         )}

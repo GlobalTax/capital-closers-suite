@@ -232,7 +232,7 @@ const ImportarMandatos = () => {
 
           {results.length > 0 && (
             <div className="space-y-2">
-              <h3 className="font-semibold text-sm">
+              <h3 className="font-medium text-sm">
                 Resultados ({results.length} procesados)
               </h3>
               <ScrollArea className="h-[400px] rounded-md border p-4">

@@ -134,7 +134,7 @@ export function FinancialRatiosView({ statement }: FinancialRatiosViewProps) {
                 )
               )}
             </div>
-            <p className="text-xl font-semibold">{ratio.value}</p>
+            <p className="text-xl font-medium">{ratio.value}</p>
             <p className="text-xs text-muted-foreground">{ratio.description}</p>
           </div>
         ))}

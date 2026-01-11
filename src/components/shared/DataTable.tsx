@@ -29,7 +29,7 @@ export function DataTable({ columns, data, onRowClick }: DataTableProps) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {columns.map((column) => (
-                <TableHead key={column.key} className="font-semibold">
+                <TableHead key={column.key} className="font-medium">
                   {column.label}
                 </TableHead>
               ))}

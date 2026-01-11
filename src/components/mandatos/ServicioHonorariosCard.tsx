@@ -73,7 +73,7 @@ export function ServicioHonorariosCard({ mandato }: ServicioHonorariosCardProps)
               <Euro className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Propuesto</span>
             </div>
-            <p className="text-lg font-semibold">
+            <p className="text-lg font-medium">
               {formatCurrency(mandato.honorarios_propuestos)}
             </p>
           </div>
@@ -82,7 +82,7 @@ export function ServicioHonorariosCard({ mandato }: ServicioHonorariosCardProps)
               <Euro className="w-4 h-4 text-green-600" />
               <span className="text-sm text-muted-foreground">Aceptado</span>
             </div>
-            <p className="text-lg font-semibold text-green-600">
+            <p className="text-lg font-medium text-green-600">
               {formatCurrency(mandato.honorarios_aceptados)}
             </p>
           </div>

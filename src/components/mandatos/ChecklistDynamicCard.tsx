@@ -245,7 +245,7 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
             <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
-                <h4 className="font-semibold text-red-700 dark:text-red-400">
+                <h4 className="font-medium text-red-700 dark:text-red-400">
                   Tareas vencidas ({overdueTasks.length})
                 </h4>
               </div>
@@ -285,7 +285,7 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
                 
                 return (
                   <AccordionItem key={fase.id} value={fase.nombre}>
-                    <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline">
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-3 h-3 rounded-full"

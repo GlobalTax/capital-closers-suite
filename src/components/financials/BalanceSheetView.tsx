@@ -78,7 +78,7 @@ export function BalanceSheetView({ statement }: BalanceSheetViewProps) {
             <span className={row.bold ? 'font-medium' : 'text-muted-foreground text-sm'}>
               {row.label}
             </span>
-            <span className={row.bold ? 'font-semibold' : ''}>
+            <span className={row.bold ? 'font-medium' : ''}>
               {formatCurrency(row.value)}
             </span>
           </div>

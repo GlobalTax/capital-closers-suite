@@ -129,7 +129,7 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
                   {/* Trabajo General M&A - Internal Mandate */}
                   <SelectItem 
                     value="00000000-0000-0000-0000-000000000001"
-                    className="font-semibold border-b"
+                    className="font-medium border-b"
                   >
                     🏢 Trabajo General M&A
                   </SelectItem>

@@ -67,7 +67,7 @@ export function FinancialKPICard({
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-2">
-          <p className={cn("text-2xl font-semibold", getValueColor())}>
+          <p className={cn("text-2xl font-medium", getValueColor())}>
             {formatValue()}
           </p>
           {trend && trendValue !== undefined && (

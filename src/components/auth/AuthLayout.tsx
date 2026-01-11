@@ -10,7 +10,7 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
       <div className="w-full max-w-md">
         <div className="bg-card border border-border rounded-lg shadow-sm p-8 space-y-6">
           <div className="space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-medium tracking-tight text-foreground">
               {title}
             </h1>
             <p className="text-sm text-muted-foreground">

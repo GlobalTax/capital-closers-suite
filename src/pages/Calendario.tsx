@@ -81,7 +81,7 @@ export default function Calendario() {
           <Button variant="outline" size="icon" onClick={navigateNext}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <h2 className="text-xl font-semibold ml-2 capitalize">
+          <h2 className="text-xl font-medium ml-2 capitalize">
             {viewMode === 'month' 
               ? format(currentDate, "MMMM yyyy", { locale: es })
               : `Semana del ${format(currentDate, "d 'de' MMMM", { locale: es })}`

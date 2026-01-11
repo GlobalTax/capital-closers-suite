@@ -37,7 +37,7 @@ export function MandatoTipoEspecifico({ mandato }: MandatoTipoEspecificoProps) {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-medium">Rango de Inversión</h4>
               </div>
-              <p className="text-sm font-semibold pl-6">
+              <p className="text-sm font-medium pl-6">
                 {formatCurrency(mandato.rango_inversion_min)} - {formatCurrency(mandato.rango_inversion_max)}
               </p>
             </div>
@@ -102,7 +102,7 @@ export function MandatoTipoEspecifico({ mandato }: MandatoTipoEspecificoProps) {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-medium">Valoración Esperada</h4>
               </div>
-              <p className="text-lg font-semibold pl-6">{formatCurrency(mandato.valoracion_esperada)}</p>
+              <p className="text-lg font-medium pl-6">{formatCurrency(mandato.valoracion_esperada)}</p>
             </div>
           )}
 
@@ -138,7 +138,7 @@ export function MandatoTipoEspecifico({ mandato }: MandatoTipoEspecificoProps) {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
               <h4 className="text-sm font-medium">Ofertas Recibidas</h4>
             </div>
-            <p className="text-lg font-semibold pl-6">
+            <p className="text-lg font-medium pl-6">
               {mandato.numero_ofertas_recibidas || 0} {mandato.numero_ofertas_recibidas === 1 ? 'oferta' : 'ofertas'}
             </p>
           </div>

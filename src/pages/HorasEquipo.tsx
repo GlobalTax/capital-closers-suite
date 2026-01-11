@@ -138,7 +138,7 @@ export default function HorasEquipo() {
       <HoursTrendChart entries={timeEntries} weeks={8} />
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Registros de Tiempo del Equipo</h3>
+        <h3 className="text-lg font-medium">Registros de Tiempo del Equipo</h3>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">
             Cargando registros...

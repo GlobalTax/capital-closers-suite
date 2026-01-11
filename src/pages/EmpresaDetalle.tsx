@@ -143,7 +143,7 @@ export default function EmpresaDetalle() {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <h1 className="text-3xl font-semibold text-foreground">{empresa.nombre}</h1>
+              <h1 className="text-3xl font-medium text-foreground">{empresa.nombre}</h1>
               {empresa.es_target && <EmpresaBadge variant="prioritaria" />}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -333,7 +333,7 @@ export default function EmpresaDetalle() {
                             <DollarSign className="h-4 w-4" />
                             Revenue
                           </p>
-                          <p className="text-lg font-semibold">€{(empresa.revenue / 1000000).toFixed(1)}M</p>
+                          <p className="text-lg font-medium">€{(empresa.revenue / 1000000).toFixed(1)}M</p>
                         </div>
                       )}
                       {empresa.ebitda && (
@@ -342,7 +342,7 @@ export default function EmpresaDetalle() {
                             <TrendingUp className="h-4 w-4" />
                             EBITDA
                           </p>
-                          <p className="text-lg font-semibold">€{(empresa.ebitda / 1000000).toFixed(1)}M</p>
+                          <p className="text-lg font-medium">€{(empresa.ebitda / 1000000).toFixed(1)}M</p>
                         </div>
                       )}
                       {margenEbitda && (
@@ -351,19 +351,19 @@ export default function EmpresaDetalle() {
                             <TrendingUp className="h-4 w-4" />
                             Margen EBITDA
                           </p>
-                          <p className="text-lg font-semibold">{margenEbitda.toFixed(1)}%</p>
+                          <p className="text-lg font-medium">{margenEbitda.toFixed(1)}%</p>
                         </div>
                       )}
                       {empresa.deuda && (
                         <div>
                           <p className="text-sm text-muted-foreground">Deuda</p>
-                          <p className="text-lg font-semibold">€{(empresa.deuda / 1000000).toFixed(1)}M</p>
+                          <p className="text-lg font-medium">€{(empresa.deuda / 1000000).toFixed(1)}M</p>
                         </div>
                       )}
                       {empresa.capital_circulante && (
                         <div>
                           <p className="text-sm text-muted-foreground">Capital Circulante</p>
-                          <p className="text-lg font-semibold">€{(empresa.capital_circulante / 1000000).toFixed(1)}M</p>
+                          <p className="text-lg font-medium">€{(empresa.capital_circulante / 1000000).toFixed(1)}M</p>
                         </div>
                       )}
                     </div>

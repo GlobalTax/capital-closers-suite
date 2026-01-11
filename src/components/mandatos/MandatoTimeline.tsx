@@ -116,14 +116,14 @@ export function MandatoTimeline({ fechaInicio, fechaCierre, estado }: MandatoTim
         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
           <div>
             <p className="text-sm text-muted-foreground">Duración total</p>
-            <p className="text-lg font-semibold">{duracion.duracionDias} días</p>
+            <p className="text-lg font-medium">{duracion.duracionDias} días</p>
           </div>
           {fechaCierre && (
             <div>
               <p className="text-sm text-muted-foreground">
                 {duracion.diasRestantes >= 0 ? 'Días restantes' : 'Días de retraso'}
               </p>
-              <p className={`text-lg font-semibold ${duracion.diasRestantes < 0 ? 'text-destructive' : ''}`}>
+              <p className={`text-lg font-medium ${duracion.diasRestantes < 0 ? 'text-destructive' : ''}`}>
                 {Math.abs(duracion.diasRestantes)} días
               </p>
             </div>

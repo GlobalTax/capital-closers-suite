@@ -201,7 +201,7 @@ export function ChecklistMACard({ mandatoId, mandatoTipo }: ChecklistMACardProps
               const tasksInFase = getTasksByFase(p.fase);
               return (
                 <AccordionItem key={p.fase} value={p.fase}>
-                  <AccordionTrigger className="text-lg font-semibold">
+                  <AccordionTrigger className="text-lg font-medium">
                     <div className="flex items-center gap-3">
                       <span>{p.fase}</span>
                       <span className="text-sm text-muted-foreground">
