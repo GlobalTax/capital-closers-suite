@@ -98,8 +98,9 @@ serve(async (req) => {
       );
     }
 
-    // Scrape the page with Firecrawl
-    console.log("Scraping with Firecrawl...");
+    // Scrape the page with Firecrawl - dynamic wait time based on platform
+    const waitTime = urlType === "apollo" ? 1000 : 1500;
+    console.log(`Scraping with Firecrawl (waitFor: ${waitTime}ms)...`);
     const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
@@ -110,7 +111,7 @@ serve(async (req) => {
         url,
         formats: ["markdown"],
         onlyMainContent: true,
-        waitFor: 3000, // Wait longer for dynamic content
+        waitFor: waitTime,
       }),
     });
 
@@ -156,10 +157,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: prompt },
-          { role: "user", content: `Here is the page content:\n\n${markdown.slice(0, 8000)}` },
+          { role: "user", content: `Page:\n\n${markdown.slice(0, 4000)}` },
         ],
       }),
     });
