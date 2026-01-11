@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   Form,
   FormControl,
@@ -86,6 +87,7 @@ export function ImportFromLinkDrawer({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [matchedEmpresas, setMatchedEmpresas] = useState<Record<number, string>>({});
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
 
   const { data: empresas = [] } = useEmpresas();
   const createContacto = useCreateContacto();
@@ -136,7 +138,7 @@ export function ImportFromLinkDrawer({
     }
   };
 
-  const findMatchingEmpresa = (empresaName?: string): string | undefined => {
+  const findMatchingEmpresa = useCallback((empresaName?: string): string | undefined => {
     if (!empresaName) return undefined;
     const normalizedName = empresaName.toLowerCase().trim();
     const match = empresas.find(
@@ -145,6 +147,28 @@ export function ImportFromLinkDrawer({
         normalizedName.includes(e.nombre.toLowerCase())
     );
     return match?.id;
+  }, [empresas]);
+
+  // Cache helpers for faster repeated extractions
+  const CACHE_KEY = "contact_import_cache";
+  const getCachedContact = (url: string): ExtractedContact | null => {
+    try {
+      const cache = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "{}");
+      const entry = cache[url];
+      // Cache valid for 10 minutes
+      if (entry && Date.now() - entry.timestamp < 10 * 60 * 1000) {
+        return entry.contact;
+      }
+    } catch { /* ignore */ }
+    return null;
+  };
+
+  const setCachedContact = (url: string, contact: ExtractedContact) => {
+    try {
+      const cache = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "{}");
+      cache[url] = { contact, timestamp: Date.now() };
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch { /* ignore */ }
   };
 
   const extractContacts = async () => {
@@ -155,33 +179,54 @@ export function ImportFromLinkDrawer({
 
     setIsExtracting(true);
     setExtractedContacts([]);
-    const newMatchedEmpresas: Record<number, string> = {};
+    setProgress({ completed: 0, total: urls.length });
 
     try {
-      const results: ExtractedContact[] = [];
-
-      for (let i = 0; i < urls.length; i++) {
-        const url = urls[i];
-        toast.info(`Extrayendo ${i + 1}/${urls.length}...`);
+      // Parallel extraction with Promise.allSettled
+      const extractPromises = urls.map(async (url) => {
+        // Check cache first
+        const cached = getCachedContact(url);
+        if (cached) {
+          return { success: true, contact: cached, fromCache: true };
+        }
 
         const { data, error } = await supabase.functions.invoke("extract-apollo-contact", {
           body: { url },
         });
 
         if (error) {
-          console.error("Error extracting:", error);
-          toast.error(`Error con URL ${i + 1}: ${error.message}`);
-          continue;
+          console.error("Error extracting:", url, error);
+          return { success: false, error: error.message };
         }
 
         if (data?.contact) {
-          results.push(data.contact);
-          const matchedId = findMatchingEmpresa(data.contact.empresa);
+          setCachedContact(url, data.contact);
+          return { success: true, contact: data.contact };
+        }
+
+        return { success: false, error: "No contact data" };
+      });
+
+      // Track progress as promises resolve
+      const results: ExtractedContact[] = [];
+      const newMatchedEmpresas: Record<number, string> = {};
+      let completed = 0;
+
+      const settled = await Promise.allSettled(extractPromises);
+      
+      settled.forEach((result, index) => {
+        completed++;
+        setProgress({ completed, total: urls.length });
+
+        if (result.status === "fulfilled" && result.value.success && result.value.contact) {
+          const contact = result.value.contact;
+          results.push(contact);
+          const matchedId = findMatchingEmpresa(contact.empresa);
           if (matchedId) {
             newMatchedEmpresas[results.length - 1] = matchedId;
           }
         }
-      }
+      });
 
       if (results.length > 0) {
         setExtractedContacts(results);
@@ -195,6 +240,7 @@ export function ImportFromLinkDrawer({
       toast.error("Error al extraer los contactos");
     } finally {
       setIsExtracting(false);
+      setProgress({ completed: 0, total: 0 });
     }
   };
 
@@ -395,6 +441,15 @@ export function ImportFromLinkDrawer({
                   </Alert>
                 )}
 
+                {isExtracting && progress.total > 0 && (
+                  <div className="space-y-2">
+                    <Progress value={(progress.completed / progress.total) * 100} />
+                    <p className="text-sm text-center text-muted-foreground">
+                      {progress.completed}/{progress.total} extraídos
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   onClick={extractContacts}
                   disabled={urls.length === 0 || isExtracting}
@@ -403,7 +458,7 @@ export function ImportFromLinkDrawer({
                   {isExtracting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Extrayendo...
+                      Extrayendo en paralelo...
                     </>
                   ) : (
                     `Extraer ${urls.length} contacto(s)`
