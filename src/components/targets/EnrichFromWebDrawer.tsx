@@ -238,14 +238,14 @@ export function EnrichFromWebDrawer({
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">Datos de Empresa</h3>
+                    <h3 className="font-medium">Datos de Empresa</h3>
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </div>
 
                   <Card className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-lg font-semibold">{enrichedData.nombre}</h4>
+                        <h4 className="text-lg font-medium">{enrichedData.nombre}</h4>
                         {enrichedData.sector && (
                           <Badge variant="secondary" className="mt-1">
                             {enrichedData.sector}
@@ -316,7 +316,7 @@ export function EnrichFromWebDrawer({
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold">Contactos encontrados</h3>
+                      <h3 className="font-medium">Contactos encontrados</h3>
                       <Badge variant="outline">{enrichedData.contactos.length}</Badge>
                     </div>
 

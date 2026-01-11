@@ -235,7 +235,7 @@ export default function ContactoDetalle() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Última Actividad</p>
-                <p className="text-lg font-semibold">
+                <p className="text-lg font-medium">
                   {ultimaInteraccion ? format(new Date(ultimaInteraccion.fecha), "dd MMM yyyy", { locale: es }) : "Sin actividad"}
                 </p>
               </div>
@@ -342,7 +342,7 @@ export default function ContactoDetalle() {
                         <p className="text-sm text-muted-foreground mt-1">{mandato.descripcion || "Sin descripción"}</p>
                       </div>
                       <div className="text-right">
-                        {mandato.valor && <p className="font-semibold">€{(mandato.valor / 1000000).toFixed(1)}M</p>}
+                        {mandato.valor && <p className="font-medium">€{(mandato.valor / 1000000).toFixed(1)}M</p>}
                         {mandato.fecha_inicio && (
                           <p className="text-sm text-muted-foreground">{format(new Date(mandato.fecha_inicio), "dd/MM/yyyy")}</p>
                         )}

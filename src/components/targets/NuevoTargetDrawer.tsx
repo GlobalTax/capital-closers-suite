@@ -166,7 +166,7 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
             <div className="space-y-6 pb-4">
               {/* Información Básica */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Building2 className="w-4 h-4" />
                   <span>Información Básica</span>
                 </div>
@@ -286,7 +286,7 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
 
               {/* Datos Financieros */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Euro className="w-4 h-4" />
                   <span>Datos Financieros</span>
                 </div>
@@ -327,7 +327,7 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
 
               {/* Contacto (opcional) */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Briefcase className="w-4 h-4" />
                   <span>Información de Contacto (Opcional)</span>
                 </div>

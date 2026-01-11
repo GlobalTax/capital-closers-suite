@@ -14,7 +14,7 @@ export function AccessDenied({ message = 'No tienes acceso a esta página' }: Ac
       <div className="text-center space-y-6 max-w-md">
         <ShieldAlert className="h-16 w-16 text-destructive mx-auto" />
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-foreground">Acceso Denegado</h1>
+          <h1 className="text-2xl font-medium text-foreground">Acceso Denegado</h1>
           <p className="text-sm text-muted-foreground">{message}</p>
         </div>
         <Button onClick={() => navigate('/mandatos')} variant="outline">

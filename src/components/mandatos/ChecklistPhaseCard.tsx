@@ -40,7 +40,7 @@ export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: Chec
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           {getStatusIcon()}
-          <h3 className="font-semibold text-sm">{fase.nombre}</h3>
+          <h3 className="font-medium text-sm">{fase.nombre}</h3>
         </div>
         <span className="text-lg font-medium" style={{ color: fase.color }}>
           {porcentaje}%

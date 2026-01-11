@@ -323,7 +323,7 @@ export default function Usuarios() {
             </DialogTitle>
             <DialogDescription className="space-y-3 pt-4">
               <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-                <p className="font-semibold text-destructive mb-2">⚠️ ADVERTENCIA: Esta acción es PERMANENTE e IRREVERSIBLE</p>
+                <p className="font-medium text-destructive mb-2">⚠️ ADVERTENCIA: Esta acción es PERMANENTE e IRREVERSIBLE</p>
                 <ul className="text-sm space-y-1 text-muted-foreground">
                   <li>• Se eliminará el usuario del sistema de autenticación</li>
                   <li>• Se perderán todos sus datos de acceso</li>
@@ -335,9 +335,9 @@ export default function Usuarios() {
               {deleteDialog.user && (
                 <div className="p-3 bg-muted rounded-lg">
                   <p className="text-sm font-medium mb-1">Usuario a eliminar:</p>
-                  <p className="text-sm"><span className="font-semibold">Nombre:</span> {deleteDialog.user.full_name}</p>
-                  <p className="text-sm"><span className="font-semibold">Email:</span> {deleteDialog.user.email}</p>
-                  <p className="text-sm"><span className="font-semibold">Rol:</span> {getRoleLabel(deleteDialog.user.role)}</p>
+                  <p className="text-sm"><span className="font-medium">Nombre:</span> {deleteDialog.user.full_name}</p>
+                  <p className="text-sm"><span className="font-medium">Email:</span> {deleteDialog.user.email}</p>
+                  <p className="text-sm"><span className="font-medium">Rol:</span> {getRoleLabel(deleteDialog.user.role)}</p>
                 </div>
               )}
 

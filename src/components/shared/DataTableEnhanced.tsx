@@ -168,7 +168,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                   </TableHead>
                 )}
                 {columns.map((column) => (
-                  <TableHead key={column.key} className="font-semibold">
+                  <TableHead key={column.key} className="font-medium">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <span>{column.label}</span>

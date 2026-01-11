@@ -57,7 +57,7 @@ export function ColorfulFinancialKPI({
           <Icon className={cn("h-5 w-5", colors.icon)} />
         </div>
         <div>
-          <p className={cn("text-3xl font-semibold mb-1", colors.text)}>
+          <p className={cn("text-3xl font-medium mb-1", colors.text)}>
             {value}
           </p>
           {subtitle && (

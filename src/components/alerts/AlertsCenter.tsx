@@ -62,7 +62,7 @@ function AlertItem({
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <p className={cn("text-sm font-medium truncate", !alert.is_read && "font-semibold")}>
+            <p className={cn("text-sm font-medium truncate", !alert.is_read && "font-medium")}>
               {alert.title}
             </p>
             {!alert.is_read && (
@@ -148,7 +148,7 @@ export function AlertsCenter() {
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">Alertas</h3>
+            <h3 className="font-medium text-sm">Alertas</h3>
             {stats && (
               <div className="flex items-center gap-1.5">
                 {stats.critical > 0 && (

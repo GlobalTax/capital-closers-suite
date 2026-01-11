@@ -158,7 +158,7 @@ export default function MisHoras() {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Mis Registros de Tiempo</h3>
+        <h3 className="text-lg font-medium">Mis Registros de Tiempo</h3>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Cargando registros...</div>
         ) : (

@@ -236,7 +236,7 @@ export default function ConfigurarDashboardTV() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Columnas del Dashboard</h2>
+            <h2 className="text-lg font-medium mb-4">Columnas del Dashboard</h2>
             
             <DndContext 
               sensors={sensors}
@@ -262,7 +262,7 @@ export default function ConfigurarDashboardTV() {
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Vista Previa</h2>
+            <h2 className="text-lg font-medium mb-4">Vista Previa</h2>
             <div className="bg-muted/50 p-4 rounded-lg min-h-[400px] flex items-center justify-center">
               <p className="text-muted-foreground">
                 Arrastra las columnas para reordenar. Los cambios se aplicarán al dashboard.

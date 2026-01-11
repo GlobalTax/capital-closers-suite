@@ -152,6 +152,6 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm leading-5 font-normal;
   }
 }

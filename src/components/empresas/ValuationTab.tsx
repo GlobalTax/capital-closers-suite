@@ -75,7 +75,7 @@ export function ValuationTab({ empresa }: ValuationTabProps) {
       {/* Header Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
+          <h3 className="text-lg font-medium flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-purple-600" />
             Valoraciones
           </h3>
@@ -217,7 +217,7 @@ export function ValuationTab({ empresa }: ValuationTabProps) {
                 <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">No hay valoraciones vinculadas</h3>
+                <h3 className="font-medium text-lg">No hay valoraciones vinculadas</h3>
                 <p className="text-muted-foreground text-sm mt-1">
                   Esta empresa no tiene valoraciones asociadas.
                   {empresa.cif && " Se buscó automáticamente por CIF."}
