@@ -11,12 +11,139 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, GripVertical, Trash2 } from "lucide-react";
+import { Plus, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface KanbanConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface SortableFaseItemProps {
+  fase: KanbanFase;
+  editingId: string | null;
+  editLabel: string;
+  editColor: string;
+  setEditLabel: (value: string) => void;
+  setEditColor: (value: string) => void;
+  onStartEdit: (fase: KanbanFase) => void;
+  onSaveEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onToggle: (id: string, activo: boolean) => void;
+  colorOptions: { value: string; label: string }[];
+}
+
+function SortableFaseItem({
+  fase,
+  editingId,
+  editLabel,
+  editColor,
+  setEditLabel,
+  setEditColor,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onToggle,
+  colorOptions,
+}: SortableFaseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: fase.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-lg border",
+        fase.color,
+        isDragging && "shadow-lg"
+      )}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </div>
+
+      {editingId === fase.id ? (
+        <>
+          <div className="flex-1 space-y-2">
+            <Input
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.target.value)}
+              placeholder="Nombre de la fase"
+            />
+            <select
+              value={editColor}
+              onChange={(e) => setEditColor(e.target.value)}
+              className="w-full p-2 rounded-md border bg-background"
+            >
+              {colorOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button size="sm" onClick={() => onSaveEdit(fase.id)}>
+            Guardar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCancelEdit}>
+            Cancelar
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="flex-1">
+            <p className="font-medium">{fase.label}</p>
+            <p className="text-xs text-muted-foreground">ID: {fase.fase_id}</p>
+          </div>
+          <Switch
+            checked={fase.activo}
+            onCheckedChange={(checked) => onToggle(fase.id, checked)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onStartEdit(fase)}
+          >
+            Editar
+          </Button>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function KanbanConfigDialog({ open, onOpenChange }: KanbanConfigDialogProps) {
@@ -28,23 +155,44 @@ export function KanbanConfigDialog({ open, onOpenChange }: KanbanConfigDialogPro
   const [newLabel, setNewLabel] = useState("");
   const [newColor, setNewColor] = useState("bg-slate-100 dark:bg-slate-800");
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = fases.findIndex((f) => f.id === active.id);
+      const newIndex = fases.findIndex((f) => f.id === over?.id);
+      const newOrder = arrayMove(fases, oldIndex, newIndex);
+
+      reorderFases.mutate(
+        newOrder.map((fase, index) => ({ id: fase.id, orden: index }))
+      );
+    }
+  };
+
   const handleSaveEdit = async (id: string) => {
     if (!editLabel.trim()) return;
-    
+
     await updateFase.mutateAsync({
       id,
       label: editLabel,
       color: editColor,
     });
-    
+
     setEditingId(null);
   };
 
   const handleCreateFase = async () => {
     if (!newFaseId.trim() || !newLabel.trim()) return;
-    
-    const maxOrden = Math.max(...fases.map(f => f.orden), 0);
-    
+
+    const maxOrden = Math.max(...fases.map((f) => f.orden), 0);
+
     await createFase.mutateAsync({
       fase_id: newFaseId,
       label: newLabel,
@@ -52,7 +200,7 @@ export function KanbanConfigDialog({ open, onOpenChange }: KanbanConfigDialogPro
       orden: maxOrden + 1,
       activo: true,
     });
-    
+
     setNewFaseId("");
     setNewLabel("");
     setNewColor("bg-slate-100 dark:bg-slate-800");
@@ -82,77 +230,37 @@ export function KanbanConfigDialog({ open, onOpenChange }: KanbanConfigDialogPro
           {/* Fases existentes */}
           <div className="space-y-3">
             <h3 className="font-medium">Fases Actuales</h3>
-            {fases.map((fase) => (
-              <div
-                key={fase.id}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg border",
-                  fase.color
-                )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={fases.map((f) => f.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <GripVertical className="w-4 h-4 text-muted-foreground cursor-move" />
-                
-                {editingId === fase.id ? (
-                  <>
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        value={editLabel}
-                        onChange={(e) => setEditLabel(e.target.value)}
-                        placeholder="Nombre de la fase"
-                      />
-                      <select
-                        value={editColor}
-                        onChange={(e) => setEditColor(e.target.value)}
-                        className="w-full p-2 rounded-md border"
-                      >
-                        {colorOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveEdit(fase.id)}
-                    >
-                      Guardar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingId(null)}
-                    >
-                      Cancelar
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex-1">
-                      <p className="font-medium">{fase.label}</p>
-                      <p className="text-xs text-muted-foreground">ID: {fase.fase_id}</p>
-                    </div>
-                    <Switch
-                      checked={fase.activo}
-                      onCheckedChange={(checked) =>
-                        toggleFase.mutate({ id: fase.id, activo: checked })
-                      }
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingId(fase.id);
-                        setEditLabel(fase.label);
-                        setEditColor(fase.color);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                  </>
-                )}
-              </div>
-            ))}
+                {fases.map((fase) => (
+                  <SortableFaseItem
+                    key={fase.id}
+                    fase={fase}
+                    editingId={editingId}
+                    editLabel={editLabel}
+                    editColor={editColor}
+                    setEditLabel={setEditLabel}
+                    setEditColor={setEditColor}
+                    onStartEdit={(f) => {
+                      setEditingId(f.id);
+                      setEditLabel(f.label);
+                      setEditColor(f.color);
+                    }}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={() => setEditingId(null)}
+                    onToggle={(id, activo) => toggleFase.mutate({ id, activo })}
+                    colorOptions={colorOptions}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
 
           {/* Nueva fase */}
@@ -180,7 +288,7 @@ export function KanbanConfigDialog({ open, onOpenChange }: KanbanConfigDialogPro
                 <select
                   value={newColor}
                   onChange={(e) => setNewColor(e.target.value)}
-                  className="w-full p-2 rounded-md border"
+                  className="w-full p-2 rounded-md border bg-background"
                 >
                   {colorOptions.map((option) => (
                     <option key={option.value} value={option.value}>
