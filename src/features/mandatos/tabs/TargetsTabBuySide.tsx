@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Kanban, List, BarChart3 } from "lucide-react";
+import { Building2, Plus, Kanban, List } from "lucide-react";
 import { CriteriosInversionCard } from "@/components/mandatos/buyside/CriteriosInversionCard";
 import { TargetFunnel } from "@/components/mandatos/buyside/TargetFunnel";
 import { TargetPipelineKanban } from "@/components/mandatos/buyside/TargetPipelineKanban";
+import { TargetDetailDrawer } from "@/components/mandatos/buyside/TargetDetailDrawer";
 import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { AsociarEmpresaDialog } from "@/components/empresas/AsociarEmpresaDialog";
-import type { Mandato, TargetFunnelStage, TargetPipelineStage } from "@/types";
+import type { Mandato, TargetFunnelStage, MandatoEmpresaBuySide } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface TargetsTabBuySideProps {
@@ -22,19 +23,31 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
   const [asociarOpen, setAsociarOpen] = useState(false);
   const [selectedFunnelStage, setSelectedFunnelStage] = useState<TargetFunnelStage | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [selectedTarget, setSelectedTarget] = useState<MandatoEmpresaBuySide | null>(null);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
 
   const {
     targets,
     stats,
     isLoading,
     moveToPipeline,
+    moveToFunnel,
+    updateScoring,
+    createOferta,
     isMoving,
+    isSavingScoring,
+    isSavingOferta,
     refetch,
   } = useTargetPipeline(mandato.id);
 
   const handleRefresh = () => {
     refetch();
     onRefresh();
+  };
+
+  const handleTargetClick = (target: MandatoEmpresaBuySide) => {
+    setSelectedTarget(target);
+    setDetailDrawerOpen(true);
   };
 
   // Filtrar por funnel stage si está seleccionado
@@ -111,8 +124,9 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
       {/* Vista principal */}
       {viewMode === 'kanban' ? (
         <TargetPipelineKanban
-          targets={filteredTargets as any}
+          targets={filteredTargets as MandatoEmpresaBuySide[]}
           onMoveTarget={(targetId, stage) => moveToPipeline({ targetId, stage })}
+          onTargetClick={handleTargetClick}
           isMoving={isMoving}
         />
       ) : (
@@ -138,6 +152,22 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
           </CardContent>
         </Card>
       )}
+
+      {/* Drawer de detalle */}
+      <TargetDetailDrawer
+        open={detailDrawerOpen}
+        onOpenChange={setDetailDrawerOpen}
+        target={selectedTarget}
+        mandatoId={mandato.id}
+        onMoveToFunnel={(targetId, stage) => moveToFunnel({ targetId, stage })}
+        onMoveToPipeline={(targetId, stage) => moveToPipeline({ targetId, stage })}
+        onUpdateScoring={(targetId, scoring) => updateScoring({ targetId, scoring })}
+        onCreateOferta={(targetId, oferta) => createOferta({ targetId, oferta })}
+        isMoving={isMoving}
+        isSavingScoring={isSavingScoring}
+        isSavingOferta={isSavingOferta}
+        onRefresh={handleRefresh}
+      />
 
       {/* Drawers */}
       <NuevoTargetDrawer
