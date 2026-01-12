@@ -173,7 +173,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                   </TableHead>
                 )}
                 {columns.map((column) => (
-                  <TableHead key={column.key} className="font-medium">
+                  <TableHead key={column.key}>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <span>{column.label}</span>
@@ -271,12 +271,12 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
       {!loading && totalCount > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)}</span>
+            <span className="text-foreground">{startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)}</span>
             {" "}de{" "}
-            <span className="font-medium text-foreground">{totalCount}</span>
+            <span className="text-foreground">{totalCount}</span>
             {" "}registros
             {externalSelectedRows.length > 0 && (
-              <span className="ml-2 text-primary font-medium">• {externalSelectedRows.length} seleccionados</span>
+              <span className="ml-2 text-primary">• {externalSelectedRows.length} seleccionados</span>
             )}
           </p>
           <div className="flex items-center gap-2">

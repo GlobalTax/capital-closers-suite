@@ -39,7 +39,7 @@ export function EmptyState({
       </div>
       
       {/* Título */}
-      <h3 className="text-lg font-medium text-foreground mb-2">{titulo}</h3>
+      <h3 className="text-lg text-foreground mb-2">{titulo}</h3>
       
       {/* Descripción */}
       {descripcion && (

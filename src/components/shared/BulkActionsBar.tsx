@@ -39,7 +39,7 @@ export function BulkActionsBar({
     >
       <div className="flex items-center gap-2">
         <CheckSquare className="h-4 w-4" />
-        <span className="text-sm font-medium">
+        <span className="text-sm">
           {selectedCount} seleccionado{selectedCount !== 1 ? "s" : ""}
         </span>
       </div>
