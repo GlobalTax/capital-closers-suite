@@ -1,11 +1,9 @@
-
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -22,9 +20,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!GEMINI_API_KEY) {
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "API key no configurada" }),
+        JSON.stringify({ error: "LOVABLE_API_KEY no configurada" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -80,42 +78,59 @@ Rellena solo los campos que puedas identificar con certeza. Deja null los demás
 
     // Clean base64 if it has data URL prefix
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+    
+    // Determine MIME type from base64 prefix or default to jpeg
+    const mimeMatch = image.match(/^data:(image\/\w+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: base64Data,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 2048,
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-5-nano",
+        messages: [
+          { role: "system", content: prompt },
+          { 
+            role: "user", 
+            content: [
+              { type: "text", text: "Extrae los datos financieros de esta imagen." },
+              { 
+                type: "image_url", 
+                image_url: { 
+                  url: `data:${mimeType};base64,${base64Data}` 
+                } 
+              }
+            ]
+          }
+        ],
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error("Lovable AI API error:", errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Límite de peticiones excedido, intente más tarde" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes en Lovable AI" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      throw new Error(`Lovable AI API error: ${response.status}`);
     }
 
     const result = await response.json();
-    const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textContent = result.choices?.[0]?.message?.content;
 
     if (!textContent) {
       throw new Error("No se pudo extraer contenido de la respuesta");
