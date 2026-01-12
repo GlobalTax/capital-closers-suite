@@ -244,7 +244,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "openai/gpt-5-nano",
         messages: [
           { role: "system", content: prompt },
           { role: "user", content: `Page:\n\n${markdown.slice(0, 4000)}` },

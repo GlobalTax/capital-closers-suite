@@ -3801,6 +3801,33 @@ export type Database = {
           },
         ]
       }
+      cr_favorites: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       cr_fund_audit_log: {
         Row: {
           action: string
@@ -3906,6 +3933,7 @@ export type Database = {
           id: string
           investment_stage: string[] | null
           is_deleted: boolean | null
+          last_news_scan_at: string | null
           last_scraped_at: string | null
           name: string
           notes_internal: string | null
@@ -3941,6 +3969,7 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_news_scan_at?: string | null
           last_scraped_at?: string | null
           name: string
           notes_internal?: string | null
@@ -3976,6 +4005,7 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_news_scan_at?: string | null
           last_scraped_at?: string | null
           name?: string
           notes_internal?: string | null
@@ -11800,6 +11830,7 @@ export type Database = {
           geography_focus: string[] | null
           id: string
           investment_style: string | null
+          last_news_scan_at: string | null
           last_scraped_at: string | null
           name: string
           notes_internal: string | null
@@ -11832,6 +11863,7 @@ export type Database = {
           geography_focus?: string[] | null
           id?: string
           investment_style?: string | null
+          last_news_scan_at?: string | null
           last_scraped_at?: string | null
           name: string
           notes_internal?: string | null
@@ -11864,6 +11896,7 @@ export type Database = {
           geography_focus?: string[] | null
           id?: string
           investment_style?: string | null
+          last_news_scan_at?: string | null
           last_scraped_at?: string | null
           name?: string
           notes_internal?: string | null
