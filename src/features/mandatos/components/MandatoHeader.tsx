@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, FilePlus, MoreVertical } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FilePlus, MoreVertical, Target, Building2 } from "lucide-react";
 import type { Mandato } from "@/types";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface MandatoHeaderProps {
   mandato: Mandato;
@@ -42,6 +43,12 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
   };
 
   const priorityBadge = getPriorityBadge(mandato.prioridad);
+  const isBuySide = mandato.tipo === "compra";
+  
+  // Colores diferenciados por tipo
+  const tipoBadgeClass = isBuySide
+    ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 border-orange-300"
+    : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300";
 
   return (
     <div className="flex items-center justify-between">
@@ -51,9 +58,19 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
         </Button>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Icono diferenciado */}
+            {isBuySide ? (
+              <Target className="h-6 w-6 text-orange-500" />
+            ) : (
+              <Building2 className="h-6 w-6 text-blue-500" />
+            )}
             <h1 className="text-3xl font-medium">
               {mandato.empresa_principal?.nombre || "Mandato"}
             </h1>
+            {/* Badge de tipo */}
+            <Badge className={cn("gap-1", tipoBadgeClass)}>
+              {isBuySide ? "Buy-Side" : "Sell-Side"}
+            </Badge>
             <Badge variant={getBadgeVariant(mandato.estado)}>
               {mandato.estado}
             </Badge>
@@ -64,7 +81,7 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
             )}
           </div>
           <p className="text-muted-foreground">
-            {mandato.tipo === "compra" ? "Mandato de Compra" : "Mandato de Venta"}
+            {isBuySide ? "Mandato de Compra (Buy-Side)" : "Mandato de Venta (Sell-Side)"}
           </p>
         </div>
       </div>
