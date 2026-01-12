@@ -654,3 +654,128 @@ export interface CostByUser {
   rate: number;
   cost: number;
 }
+
+// ============================================
+// BUY-SIDE MANDATO TYPES
+// ============================================
+
+// Estados del funnel de targets para compra
+export type TargetFunnelStage = 
+  | 'long_list' 
+  | 'short_list' 
+  | 'finalista' 
+  | 'descartado';
+
+// Pipeline stages para targets de compra
+export type TargetPipelineStage = 
+  | 'identificada' 
+  | 'contactada' 
+  | 'nda_firmado' 
+  | 'info_recibida' 
+  | 'due_diligence' 
+  | 'oferta' 
+  | 'cierre';
+
+// Configuración del funnel
+export const TARGET_FUNNEL_CONFIG: Record<TargetFunnelStage, { label: string; color: string; order: number }> = {
+  long_list: { label: 'Long List', color: '#94a3b8', order: 1 },
+  short_list: { label: 'Short List', color: '#f59e0b', order: 2 },
+  finalista: { label: 'Finalistas', color: '#22c55e', order: 3 },
+  descartado: { label: 'Descartados', color: '#ef4444', order: 4 },
+};
+
+// Configuración del pipeline de targets
+export const TARGET_PIPELINE_CONFIG: Record<TargetPipelineStage, { label: string; color: string; order: number }> = {
+  identificada: { label: 'Identificada', color: '#94a3b8', order: 1 },
+  contactada: { label: 'Contactada', color: '#3b82f6', order: 2 },
+  nda_firmado: { label: 'NDA Firmado', color: '#8b5cf6', order: 3 },
+  info_recibida: { label: 'Info Recibida', color: '#f59e0b', order: 4 },
+  due_diligence: { label: 'Due Diligence', color: '#ec4899', order: 5 },
+  oferta: { label: 'Oferta', color: '#f97316', order: 6 },
+  cierre: { label: 'Cierre', color: '#22c55e', order: 7 },
+};
+
+// Scoring de targets
+export interface TargetScoring {
+  id: string;
+  mandato_empresa_id: string;
+  fit_estrategico: number;      // 0-100
+  fit_financiero: number;       // 0-100  
+  fit_cultural: number;         // 0-100
+  score_total: number;          // Promedio ponderado (calculado)
+  notas?: string;
+  scored_at: string;
+  scored_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Tipos de oferta
+export type OfertaTipo = 'indicativa' | 'loi' | 'binding';
+export type OfertaEstado = 'enviada' | 'aceptada' | 'rechazada' | 'contraoferta' | 'expirada' | 'retirada';
+
+// Oferta/LOI tracking
+export interface TargetOferta {
+  id: string;
+  mandato_empresa_id: string;
+  tipo: OfertaTipo;
+  monto: number;
+  fecha: string;
+  estado: OfertaEstado;
+  condiciones?: string;
+  fecha_expiracion?: string;
+  contraoferta_monto?: number;
+  notas?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Criterios de búsqueda con match scoring
+export interface CriteriosBusqueda {
+  perfil_empresa: string;
+  rango_min: number;
+  rango_max: number;
+  sectores: string[];
+  geografias?: string[];
+  tamano_empleados_min?: number;
+  tamano_empleados_max?: number;
+  ebitda_min?: number;
+  margen_min?: number;
+}
+
+// MandatoEmpresa extendido para Buy-Side
+export interface MandatoEmpresaBuySide extends MandatoEmpresa {
+  funnel_stage?: TargetFunnelStage;
+  pipeline_stage_target?: TargetPipelineStage;
+  match_score?: number;
+  pipeline_stage_changed_at?: string;
+  scoring?: TargetScoring;
+  ofertas?: TargetOferta[];
+}
+
+// Estadísticas del pipeline de targets
+export interface TargetPipelineStats {
+  total: number;
+  byFunnelStage: Record<TargetFunnelStage, number>;
+  byPipelineStage: Record<TargetPipelineStage, number>;
+  averageScore: number;
+  conversionRate: number;
+  totalOfertas: number;
+}
+
+// Configuración de oferta para label/colores
+export const OFERTA_TIPO_CONFIG: Record<OfertaTipo, { label: string; color: string }> = {
+  indicativa: { label: 'Indicativa', color: '#94a3b8' },
+  loi: { label: 'LOI', color: '#f59e0b' },
+  binding: { label: 'Binding', color: '#22c55e' },
+};
+
+export const OFERTA_ESTADO_CONFIG: Record<OfertaEstado, { label: string; color: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  enviada: { label: 'Enviada', color: '#3b82f6', variant: 'default' },
+  aceptada: { label: 'Aceptada', color: '#22c55e', variant: 'default' },
+  rechazada: { label: 'Rechazada', color: '#ef4444', variant: 'destructive' },
+  contraoferta: { label: 'Contraoferta', color: '#f59e0b', variant: 'secondary' },
+  expirada: { label: 'Expirada', color: '#6b7280', variant: 'outline' },
+  retirada: { label: 'Retirada', color: '#6b7280', variant: 'outline' },
+};
