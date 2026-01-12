@@ -8293,29 +8293,91 @@ export type Database = {
         }
         Relationships: []
       }
+      mandato_empresa_scoring: {
+        Row: {
+          created_at: string
+          fit_cultural: number
+          fit_estrategico: number
+          fit_financiero: number
+          id: string
+          mandato_empresa_id: string
+          notas: string | null
+          score_total: number | null
+          scored_at: string | null
+          scored_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fit_cultural?: number
+          fit_estrategico?: number
+          fit_financiero?: number
+          id?: string
+          mandato_empresa_id: string
+          notas?: string | null
+          score_total?: number | null
+          scored_at?: string | null
+          scored_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fit_cultural?: number
+          fit_estrategico?: number
+          fit_financiero?: number
+          id?: string
+          mandato_empresa_id?: string
+          notas?: string | null
+          score_total?: number | null
+          scored_at?: string | null
+          scored_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_empresa_scoring_mandato_empresa_id_fkey"
+            columns: ["mandato_empresa_id"]
+            isOneToOne: true
+            referencedRelation: "mandato_empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandato_empresas: {
         Row: {
           created_at: string | null
           empresa_id: string
+          funnel_stage: string | null
           id: string
           mandato_id: string
+          match_score: number | null
           notas: string | null
+          pipeline_stage_changed_at: string | null
+          pipeline_stage_target: string | null
           rol: string
         }
         Insert: {
           created_at?: string | null
           empresa_id: string
+          funnel_stage?: string | null
           id?: string
           mandato_id: string
+          match_score?: number | null
           notas?: string | null
+          pipeline_stage_changed_at?: string | null
+          pipeline_stage_target?: string | null
           rol: string
         }
         Update: {
           created_at?: string | null
           empresa_id?: string
+          funnel_stage?: string | null
           id?: string
           mandato_id?: string
+          match_score?: number | null
           notas?: string | null
+          pipeline_stage_changed_at?: string | null
+          pipeline_stage_target?: string | null
           rol?: string
         }
         Relationships: [
@@ -12347,6 +12409,62 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      target_ofertas: {
+        Row: {
+          condiciones: string | null
+          contraoferta_monto: number | null
+          created_at: string
+          created_by: string | null
+          estado: string
+          fecha: string
+          fecha_expiracion: string | null
+          id: string
+          mandato_empresa_id: string
+          monto: number
+          notas: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          condiciones?: string | null
+          contraoferta_monto?: number | null
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          fecha?: string
+          fecha_expiracion?: string | null
+          id?: string
+          mandato_empresa_id: string
+          monto: number
+          notas?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          condiciones?: string | null
+          contraoferta_monto?: number | null
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          fecha?: string
+          fecha_expiracion?: string | null
+          id?: string
+          mandato_empresa_id?: string
+          monto?: number
+          notas?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "target_ofertas_mandato_empresa_id_fkey"
+            columns: ["mandato_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_empresas"
             referencedColumns: ["id"]
           },
         ]

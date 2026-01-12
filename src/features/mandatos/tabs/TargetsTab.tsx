@@ -8,6 +8,7 @@ import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { TargetCard } from "@/components/targets/TargetCard";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
+import { TargetsTabBuySide } from "./TargetsTabBuySide";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
@@ -29,6 +30,17 @@ interface EmpresaData {
 }
 
 export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
+  // Si es mandato de compra, usar la vista Buy-Side especializada
+  if (mandato.tipo === 'compra') {
+    return <TargetsTabBuySide mandato={mandato} onRefresh={onRefresh} />;
+  }
+
+  // Vista original para mandatos de venta
+  return <TargetsTabSellSide mandato={mandato} onRefresh={onRefresh} />;
+}
+
+// Componente interno para mandatos de venta (código original)
+function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
   const [nuevoTargetOpen, setNuevoTargetOpen] = useState(false);
   const [asociarEmpresaOpen, setAsociarEmpresaOpen] = useState(false);
   const [enrichFromWebOpen, setEnrichFromWebOpen] = useState(false);
@@ -46,7 +58,6 @@ export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
   
   // Datos por empresa (interacciones + contactos)
   const [empresaData, setEmpresaData] = useState<Record<string, EmpresaData>>({});
-
   const targetEmpresas = mandato.empresas?.filter(e => e.rol === 'target') || [];
   const otrasEmpresas = mandato.empresas?.filter(e => e.rol !== 'target') || [];
 
