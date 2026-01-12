@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Calendar, TrendingUp, GripVertical, Clock, AlertTriangle, Euro, Search, FileText, Calculator, Users, Briefcase } from "lucide-react";
+import { Building2, Calendar, TrendingUp, GripVertical, Clock, AlertTriangle, Euro, Search, FileText, Calculator, Users, Briefcase, Target } from "lucide-react";
 import { Mandato } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -72,14 +72,24 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
     }
   };
 
+  // Colores diferenciados por tipo
+  const isBuySide = mandato.tipo === "compra";
+  const tipoColor = isBuySide 
+    ? "border-l-orange-500" 
+    : "border-l-blue-500";
+  const tipoBadgeClass = isBuySide
+    ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+    : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
       className={cn(
-        "p-3 cursor-pointer hover:shadow-md transition-all",
+        "p-3 cursor-pointer hover:shadow-md transition-all border-l-4",
+        tipoColor,
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
-        isStagnant && "border-l-4 border-l-destructive",
+        isStagnant && "border-l-destructive",
         hasOverdueTasks && "ring-1 ring-destructive/50"
       )}
       onClick={() => navigate(`/mandatos/${mandato.id}`)}
@@ -96,8 +106,13 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
                   {MANDATO_CATEGORIA_LABELS[categoria]?.label || categoria}
                 </Badge>
               ) : (
-                <Badge variant={mandato.tipo === "venta" ? "default" : "secondary"} className="text-xs">
-                  {mandato.tipo === "venta" ? "Venta" : "Compra"}
+                <Badge className={cn("text-xs gap-1", tipoBadgeClass)}>
+                  {isBuySide ? (
+                    <Target className="w-3 h-3" />
+                  ) : (
+                    <Building2 className="w-3 h-3" />
+                  )}
+                  {isBuySide ? "Buy-Side" : "Sell-Side"}
                 </Badge>
               )}
               
