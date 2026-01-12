@@ -142,7 +142,10 @@ export function TargetDetailDrawer({
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => navigate(`/empresas/${empresa.id}`)}
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/empresas/${empresa.id}`);
+                    }}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
@@ -365,7 +368,14 @@ export function TargetDetailDrawer({
               <Trash2 className="h-4 w-4 mr-1" />
               Descartar
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(`/empresas/${empresa.id}`)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/empresas/${empresa.id}`);
+              }}
+            >
               Ver ficha empresa
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
