@@ -7,7 +7,7 @@ export default {
   theme: {
     fontFamily: {
       sans: [
-        'ABC Diatype',
+        'General Sans',
         'system-ui',
         '-apple-system',
         'Segoe UI',
