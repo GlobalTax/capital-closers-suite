@@ -2,11 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ABC Diatype Font */
+/* General Sans Font Family */
 @font-face {
-  font-family: 'ABC Diatype';
-  src: url('/fonts/abc-diatype-regular.otf') format('opentype');
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Extralight.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Regular.otf') format('opentype');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/GeneralSans-Semibold.otf') format('opentype');
+  font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
