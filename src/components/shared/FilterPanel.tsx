@@ -148,7 +148,7 @@ export function FilterPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-sm">Filtros</span>
+            <span className="text-sm">Filtros</span>
             {totalActiveFilters > 0 && (
               <Badge variant="secondary" className="h-5 px-1.5 text-xs">
                 {totalActiveFilters}
@@ -199,7 +199,7 @@ export function FilterPanel({
               onOpenChange={() => toggleSection(section.id)}
             >
               <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
-                <span className="text-sm font-medium">{section.label}</span>
+                <span className="text-sm">{section.label}</span>
                 <div className="flex items-center gap-2">
                   {values[section.id]?.length > 0 && (
                     <Badge variant="secondary" className="h-5 px-1.5 text-xs">

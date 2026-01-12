@@ -41,7 +41,7 @@ export function PageHeader({
       <div className="flex items-center gap-4">
         {renderIcon()}
         <div>
-          <h1 className="text-2xl font-medium text-foreground tracking-tight">{title}</h1>
+          <h1 className="text-2xl text-foreground tracking-tight">{title}</h1>
           {(description || subtitle) && (
             <p className="text-sm text-muted-foreground mt-1">{description || subtitle}</p>
           )}
