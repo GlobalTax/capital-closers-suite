@@ -50,6 +50,7 @@ const empresaSchema = z.object({
   capital_circulante: z.coerce.number().optional(),
   descripcion: z.string().optional(),
   es_target: z.boolean().default(false),
+  potencial_search_fund: z.boolean().default(false),
   nivel_interes: z.enum(["Alto", "Medio", "Bajo"]).optional(),
   estado_target: z.enum(["pendiente", "contactada", "interesada", "rechazada", "en_dd", "oferta", "cerrada"]).optional(),
 });
@@ -83,6 +84,7 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
       capital_circulante: empresa.capital_circulante || undefined,
       descripcion: empresa.descripcion || "",
       es_target: empresa.es_target,
+      potencial_search_fund: empresa.potencial_search_fund || false,
       nivel_interes: empresa.nivel_interes || undefined,
       estado_target: empresa.estado_target || undefined,
     },
@@ -295,7 +297,7 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
                 </div>
               </div>
 
-              <div className="border-t pt-4">
+              <div className="border-t pt-4 space-y-4">
                 <FormField
                   control={form.control}
                   name="es_target"
@@ -305,6 +307,27 @@ export function EditarEmpresaDrawer({ open, onOpenChange, empresa, onEmpresaActu
                         <FormLabel>Empresa Prioritaria</FormLabel>
                         <p className="text-sm text-muted-foreground">
                           Marcar como empresa de interés prioritaria
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="potencial_search_fund"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between space-y-0 p-4 border rounded-lg bg-orange-50/50">
+                      <div>
+                        <FormLabel>Potencial Search Fund</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Marcar como potencial target para Search Funds
                         </p>
                       </div>
                       <FormControl>

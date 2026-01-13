@@ -12,7 +12,10 @@ import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { useEmpresasPaginated } from "@/hooks/queries/useEmpresas";
 import { useEmpresasRealtime } from "@/hooks/useEmpresasRealtime";
 import type { Empresa } from "@/types";
-import { Building2, Star, TrendingUp, Activity, Globe, Sparkles } from "lucide-react";
+import { Building2, Star, TrendingUp, Activity, Globe, Sparkles, Target } from "lucide-react";
+import { useUpdateEmpresa } from "@/hooks/queries/useEmpresas";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +32,7 @@ export default function Empresas() {
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
   
   const { data: result, isLoading } = useEmpresasPaginated(page, DEFAULT_PAGE_SIZE, filtroTarget);
+  const { mutate: updateEmpresa } = useUpdateEmpresa();
   useEmpresasRealtime();
 
   const empresas = result?.data || [];
@@ -68,6 +72,9 @@ export default function Empresas() {
           <div className="flex items-center gap-2 mt-1">
             {row.es_target && (
               <Badge variant="outline" className="text-xs">⭐ Prioritaria</Badge>
+            )}
+            {row.potencial_search_fund && (
+              <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200">SF</Badge>
             )}
             {row.sector && (
               <span className="text-xs text-muted-foreground">{row.sector}</span>
@@ -139,6 +146,23 @@ export default function Empresas() {
       label: "Acciones",
       render: (_: string, row: Empresa) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              updateEmpresa(
+                { id: row.id, data: { potencial_search_fund: !row.potencial_search_fund } },
+                {
+                  onSuccess: () => {
+                    toast.success(row.potencial_search_fund ? "Marca SF eliminada" : "Marcado como Potencial SF");
+                  },
+                }
+              );
+            }}
+            title={row.potencial_search_fund ? "Quitar marca SF" : "Marcar como potencial SF"}
+          >
+            <Target className={cn("h-4 w-4", row.potencial_search_fund && "text-orange-500 fill-orange-200")} />
+          </Button>
           {row.sitio_web && (
             <Button
               variant="ghost"

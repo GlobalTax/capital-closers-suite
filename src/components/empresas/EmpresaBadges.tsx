@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface EmpresaBadgeProps {
-  variant: 'new' | 'sourced' | 'hot' | 'cold' | 'prioritaria';
+  variant: 'new' | 'sourced' | 'hot' | 'cold' | 'prioritaria' | 'search_fund';
   className?: string;
 }
 
@@ -26,6 +26,10 @@ const badgeConfig = {
   prioritaria: {
     label: 'Prioritaria',
     className: 'bg-purple-100 text-purple-700 hover:bg-purple-100',
+  },
+  search_fund: {
+    label: 'Potencial SF',
+    className: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
   },
 };
 
