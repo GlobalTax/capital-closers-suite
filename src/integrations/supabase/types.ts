@@ -8486,7 +8486,7 @@ export type Database = {
           rejection_reason: string | null
           start_time: string
           status: string | null
-          task_id: string
+          task_id: string | null
           updated_at: string | null
           user_id: string
           work_task_type_id: string | null
@@ -8506,7 +8506,7 @@ export type Database = {
           rejection_reason?: string | null
           start_time: string
           status?: string | null
-          task_id: string
+          task_id?: string | null
           updated_at?: string | null
           user_id: string
           work_task_type_id?: string | null
@@ -8526,7 +8526,7 @@ export type Database = {
           rejection_reason?: string | null
           start_time?: string
           status?: string | null
-          task_id?: string
+          task_id?: string | null
           updated_at?: string | null
           user_id?: string
           work_task_type_id?: string | null
