@@ -4661,6 +4661,7 @@ export type Database = {
       documentos: {
         Row: {
           created_at: string | null
+          descripcion: string | null
           file_name: string
           file_size_bytes: number
           folder_id: string | null
@@ -4678,6 +4679,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          descripcion?: string | null
           file_name: string
           file_size_bytes: number
           folder_id?: string | null
@@ -4695,6 +4697,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          descripcion?: string | null
           file_name?: string
           file_size_bytes?: number
           folder_id?: string | null
