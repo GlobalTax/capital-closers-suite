@@ -329,9 +329,12 @@ export default function Mandatos() {
     setLoading(true);
     try {
       const data = await fetchMandatos();
+      console.log('[Mandatos] Datos cargados:', data.length, 'mandatos');
+      console.log('[Mandatos] Pipeline stages:', [...new Set(data.map(m => m.pipeline_stage))]);
+      console.log('[Mandatos] Tipos:', [...new Set(data.map(m => m.tipo))]);
       setMandatos(data);
     } catch (error) {
-      console.error("Error cargando mandatos:", error);
+      console.error("[Mandatos] Error cargando mandatos:", error);
       toast.error("Error al cargar los mandatos");
     } finally {
       setLoading(false);
@@ -885,9 +888,25 @@ export default function Mandatos() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
+              {/* Debug: mostrar estado cuando no hay datos */}
+              {mandatosFiltrados.length === 0 && !loading && (
+                <EmptyState
+                  icon={FileText}
+                  titulo="No hay mandatos para mostrar"
+                  descripcion="No se encontraron mandatos M&A. Verifica que estés autenticado correctamente o que existan mandatos en el sistema."
+                />
+              )}
+              
+              {fases.length === 0 && mandatosFiltrados.length > 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No hay fases de Kanban configuradas. Configura las fases en el diálogo de configuración.
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {fases.map((fase) => {
                   const mandatosColumna = getMandatosPorStage(fase.fase_id);
+                  console.log(`[Kanban] Fase ${fase.fase_id} (${fase.label}): ${mandatosColumna.length} mandatos`);
                   return (
                     <KanbanColumn
                       key={fase.id}
