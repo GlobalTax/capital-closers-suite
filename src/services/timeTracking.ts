@@ -450,13 +450,30 @@ export const getTimeStats = async (mandatoId?: string): Promise<TimeStats> => {
 export const createTimeEntry = async (
   entry: Partial<TimeEntry>
 ): Promise<TimeEntry> => {
+  console.log('[TimeTracking] Creando entrada:', {
+    mandato_id: entry.mandato_id,
+    work_task_type_id: entry.work_task_type_id,
+    user_id: entry.user_id
+  });
+
   const { data, error } = await supabase
     .from('mandato_time_entries')
     .insert([entry] as any)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('[TimeTracking] Error al crear entrada:', error);
+    
+    // Detectar error de FK y dar mensaje más claro
+    if (error.message?.includes('foreign key constraint') || 
+        error.code === '23503') {
+      throw new Error('El mandato seleccionado no existe. Selecciona un mandato válido.');
+    }
+    throw error;
+  }
+  
+  console.log('[TimeTracking] Entrada creada:', data.id);
   return data as TimeEntry;
 };
 
