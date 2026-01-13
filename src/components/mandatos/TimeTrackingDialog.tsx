@@ -93,15 +93,34 @@ export function TimeTrackingDialog({
     }
   };
 
+  // Validar UUID
+  const isValidUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setLoading(true);
+      
+      console.log('[TimeTracking] Guardando entrada con mandato_id:', data.mandato_id);
       
       // Validate required fields
       if (!data.mandato_id) {
         toast({
           title: "Error",
           description: "Debes seleccionar un mandato",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validar que sea un UUID válido
+      if (!isValidUUID(data.mandato_id)) {
+        console.error('[TimeTracking] mandato_id inválido:', data.mandato_id);
+        toast({
+          title: "Error",
+          description: "El mandato seleccionado no es válido",
           variant: "destructive"
         });
         return;
