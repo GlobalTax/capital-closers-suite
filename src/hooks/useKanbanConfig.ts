@@ -24,7 +24,11 @@ export function useKanbanConfig() {
         .eq("activo", true)
         .order("orden");
       
-      if (error) throw error;
+      console.log('[KanbanConfig] Fases cargadas:', data?.length, 'fases activas:', data?.map(f => f.fase_id));
+      if (error) {
+        console.error('[KanbanConfig] Error:', error);
+        throw error;
+      }
       return data as KanbanFase[];
     },
   });
