@@ -133,8 +133,35 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const handleDownload = async (doc: DocumentWithVersion) => {
     setDownloadingId(doc.id);
     try {
-      const url = await getSignedUrl(doc.storage_path);
-      if (url) window.open(url, '_blank');
+      console.log('[Documentos] Descargando:', doc.file_name, 'Path:', doc.storage_path);
+      
+      if (!doc.storage_path) {
+        toast.error('El documento no tiene ruta de almacenamiento');
+        return;
+      }
+
+      const url = await getSignedUrl(doc.storage_path, { 
+        id: doc.id, 
+        nombre: doc.file_name 
+      });
+      
+      if (url) {
+        // Forzar descarga usando un enlace temporal
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.file_name;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success(`Descargando ${doc.file_name}`);
+      } else {
+        toast.error('No se pudo generar el enlace de descarga');
+      }
+    } catch (error) {
+      console.error('[Documentos] Error descarga:', error);
+      toast.error('Error al descargar el documento');
     } finally {
       setDownloadingId(null);
     }
