@@ -40,7 +40,7 @@ const formSchema = z.object({
   estado: z.enum(["prospecto", "activo", "en_negociacion", "cerrado", "cancelado"]),
   valor: z.number().min(0).optional().nullable(),
   probability: z.number().min(0).max(100).optional().nullable(),
-  pipeline_stage: z.string().optional().nullable(),
+  pipeline_stage: z.enum(["prospeccion", "loi", "due_diligence", "negociacion", "cierre", "propuesta", "en_ejecucion", "entregado"]).optional().nullable(),
   expected_close_date: z.string().optional().nullable(),
   fecha_cierre: z.string().optional().nullable(),
   prioridad: z.enum(["alta", "media", "baja", "urgente"]).optional().nullable(),
