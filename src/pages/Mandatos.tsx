@@ -73,6 +73,7 @@ import {
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: "codigo", label: "ID", visible: true, locked: true },
   { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
+  { key: "potencial_sf", label: "SF", visible: true },
   { key: "tipo", label: "Tipo", visible: true },
   { key: "estado", label: "Estado", visible: true },
   { key: "categoria", label: "Categoría", visible: false },
@@ -518,6 +519,20 @@ export default function Mandatos() {
       render: (value: any) => (
         <span className="font-medium">{value?.nombre || "Sin asignar"}</span>
       )
+    },
+    potencial_sf: {
+      key: "potencial_sf",
+      label: "SF",
+      sortable: true,
+      render: (_: any, row: Mandato) => {
+        const isSF = row.empresa_principal?.potencial_search_fund;
+        if (!isSF) return null;
+        return (
+          <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-1.5">
+            SF
+          </Badge>
+        );
+      },
     },
     tipo: {
       key: "tipo",
