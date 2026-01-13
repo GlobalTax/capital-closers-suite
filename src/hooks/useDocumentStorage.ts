@@ -149,11 +149,24 @@ export function useDocumentStorage() {
     documentInfo?: { id: string; nombre: string }
   ): Promise<string | null> => {
     try {
+      console.log('[Storage] Generando signed URL para:', storagePath);
+      
+      if (!storagePath) {
+        console.error('[Storage] Error: storage_path vacío o nulo');
+        toast.error('El documento no tiene ruta de almacenamiento válida');
+        return null;
+      }
+
       const { data, error } = await supabase.storage
         .from("mandato-documentos")
         .createSignedUrl(storagePath, 600); // 10 minutes
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Storage] Error createSignedUrl:', error.message, error);
+        throw error;
+      }
+
+      console.log('[Storage] Signed URL generada correctamente');
 
       // Registrar acceso de forma asíncrona (no bloquea la descarga)
       if (documentInfo?.id) {
@@ -166,8 +179,9 @@ export function useDocumentStorage() {
 
       return data.signedUrl;
     } catch (error) {
-      console.error("Error generating signed URL:", error);
-      toast.error("Error al generar enlace de descarga");
+      console.error("[Storage] Error generating signed URL:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast.error(`Error al generar enlace de descarga: ${errorMessage}`);
       return null;
     }
   };
