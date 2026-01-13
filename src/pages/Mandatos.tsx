@@ -401,8 +401,9 @@ export default function Mandatos() {
     localStorage.setItem("mandatos-columns", JSON.stringify(newConfig));
   }, []);
 
-  const getMandatosPorEstado = (estado: MandatoEstado) => {
-    return mandatosFiltrados.filter((m) => m.estado === estado);
+  // Función para obtener mandatos por pipeline_stage (para el Kanban)
+  const getMandatosPorStage = (stage: string) => {
+    return mandatosFiltrados.filter((m) => m.pipeline_stage === stage);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -417,16 +418,17 @@ export default function Mandatos() {
     if (!over) return;
 
     const mandatoId = active.id as string;
-    const nuevoEstado = over.id as MandatoEstado;
+    const nuevoStage = over.id as string;
 
     const mandato = mandatos.find((m) => m.id === mandatoId);
-    if (!mandato || mandato.estado === nuevoEstado) return;
+    if (!mandato || mandato.pipeline_stage === nuevoStage) return;
 
     try {
-      await updateMandato(mandatoId, { estado: nuevoEstado });
-      toast.success(`Mandato movido a ${nuevoEstado}`);
+      await updateMandato(mandatoId, { pipeline_stage: nuevoStage as any });
+      toast.success(`Mandato movido a ${nuevoStage}`);
       cargarMandatos();
     } catch (error) {
+      console.error("Error al mover mandato:", error);
       toast.error("Error al actualizar el mandato");
     }
   };
@@ -885,7 +887,7 @@ export default function Mandatos() {
             >
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {fases.map((fase) => {
-                  const mandatosColumna = getMandatosPorEstado(fase.fase_id as MandatoEstado);
+                  const mandatosColumna = getMandatosPorStage(fase.fase_id);
                   return (
                     <KanbanColumn
                       key={fase.id}

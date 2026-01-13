@@ -123,6 +123,9 @@ export interface MandatoEmpresa {
 // ============================================
 // MANDATO
 // ============================================
+// Pipeline Stage Type for M&A workflow
+export type PipelineStage = 'prospeccion' | 'loi' | 'due_diligence' | 'negociacion' | 'cierre' | 'propuesta' | 'en_ejecucion' | 'entregado';
+
 export interface Mandato {
   id: string;
   codigo?: string;
@@ -131,6 +134,7 @@ export interface Mandato {
   empresa_principal_id?: string;
   empresa_principal?: Empresa;
   estado: MandatoEstado;
+  pipeline_stage?: PipelineStage;
   valor?: number;
   fecha_inicio?: string;
   fecha_cierre?: string;
