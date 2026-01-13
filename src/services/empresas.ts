@@ -29,6 +29,7 @@ class EmpresaService extends BaseService<Empresa> {
       ubicacion: raw.ubicacion,
       descripcion: raw.descripcion,
       es_target: raw.es_target || false,
+      potencial_search_fund: raw.potencial_search_fund || false,
       created_at: raw.created_at,
       updated_at: raw.updated_at,
     } as Empresa;

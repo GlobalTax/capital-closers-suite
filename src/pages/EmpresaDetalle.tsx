@@ -145,6 +145,7 @@ export default function EmpresaDetalle() {
             <div className="flex items-center gap-2 mb-2">
               <h1 className="text-3xl font-medium text-foreground">{empresa.nombre}</h1>
               {empresa.es_target && <EmpresaBadge variant="prioritaria" />}
+              {empresa.potencial_search_fund && <EmpresaBadge variant="search_fund" />}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {empresa.ubicacion && (

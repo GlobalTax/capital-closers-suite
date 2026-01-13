@@ -57,6 +57,9 @@ export interface Empresa {
   estado_target?: TargetEstado;
   nivel_interes?: NivelInteres;
   
+  // Search Fund
+  potencial_search_fund?: boolean;
+  
   created_at: string;
   updated_at: string;
 }
