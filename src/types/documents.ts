@@ -8,6 +8,7 @@ export type FolderType =
   | 'negociacion' 
   | 'cierre' 
   | 'data_room' 
+  | 'teaser'
   | 'custom';
 
 export type TemplateCategory = 

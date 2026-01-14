@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import { DocumentVersionHistory } from "@/components/documentos/DocumentVersionH
 import { TemplateLibrary } from "@/components/documentos/TemplateLibrary";
 import { useDocumentFolders } from "@/hooks/useDocumentFolders";
 import { useDocumentStorage } from "@/hooks/useDocumentStorage";
+import { useTeaserForMandato, useTeaserFolder, useTeaserDownload } from "@/hooks/useTeaser";
 import { uploadDocumentToFolder, createDocumentVersion } from "@/services/documentFolders.service";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -62,9 +64,15 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const [documentToDelete, setDocumentToDelete] = useState<DocumentWithVersion | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [uploadingTeaser, setUploadingTeaser] = useState(false);
 
   const { folders, documents, folderTree, unfiledDocuments, isLoading, createFolder, renameFolder, deleteFolder, refetch } = useDocumentFolders(mandatoId);
   const { getSignedUrl, deleteDocument } = useDocumentStorage();
+  
+  // Teaser hooks
+  const { data: teaser, refetch: refetchTeaser } = useTeaserForMandato(mandatoId);
+  const { ensureTeaserFolder } = useTeaserFolder(mandatoId);
+  const { downloadTeaser } = useTeaserDownload();
 
   // Filtrar documentos por carpeta seleccionada
   const filteredDocuments = selectedFolderId === null
@@ -196,6 +204,10 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     <div className="space-y-6">
       <Tabs defaultValue="documentos" className="w-full">
         <TabsList>
+          <TabsTrigger value="teaser" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            Teaser
+          </TabsTrigger>
           <TabsTrigger value="documentos" className="gap-2">
             <FolderTreeIcon className="w-4 h-4" />
             Documentos
@@ -205,6 +217,118 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
             Plantillas M&A
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="teaser" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Teaser del Mandato
+              </CardTitle>
+              <CardDescription>
+                El teaser es el documento principal de presentación para inversores potenciales
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {teaser ? (
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div>
+                      <p className="font-medium">{teaser.file_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Subido el {format(new Date(teaser.created_at), "d MMM yyyy", { locale: es })} • 
+                        {(teaser.file_size_bytes / 1024).toFixed(0)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        const success = await downloadTeaser(teaser);
+                        if (success) toast.success("Descargando teaser...");
+                        else toast.error("Error al descargar");
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Descargar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No hay teaser subido para este mandato. Sube el primer teaser usando el botón de abajo.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="pt-4 border-t">
+                <input
+                  type="file"
+                  id="teaser-upload"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    setUploadingTeaser(true);
+                    try {
+                      const teaserFolder = await ensureTeaserFolder();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      const timestamp = Date.now();
+                      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                      const storagePath = `${user?.id}/mandatos/${mandatoId}/teaser/${timestamp}_${sanitizedFileName}`;
+
+                      const { error: uploadError } = await supabase.storage
+                        .from('mandato-documentos')
+                        .upload(storagePath, file);
+
+                      if (uploadError) throw uploadError;
+
+                      await uploadDocumentToFolder(
+                        mandatoId,
+                        teaserFolder.id,
+                        file.name,
+                        file.size,
+                        file.type,
+                        storagePath,
+                        'Teaser',
+                        'Teaser del mandato',
+                        user?.id
+                      );
+
+                      toast.success('Teaser subido correctamente');
+                      refetchTeaser();
+                      refetch();
+                    } catch (error) {
+                      console.error('Error uploading teaser:', error);
+                      toast.error('Error al subir el teaser');
+                    } finally {
+                      setUploadingTeaser(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <Button 
+                  onClick={() => document.getElementById('teaser-upload')?.click()}
+                  disabled={uploadingTeaser}
+                >
+                  {uploadingTeaser ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {teaser ? 'Reemplazar teaser' : 'Subir teaser'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="documentos" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
