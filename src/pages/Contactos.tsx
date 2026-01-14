@@ -230,6 +230,17 @@ export default function Contactos() {
       )
     },
     { 
+      key: "cif", 
+      label: "CIF", 
+      sortable: false, 
+      filterable: true,
+      render: (_value: any, row: Contacto) => (
+        <span className="text-sm font-mono">
+          {(row.empresa_principal as any)?.cif || <span className="text-muted-foreground">—</span>}
+        </span>
+      )
+    },
+    { 
       key: "email", 
       label: "Email", 
       filterable: true,
