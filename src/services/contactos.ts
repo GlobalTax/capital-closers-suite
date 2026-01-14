@@ -12,7 +12,7 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(id, nombre)
+        empresa_principal:empresas(id, nombre, cif)
       `)
       .is('merged_into_contacto_id', null)
       .order('created_at', { ascending: false });
@@ -45,7 +45,7 @@ export const fetchContactosPaginated = async (
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(id, nombre)
+        empresa_principal:empresas(id, nombre, cif)
       `, { count: 'exact' })
       .is('merged_into_contacto_id', null)
       .order('created_at', { ascending: false })
@@ -78,7 +78,7 @@ export const getContactoById = async (id: string): Promise<Contacto | null> => {
       .from('contactos')
       .select(`
         *,
-        empresa_principal:empresas(id, nombre)
+        empresa_principal:empresas(id, nombre, cif)
       `)
       .eq('id', id)
       .single();
@@ -112,7 +112,7 @@ export const createContacto = async (contacto: Partial<Contacto>) => {
       .insert(normalizedData as any)
       .select(`
         *,
-        empresa_principal:empresas(id, nombre)
+        empresa_principal:empresas(id, nombre, cif)
       `)
       .single();
     
@@ -162,7 +162,7 @@ export const updateContacto = async (id: string, contacto: Partial<Contacto>) =>
       .eq('id', id)
       .select(`
         *,
-        empresa_principal:empresas(id, nombre)
+        empresa_principal:empresas(id, nombre, cif)
       `)
       .single();
     
