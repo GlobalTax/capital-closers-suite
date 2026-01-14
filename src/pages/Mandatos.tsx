@@ -54,12 +54,17 @@ import {
   Calendar,
   Trophy,
   XCircle,
+  Send,
+  FileDown,
+  Loader2,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useKanbanConfig } from "@/hooks/useKanbanConfig";
 import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
+import { SendTeasersDialog } from "@/components/mandatos/SendTeasersDialog";
 import { useUndoableAction } from "@/hooks/useUndoableAction";
+import { useTeasersForMandatos, useTeaserDownload } from "@/hooks/useTeaser";
 import { differenceInDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -74,6 +79,7 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: "codigo", label: "ID", visible: true, locked: true },
   { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
   { key: "potencial_sf", label: "SF", visible: true },
+  { key: "teaser", label: "Teaser", visible: true },
   { key: "tipo", label: "Tipo", visible: true },
   { key: "estado", label: "Estado", visible: true },
   { key: "categoria", label: "Categoría", visible: false },
@@ -276,9 +282,11 @@ export default function Mandatos() {
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [sendTeasersOpen, setSendTeasersOpen] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20);
   const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [downloadingTeaser, setDownloadingTeaser] = useState<string | null>(null);
 
   // Columnas personalizables - cargar desde localStorage
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
@@ -303,8 +311,11 @@ export default function Mandatos() {
 
   const { fases } = useKanbanConfig();
   const { executeWithUndo } = useUndoableAction();
+  const { downloadTeaser } = useTeaserDownload();
 
-  // Restauración de scroll
+  // Obtener IDs de mandatos para cargar teasers
+  const mandatoIds = useMemo(() => mandatos.map(m => m.id), [mandatos]);
+  const { data: teasersMap } = useTeasersForMandatos(mandatoIds);
   useScrollRestoration();
 
   // Hook de filtros Apollo-style
@@ -543,6 +554,65 @@ export default function Mandatos() {
           <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-1.5">
             SF
           </Badge>
+        );
+      },
+    },
+    teaser: {
+      key: "teaser",
+      label: "Teaser",
+      sortable: false,
+      render: (_: any, row: Mandato) => {
+        const teaser = teasersMap?.[row.id];
+        const isDownloading = downloadingTeaser === row.id;
+        
+        if (!teaser) {
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground text-xs">—</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sin teaser</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-primary hover:text-primary/80"
+                  disabled={isDownloading}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setDownloadingTeaser(row.id);
+                    const success = await downloadTeaser(teaser);
+                    if (success) {
+                      toast.success(`Descargando ${teaser.file_name}`);
+                    } else {
+                      toast.error("Error al descargar teaser");
+                    }
+                    setDownloadingTeaser(null);
+                  }}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileDown className="w-4 h-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{teaser.file_name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       },
     },
@@ -959,6 +1029,12 @@ export default function Mandatos() {
         selectedCount={selectedRows.length}
         onClearSelection={() => setSelectedRows([])}
         actions={[
+          {
+            icon: Send,
+            label: "Enviar teasers",
+            onClick: () => setSendTeasersOpen(true),
+            variant: "default",
+          },
           commonBulkActions.export(handleBulkExport),
           commonBulkActions.delete(handleBulkDelete),
         ]}
@@ -973,6 +1049,12 @@ export default function Mandatos() {
       <KanbanConfigDialog
         open={configDialogOpen}
         onOpenChange={setConfigDialogOpen}
+      />
+
+      <SendTeasersDialog
+        open={sendTeasersOpen}
+        onOpenChange={setSendTeasersOpen}
+        selectedMandatos={mandatos.filter(m => selectedRows.includes(m.id))}
       />
     </PageTransition>
   );
