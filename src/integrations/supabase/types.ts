@@ -8706,6 +8706,7 @@ export type Database = {
           platform_arx: string | null
           platform_deale: string | null
           platform_dealsuite: string | null
+          potencial_searchfund: boolean | null
           prioridad: string | null
           probability: number | null
           rango_inversion_max: number | null
@@ -8768,6 +8769,7 @@ export type Database = {
           platform_arx?: string | null
           platform_deale?: string | null
           platform_dealsuite?: string | null
+          potencial_searchfund?: boolean | null
           prioridad?: string | null
           probability?: number | null
           rango_inversion_max?: number | null
@@ -8830,6 +8832,7 @@ export type Database = {
           platform_arx?: string | null
           platform_deale?: string | null
           platform_dealsuite?: string | null
+          potencial_searchfund?: boolean | null
           prioridad?: string | null
           probability?: number | null
           rango_inversion_max?: number | null

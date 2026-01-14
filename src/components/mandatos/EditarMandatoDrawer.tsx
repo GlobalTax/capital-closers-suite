@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -55,6 +56,7 @@ const formSchema = z.object({
   tipo_comprador_buscado: z.string().optional().nullable(),
   estado_negociacion: z.string().optional().nullable(),
   numero_ofertas_recibidas: z.number().optional().nullable(),
+  potencial_searchfund: z.boolean().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -122,6 +124,7 @@ export function EditarMandatoDrawer({
       tipo_comprador_buscado: mandato.tipo_comprador_buscado || null,
       estado_negociacion: mandato.estado_negociacion || null,
       numero_ofertas_recibidas: mandato.numero_ofertas_recibidas || null,
+      potencial_searchfund: (mandato as any).potencial_searchfund || false,
     },
   });
 
@@ -144,6 +147,7 @@ export function EditarMandatoDrawer({
         tipo_comprador_buscado: mandato.tipo_comprador_buscado || null,
         estado_negociacion: mandato.estado_negociacion || null,
         numero_ofertas_recibidas: mandato.numero_ofertas_recibidas || null,
+        potencial_searchfund: (mandato as any).potencial_searchfund || false,
       });
       // Reset gate result when drawer opens
       setGateResult(null);
@@ -468,7 +472,27 @@ export function EditarMandatoDrawer({
             {/* Campos específicos de VENTA */}
             {mandato.tipo === "venta" && (
               <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                <h4 className="font-medium text-sm">Detalles de Venta</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Detalles de Venta</h4>
+                  
+                  {/* Toggle Potencial Searchfund */}
+                  <FormField
+                    control={form.control}
+                    name="potencial_searchfund"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormLabel className="text-xs text-muted-foreground">Potencial SF</FormLabel>
+                        <FormControl>
+                          <Switch
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-orange-500"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
