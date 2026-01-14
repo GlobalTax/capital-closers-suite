@@ -147,6 +147,15 @@ const filterSections: FilterSection[] = [
       label: estado,
     })),
   },
+  {
+    id: "potencial_searchfund",
+    label: "Potencial SF",
+    type: "checkbox",
+    defaultOpen: false,
+    options: [
+      { value: "true", label: "Potencial Searchfund" },
+    ],
+  },
 ];
 
 // Función para formatear moneda
@@ -450,11 +459,13 @@ export default function Mandatos() {
       // Filtros del panel
       const estadoFilter = filterValues.estado || [];
       const tipoFilter = filterValues.tipo || [];
+      const sfFilter = filterValues.potencial_searchfund || [];
       
       const matchEstado = estadoFilter.length === 0 || estadoFilter.includes(mandato.estado);
       const matchTipo = tipoFilter.length === 0 || tipoFilter.includes(mandato.tipo);
+      const matchSF = sfFilter.length === 0 || (sfFilter.includes("true") && (mandato as any).potencial_searchfund === true);
 
-      return matchSearch && matchEstado && matchTipo;
+      return matchSearch && matchEstado && matchTipo && matchSF;
     });
   }, [mandatos, searchQuery, filterValues]);
 
@@ -525,7 +536,8 @@ export default function Mandatos() {
       label: "SF",
       sortable: true,
       render: (_: any, row: Mandato) => {
-        const isSF = row.empresa_principal?.potencial_search_fund;
+        // Priorizar el flag del mandato, luego el de la empresa
+        const isSF = (row as any).potencial_searchfund || row.empresa_principal?.potencial_search_fund;
         if (!isSF) return null;
         return (
           <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-1.5">

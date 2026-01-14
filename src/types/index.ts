@@ -191,6 +191,9 @@ export interface Mandato {
   external_synced_at?: string;
   url_publica?: string;
   
+  // Search Fund flag
+  potencial_searchfund?: boolean;
+  
 }
 
 // ============================================
