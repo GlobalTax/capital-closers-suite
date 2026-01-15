@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
@@ -9,17 +9,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
-import { useEmpresasPaginated } from "@/hooks/queries/useEmpresas";
+import { useEmpresasPaginated, useUpdateEmpresa } from "@/hooks/queries/useEmpresas";
 import { useEmpresasRealtime } from "@/hooks/useEmpresasRealtime";
 import type { Empresa } from "@/types";
 import { Building2, Star, TrendingUp, Activity, Globe, Sparkles, Target } from "lucide-react";
-import { useUpdateEmpresa } from "@/hooks/queries/useEmpresas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
+import { 
+  InlineEditText, 
+  InlineEditNumber, 
+  InlineEditCheckbox,
+  InlineEditSelect 
+} from "@/components/shared/InlineEdit";
+
+const SECTOR_OPTIONS = [
+  { value: "Tecnología", label: "Tecnología" },
+  { value: "Industrial", label: "Industrial" },
+  { value: "Servicios", label: "Servicios" },
+  { value: "Consumo", label: "Consumo" },
+  { value: "Salud", label: "Salud" },
+  { value: "Educación", label: "Educación" },
+  { value: "Energía", label: "Energía" },
+  { value: "Inmobiliario", label: "Inmobiliario" },
+  { value: "Finanzas", label: "Finanzas" },
+  { value: "Otros", label: "Otros" },
+];
+
+const INTERES_OPTIONS = [
+  { value: "Alto", label: "Alto" },
+  { value: "Medio", label: "Medio" },
+  { value: "Bajo", label: "Bajo" },
+];
 
 export default function Empresas() {
   const navigate = useNavigate();
@@ -32,7 +56,7 @@ export default function Empresas() {
   const [interaccionesCounts, setInteraccionesCounts] = useState<Record<string, { total: number; pendientes: number }>>({});
   
   const { data: result, isLoading } = useEmpresasPaginated(page, DEFAULT_PAGE_SIZE, filtroTarget);
-  const { mutate: updateEmpresa } = useUpdateEmpresa();
+  const { mutateAsync: updateEmpresa } = useUpdateEmpresa();
   useEmpresasRealtime();
 
   const empresas = result?.data || [];
@@ -42,6 +66,24 @@ export default function Empresas() {
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
+  };
+
+  // Handler para edición inline
+  const handleInlineUpdate = useCallback(async (id: string, field: string, value: any) => {
+    try {
+      await updateEmpresa({ id, data: { [field]: value } });
+    } catch (error) {
+      toast.error("Error al actualizar");
+      throw error;
+    }
+  }, [updateEmpresa]);
+
+  // Formateo de moneda
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "—";
+    if (value >= 1000000) return `€${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `€${(value / 1000).toFixed(0)}K`;
+    return `€${value}`;
   };
 
   // KPIs basados en count del servidor
@@ -67,8 +109,12 @@ export default function Empresas() {
       sortable: true,
       filterable: true,
       render: (value: string, row: Empresa) => (
-        <div>
-          <p className="font-medium">{value}</p>
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditText
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'nombre', newValue)}
+            className="font-medium"
+          />
           <div className="flex items-center gap-2 mt-1">
             {row.es_target && (
               <Badge variant="outline" className="text-xs">⭐ Prioritaria</Badge>
@@ -77,7 +123,12 @@ export default function Empresas() {
               <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-200">SF</Badge>
             )}
             {row.sector && (
-              <span className="text-xs text-muted-foreground">{row.sector}</span>
+              <InlineEditSelect
+                value={row.sector}
+                options={SECTOR_OPTIONS}
+                onSave={async (newValue) => handleInlineUpdate(row.id, 'sector', newValue)}
+                className="text-xs text-muted-foreground"
+              />
             )}
           </div>
         </div>
@@ -86,19 +137,45 @@ export default function Empresas() {
     { 
       key: "ubicacion", 
       label: "Ubicación",
-      render: (value: string) => <span className="text-sm">{value || "-"}</span>
+      render: (value: string, row: Empresa) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditText
+            value={value || ""}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'ubicacion', newValue)}
+            className="text-sm"
+            placeholder="—"
+          />
+        </div>
+      )
     },
     {
       key: "facturacion",
       label: "Facturación",
       sortable: true,
-      render: (value: number) => value ? `€${(value / 1000000).toFixed(1)}M` : "-"
+      render: (value: number, row: Empresa) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'facturacion', newValue)}
+            format={formatCurrency}
+            className="text-sm"
+          />
+        </div>
+      )
     },
     {
       key: "empleados",
       label: "Empleados",
       sortable: true,
-      render: (value: number) => value || "-"
+      render: (value: number, row: Empresa) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'empleados', newValue)}
+            className="text-sm"
+          />
+        </div>
+      )
     },
     {
       key: "updated_at",
@@ -132,37 +209,50 @@ export default function Empresas() {
       key: "nivel_interes",
       label: "Interés",
       render: (value: string, row: Empresa) => {
-        if (!row.es_target || !value) return "-";
+        if (!row.es_target) return <span className="text-muted-foreground text-sm">—</span>;
+        
         const colors: Record<string, any> = {
           Alto: "destructive",
           Medio: "default",
           Bajo: "secondary"
         };
-        return <Badge variant={colors[value]}>{value}</Badge>;
+
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <InlineEditSelect
+              value={value || ""}
+              options={INTERES_OPTIONS}
+              onSave={async (newValue) => handleInlineUpdate(row.id, 'nivel_interes', newValue)}
+              renderDisplay={(val) => val ? <Badge variant={colors[val]}>{val}</Badge> : <span className="text-muted-foreground">—</span>}
+              placeholder="Seleccionar"
+            />
+          </div>
+        );
       }
+    },
+    {
+      key: "badges",
+      label: "Marcas",
+      render: (_: any, row: Empresa) => (
+        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <InlineEditCheckbox
+            checked={row.es_target || false}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'es_target', newValue)}
+            label={<Star className={cn("h-4 w-4", row.es_target && "text-yellow-500 fill-yellow-200")} />}
+          />
+          <InlineEditCheckbox
+            checked={row.potencial_search_fund || false}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'potencial_search_fund', newValue)}
+            label={<Target className={cn("h-4 w-4", row.potencial_search_fund && "text-orange-500 fill-orange-200")} />}
+          />
+        </div>
+      )
     },
     {
       key: "id",
       label: "Acciones",
       render: (_: string, row: Empresa) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              updateEmpresa(
-                { id: row.id, data: { potencial_search_fund: !row.potencial_search_fund } },
-                {
-                  onSuccess: () => {
-                    toast.success(row.potencial_search_fund ? "Marca SF eliminada" : "Marcado como Potencial SF");
-                  },
-                }
-              );
-            }}
-            title={row.potencial_search_fund ? "Quitar marca SF" : "Marcar como potencial SF"}
-          >
-            <Target className={cn("h-4 w-4", row.potencial_search_fund && "text-orange-500 fill-orange-200")} />
-          </Button>
           {row.sitio_web && (
             <Button
               variant="ghost"
