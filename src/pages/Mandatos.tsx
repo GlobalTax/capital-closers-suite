@@ -57,6 +57,8 @@ import {
   Send,
   FileDown,
   Loader2,
+  Target,
+  CircleOff,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -406,6 +408,34 @@ export default function Mandatos() {
     }));
     exportToCSV(exportData, `mandatos-seleccionados-${new Date().toISOString().split("T")[0]}`);
     toast.success(`${selectedRows.length} mandatos exportados`);
+  };
+
+  const handleBulkMarkSF = async () => {
+    try {
+      await Promise.all(
+        selectedRows.map((id) => updateMandato(id, { potencial_searchfund: true }))
+      );
+      toast.success(`${selectedRows.length} mandato${selectedRows.length !== 1 ? 's' : ''} marcado${selectedRows.length !== 1 ? 's' : ''} como SF`);
+      setSelectedRows([]);
+      cargarMandatos();
+    } catch (error) {
+      console.error("Error al marcar SF:", error);
+      toast.error("Error al marcar mandatos como SF");
+    }
+  };
+
+  const handleBulkUnmarkSF = async () => {
+    try {
+      await Promise.all(
+        selectedRows.map((id) => updateMandato(id, { potencial_searchfund: false }))
+      );
+      toast.success(`${selectedRows.length} mandato${selectedRows.length !== 1 ? 's' : ''} desmarcado${selectedRows.length !== 1 ? 's' : ''} de SF`);
+      setSelectedRows([]);
+      cargarMandatos();
+    } catch (error) {
+      console.error("Error al desmarcar SF:", error);
+      toast.error("Error al desmarcar mandatos de SF");
+    }
   };
 
   const handleExportCSV = () => {
@@ -1030,10 +1060,19 @@ export default function Mandatos() {
         onClearSelection={() => setSelectedRows([])}
         actions={[
           {
+            icon: Target,
+            label: "Marcar SF",
+            onClick: handleBulkMarkSF,
+          },
+          {
+            icon: CircleOff,
+            label: "Quitar SF",
+            onClick: handleBulkUnmarkSF,
+          },
+          {
             icon: Send,
             label: "Enviar teasers",
             onClick: () => setSendTeasersOpen(true),
-            variant: "default",
           },
           commonBulkActions.export(handleBulkExport),
           commonBulkActions.delete(handleBulkDelete),
