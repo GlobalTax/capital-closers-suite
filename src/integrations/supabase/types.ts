@@ -2013,6 +2013,57 @@ export type Database = {
           },
         ]
       }
+      campaign_costs: {
+        Row: {
+          amount: number
+          campaign_name: string | null
+          channel: string
+          clicks: number | null
+          cpc: number | null
+          created_at: string
+          created_by: string | null
+          ctr: number | null
+          id: string
+          impressions: number | null
+          notes: string | null
+          period_end: string
+          period_start: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          campaign_name?: string | null
+          channel: string
+          clicks?: number | null
+          cpc?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          notes?: string | null
+          period_end: string
+          period_start: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          campaign_name?: string | null
+          channel?: string
+          clicks?: number | null
+          cpc?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       carousel_logos: {
         Row: {
           company_name: string
@@ -4666,6 +4717,7 @@ export type Database = {
           file_size_bytes: number
           folder_id: string | null
           id: string
+          idioma: string | null
           is_latest_version: boolean | null
           mandato_id: string | null
           mime_type: string
@@ -4684,6 +4736,7 @@ export type Database = {
           file_size_bytes: number
           folder_id?: string | null
           id?: string
+          idioma?: string | null
           is_latest_version?: boolean | null
           mandato_id?: string | null
           mime_type: string
@@ -4702,6 +4755,7 @@ export type Database = {
           file_size_bytes?: number
           folder_id?: string | null
           id?: string
+          idioma?: string | null
           is_latest_version?: boolean | null
           mandato_id?: string | null
           mime_type?: string

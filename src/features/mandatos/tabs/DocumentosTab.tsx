@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,13 +36,13 @@ import { DocumentVersionHistory } from "@/components/documentos/DocumentVersionH
 import { TemplateLibrary } from "@/components/documentos/TemplateLibrary";
 import { useDocumentFolders } from "@/hooks/useDocumentFolders";
 import { useDocumentStorage } from "@/hooks/useDocumentStorage";
-import { useTeaserForMandato, useTeaserFolder, useTeaserDownload } from "@/hooks/useTeaser";
+import { useTeasersByLanguage, useTeaserFolder, useTeaserDownload } from "@/hooks/useTeaser";
 import { uploadDocumentToFolder, createDocumentVersion } from "@/services/documentFolders.service";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import type { DocumentWithVersion } from "@/types/documents";
+import type { DocumentWithVersion, IdiomaTeaser } from "@/types/documents";
 import type { MandatoTipo } from "@/types";
 
 interface DocumentosTabProps {
@@ -64,13 +64,14 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const [documentToDelete, setDocumentToDelete] = useState<DocumentWithVersion | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [uploadingTeaser, setUploadingTeaser] = useState(false);
+  const [uploadingTeaserES, setUploadingTeaserES] = useState(false);
+  const [uploadingTeaserEN, setUploadingTeaserEN] = useState(false);
 
   const { folders, documents, folderTree, unfiledDocuments, isLoading, createFolder, renameFolder, deleteFolder, refetch } = useDocumentFolders(mandatoId);
   const { getSignedUrl, deleteDocument } = useDocumentStorage();
   
-  // Teaser hooks
-  const { data: teaser, refetch: refetchTeaser } = useTeaserForMandato(mandatoId);
+  // Teaser hooks - ahora con soporte ES/EN
+  const { data: teasers, refetch: refetchTeasers } = useTeasersByLanguage(mandatoId);
   const { ensureTeaserFolder } = useTeaserFolder(mandatoId);
   const { downloadTeaser } = useTeaserDownload();
 
@@ -138,6 +139,70 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     }
   };
 
+  const handleTeaserUpload = async (file: File, idioma: IdiomaTeaser) => {
+    const setUploading = idioma === 'ES' ? setUploadingTeaserES : setUploadingTeaserEN;
+    setUploading(true);
+    
+    try {
+      console.log('[Teaser Upload] Iniciando subida:', {
+        mandatoId,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        idioma,
+      });
+
+      const teaserFolder = await ensureTeaserFolder();
+      const { data: { user } } = await supabase.auth.getUser();
+      const timestamp = Date.now();
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `${user?.id}/mandatos/${mandatoId}/teaser/${idioma.toLowerCase()}_${timestamp}_${sanitizedFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('mandato-documentos')
+        .upload(storagePath, file);
+
+      if (uploadError) {
+        console.error('[Teaser Upload] Error storage:', {
+          code: (uploadError as any).code,
+          message: uploadError.message,
+          statusCode: (uploadError as any).statusCode,
+        });
+        
+        if (uploadError.message?.includes('mime') || uploadError.message?.includes('type')) {
+          toast.error('Tipo de archivo no permitido. Usa PDF, Word o PowerPoint.');
+        } else if (uploadError.message?.includes('size')) {
+          toast.error('Archivo demasiado grande. Máximo 20MB.');
+        } else {
+          toast.error(`Error al subir: ${uploadError.message}`);
+        }
+        return;
+      }
+
+      await uploadDocumentToFolder(
+        mandatoId,
+        teaserFolder.id,
+        file.name,
+        file.size,
+        file.type,
+        storagePath,
+        'Teaser',
+        `Teaser del mandato (${idioma === 'ES' ? 'Español' : 'Inglés'})`,
+        user?.id,
+        idioma
+      );
+
+      toast.success(`Teaser (${idioma === 'ES' ? 'Español' : 'Inglés'}) subido correctamente`);
+      refetchTeasers();
+      refetch();
+    } catch (error) {
+      console.error('[Teaser Upload] Error:', error);
+      toast.error('Error al subir el teaser');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDownload = async (doc: DocumentWithVersion) => {
     setDownloadingId(doc.id);
     try {
@@ -192,6 +257,97 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  // Componente para sección de teaser por idioma
+  const TeaserSection = ({ 
+    idioma, 
+    teaser, 
+    isUploading, 
+    flagEmoji 
+  }: { 
+    idioma: IdiomaTeaser; 
+    teaser: DocumentWithVersion | null; 
+    isUploading: boolean;
+    flagEmoji: string;
+  }) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <span className="text-lg">{flagEmoji}</span>
+        Teaser en {idioma === 'ES' ? 'Español' : 'Inglés'}
+      </div>
+      
+      {teaser ? (
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-3">
+            <FileText className="w-8 h-8 text-primary" />
+            <div>
+              <p className="font-medium">{teaser.file_name}</p>
+              <p className="text-sm text-muted-foreground">
+                Subido el {format(new Date(teaser.created_at), "d MMM yyyy", { locale: es })} • 
+                {formatFileSize(teaser.file_size_bytes)}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                const success = await downloadTeaser(teaser);
+                if (success) toast.success("Descargando teaser...");
+                else toast.error("Error al descargar");
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Descargar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById(`teaser-upload-${idioma}`)?.click()}
+              disabled={isUploading}
+            >
+              {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>No hay teaser en {idioma === 'ES' ? 'español' : 'inglés'}</span>
+            <Button 
+              size="sm"
+              variant="outline"
+              onClick={() => document.getElementById(`teaser-upload-${idioma}`)?.click()}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 mr-2" />
+              )}
+              Subir teaser ({idioma})
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <input
+        type="file"
+        id={`teaser-upload-${idioma}`}
+        className="hidden"
+        accept=".pdf,.doc,.docx,.ppt,.pptx"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            handleTeaserUpload(file, idioma);
+          }
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -202,7 +358,7 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="documentos" className="w-full">
+      <Tabs defaultValue="teaser" className="w-full">
         <TabsList>
           <TabsTrigger value="teaser" className="gap-2">
             <Sparkles className="w-4 h-4" />
@@ -223,109 +379,30 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />
-                Teaser del Mandato
+                Teasers del Mandato
               </CardTitle>
               <CardDescription>
-                El teaser es el documento principal de presentación para inversores potenciales
+                Gestiona los teasers en español e inglés para inversores potenciales
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {teaser ? (
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-primary" />
-                    <div>
-                      <p className="font-medium">{teaser.file_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Subido el {format(new Date(teaser.created_at), "d MMM yyyy", { locale: es })} • 
-                        {(teaser.file_size_bytes / 1024).toFixed(0)} KB
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={async () => {
-                        const success = await downloadTeaser(teaser);
-                        if (success) toast.success("Descargando teaser...");
-                        else toast.error("Error al descargar");
-                      }}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Descargar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No hay teaser subido para este mandato. Sube el primer teaser usando el botón de abajo.
-                  </AlertDescription>
-                </Alert>
-              )}
+            <CardContent className="space-y-6">
+              {/* Teaser en Español */}
+              <TeaserSection 
+                idioma="ES" 
+                teaser={teasers?.es || null} 
+                isUploading={uploadingTeaserES}
+                flagEmoji="🇪🇸"
+              />
 
-              <div className="pt-4 border-t">
-                <input
-                  type="file"
-                  id="teaser-upload"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx,.ppt,.pptx"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    
-                    setUploadingTeaser(true);
-                    try {
-                      const teaserFolder = await ensureTeaserFolder();
-                      const { data: { user } } = await supabase.auth.getUser();
-                      const timestamp = Date.now();
-                      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                      const storagePath = `${user?.id}/mandatos/${mandatoId}/teaser/${timestamp}_${sanitizedFileName}`;
+              <div className="border-t" />
 
-                      const { error: uploadError } = await supabase.storage
-                        .from('mandato-documentos')
-                        .upload(storagePath, file);
-
-                      if (uploadError) throw uploadError;
-
-                      await uploadDocumentToFolder(
-                        mandatoId,
-                        teaserFolder.id,
-                        file.name,
-                        file.size,
-                        file.type,
-                        storagePath,
-                        'Teaser',
-                        'Teaser del mandato',
-                        user?.id
-                      );
-
-                      toast.success('Teaser subido correctamente');
-                      refetchTeaser();
-                      refetch();
-                    } catch (error) {
-                      console.error('Error uploading teaser:', error);
-                      toast.error('Error al subir el teaser');
-                    } finally {
-                      setUploadingTeaser(false);
-                      e.target.value = '';
-                    }
-                  }}
-                />
-                <Button 
-                  onClick={() => document.getElementById('teaser-upload')?.click()}
-                  disabled={uploadingTeaser}
-                >
-                  {uploadingTeaser ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4 mr-2" />
-                  )}
-                  {teaser ? 'Reemplazar teaser' : 'Subir teaser'}
-                </Button>
-              </div>
+              {/* Teaser en Inglés */}
+              <TeaserSection 
+                idioma="EN" 
+                teaser={teasers?.en || null} 
+                isUploading={uploadingTeaserEN}
+                flagEmoji="🇬🇧"
+              />
             </CardContent>
           </Card>
         </TabsContent>

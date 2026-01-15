@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getTeaserForMandato, 
   getTeasersForMandatos,
+  getTeasersForMandatoByLanguage,
   getOrCreateTeaserFolder,
   getSignedUrlForTeaser,
 } from "@/services/teaser.service";
@@ -9,6 +10,7 @@ import type { DocumentWithVersion } from "@/types/documents";
 
 /**
  * Hook para obtener el teaser de un mandato específico
+ * @deprecated Usar useTeasersByLanguage para soporte ES/EN
  */
 export function useTeaserForMandato(mandatoId: string | undefined) {
   return useQuery({
@@ -16,6 +18,18 @@ export function useTeaserForMandato(mandatoId: string | undefined) {
     queryFn: () => getTeaserForMandato(mandatoId!),
     enabled: !!mandatoId,
     staleTime: 2 * 60 * 1000, // 2 min
+  });
+}
+
+/**
+ * Hook para obtener teasers ES y EN de un mandato
+ */
+export function useTeasersByLanguage(mandatoId: string | undefined) {
+  return useQuery({
+    queryKey: ['teasers-language', mandatoId],
+    queryFn: () => getTeasersForMandatoByLanguage(mandatoId!),
+    enabled: !!mandatoId,
+    staleTime: 2 * 60 * 1000,
   });
 }
 
@@ -50,6 +64,7 @@ export function useTeaserFolder(mandatoId: string | undefined) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-folders', mandatoId] });
       queryClient.invalidateQueries({ queryKey: ['teaser', mandatoId] });
+      queryClient.invalidateQueries({ queryKey: ['teasers-language', mandatoId] });
     },
   });
 
