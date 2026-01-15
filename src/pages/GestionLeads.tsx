@@ -32,6 +32,7 @@ import { Search, Filter, SlidersHorizontal, X, TrendingUp, Users, Calculator, Bu
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { LeadDetailSheet, LeadDetailData } from "@/components/leads/LeadDetailSheet";
+import { InlineEditText, InlineEditSelect } from "@/components/shared/InlineEdit";
 
 type LeadRow = {
   id: string;
@@ -42,16 +43,13 @@ type LeadRow = {
   status: string;
   fecha: string;
   dias: number;
-  // Campos financieros (solo para valuations)
   valoracion?: number;
   facturacion?: number;
   ebitda?: number;
-  // Canal de adquisición
   canal?: string;
   acquisition_channel_id?: string;
 };
 
-// Helper para formatear moneda
 const formatCurrency = (value: number | undefined): string => {
   if (value === undefined || value === null) return '-';
   if (value >= 1000000) {
@@ -62,13 +60,26 @@ const formatCurrency = (value: number | undefined): string => {
   return `${value.toFixed(0)}€`;
 };
 
+const STATUS_OPTIONS = [
+  { value: "new", label: "Nuevo" },
+  { value: "contacted", label: "En Contacto" },
+  { value: "qualified", label: "Calificado" },
+  { value: "converted", label: "Convertido" },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  new: "bg-gray-100 text-gray-800",
+  contacted: "bg-blue-100 text-blue-800",
+  qualified: "bg-amber-100 text-amber-800",
+  converted: "bg-green-100 text-green-800",
+};
+
 export default function GestionLeads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   
-  // Estados para filtros numéricos
   const [valoracionMin, setValoracionMin] = useState<string>("");
   const [valoracionMax, setValoracionMax] = useState<string>("");
   const [facturacionMin, setFacturacionMin] = useState<string>("");
@@ -76,18 +87,15 @@ export default function GestionLeads() {
   const [ebitdaMin, setEbitdaMin] = useState<string>("");
   const [ebitdaMax, setEbitdaMax] = useState<string>("");
   
-  // Estado para el panel lateral
   const [selectedLead, setSelectedLead] = useState<LeadDetailData | null>(null);
   
   const queryClient = useQueryClient();
 
-  // Fetch todos los leads
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['gestion-leads', filterType, filterStatus],
     queryFn: async (): Promise<LeadRow[]> => {
       const allLeads: LeadRow[] = [];
 
-      // Contact leads - incluye canal de adquisición
       if (filterType === 'all' || filterType === 'contact') {
         const { data: contacts } = await supabase
           .from('contact_leads')
@@ -114,7 +122,6 @@ export default function GestionLeads() {
         }
       }
 
-      // Valuations - con campos financieros y canal
       if (filterType === 'all' || filterType === 'valuation') {
         const { data: valuations } = await supabase
           .from('company_valuations')
@@ -135,18 +142,15 @@ export default function GestionLeads() {
             status: v.valuation_status || 'new',
             fecha: v.created_at,
             dias: Math.floor((Date.now() - new Date(v.last_activity_at || v.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-            // Campos financieros
             valoracion: v.final_valuation ? Number(v.final_valuation) : undefined,
             facturacion: v.revenue ? Number(v.revenue) : undefined,
             ebitda: v.ebitda ? Number(v.ebitda) : undefined,
-            // Canal
             canal: v.acquisition_channels?.name || undefined,
             acquisition_channel_id: v.acquisition_channel_id || undefined,
           })));
         }
       }
 
-      // Collaborators - con canal
       if (filterType === 'all' || filterType === 'collaborator') {
         const { data: collaborators } = await supabase
           .from('collaborator_applications')
@@ -173,7 +177,6 @@ export default function GestionLeads() {
         }
       }
 
-      // Filtrar por status si aplica
       if (filterStatus !== 'all') {
         return allLeads.filter(l => l.status === filterStatus);
       }
@@ -182,7 +185,6 @@ export default function GestionLeads() {
     }
   });
 
-  // Mutation para actualizar estado
   const updateStatusMutation = useMutation({
     mutationFn: async ({ leadId, leadType, newStatus }: { 
       leadId: string; 
@@ -202,7 +204,44 @@ export default function GestionLeads() {
     }
   });
 
-  // Contar filtros numéricos activos
+  // Mutation para actualizar campos de leads
+  const updateLeadFieldMutation = useMutation({
+    mutationFn: async ({ leadId, leadType, field, value }: {
+      leadId: string;
+      leadType: 'contact' | 'valuation' | 'collaborator';
+      field: string;
+      value: any;
+    }) => {
+      const tableMap: Record<string, 'contact_leads' | 'company_valuations' | 'collaborator_applications'> = {
+        contact: 'contact_leads',
+        valuation: 'company_valuations',
+        collaborator: 'collaborator_applications'
+      };
+      
+      const fieldMap: Record<string, Record<string, string>> = {
+        contact: { nombre: 'full_name', empresa: 'company' },
+        valuation: { nombre: 'contact_name', empresa: 'company_name' },
+        collaborator: { nombre: 'full_name', empresa: 'company' }
+      };
+
+      const actualField = fieldMap[leadType]?.[field] || field;
+      
+      const { error } = await supabase
+        .from(tableMap[leadType])
+        .update({ [actualField]: value })
+        .eq('id', leadId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gestion-leads'] });
+      toast.success('Actualizado correctamente');
+    },
+    onError: () => {
+      toast.error('Error al actualizar');
+    }
+  });
+
   const activeNumericFilters = useMemo(() => {
     let count = 0;
     if (valoracionMin || valoracionMax) count++;
@@ -213,7 +252,6 @@ export default function GestionLeads() {
 
   const hasActiveFilters = searchTerm || activeNumericFilters > 0;
 
-  // Limpiar todos los filtros
   const clearAllFilters = () => {
     setSearchTerm("");
     setValoracionMin("");
@@ -224,17 +262,14 @@ export default function GestionLeads() {
     setEbitdaMax("");
   };
 
-  // Filtrar leads con todos los criterios
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
-      // Búsqueda de texto (nombre, email, empresa)
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm || 
         lead.nombre.toLowerCase().includes(searchLower) ||
         lead.email.toLowerCase().includes(searchLower) ||
         (lead.empresa?.toLowerCase().includes(searchLower));
 
-      // Filtros numéricos - solo aplican si hay valor
       const valMinNum = valoracionMin ? Number(valoracionMin) : null;
       const valMaxNum = valoracionMax ? Number(valoracionMax) : null;
       const facMinNum = facturacionMin ? Number(facturacionMin) : null;
@@ -242,11 +277,10 @@ export default function GestionLeads() {
       const ebitMinNum = ebitdaMin ? Number(ebitdaMin) : null;
       const ebitMaxNum = ebitdaMax ? Number(ebitdaMax) : null;
 
-      // Si hay filtros numéricos activos y el lead no tiene datos financieros, excluirlo
       const hasNumericFilters = valMinNum || valMaxNum || facMinNum || facMaxNum || ebitMinNum || ebitMaxNum;
       
       if (hasNumericFilters && lead.tipo !== 'valuation') {
-        return false; // Solo valuations tienen datos financieros
+        return false;
       }
 
       const matchesValoracion = 
@@ -265,7 +299,6 @@ export default function GestionLeads() {
     });
   }, [leads, searchTerm, valoracionMin, valoracionMax, facturacionMin, facturacionMax, ebitdaMin, ebitdaMax]);
 
-  // Estadísticas KPI
   const stats = useMemo(() => {
     const total = leads.length;
     const contacts = leads.filter(l => l.tipo === 'contact').length;
@@ -347,7 +380,6 @@ export default function GestionLeads() {
 
       {/* Filtros principales */}
       <div className="flex flex-wrap gap-4 items-start">
-        {/* Búsqueda */}
         <div className="flex-1 min-w-[300px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -360,7 +392,6 @@ export default function GestionLeads() {
           </div>
         </div>
 
-        {/* Filtro por tipo */}
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-[200px]">
             <Filter className="w-4 h-4 mr-2" />
@@ -374,7 +405,6 @@ export default function GestionLeads() {
           </SelectContent>
         </Select>
 
-        {/* Filtro por estado */}
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[200px]">
             <SelectValue />
@@ -388,7 +418,6 @@ export default function GestionLeads() {
           </SelectContent>
         </Select>
 
-        {/* Botón filtros avanzados */}
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="default" className="gap-2">
@@ -403,7 +432,6 @@ export default function GestionLeads() {
           </CollapsibleTrigger>
         </Collapsible>
 
-        {/* Limpiar filtros */}
         {hasActiveFilters && (
           <Button 
             variant="ghost" 
@@ -421,7 +449,6 @@ export default function GestionLeads() {
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg bg-muted/30">
-            {/* Valoración */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-amber-500" />
@@ -447,7 +474,6 @@ export default function GestionLeads() {
               <p className="text-xs text-muted-foreground">Ej: 500000 para 500K€</p>
             </div>
             
-            {/* Facturación */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-blue-500" />
@@ -473,7 +499,6 @@ export default function GestionLeads() {
               <p className="text-xs text-muted-foreground">Ej: 1000000 para 1M€</p>
             </div>
             
-            {/* EBITDA */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Calculator className="w-4 h-4 text-purple-500" />
@@ -548,9 +573,36 @@ export default function GestionLeads() {
                       {tipoLabels[lead.tipo]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium py-2">{lead.nombre}</TableCell>
+                  <TableCell className="py-2">
+                    <InlineEditText
+                      value={lead.nombre}
+                      onSave={async (newValue) => {
+                        await updateLeadFieldMutation.mutateAsync({
+                          leadId: lead.id,
+                          leadType: lead.tipo,
+                          field: 'nombre',
+                          value: newValue
+                        });
+                      }}
+                      className="font-medium"
+                    />
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs py-2 hidden md:table-cell">{lead.email}</TableCell>
-                  <TableCell className="py-2 text-xs">{lead.empresa || '-'}</TableCell>
+                  <TableCell className="py-2">
+                    <InlineEditText
+                      value={lead.empresa || ""}
+                      onSave={async (newValue) => {
+                        await updateLeadFieldMutation.mutateAsync({
+                          leadId: lead.id,
+                          leadType: lead.tipo,
+                          field: 'empresa',
+                          value: newValue || null
+                        });
+                      }}
+                      className="text-xs"
+                      placeholder="-"
+                    />
+                  </TableCell>
                   <TableCell className="py-2">
                     {lead.canal ? (
                       <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
@@ -573,26 +625,22 @@ export default function GestionLeads() {
                     {lead.ebitda ? formatCurrency(lead.ebitda) : '-'}
                   </TableCell>
                   <TableCell className="py-2">
-                    <Select
+                    <InlineEditSelect
                       value={lead.status}
-                      onValueChange={(newStatus) => {
-                        updateStatusMutation.mutate({
+                      options={STATUS_OPTIONS}
+                      onSave={async (newStatus) => {
+                        await updateStatusMutation.mutateAsync({
                           leadId: lead.id,
                           leadType: lead.tipo,
                           newStatus
                         });
                       }}
-                    >
-                      <SelectTrigger className="w-[120px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">Nuevo</SelectItem>
-                        <SelectItem value="contacted">En Contacto</SelectItem>
-                        <SelectItem value="qualified">Calificado</SelectItem>
-                        <SelectItem value="converted">Convertido</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      renderDisplay={(val) => (
+                        <Badge className={`${STATUS_COLORS[val] || 'bg-gray-100 text-gray-800'} text-xs`}>
+                          {STATUS_OPTIONS.find(o => o.value === val)?.label || val}
+                        </Badge>
+                      )}
+                    />
                   </TableCell>
                   <TableCell className="py-2">
                     {lead.dias > 7 ? (

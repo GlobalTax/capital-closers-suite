@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
@@ -17,13 +17,14 @@ import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawe
 import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Link } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { useContactosPaginated } from "@/hooks/queries/useContactos";
+import { useContactosPaginated, useUpdateContacto } from "@/hooks/queries/useContactos";
 import { useContactosRealtime } from "@/hooks/useContactosRealtime";
 import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
 import { cn } from "@/lib/utils";
+import { InlineEditText } from "@/components/shared/InlineEdit";
 
 type FiltroAccion = 'todos' | 'pendientes' | 'vencidas' | 'sin_actividad';
 
@@ -45,7 +46,8 @@ export default function Contactos() {
   const page = parseInt(searchParams.get('page') || '1', 10);
   
   const { data: result, isLoading, refetch } = useContactosPaginated(page, DEFAULT_PAGE_SIZE);
-  useContactosRealtime(); // Suscripción a cambios en tiempo real
+  const { mutateAsync: updateContacto } = useUpdateContacto();
+  useContactosRealtime();
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiImportOpen, setAiImportOpen] = useState(false);
@@ -62,6 +64,16 @@ export default function Contactos() {
     setSearchParams({ page: newPage.toString() });
   };
 
+  // Handler para edición inline
+  const handleInlineUpdate = useCallback(async (id: string, field: string, value: any) => {
+    try {
+      await updateContacto({ id, data: { [field]: value } });
+    } catch (error) {
+      toast.error("Error al actualizar");
+      throw error;
+    }
+  }, [updateContacto]);
+
   useEffect(() => {
     cargarInteracciones();
   }, [contactos]);
@@ -70,25 +82,22 @@ export default function Contactos() {
     if (contactos.length === 0) return;
     
     try {
-      const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       const contactoIds = contactos.map(c => c.id);
       
-      // Query 1: Contadores del último mes
       const { data: interaccionesRecientes, error: err1 } = await supabase
         .from('interacciones')
         .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
         .in('contacto_id', contactoIds)
         .gte('fecha', thirtyDaysAgo);
       
-      // Query 2: Última interacción por contacto (todas las fechas)
       const { data: ultimasInteracciones, error: err2 } = await supabase
         .from('interacciones')
         .select('contacto_id, fecha')
         .in('contacto_id', contactoIds)
         .order('fecha', { ascending: false });
       
-      // Query 3: Próximas acciones por contacto
       const { data: proximasAcciones, error: err3 } = await supabase
         .from('interacciones')
         .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
@@ -101,7 +110,6 @@ export default function Contactos() {
       if (err2) throw err2;
       if (err3) throw err3;
       
-      // Obtener última fecha por contacto
       const ultimasPorContacto: Record<string, string> = {};
       ultimasInteracciones?.forEach((int) => {
         if (int.contacto_id && !ultimasPorContacto[int.contacto_id]) {
@@ -109,7 +117,6 @@ export default function Contactos() {
         }
       });
       
-      // Encontrar la próxima acción más cercana por contacto
       const proximasPorContacto: Record<string, { texto: string; fecha: string; esVencida: boolean }> = {};
       proximasAcciones?.forEach((int) => {
         if (int.contacto_id && !proximasPorContacto[int.contacto_id]) {
@@ -122,7 +129,6 @@ export default function Contactos() {
         }
       });
       
-      // Inicializar todos los contactos
       const counts: Record<string, InteraccionData> = {};
       contactoIds.forEach(contactoId => {
         counts[contactoId] = { 
@@ -134,7 +140,6 @@ export default function Contactos() {
         };
       });
       
-      // Contar interacciones recientes y clasificar pendientes/vencidas
       interaccionesRecientes?.forEach((int) => {
         if (int.contacto_id && counts[int.contacto_id]) {
           counts[int.contacto_id].total++;
@@ -155,7 +160,6 @@ export default function Contactos() {
     }
   };
 
-  // Filtrar contactos según el filtro de acción seleccionado
   const contactosFiltrados = useMemo(() => {
     if (filtroAccion === 'todos') return contactos;
     
@@ -175,7 +179,6 @@ export default function Contactos() {
     });
   }, [contactos, interaccionesCounts, filtroAccion]);
 
-  // Contadores para los filtros
   const filtroContadores = useMemo(() => {
     return {
       todos: contactos.length,
@@ -185,7 +188,6 @@ export default function Contactos() {
     };
   }, [contactos, interaccionesCounts]);
 
-  // KPIs basados en count del servidor
   const kpis = useMemo(() => {
     const total = result?.count || 0;
     const activos = contactos.filter(c => 
@@ -211,9 +213,28 @@ export default function Contactos() {
               {row.nombre.split(" ").map((n) => n[0]).join("")}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <p className="font-medium">{row.nombre} {row.apellidos || ""}</p>
-            {row.cargo && <p className="text-xs text-muted-foreground">{row.cargo}</p>}
+          <div onClick={(e) => e.stopPropagation()}>
+            <InlineEditText
+              value={`${row.nombre} ${row.apellidos || ""}`.trim()}
+              onSave={async (newValue) => {
+                const parts = newValue.split(" ");
+                const nombre = parts[0] || "";
+                const apellidos = parts.slice(1).join(" ") || null;
+                await handleInlineUpdate(row.id, 'nombre', nombre);
+                if (apellidos !== row.apellidos) {
+                  await handleInlineUpdate(row.id, 'apellidos', apellidos);
+                }
+              }}
+              className="font-medium"
+            />
+            <div className="mt-0.5">
+              <InlineEditText
+                value={row.cargo || ""}
+                onSave={async (newValue) => handleInlineUpdate(row.id, 'cargo', newValue || null)}
+                className="text-xs text-muted-foreground"
+                placeholder="Sin cargo"
+              />
+            </div>
           </div>
         </div>
       ),
@@ -244,14 +265,30 @@ export default function Contactos() {
       key: "email", 
       label: "Email", 
       filterable: true,
-      render: (value: string) => (
-        <span className="text-sm">{value}</span>
+      render: (value: string, row: Contacto) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditText
+            value={value || ""}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'email', newValue || null)}
+            className="text-sm"
+            placeholder="—"
+          />
+        </div>
       )
     },
     { 
       key: "telefono", 
       label: "Teléfono",
-      render: (value: string) => value || <span className="text-muted-foreground">-</span>
+      render: (value: string, row: Contacto) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditText
+            value={value || ""}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'telefono', newValue || null)}
+            className="text-sm"
+            placeholder="—"
+          />
+        </div>
+      )
     },
     {
       key: "ultima_actividad",
