@@ -152,11 +152,29 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         idioma,
       });
 
-      const teaserFolder = await ensureTeaserFolder();
+      // Paso 1: Obtener/crear carpeta teaser
+      let teaserFolder;
+      try {
+        teaserFolder = await ensureTeaserFolder();
+        console.log('[Teaser Upload] Carpeta obtenida:', teaserFolder.id);
+      } catch (folderError: any) {
+        console.error('[Teaser Upload] Error en carpeta:', folderError);
+        toast.error(`Error con la carpeta teaser: ${folderError.message}`);
+        return;
+      }
+
+      // Paso 2: Obtener usuario
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Debes iniciar sesión para subir archivos');
+        return;
+      }
+
+      // Paso 3: Subir a storage
       const timestamp = Date.now();
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `${user?.id}/mandatos/${mandatoId}/teaser/${idioma.toLowerCase()}_${timestamp}_${sanitizedFileName}`;
+      const storagePath = `${user.id}/mandatos/${mandatoId}/teaser/${idioma.toLowerCase()}_${timestamp}_${sanitizedFileName}`;
+      console.log('[Teaser Upload] Subiendo a storage, path:', storagePath);
 
       const { error: uploadError } = await supabase.storage
         .from('mandato-documentos')
@@ -169,35 +187,49 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           statusCode: (uploadError as any).statusCode,
         });
         
-        if (uploadError.message?.includes('mime') || uploadError.message?.includes('type')) {
+        const errorMsg = uploadError.message?.toLowerCase() || '';
+        if (errorMsg.includes('mime') || errorMsg.includes('type')) {
           toast.error('Tipo de archivo no permitido. Usa PDF, Word o PowerPoint.');
-        } else if (uploadError.message?.includes('size')) {
+        } else if (errorMsg.includes('size') || errorMsg.includes('payload')) {
           toast.error('Archivo demasiado grande. Máximo 20MB.');
+        } else if (errorMsg.includes('permission') || errorMsg.includes('policy')) {
+          toast.error('No tienes permisos para subir archivos.');
         } else {
-          toast.error(`Error al subir: ${uploadError.message}`);
+          toast.error(`Error de almacenamiento: ${uploadError.message}`);
         }
         return;
       }
+      console.log('[Teaser Upload] Archivo subido a storage');
 
-      await uploadDocumentToFolder(
-        mandatoId,
-        teaserFolder.id,
-        file.name,
-        file.size,
-        file.type,
-        storagePath,
-        'Teaser',
-        `Teaser del mandato (${idioma === 'ES' ? 'Español' : 'Inglés'})`,
-        user?.id,
-        idioma
-      );
+      // Paso 4: Registrar en base de datos
+      console.log('[Teaser Upload] Registrando en base de datos...');
+      try {
+        await uploadDocumentToFolder(
+          mandatoId,
+          teaserFolder.id,
+          file.name,
+          file.size,
+          file.type,
+          storagePath,
+          'Teaser',
+          `Teaser del mandato (${idioma === 'ES' ? 'Español' : 'Inglés'})`,
+          user.id,
+          idioma
+        );
+      } catch (dbError: any) {
+        console.error('[Teaser Upload] Error registrando en DB:', dbError);
+        // Limpiar archivo huérfano del storage
+        await supabase.storage.from('mandato-documentos').remove([storagePath]);
+        toast.error(`Error guardando registro: ${dbError.message}`);
+        return;
+      }
 
       toast.success(`Teaser (${idioma === 'ES' ? 'Español' : 'Inglés'}) subido correctamente`);
       refetchTeasers();
       refetch();
-    } catch (error) {
-      console.error('[Teaser Upload] Error:', error);
-      toast.error('Error al subir el teaser');
+    } catch (error: any) {
+      console.error('[Teaser Upload] Error inesperado:', error);
+      toast.error(`Error inesperado: ${error.message || 'Error desconocido'}`);
     } finally {
       setUploading(false);
     }

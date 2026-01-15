@@ -8,32 +8,39 @@ const TEASER_FOLDER_TYPE = "teaser";
  * Obtener o crear la carpeta Teaser para un mandato
  */
 export async function getOrCreateTeaserFolder(mandatoId: string): Promise<DocumentFolder> {
-  // Buscar carpeta existente
+  // Buscar carpeta existente con maybeSingle - no lanza error si no existe
   const { data: existing, error: findError } = await supabase
     .from('document_folders')
     .select('*')
     .eq('mandato_id', mandatoId)
     .eq('folder_type', TEASER_FOLDER_TYPE)
-    .single();
+    .maybeSingle();
 
-  if (existing && !findError) {
+  if (findError) {
+    console.error('[Teaser] Error buscando carpeta:', findError);
+    throw new Error(`Error buscando carpeta teaser: ${findError.message}`);
+  }
+
+  if (existing) {
     return existing as DocumentFolder;
   }
 
   // Crear carpeta si no existe
+  console.log('[Teaser] Creando carpeta teaser para mandato:', mandatoId);
   const { data: newFolder, error: createError } = await supabase
     .from('document_folders')
     .insert({
       mandato_id: mandatoId,
       name: TEASER_FOLDER_NAME,
       folder_type: TEASER_FOLDER_TYPE,
-      orden: 0, // Al principio
+      orden: 0,
       is_data_room: false,
     })
     .select()
     .single();
 
   if (createError) {
+    console.error('[Teaser] Error creando carpeta:', createError);
     throw new Error(`Error creando carpeta Teaser: ${createError.message}`);
   }
 
@@ -47,20 +54,20 @@ export async function getTeaserByIdioma(
   mandatoId: string, 
   idioma: IdiomaTeaser
 ): Promise<DocumentWithVersion | null> {
-  // Buscar carpeta teaser
+  // Buscar carpeta teaser con maybeSingle
   const { data: folder } = await supabase
     .from('document_folders')
     .select('id')
     .eq('mandato_id', mandatoId)
     .eq('folder_type', TEASER_FOLDER_TYPE)
-    .single();
+    .maybeSingle();
 
   if (!folder) {
     return null;
   }
 
-  // Buscar documento por idioma
-  const { data: doc, error } = await supabase
+  // Buscar documento por idioma con maybeSingle
+  const { data: doc } = await supabase
     .from('documentos')
     .select('*')
     .eq('folder_id', folder.id)
@@ -68,13 +75,9 @@ export async function getTeaserByIdioma(
     .eq('is_latest_version', true)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (error || !doc) {
-    return null;
-  }
-
-  return doc as DocumentWithVersion;
+  return doc as DocumentWithVersion || null;
 }
 
 /**
@@ -96,33 +99,29 @@ export async function getTeasersForMandatoByLanguage(mandatoId: string): Promise
  * @deprecated Usar getTeasersForMandatoByLanguage para soporte ES/EN
  */
 export async function getTeaserForMandato(mandatoId: string): Promise<DocumentWithVersion | null> {
-  // Buscar carpeta teaser
+  // Buscar carpeta teaser con maybeSingle
   const { data: folder } = await supabase
     .from('document_folders')
     .select('id')
     .eq('mandato_id', mandatoId)
     .eq('folder_type', TEASER_FOLDER_TYPE)
-    .single();
+    .maybeSingle();
 
   if (!folder) {
     return null;
   }
 
-  // Buscar documento más reciente en la carpeta
-  const { data: doc, error } = await supabase
+  // Buscar documento más reciente con maybeSingle
+  const { data: doc } = await supabase
     .from('documentos')
     .select('*')
     .eq('folder_id', folder.id)
     .eq('is_latest_version', true)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (error || !doc) {
-    return null;
-  }
-
-  return doc as DocumentWithVersion;
+  return doc as DocumentWithVersion || null;
 }
 
 /**
