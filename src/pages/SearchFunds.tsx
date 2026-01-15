@@ -36,14 +36,13 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
-import { SearchFundDetailSheet } from '@/components/searchfunds/SearchFundDetailSheet';
 import {
   useSearchFundsWithStats,
   useSearchFundCountries,
   useSearchFundSectors,
   type SearchFundWithStats,
 } from '@/hooks/useSearchFundsWithStats';
-import type { SearchFund } from '@/types/searchFunds';
+import { useNavigate } from 'react-router-dom';
 
 function formatCurrency(value: number | null): string {
   if (value === null) return '-';
@@ -75,12 +74,11 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
 };
 
 export default function SearchFunds() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
-  const [selectedFund, setSelectedFund] = useState<SearchFund | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
 
   // Build filters object
   const filters = useMemo(() => {
@@ -116,8 +114,7 @@ export default function SearchFunds() {
   };
 
   const handleRowClick = (fund: SearchFundWithStats) => {
-    setSelectedFund(fund);
-    setDetailOpen(true);
+    navigate(`/search-funds/${fund.id}`);
   };
 
   return (
@@ -386,13 +383,6 @@ export default function SearchFunds() {
           </div>
         </Card>
       </div>
-
-      {/* Detail Sheet */}
-      <SearchFundDetailSheet
-        fund={selectedFund}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-      />
     </AppLayout>
   );
 }
