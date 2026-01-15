@@ -149,7 +149,15 @@ export function useDocumentStorage() {
     documentInfo?: { id: string; nombre: string }
   ): Promise<string | null> => {
     try {
-      console.log('[Storage] Generando signed URL para:', storagePath);
+      // Verificar auth antes de intentar generar URL
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('[Storage] Usuario no autenticado:', authError);
+        toast.error('Debes iniciar sesión para descargar archivos');
+        return null;
+      }
+
+      console.log('[Storage] Generando signed URL para:', storagePath, 'Usuario:', user.id);
       
       if (!storagePath) {
         console.error('[Storage] Error: storage_path vacío o nulo');
@@ -162,8 +170,22 @@ export function useDocumentStorage() {
         .createSignedUrl(storagePath, 600); // 10 minutes
 
       if (error) {
-        console.error('[Storage] Error createSignedUrl:', error.message, error);
-        throw error;
+        console.error('[Storage] Error createSignedUrl:', {
+          message: error.message,
+          name: error.name,
+          cause: (error as any).cause,
+        });
+        
+        // Mensajes específicos según el tipo de error
+        const errorMsg = error.message?.toLowerCase() || '';
+        if (errorMsg.includes('not found') || errorMsg.includes('object not found')) {
+          toast.error('El archivo no existe en el almacenamiento');
+        } else if (errorMsg.includes('permission') || errorMsg.includes('policy') || errorMsg.includes('row-level')) {
+          toast.error('No tienes permisos para descargar este archivo');
+        } else {
+          toast.error(`Error de descarga: ${error.message}`);
+        }
+        return null;
       }
 
       console.log('[Storage] Signed URL generada correctamente');
@@ -179,7 +201,7 @@ export function useDocumentStorage() {
 
       return data.signedUrl;
     } catch (error) {
-      console.error("[Storage] Error generating signed URL:", error);
+      console.error("[Storage] Error inesperado generating signed URL:", error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast.error(`Error al generar enlace de descarga: ${errorMessage}`);
       return null;
