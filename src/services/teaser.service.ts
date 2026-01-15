@@ -8,6 +8,8 @@ const TEASER_FOLDER_TYPE = "teaser";
  * Obtener o crear la carpeta Teaser para un mandato
  */
 export async function getOrCreateTeaserFolder(mandatoId: string): Promise<DocumentFolder> {
+  console.log('[Teaser] Buscando/creando carpeta teaser para mandato:', mandatoId);
+  
   // Buscar carpeta existente con maybeSingle - no lanza error si no existe
   const { data: existing, error: findError } = await supabase
     .from('document_folders')
@@ -18,15 +20,20 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
 
   if (findError) {
     console.error('[Teaser] Error buscando carpeta:', findError);
+    // Detectar errores de RLS
+    if (findError.code === '42501' || findError.message?.includes('policy')) {
+      throw new Error('No tienes permisos para acceder a las carpetas. Contacta al administrador.');
+    }
     throw new Error(`Error buscando carpeta teaser: ${findError.message}`);
   }
 
   if (existing) {
+    console.log('[Teaser] Carpeta existente encontrada:', existing.id);
     return existing as DocumentFolder;
   }
 
   // Crear carpeta si no existe
-  console.log('[Teaser] Creando carpeta teaser para mandato:', mandatoId);
+  console.log('[Teaser] Creando nueva carpeta teaser...');
   const { data: newFolder, error: createError } = await supabase
     .from('document_folders')
     .insert({
@@ -41,9 +48,14 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
 
   if (createError) {
     console.error('[Teaser] Error creando carpeta:', createError);
+    // Mensaje específico para error de RLS
+    if (createError.code === '42501' || createError.message?.includes('policy') || createError.message?.includes('row-level')) {
+      throw new Error('No tienes permisos para crear carpetas. Contacta al administrador.');
+    }
     throw new Error(`Error creando carpeta Teaser: ${createError.message}`);
   }
 
+  console.log('[Teaser] Carpeta creada exitosamente:', newFolder.id);
   return newFolder as DocumentFolder;
 }
 

@@ -152,25 +152,50 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         idioma,
       });
 
+      // Paso 0: Verificar autenticación ANTES de cualquier operación
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('[Teaser Upload] Error auth:', authError);
+        toast.error('Debes iniciar sesión para subir archivos');
+        return;
+      }
+      console.log('[Teaser Upload] Usuario autenticado:', user.id, user.email);
+
+      // Verificar que es admin activo
+      const { data: adminCheck, error: adminError } = await supabase
+        .from('admin_users')
+        .select('role, is_active')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      console.log('[Teaser Upload] Admin check:', adminCheck, 'Error:', adminError);
+      if (adminError || !adminCheck?.is_active) {
+        toast.error('No tienes permisos de administrador para subir archivos');
+        return;
+      }
+
       // Paso 1: Obtener/crear carpeta teaser
       let teaserFolder;
       try {
         teaserFolder = await ensureTeaserFolder();
-        console.log('[Teaser Upload] Carpeta obtenida:', teaserFolder.id);
+        console.log('[Teaser Upload] Carpeta obtenida:', teaserFolder?.id);
       } catch (folderError: any) {
         console.error('[Teaser Upload] Error en carpeta:', folderError);
-        toast.error(`Error con la carpeta teaser: ${folderError.message}`);
+        if (folderError.message?.includes('policy') || folderError.message?.includes('permission')) {
+          toast.error('No tienes permisos para crear carpetas. Contacta al administrador.');
+        } else {
+          toast.error(`Error con la carpeta teaser: ${folderError.message}`);
+        }
         return;
       }
 
-      // Paso 2: Obtener usuario
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Debes iniciar sesión para subir archivos');
+      if (!teaserFolder?.id) {
+        console.error('[Teaser Upload] Carpeta no obtenida correctamente');
+        toast.error('Error al obtener la carpeta de teasers');
         return;
       }
 
-      // Paso 3: Subir a storage
+      // Paso 2: Subir a storage
       const timestamp = Date.now();
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storagePath = `${user.id}/mandatos/${mandatoId}/teaser/${idioma.toLowerCase()}_${timestamp}_${sanitizedFileName}`;
@@ -192,16 +217,16 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           toast.error('Tipo de archivo no permitido. Usa PDF, Word o PowerPoint.');
         } else if (errorMsg.includes('size') || errorMsg.includes('payload')) {
           toast.error('Archivo demasiado grande. Máximo 20MB.');
-        } else if (errorMsg.includes('permission') || errorMsg.includes('policy')) {
-          toast.error('No tienes permisos para subir archivos.');
+        } else if (errorMsg.includes('permission') || errorMsg.includes('policy') || errorMsg.includes('row-level')) {
+          toast.error('No tienes permisos para subir archivos al almacenamiento.');
         } else {
           toast.error(`Error de almacenamiento: ${uploadError.message}`);
         }
         return;
       }
-      console.log('[Teaser Upload] Archivo subido a storage');
+      console.log('[Teaser Upload] Archivo subido a storage OK');
 
-      // Paso 4: Registrar en base de datos
+      // Paso 3: Registrar en base de datos
       console.log('[Teaser Upload] Registrando en base de datos...');
       try {
         await uploadDocumentToFolder(
@@ -216,6 +241,7 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           user.id,
           idioma
         );
+        console.log('[Teaser Upload] Registro en DB OK');
       } catch (dbError: any) {
         console.error('[Teaser Upload] Error registrando en DB:', dbError);
         // Limpiar archivo huérfano del storage
