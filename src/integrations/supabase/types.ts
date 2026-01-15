@@ -12376,42 +12376,57 @@ export type Database = {
       }
       sf_matches: {
         Row: {
+          contacted_at: string | null
           created_at: string
           crm_entity_id: string
           crm_entity_type: string
           fund_id: string
           id: string
+          last_interaction_at: string | null
           last_scored_at: string | null
           match_reasons: Json | null
           match_score: number | null
+          nda_sent_at: string | null
+          notes: string | null
           owner_user_id: string | null
           status: string | null
+          teaser_sent_at: string | null
           updated_at: string
         }
         Insert: {
+          contacted_at?: string | null
           created_at?: string
           crm_entity_id: string
           crm_entity_type: string
           fund_id: string
           id?: string
+          last_interaction_at?: string | null
           last_scored_at?: string | null
           match_reasons?: Json | null
           match_score?: number | null
+          nda_sent_at?: string | null
+          notes?: string | null
           owner_user_id?: string | null
           status?: string | null
+          teaser_sent_at?: string | null
           updated_at?: string
         }
         Update: {
+          contacted_at?: string | null
           created_at?: string
           crm_entity_id?: string
           crm_entity_type?: string
           fund_id?: string
           id?: string
+          last_interaction_at?: string | null
           last_scored_at?: string | null
           match_reasons?: Json | null
           match_score?: number | null
+          nda_sent_at?: string | null
+          notes?: string | null
           owner_user_id?: string | null
           status?: string | null
+          teaser_sent_at?: string | null
           updated_at?: string
         }
         Relationships: [
