@@ -17,6 +17,12 @@ import { ColumnToggle, type ColumnConfig } from "@/components/shared/ColumnToggl
 import { ViewDensityToggle, useViewDensity } from "@/components/shared/ViewDensityToggle";
 import { type ViewDensity } from "@/components/shared/DataTableEnhanced";
 import { useFilters } from "@/hooks/useFilters";
+import { 
+  InlineEditText, 
+  InlineEditSelect, 
+  InlineEditNumber,
+  InlineEditCheckbox 
+} from "@/components/shared/InlineEdit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -530,6 +536,13 @@ export default function Mandatos() {
     },
   ];
 
+  // Helper para guardar y recargar
+  const handleInlineUpdate = useCallback(async (id: string, updates: Partial<Mandato>) => {
+    await updateMandato(id, updates);
+    toast.success("Actualizado");
+    cargarMandatos();
+  }, []);
+
   // Definiciones de todas las columnas con sus renders
   const allColumnDefinitions = useMemo(() => ({
     codigo: { 
@@ -541,21 +554,13 @@ export default function Mandatos() {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span 
-                className="font-mono text-xs font-medium cursor-pointer hover:text-primary transition-colors" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newCodigo = prompt("Editar código:", value || "");
-                  if (newCodigo !== null && newCodigo !== value) {
-                    updateMandato(row.id, { codigo: newCodigo }).then(() => {
-                      toast.success("Código actualizado");
-                      cargarMandatos();
-                    }).catch(() => toast.error("Error al actualizar código"));
-                  }
-                }}
-              >
-                {value || row.id.substring(0, 8)}
-              </span>
+              <div onClick={(e) => e.stopPropagation()}>
+                <InlineEditText
+                  value={value || row.id.substring(0, 8)}
+                  onSave={async (newValue) => handleInlineUpdate(row.id, { codigo: newValue })}
+                  className="font-mono text-xs font-medium"
+                />
+              </div>
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs">UUID: {row.id.substring(0, 8)}...</p>
@@ -577,13 +582,19 @@ export default function Mandatos() {
       label: "SF",
       sortable: true,
       render: (_: any, row: Mandato) => {
-        // Priorizar el flag del mandato, luego el de la empresa
-        const isSF = (row as any).potencial_searchfund || row.empresa_principal?.potencial_search_fund;
-        if (!isSF) return null;
+        const isSF = (row as any).potencial_searchfund;
         return (
-          <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-1.5">
-            SF
-          </Badge>
+          <div onClick={(e) => e.stopPropagation()}>
+            <InlineEditCheckbox
+              checked={isSF || false}
+              onSave={async (newValue) => handleInlineUpdate(row.id, { potencial_searchfund: newValue } as any)}
+              label={isSF ? (
+                <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-1.5">
+                  SF
+                </Badge>
+              ) : null}
+            />
+          </div>
         );
       },
     },
@@ -650,52 +661,109 @@ export default function Mandatos() {
       key: "tipo",
       label: "Tipo",
       sortable: true,
-      render: (value: string) => (
-        <Badge variant={value === "venta" ? "default" : "secondary"}>
-          {value === "venta" ? "Venta" : "Compra"}
-        </Badge>
+      render: (value: string, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditSelect
+            value={value}
+            options={MANDATO_TIPOS.map(t => ({ value: t, label: t === "venta" ? "Venta" : "Compra" }))}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { tipo: newValue as any })}
+            renderDisplay={(val) => (
+              <Badge variant={val === "venta" ? "default" : "secondary"}>
+                {val === "venta" ? "Venta" : "Compra"}
+              </Badge>
+            )}
+          />
+        </div>
       ),
     },
     estado: {
       key: "estado",
       label: "Estado",
       sortable: true,
-      render: (value: string) => (
-        <BadgeStatus status={value as any} type="mandato" />
+      render: (value: string, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditSelect
+            value={value}
+            options={MANDATO_ESTADOS.map(e => ({ value: e, label: e }))}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { estado: newValue as MandatoEstado })}
+            renderDisplay={(val) => <BadgeStatus status={val as any} type="mandato" />}
+          />
+        </div>
       ),
     },
     categoria: {
       key: "categoria",
       label: "Categoría",
       sortable: true,
-      render: (value: string) => value ? (
-        <Badge variant="outline" className="text-xs">{value}</Badge>
-      ) : <span className="text-muted-foreground">—</span>,
+      render: (value: string, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditSelect
+            value={value || ""}
+            options={[
+              { value: "operacion_ma", label: "Operación M&A" },
+              { value: "due_diligence", label: "Due Diligence" },
+              { value: "spa_legal", label: "SPA / Legal" },
+              { value: "valoracion", label: "Valoración" },
+              { value: "asesoria", label: "Asesoría" },
+            ]}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { categoria: newValue as any })}
+            placeholder="Sin categoría"
+            renderDisplay={(val) => val ? (
+              <Badge variant="outline" className="text-xs">{val}</Badge>
+            ) : <span className="text-muted-foreground">—</span>}
+          />
+        </div>
+      ),
     },
     prioridad: {
       key: "prioridad",
       label: "Prioridad",
       sortable: true,
-      render: (value: string) => <PriorityBadge priority={value} />,
+      render: (value: string, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditSelect
+            value={value || ""}
+            options={[
+              { value: "urgente", label: "Urgente" },
+              { value: "alta", label: "Alta" },
+              { value: "media", label: "Media" },
+              { value: "baja", label: "Baja" },
+            ]}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { prioridad: newValue as any })}
+            placeholder="Sin prioridad"
+            renderDisplay={(val) => <PriorityBadge priority={val} />}
+          />
+        </div>
+      ),
     },
     valor: {
       key: "valor",
       label: "Valor Deal",
       sortable: true,
-      render: (value: number) => (
-        <span className="font-mono text-sm tabular-nums">
-          {formatCurrency(value)}
-        </span>
+      render: (value: number, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { valor: newValue } as any)}
+            format={formatCurrency}
+            className="text-sm tabular-nums"
+          />
+        </div>
       ),
     },
     valoracion_esperada: {
       key: "valoracion_esperada",
       label: "Valoración",
       sortable: true,
-      render: (value: number) => (
-        <span className="font-mono text-sm tabular-nums text-primary">
-          {formatCurrency(value)}
-        </span>
+      render: (value: number, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { valoracion_esperada: newValue })}
+            format={formatCurrency}
+            className="text-sm tabular-nums text-primary"
+          />
+        </div>
       ),
     },
     fecha_inicio: {
@@ -740,10 +808,15 @@ export default function Mandatos() {
       key: "honorarios_aceptados",
       label: "Fee",
       sortable: true,
-      render: (value: number) => (
-        <span className="font-mono text-sm tabular-nums text-green-600 dark:text-green-400">
-          {formatCurrency(value)}
-        </span>
+      render: (value: number, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, { honorarios_aceptados: newValue })}
+            format={formatCurrency}
+            className="text-sm tabular-nums text-green-600 dark:text-green-400"
+          />
+        </div>
       ),
     },
     total_ingresos: {
