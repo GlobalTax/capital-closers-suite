@@ -28,9 +28,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, SlidersHorizontal, X, TrendingUp, Users, Calculator, Building2 } from "lucide-react";
+import { Search, Filter, SlidersHorizontal, X, TrendingUp, Users, Calculator, Building2, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { LeadDetailSheet, LeadDetailData } from "@/components/leads/LeadDetailSheet";
 
 type LeadRow = {
   id: string;
@@ -45,6 +46,9 @@ type LeadRow = {
   valoracion?: number;
   facturacion?: number;
   ebitda?: number;
+  // Canal de adquisición
+  canal?: string;
+  acquisition_channel_id?: string;
 };
 
 // Helper para formatear moneda
@@ -72,6 +76,9 @@ export default function GestionLeads() {
   const [ebitdaMin, setEbitdaMin] = useState<string>("");
   const [ebitdaMax, setEbitdaMax] = useState<string>("");
   
+  // Estado para el panel lateral
+  const [selectedLead, setSelectedLead] = useState<LeadDetailData | null>(null);
+  
   const queryClient = useQueryClient();
 
   // Fetch todos los leads
@@ -80,11 +87,14 @@ export default function GestionLeads() {
     queryFn: async (): Promise<LeadRow[]> => {
       const allLeads: LeadRow[] = [];
 
-      // Contact leads
+      // Contact leads - incluye canal de adquisición
       if (filterType === 'all' || filterType === 'contact') {
         const { data: contacts } = await supabase
           .from('contact_leads')
-          .select('*')
+          .select(`
+            *,
+            acquisition_channels (id, name)
+          `)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false });
 
@@ -97,16 +107,21 @@ export default function GestionLeads() {
             empresa: c.company || undefined,
             status: c.status,
             fecha: c.created_at,
-            dias: Math.floor((Date.now() - new Date(c.status_updated_at || c.created_at).getTime()) / (1000 * 60 * 60 * 24))
+            dias: Math.floor((Date.now() - new Date(c.status_updated_at || c.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+            canal: c.acquisition_channels?.name || undefined,
+            acquisition_channel_id: c.acquisition_channel_id || undefined,
           })));
         }
       }
 
-      // Valuations - ahora con campos financieros
+      // Valuations - con campos financieros y canal
       if (filterType === 'all' || filterType === 'valuation') {
         const { data: valuations } = await supabase
           .from('company_valuations')
-          .select('*')
+          .select(`
+            *,
+            acquisition_channels (id, name)
+          `)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false });
 
@@ -124,15 +139,21 @@ export default function GestionLeads() {
             valoracion: v.final_valuation ? Number(v.final_valuation) : undefined,
             facturacion: v.revenue ? Number(v.revenue) : undefined,
             ebitda: v.ebitda ? Number(v.ebitda) : undefined,
+            // Canal
+            canal: v.acquisition_channels?.name || undefined,
+            acquisition_channel_id: v.acquisition_channel_id || undefined,
           })));
         }
       }
 
-      // Collaborators
+      // Collaborators - con canal
       if (filterType === 'all' || filterType === 'collaborator') {
         const { data: collaborators } = await supabase
           .from('collaborator_applications')
-          .select('*')
+          .select(`
+            *,
+            acquisition_channels (id, name)
+          `)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false });
 
@@ -145,7 +166,9 @@ export default function GestionLeads() {
             empresa: c.company || undefined,
             status: c.status,
             fecha: c.created_at,
-            dias: Math.floor((Date.now() - new Date(c.status_updated_at || c.created_at).getTime()) / (1000 * 60 * 60 * 24))
+            dias: Math.floor((Date.now() - new Date(c.status_updated_at || c.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+            canal: c.acquisition_channels?.name || undefined,
+            acquisition_channel_id: c.acquisition_channel_id || undefined,
           })));
         }
       }
@@ -486,59 +509,70 @@ export default function GestionLeads() {
       </div>
 
       {/* Tabla */}
-      <div className="rounded-lg border">
+      <div className="rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Tipo</TableHead>
+              <TableHead className="w-[100px]">Tipo</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
               <TableHead>Empresa</TableHead>
-              <TableHead className="text-right">Valoración</TableHead>
-              <TableHead className="text-right">Facturación</TableHead>
-              <TableHead className="text-right">EBITDA</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Días</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead>Canal</TableHead>
+              <TableHead className="text-right w-[90px]">Valoración</TableHead>
+              <TableHead className="text-right w-[90px]">Facturación</TableHead>
+              <TableHead className="text-right w-[80px]">EBITDA</TableHead>
+              <TableHead className="w-[130px]">Estado</TableHead>
+              <TableHead className="w-[60px]">Días</TableHead>
+              <TableHead className="hidden lg:table-cell w-[90px]">Fecha</TableHead>
+              <TableHead className="w-[70px]">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={12} className="text-center py-8">
                   Cargando leads...
                 </TableCell>
               </TableRow>
             ) : filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={12} className="text-center py-8">
                   No se encontraron leads
                 </TableCell>
               </TableRow>
             ) : (
               filteredLeads.map(lead => (
-                <TableRow key={`${lead.tipo}-${lead.id}`}>
-                  <TableCell>
-                    <Badge className={`${tipoBadgeColors[lead.tipo]} text-white`}>
+                <TableRow key={`${lead.tipo}-${lead.id}`} className="text-sm">
+                  <TableCell className="py-2">
+                    <Badge className={`${tipoBadgeColors[lead.tipo]} text-white text-xs`}>
                       {tipoLabels[lead.tipo]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">{lead.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{lead.email}</TableCell>
-                  <TableCell>{lead.empresa || '-'}</TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="font-medium py-2">{lead.nombre}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs py-2 hidden md:table-cell">{lead.email}</TableCell>
+                  <TableCell className="py-2 text-xs">{lead.empresa || '-'}</TableCell>
+                  <TableCell className="py-2">
+                    {lead.canal ? (
+                      <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
+                        <Megaphone className="w-3 h-3" />
+                        {lead.canal}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-medium py-2">
                     {lead.valoracion ? (
-                      <span className="text-amber-600">{formatCurrency(lead.valoracion)}</span>
+                      <span className="text-amber-600 text-xs">{formatCurrency(lead.valoracion)}</span>
                     ) : '-'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right py-2 text-xs">
                     {lead.facturacion ? formatCurrency(lead.facturacion) : '-'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right py-2 text-xs">
                     {lead.ebitda ? formatCurrency(lead.ebitda) : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     <Select
                       value={lead.status}
                       onValueChange={(newStatus) => {
@@ -549,7 +583,7 @@ export default function GestionLeads() {
                         });
                       }}
                     >
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-[120px] h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -560,18 +594,23 @@ export default function GestionLeads() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-2">
                     {lead.dias > 7 ? (
-                      <Badge variant="destructive">{lead.dias}d</Badge>
+                      <Badge variant="destructive" className="text-xs">{lead.dias}d</Badge>
                     ) : (
-                      <span className="text-muted-foreground">{lead.dias}d</span>
+                      <span className="text-muted-foreground text-xs">{lead.dias}d</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(lead.fecha), 'dd/MM/yyyy')}
+                  <TableCell className="text-muted-foreground text-xs py-2 hidden lg:table-cell">
+                    {format(new Date(lead.fecha), 'dd/MM/yy')}
                   </TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm">
+                  <TableCell className="py-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 text-xs"
+                      onClick={() => setSelectedLead(lead)}
+                    >
                       Ver
                     </Button>
                   </TableCell>
@@ -581,6 +620,15 @@ export default function GestionLeads() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Panel lateral de detalle */}
+      <LeadDetailSheet 
+        lead={selectedLead}
+        open={!!selectedLead}
+        onOpenChange={(open) => {
+          if (!open) setSelectedLead(null);
+        }}
+      />
     </div>
   );
 }
