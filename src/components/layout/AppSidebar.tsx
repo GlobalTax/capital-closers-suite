@@ -86,6 +86,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
       { title: "Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
+      { title: "Search Funds", url: "/search-funds", icon: Target },
     ],
   },
   {

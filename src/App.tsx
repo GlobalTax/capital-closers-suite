@@ -44,6 +44,7 @@ const SyncOperations = lazy(() => import("./pages/SyncOperations"));
 const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
 const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
 const GestorDocumentos = lazy(() => import("./pages/GestorDocumentos"));
+const SearchFunds = lazy(() => import("./pages/SearchFunds"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -61,6 +62,7 @@ function AppContent() {
           <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/servicios" element={<ProtectedRoute><AppLayout><Servicios /></AppLayout></ProtectedRoute>} />
+          <Route path="/search-funds" element={<ProtectedRoute><SearchFunds /></ProtectedRoute>} />
           <Route path="/contactos" element={<ProtectedRoute><AppLayout><Contactos /></AppLayout></ProtectedRoute>} />
           <Route path="/contactos/:id" element={<ProtectedRoute><AppLayout><ContactoDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/empresas" element={<ProtectedRoute><AppLayout><Empresas /></AppLayout></ProtectedRoute>} />
