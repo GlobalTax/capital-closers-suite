@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { DocumentWithVersion, DocumentFolder } from "@/types/documents";
+import type { DocumentWithVersion, DocumentFolder, IdiomaTeaser } from "@/types/documents";
 
 const TEASER_FOLDER_NAME = "Teaser";
 const TEASER_FOLDER_TYPE = "teaser";
@@ -41,7 +41,59 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
 }
 
 /**
+ * Obtener teaser por idioma específico
+ */
+export async function getTeaserByIdioma(
+  mandatoId: string, 
+  idioma: IdiomaTeaser
+): Promise<DocumentWithVersion | null> {
+  // Buscar carpeta teaser
+  const { data: folder } = await supabase
+    .from('document_folders')
+    .select('id')
+    .eq('mandato_id', mandatoId)
+    .eq('folder_type', TEASER_FOLDER_TYPE)
+    .single();
+
+  if (!folder) {
+    return null;
+  }
+
+  // Buscar documento por idioma
+  const { data: doc, error } = await supabase
+    .from('documentos')
+    .select('*')
+    .eq('folder_id', folder.id)
+    .eq('idioma', idioma)
+    .eq('is_latest_version', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !doc) {
+    return null;
+  }
+
+  return doc as DocumentWithVersion;
+}
+
+/**
+ * Obtener ambos teasers (ES y EN) de un mandato
+ */
+export async function getTeasersForMandatoByLanguage(mandatoId: string): Promise<{
+  es: DocumentWithVersion | null;
+  en: DocumentWithVersion | null;
+}> {
+  const [es, en] = await Promise.all([
+    getTeaserByIdioma(mandatoId, 'ES'),
+    getTeaserByIdioma(mandatoId, 'EN'),
+  ]);
+  return { es, en };
+}
+
+/**
  * Obtener el teaser principal de un mandato (documento más reciente en carpeta Teaser)
+ * @deprecated Usar getTeasersForMandatoByLanguage para soporte ES/EN
  */
 export async function getTeaserForMandato(mandatoId: string): Promise<DocumentWithVersion | null> {
   // Buscar carpeta teaser

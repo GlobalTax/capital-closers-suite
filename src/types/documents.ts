@@ -54,6 +54,8 @@ export interface DocumentTemplate {
   updated_at: string;
 }
 
+export type IdiomaTeaser = 'ES' | 'EN';
+
 export interface DocumentWithVersion {
   id: string;
   mandato_id?: string;
@@ -68,6 +70,7 @@ export interface DocumentWithVersion {
   parent_document_id?: string;
   is_latest_version: boolean;
   uploaded_by?: string;
+  idioma?: IdiomaTeaser | null;
   created_at: string;
   updated_at: string;
   // Joined

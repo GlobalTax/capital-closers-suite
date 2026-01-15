@@ -174,7 +174,8 @@ export async function uploadDocumentToFolder(
   storagePath: string,
   tipo: string,
   descripcion?: string,
-  uploadedBy?: string
+  uploadedBy?: string,
+  idioma?: 'ES' | 'EN' | null
 ): Promise<DocumentWithVersion> {
   const { data, error } = await supabase
     .from('documentos')
@@ -188,6 +189,7 @@ export async function uploadDocumentToFolder(
       tipo,
       descripcion,
       uploaded_by: uploadedBy,
+      idioma,
       version: 1,
       is_latest_version: true,
     })
