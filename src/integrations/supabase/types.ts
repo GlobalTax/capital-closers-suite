@@ -5319,6 +5319,7 @@ export type Database = {
       }
       empresas: {
         Row: {
+          año_datos_financieros: number | null
           brevo_id: string | null
           brevo_last_modified_at: string | null
           brevo_synced_at: string | null
@@ -5349,6 +5350,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          año_datos_financieros?: number | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
@@ -5379,6 +5381,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          año_datos_financieros?: number | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
