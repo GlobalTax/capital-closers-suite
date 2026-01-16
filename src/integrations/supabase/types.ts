@@ -5319,12 +5319,15 @@ export type Database = {
       }
       empresas: {
         Row: {
+          actividades_destacadas: string[] | null
           año_datos_financieros: number | null
           brevo_id: string | null
           brevo_last_modified_at: string | null
           brevo_synced_at: string | null
           capital_circulante: number | null
           cif: string | null
+          cnae_codigo: string | null
+          cnae_descripcion: string | null
           created_at: string | null
           descripcion: string | null
           deuda: number | null
@@ -5334,6 +5337,8 @@ export type Database = {
           es_target: boolean | null
           estado_target: string | null
           facturacion: number | null
+          fecha_enriquecimiento: string | null
+          fuente_enriquecimiento: string | null
           id: string
           import_log_id: string | null
           margen_ebitda: number | null
@@ -5342,6 +5347,7 @@ export type Database = {
           potencial_search_fund: boolean | null
           revenue: number | null
           sector: string
+          sector_id: string | null
           sitio_web: string | null
           source_pro_valuation_id: string | null
           source_valuation_id: string | null
@@ -5350,12 +5356,15 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          actividades_destacadas?: string[] | null
           año_datos_financieros?: number | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
+          cnae_codigo?: string | null
+          cnae_descripcion?: string | null
           created_at?: string | null
           descripcion?: string | null
           deuda?: number | null
@@ -5365,6 +5374,8 @@ export type Database = {
           es_target?: boolean | null
           estado_target?: string | null
           facturacion?: number | null
+          fecha_enriquecimiento?: string | null
+          fuente_enriquecimiento?: string | null
           id?: string
           import_log_id?: string | null
           margen_ebitda?: number | null
@@ -5373,6 +5384,7 @@ export type Database = {
           potencial_search_fund?: boolean | null
           revenue?: number | null
           sector: string
+          sector_id?: string | null
           sitio_web?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
@@ -5381,12 +5393,15 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          actividades_destacadas?: string[] | null
           año_datos_financieros?: number | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
           capital_circulante?: number | null
           cif?: string | null
+          cnae_codigo?: string | null
+          cnae_descripcion?: string | null
           created_at?: string | null
           descripcion?: string | null
           deuda?: number | null
@@ -5396,6 +5411,8 @@ export type Database = {
           es_target?: boolean | null
           estado_target?: string | null
           facturacion?: number | null
+          fecha_enriquecimiento?: string | null
+          fuente_enriquecimiento?: string | null
           id?: string
           import_log_id?: string | null
           margen_ebitda?: number | null
@@ -5404,6 +5421,7 @@ export type Database = {
           potencial_search_fund?: boolean | null
           revenue?: number | null
           sector?: string
+          sector_id?: string | null
           sitio_web?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
@@ -5417,6 +5435,13 @@ export type Database = {
             columns: ["import_log_id"]
             isOneToOne: false
             referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
             referencedColumns: ["id"]
           },
           {

@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,11 +25,15 @@ import {
   CheckCircle2,
   Sparkles,
   ExternalLink,
+  FileText,
+  Target,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createEmpresa } from "@/services/empresas";
 import { addEmpresaToMandato } from "@/services/mandatos";
+import { cn } from "@/lib/utils";
 
 interface EnrichedContact {
   nombre: string;
@@ -43,12 +46,18 @@ interface EnrichedContact {
 interface EnrichedData {
   nombre: string;
   descripcion?: string;
+  actividades_destacadas?: string[];
+  cnae_codigo?: string;
+  cnae_descripcion?: string;
   sector?: string;
+  sector_id?: string;
+  sector_confianza?: 'alto' | 'medio' | 'bajo';
   empleados?: number;
   sitio_web?: string;
   ubicacion?: string;
   linkedin?: string;
   twitter?: string;
+  fuente: string;
   contactos: EnrichedContact[];
 }
 
@@ -70,13 +79,17 @@ export function EnrichFromWebDrawer({
   onSuccess,
 }: EnrichFromWebDrawerProps) {
   const [input, setInput] = useState(initialUrl || initialName);
+  const [manualUrl, setManualUrl] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [enrichedData, setEnrichedData] = useState<EnrichedData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [requireManualUrl, setRequireManualUrl] = useState(false);
+  const [searchAttempted, setSearchAttempted] = useState(false);
 
-  const handleSearch = async () => {
-    if (!input.trim()) {
+  const handleSearch = async (urlOverride?: string) => {
+    const searchInput = urlOverride || input.trim();
+    if (!searchInput) {
       toast.error("Introduce un nombre o URL");
       return;
     }
@@ -84,14 +97,28 @@ export function EnrichFromWebDrawer({
     setIsSearching(true);
     setError(null);
     setEnrichedData(null);
+    setRequireManualUrl(false);
+    setSearchAttempted(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("enrich-company", {
-        body: { input: input.trim() },
+      // Use the v2 function with better source handling
+      const { data, error: fnError } = await supabase.functions.invoke("enrich-company-v2", {
+        body: { 
+          input: searchInput,
+          manualUrl: urlOverride || undefined
+        },
       });
 
       if (fnError) throw new Error(fnError.message);
-      if (!data.success) throw new Error(data.error || "No se pudieron obtener datos");
+      
+      if (!data.success) {
+        if (data.requireManualUrl) {
+          setRequireManualUrl(true);
+          setError(data.error || "No se encontró información automáticamente");
+          return;
+        }
+        throw new Error(data.error || "No se pudieron obtener datos");
+      }
 
       const contacts = (data.data.contactos || []).map((c: any) => ({
         ...c,
@@ -126,15 +153,22 @@ export function EnrichFromWebDrawer({
 
     setIsCreating(true);
     try {
-      // Create empresa
+      // Create empresa with enriched data
       const newEmpresa = await createEmpresa({
         nombre: enrichedData.nombre,
         descripcion: enrichedData.descripcion,
         sector: enrichedData.sector,
+        sector_id: enrichedData.sector_id,
         empleados: enrichedData.empleados,
         sitio_web: enrichedData.sitio_web,
         ubicacion: enrichedData.ubicacion,
         es_target: true,
+        // New enrichment fields
+        cnae_codigo: enrichedData.cnae_codigo,
+        cnae_descripcion: enrichedData.cnae_descripcion,
+        actividades_destacadas: enrichedData.actividades_destacadas,
+        fuente_enriquecimiento: enrichedData.fuente,
+        fecha_enriquecimiento: new Date().toISOString(),
       });
 
       // Associate to mandate
@@ -168,9 +202,18 @@ export function EnrichFromWebDrawer({
 
   const handleClose = () => {
     setInput("");
+    setManualUrl("");
     setEnrichedData(null);
     setError(null);
+    setRequireManualUrl(false);
+    setSearchAttempted(false);
     onOpenChange(false);
+  };
+
+  const confidenceColors = {
+    alto: "bg-green-100 text-green-700 border-green-200",
+    medio: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    bajo: "bg-red-100 text-red-700 border-red-200",
   };
 
   return (
@@ -182,7 +225,7 @@ export function EnrichFromWebDrawer({
             Enriquecer desde Web
           </DrawerTitle>
           <DrawerDescription>
-            Introduce un nombre de empresa o URL para extraer datos automáticamente
+            Introduce un nombre de empresa o URL para extraer datos de fuentes fiables (Empresite, web oficial)
           </DrawerDescription>
         </DrawerHeader>
 
@@ -198,7 +241,7 @@ export function EnrichFromWebDrawer({
                 className="flex-1"
                 disabled={isSearching}
               />
-              <Button onClick={handleSearch} disabled={isSearching || !input.trim()}>
+              <Button onClick={() => handleSearch()} disabled={isSearching || !input.trim()}>
                 {isSearching ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -208,8 +251,41 @@ export function EnrichFromWebDrawer({
               </Button>
             </div>
 
-            {/* Error */}
-            {error && (
+            {/* Manual URL Fallback */}
+            {requireManualUrl && !enrichedData && (
+              <Card className="p-4 border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <p className="font-medium text-amber-700">No se encontró información automáticamente</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Introduce la URL directa de la empresa o su ficha en Empresite
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="https://empresite.eleconomista.es/..." 
+                        value={manualUrl}
+                        onChange={(e) => setManualUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && manualUrl && handleSearch(manualUrl)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="secondary"
+                        onClick={() => handleSearch(manualUrl)}
+                        disabled={!manualUrl || isSearching}
+                      >
+                        {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Buscar"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Error (non-manual) */}
+            {error && !requireManualUrl && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <p className="text-sm">{error}</p>
@@ -224,7 +300,7 @@ export function EnrichFromWebDrawer({
                   <div>
                     <p className="font-medium">Buscando información...</p>
                     <p className="text-sm text-muted-foreground">
-                      Esto puede tomar unos segundos
+                      Consultando fuentes: Empresite, web oficial...
                     </p>
                   </div>
                 </div>
@@ -242,22 +318,33 @@ export function EnrichFromWebDrawer({
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                   </div>
 
-                  <Card className="p-4 space-y-3">
+                  <Card className="p-4 space-y-4">
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="space-y-2">
                         <h4 className="text-lg font-medium">{enrichedData.nombre}</h4>
-                        {enrichedData.sector && (
-                          <Badge variant="secondary" className="mt-1">
-                            {enrichedData.sector}
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {enrichedData.sector && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Target className="h-3 w-3" />
+                              {enrichedData.sector}
+                            </Badge>
+                          )}
+                          {enrichedData.sector_confianza && (
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs", confidenceColors[enrichedData.sector_confianza])}
+                            >
+                              Confianza: {enrichedData.sector_confianza}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       {enrichedData.sitio_web && (
                         <a
                           href={enrichedData.sitio_web}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1 text-sm"
+                          className="text-primary hover:underline flex items-center gap-1 text-sm shrink-0"
                         >
                           <ExternalLink className="h-3 w-3" />
                           Web
@@ -266,9 +353,36 @@ export function EnrichFromWebDrawer({
                     </div>
 
                     {enrichedData.descripcion && (
-                      <p className="text-sm text-muted-foreground line-clamp-3">
+                      <p className="text-sm text-muted-foreground">
                         {enrichedData.descripcion}
                       </p>
+                    )}
+
+                    {/* Activities */}
+                    {enrichedData.actividades_destacadas && enrichedData.actividades_destacadas.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                          Actividades destacadas
+                        </div>
+                        <ul className="text-sm text-muted-foreground space-y-1 pl-5">
+                          {enrichedData.actividades_destacadas.map((act, idx) => (
+                            <li key={idx} className="list-disc">{act}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* CNAE */}
+                    {enrichedData.cnae_codigo && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Badge variant="outline" className="font-mono">
+                          CNAE: {enrichedData.cnae_codigo}
+                        </Badge>
+                        {enrichedData.cnae_descripcion && (
+                          <span className="text-muted-foreground">{enrichedData.cnae_descripcion}</span>
+                        )}
+                      </div>
                     )}
 
                     <div className="flex flex-wrap gap-3 text-sm">
@@ -306,6 +420,22 @@ export function EnrichFromWebDrawer({
                         )}
                       </div>
                     )}
+
+                    {/* Source attribution */}
+                    <div className="pt-2 border-t">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Info className="h-3 w-3" />
+                        <span>Fuente: </span>
+                        <a 
+                          href={enrichedData.fuente} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline truncate max-w-[300px]"
+                        >
+                          {enrichedData.fuente}
+                        </a>
+                      </div>
+                    </div>
                   </Card>
                 </div>
 
@@ -324,9 +454,10 @@ export function EnrichFromWebDrawer({
                       {enrichedData.contactos.map((contact, idx) => (
                         <Card
                           key={idx}
-                          className={`p-3 cursor-pointer transition-colors ${
+                          className={cn(
+                            "p-3 cursor-pointer transition-colors",
                             contact.selected ? "border-primary/50 bg-primary/5" : ""
-                          }`}
+                          )}
                           onClick={() => toggleContact(idx)}
                         >
                           <div className="flex items-center gap-3">
