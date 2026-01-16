@@ -294,7 +294,7 @@ export function InlineEditNumber({
   return (
     <span
       className={cn(
-        "cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-1 group font-mono",
+        "cursor-pointer hover:bg-muted/60 hover:text-primary transition-all inline-flex items-center gap-1.5 group font-mono rounded px-1.5 py-0.5 -mx-1.5",
         className
       )}
       onClick={(e) => {
@@ -302,11 +302,11 @@ export function InlineEditNumber({
         setIsEditing(true);
       }}
     >
-      {value ? displayValue : <span className="text-muted-foreground">{placeholder}</span>}
+      {value ? displayValue : <span className="text-muted-foreground/70 italic text-sm">Añadir...</span>}
       {showSuccess ? (
         <Check className="w-3 h-3 text-green-500" />
       ) : (
-        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+        <Pencil className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary transition-colors" />
       )}
     </span>
   );
