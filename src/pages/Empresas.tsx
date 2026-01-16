@@ -164,6 +164,35 @@ export default function Empresas() {
       )
     },
     {
+      key: "ebitda",
+      label: "EBITDA",
+      sortable: true,
+      render: (value: number, row: Empresa) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'ebitda', newValue)}
+            format={formatCurrency}
+            className="text-sm"
+          />
+        </div>
+      )
+    },
+    {
+      key: "año_datos_financieros",
+      label: "Año",
+      sortable: true,
+      render: (value: number, row: Empresa) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditNumber
+            value={value}
+            onSave={async (newValue) => handleInlineUpdate(row.id, 'año_datos_financieros', newValue)}
+            className="text-sm text-muted-foreground"
+          />
+        </div>
+      )
+    },
+    {
       key: "empleados",
       label: "Empleados",
       sortable: true,
