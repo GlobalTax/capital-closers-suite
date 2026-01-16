@@ -11,6 +11,7 @@ import { NuevoEmpresaDrawer } from "@/components/empresas/NuevoEmpresaDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { useEmpresasPaginated, useUpdateEmpresa } from "@/hooks/queries/useEmpresas";
 import { useEmpresasRealtime } from "@/hooks/useEmpresasRealtime";
+import { useSectorOptions } from "@/hooks/useSectors";
 import type { Empresa } from "@/types";
 import { Building2, Star, TrendingUp, Activity, Globe, Sparkles, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -26,16 +27,16 @@ import {
   InlineEditSelect 
 } from "@/components/shared/InlineEdit";
 
-const SECTOR_OPTIONS = [
+// Fallback options while sectors load from DB
+const SECTOR_OPTIONS_FALLBACK = [
   { value: "Tecnología", label: "Tecnología" },
-  { value: "Industrial", label: "Industrial" },
-  { value: "Servicios", label: "Servicios" },
-  { value: "Consumo", label: "Consumo" },
-  { value: "Salud", label: "Salud" },
+  { value: "Industrial y Manufacturero", label: "Industrial y Manufacturero" },
+  { value: "Servicios Financieros", label: "Servicios Financieros" },
+  { value: "Retail y Consumo", label: "Retail y Consumo" },
+  { value: "Salud y Biotecnología", label: "Salud y Biotecnología" },
   { value: "Educación", label: "Educación" },
-  { value: "Energía", label: "Energía" },
+  { value: "Energía y Renovables", label: "Energía y Renovables" },
   { value: "Inmobiliario", label: "Inmobiliario" },
-  { value: "Finanzas", label: "Finanzas" },
   { value: "Otros", label: "Otros" },
 ];
 
@@ -57,9 +58,13 @@ export default function Empresas() {
   
   const { data: result, isLoading } = useEmpresasPaginated(page, DEFAULT_PAGE_SIZE, filtroTarget);
   const { mutateAsync: updateEmpresa } = useUpdateEmpresa();
+  const { options: sectorOptions } = useSectorOptions();
   useEmpresasRealtime();
 
   const empresas = result?.data || [];
+  
+  // Use dynamic sectors from CR Directory, with fallback
+  const SECTOR_OPTIONS = sectorOptions.length > 0 ? sectorOptions : SECTOR_OPTIONS_FALLBACK;
 
   // Restauración de scroll
   useScrollRestoration();

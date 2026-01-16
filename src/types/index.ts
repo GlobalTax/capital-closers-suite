@@ -63,6 +63,14 @@ export interface Empresa {
   // Año de los datos financieros
   año_datos_financieros?: number;
   
+  // Campos de enriquecimiento (fuentes externas)
+  cnae_codigo?: string;
+  cnae_descripcion?: string;
+  actividades_destacadas?: string[];
+  fuente_enriquecimiento?: string;
+  fecha_enriquecimiento?: string;
+  sector_id?: string; // FK to sectors table (CR Directory)
+  
   created_at: string;
   updated_at: string;
 }
