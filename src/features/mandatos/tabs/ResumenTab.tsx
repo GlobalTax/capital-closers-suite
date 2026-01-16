@@ -1,6 +1,6 @@
 import { MandatoTimeline } from "@/components/mandatos/MandatoTimeline";
 import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifico";
-import { InformacionFinancieraEmpresa } from "@/components/mandatos/InformacionFinancieraEmpresa";
+import { InformacionFinancieraEditable } from "@/components/mandatos/InformacionFinancieraEditable";
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { ServicioHonorariosCard } from "@/components/mandatos/ServicioHonorariosCard";
 import type { Mandato } from "@/types";
@@ -9,9 +9,10 @@ interface ResumenTabProps {
   mandato: Mandato;
   onAddContacto: () => void;
   onAsociarContacto: () => void;
+  onUpdateEmpresa?: (empresaId: string, field: string, value: number | null) => Promise<void>;
 }
 
-export function ResumenTab({ mandato, onAddContacto, onAsociarContacto }: ResumenTabProps) {
+export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdateEmpresa }: ResumenTabProps) {
   const isServicio = mandato.categoria && mandato.categoria !== "operacion_ma";
 
   return (
@@ -29,7 +30,10 @@ export function ResumenTab({ mandato, onAddContacto, onAsociarContacto }: Resume
       {!isServicio && <MandatoTipoEspecifico mandato={mandato} />}
       
       {mandato.empresa_principal && (
-        <InformacionFinancieraEmpresa empresa={mandato.empresa_principal} />
+        <InformacionFinancieraEditable 
+          empresa={mandato.empresa_principal} 
+          onUpdate={onUpdateEmpresa}
+        />
       )}
       
       <ContactosClaveCard

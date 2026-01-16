@@ -25,6 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
 import { CostSummaryCard } from "@/components/mandatos/CostSummaryCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { TimeEntry, TimeStats } from "@/types";
 import { handleError } from "@/lib/error-handler";
 export default function MandatoDetalle() {
@@ -137,6 +139,20 @@ export default function MandatoDetalle() {
             mandato={mandato}
             onAddContacto={() => setOpenContactoDrawer(true)}
             onAsociarContacto={() => setOpenAsociarDialog(true)}
+            onUpdateEmpresa={async (empresaId, field, value) => {
+              const { error } = await supabase
+                .from('empresas')
+                .update({ [field]: value })
+                .eq('id', empresaId);
+              
+              if (error) {
+                toast.error('Error al actualizar');
+                throw error;
+              }
+              
+              toast.success('Actualizado');
+              refetch();
+            }}
           />
         </TabsContent>
 
