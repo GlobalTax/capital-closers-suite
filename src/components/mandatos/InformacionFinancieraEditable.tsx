@@ -153,7 +153,7 @@ export function InformacionFinancieraEditable({ empresa, loading, onUpdate }: In
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {editableKpis.map((kpi) => (
-            <div key={kpi.field} className="space-y-2">
+            <div key={kpi.field} className="space-y-1.5 p-2 rounded-lg hover:bg-muted/30 transition-colors">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <kpi.icon className="h-4 w-4" />
                 <p className="text-sm">{kpi.label}</p>
@@ -164,10 +164,9 @@ export function InformacionFinancieraEditable({ empresa, loading, onUpdate }: In
                   onSave={(v) => handleSave(kpi.field, v)}
                   format={kpi.format as (v: number | null) => string}
                   className="text-lg font-medium"
-                  placeholder="—"
                 />
               ) : (
-                <p className="text-lg font-medium">
+                <p className="text-lg font-medium px-1.5">
                   {kpi.value != null ? kpi.format(kpi.value) : '—'}
                 </p>
               )}
