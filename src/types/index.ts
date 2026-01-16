@@ -60,6 +60,9 @@ export interface Empresa {
   // Search Fund
   potencial_search_fund?: boolean;
   
+  // Año de los datos financieros
+  año_datos_financieros?: number;
+  
   created_at: string;
   updated_at: string;
 }

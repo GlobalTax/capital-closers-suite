@@ -88,6 +88,9 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
   { key: "potencial_sf", label: "SF", visible: true },
   { key: "teaser", label: "Teaser", visible: true },
+  { key: "facturacion", label: "Facturación", visible: true },
+  { key: "ebitda", label: "EBITDA", visible: true },
+  { key: "año_datos", label: "Año", visible: true },
   { key: "tipo", label: "Tipo", visible: true },
   { key: "estado", label: "Estado", visible: true },
   { key: "categoria", label: "Categoría", visible: false },
@@ -656,6 +659,40 @@ export default function Mandatos() {
           </TooltipProvider>
         );
       },
+    },
+    facturacion: {
+      key: "facturacion",
+      label: "Facturación",
+      sortable: true,
+      render: (_: any, row: Mandato) => (
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {row.empresa_principal?.facturacion 
+            ? formatCurrency(row.empresa_principal.facturacion) 
+            : "—"}
+        </span>
+      ),
+    },
+    ebitda: {
+      key: "ebitda",
+      label: "EBITDA",
+      sortable: true,
+      render: (_: any, row: Mandato) => (
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {row.empresa_principal?.ebitda 
+            ? formatCurrency(row.empresa_principal.ebitda) 
+            : "—"}
+        </span>
+      ),
+    },
+    año_datos: {
+      key: "año_datos",
+      label: "Año",
+      sortable: true,
+      render: (_: any, row: Mandato) => (
+        <span className="text-sm text-muted-foreground">
+          {(row.empresa_principal as any)?.año_datos_financieros || "—"}
+        </span>
+      ),
     },
     tipo: {
       key: "tipo",
