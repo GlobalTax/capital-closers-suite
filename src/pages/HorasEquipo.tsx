@@ -7,6 +7,7 @@ import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
 import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
 import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
 import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
+import { ValueVsInvestmentChart } from "@/components/mandatos/ValueVsInvestmentChart";
 import { AtRiskMandatosPanel } from "@/components/mandatos/AtRiskMandatosPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,6 +145,14 @@ export default function HorasEquipo() {
       <InvestmentByMandatoChart 
         entries={timeEntries} 
         limit={10}
+        loading={loading}
+      />
+
+      {/* Strategic Scatter Plot */}
+      <ValueVsInvestmentChart
+        entries={timeEntries}
+        hoursThreshold={40}
+        probabilityThreshold={50}
         loading={loading}
       />
 
