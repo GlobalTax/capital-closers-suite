@@ -14,6 +14,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,13 +32,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { createEmpresa } from "@/services/empresas";
 import { createContacto } from "@/services/contactos";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import { toast } from "sonner";
 import { TARGET_ESTADOS, NIVEL_INTERES } from "@/lib/constants";
 import type { NivelInteres, TargetEstado } from "@/types";
-import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe, Loader2 } from "lucide-react";
+import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe, Loader2, AlertCircle } from "lucide-react";
 
 const SECTORES = [
   "Tecnología",
@@ -53,17 +55,29 @@ const SECTORES = [
 ];
 
 const formSchema = z.object({
-  nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100, "Máximo 100 caracteres"),
+  nombre: z.string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede superar 100 caracteres")
+    .trim(),
   sector: z.string().min(1, "Selecciona un sector"),
-  facturacion: z.string().optional(),
-  empleados: z.coerce.number().min(0).optional(),
-  ubicacion: z.string().optional(),
-  interes: z.enum(["Alto", "Medio", "Bajo"] as const),
-  estado: z.enum(TARGET_ESTADOS),
+  facturacion: z.string().max(50, "Máximo 50 caracteres").optional(),
+  empleados: z.coerce.number()
+    .min(0, "El número de empleados no puede ser negativo")
+    .max(999999, "Número demasiado grande")
+    .optional()
+    .nullable()
+    .transform(v => (v === 0 || v === undefined) ? null : v),
+  ubicacion: z.string().max(200, "La ubicación no puede superar 200 caracteres").optional(),
+  interes: z.enum(["Alto", "Medio", "Bajo"] as const, {
+    required_error: "Selecciona un nivel de interés",
+  }),
+  estado: z.enum(TARGET_ESTADOS, {
+    required_error: "Selecciona un estado",
+  }),
   descripcion: z.string().max(500, "Máximo 500 caracteres").optional(),
-  contactoPrincipal: z.string().max(100).optional(),
+  contactoPrincipal: z.string().max(100, "Máximo 100 caracteres").optional(),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
-  telefono: z.string().optional(),
+  telefono: z.string().max(30, "Máximo 30 caracteres").optional(),
   sitioWeb: z.string().url("URL inválida").optional().or(z.literal("")),
 });
 
@@ -81,11 +95,12 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       nombre: "",
       sector: "",
       facturacion: "",
-      empleados: 0,
+      empleados: null,
       ubicacion: "",
       interes: "Medio",
       estado: "pendiente",
@@ -99,7 +114,6 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
 
   const parseFacturacion = (facturacion: string): number | undefined => {
     if (!facturacion) return undefined;
-    // Extraer número de strings como "€5M", "5.000.000", "5000000"
     const cleaned = facturacion.replace(/[€$,.\s]/g, '').replace(/M/gi, '000000').replace(/K/gi, '000');
     const value = parseInt(cleaned, 10);
     return isNaN(value) ? undefined : value;
@@ -108,21 +122,21 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      // Crear la empresa con TODOS los campos capturados
+      console.log('[NuevoTargetDrawer] Submitting:', { values, mandatoId });
+
       const nuevaEmpresa = await createEmpresa({
-        nombre: values.nombre,
+        nombre: values.nombre.trim(),
         sector: values.sector,
-        descripcion: values.descripcion,
+        descripcion: values.descripcion?.trim() || undefined,
         es_target: true,
         estado_target: values.estado as TargetEstado,
         nivel_interes: values.interes as NivelInteres,
-        ubicacion: values.ubicacion || undefined,
+        ubicacion: values.ubicacion?.trim() || undefined,
         empleados: values.empleados || undefined,
         facturacion: parseFacturacion(values.facturacion || ""),
-        sitio_web: values.sitioWeb || undefined,
+        sitio_web: values.sitioWeb?.trim() || undefined,
       });
 
-      // Si hay datos de contacto, crear el contacto asociado
       if (values.contactoPrincipal || values.email) {
         const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
         await createContacto({
@@ -134,7 +148,6 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
         });
       }
 
-      // Si hay mandatoId, asociar la empresa al mandato como target
       if (mandatoId) {
         await addEmpresaToMandato(mandatoId, nuevaEmpresa.id, "target", values.descripcion);
       }
@@ -143,13 +156,36 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
       form.reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
-      toast.error("Error al crear la empresa target");
-      console.error(error);
+    } catch (error: any) {
+      console.error('[NuevoTargetDrawer] Error:', error);
+
+      const errorCode = error?.metadata?.code || error?.code;
+      const errorMessage = error?.metadata?.message || error?.message || 'Error desconocido';
+
+      if (errorCode === '23505') {
+        toast.error("Empresa duplicada", {
+          description: "Ya existe una empresa con este nombre en el sistema.",
+        });
+      } else if (errorCode === '42501' || errorCode === 'PGRST301') {
+        toast.error("Sin permisos", {
+          description: "Tu sesión puede haber expirado. Recarga la página e intenta de nuevo.",
+        });
+      } else if (errorCode === '22001') {
+        toast.error("Datos demasiado largos", {
+          description: "Alguno de los campos excede la longitud permitida.",
+        });
+      } else {
+        toast.error("Error al crear la empresa target", {
+          description: errorMessage,
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const formErrors = Object.entries(form.formState.errors);
+  const isFormValid = form.formState.isValid;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -163,6 +199,26 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="px-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+            {/* Resumen de errores */}
+            {formErrors.length > 0 && form.formState.isSubmitted && (
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Por favor corrige {formErrors.length} campo(s):</span>
+                </div>
+                <ul className="text-sm text-destructive/80 mt-1 ml-6 list-disc">
+                  {formErrors.map(([key, error]) => (
+                    <li key={key}>{error?.message as string}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Indicador de campos obligatorios */}
+            <p className="text-xs text-muted-foreground mb-4">
+              <span className="text-destructive">*</span> Campos obligatorios
+            </p>
+
             <div className="space-y-6 pb-4">
               {/* Información Básica */}
               <div className="space-y-4">
@@ -437,14 +493,27 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
                 Cancelar
               </Button>
             </DrawerClose>
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              className="flex-1"
-              disabled={loading}
-            >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {loading ? "Creando..." : "Crear Empresa Target"}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex-1">
+                    <Button
+                      onClick={form.handleSubmit(onSubmit)}
+                      className="w-full"
+                      disabled={loading || !isFormValid}
+                    >
+                      {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {loading ? "Creando..." : "Crear Empresa Target"}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isFormValid && !loading && (
+                  <TooltipContent>
+                    <p>Completa los campos obligatorios para continuar</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </DrawerFooter>
       </DrawerContent>
