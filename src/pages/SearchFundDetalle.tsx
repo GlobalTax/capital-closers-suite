@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchFundPeople } from '@/hooks/useSearchFundPeople';
+import { useSearchFundsRealtime } from '@/hooks/useSearchFundsRealtime';
 import type { SearchFund } from '@/types/searchFunds';
 import { MATCH_STATUS_LABELS, MATCH_STATUS_COLORS, type MatchStatus } from '@/types/searchFunds';
 
@@ -73,6 +74,10 @@ function formatRange(min: number | null, max: number | null): string {
 export default function SearchFundDetalle() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  // Activar sincronización en tiempo real
+  useSearchFundsRealtime();
+  
   const [industriasOpen, setIndustriasOpen] = useState(true);
   const [criteriosOpen, setCriteriosOpen] = useState(true);
   const [detallesOpen, setDetallesOpen] = useState(true);

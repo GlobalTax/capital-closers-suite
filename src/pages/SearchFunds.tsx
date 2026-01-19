@@ -42,6 +42,7 @@ import {
   useSearchFundSectors,
   type SearchFundWithStats,
 } from '@/hooks/useSearchFundsWithStats';
+import { useSearchFundsRealtime } from '@/hooks/useSearchFundsRealtime';
 import { useNavigate } from 'react-router-dom';
 
 function formatCurrency(value: number | null): string {
@@ -75,6 +76,10 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
 
 export default function SearchFunds() {
   const navigate = useNavigate();
+  
+  // Activar sincronización en tiempo real
+  useSearchFundsRealtime();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
