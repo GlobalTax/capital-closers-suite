@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { TimeEntry, TimeEntryWorkType, TimeEntryStatus, TimeStats, TeamStats, MandatoInfo } from "@/types";
+import type { TimeEntry, TimeEntryWorkType, TimeEntryStatus, TimeEntryValueType, TimeStats, TeamStats, MandatoInfo, ValueTypeStats } from "@/types";
 
 // Helper to validate UUID
 const isValidUUID = (str: string): boolean => {
@@ -32,6 +32,7 @@ export const fetchTimeEntries = async (
       ),
       mandato:mandatos!inner(
         id,
+        codigo,
         descripcion,
         tipo,
         estado
@@ -77,7 +78,8 @@ export const fetchTimeEntries = async (
       full_name: usersMap.get(entry.user_id)!.full_name || 'Usuario',
       email: usersMap.get(entry.user_id)!.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo
+    mandato: entry.mandato as MandatoInfo,
+    work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
 
@@ -105,6 +107,7 @@ export const fetchMyTimeEntries = async (
       ),
       mandato:mandatos!inner(
         id,
+        codigo,
         descripcion,
         tipo,
         estado
@@ -147,7 +150,8 @@ export const fetchMyTimeEntries = async (
       full_name: adminUser.full_name || 'Usuario',
       email: adminUser.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo
+    mandato: entry.mandato as MandatoInfo,
+    work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
 
@@ -162,6 +166,7 @@ export const fetchAllTimeEntries = async (
     mandatoId?: string;
     status?: TimeEntryStatus;
     workType?: TimeEntryWorkType;
+    valueType?: TimeEntryValueType;
     onlyBillable?: boolean;
   }
 ): Promise<TimeEntry[]> => {
@@ -177,6 +182,7 @@ export const fetchAllTimeEntries = async (
       ),
       mandato:mandatos!inner(
         id,
+        codigo,
         descripcion,
         tipo,
         estado
@@ -213,6 +219,9 @@ export const fetchAllTimeEntries = async (
   if (filters?.onlyBillable) {
     query = query.eq('is_billable', true);
   }
+  if (filters?.valueType) {
+    query = query.eq('value_type', filters.valueType);
+  }
 
   const { data, error } = await query;
   if (error) throw error;
@@ -233,7 +242,8 @@ export const fetchAllTimeEntries = async (
       full_name: usersMap.get(entry.user_id)!.full_name || 'Usuario',
       email: usersMap.get(entry.user_id)!.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo
+    mandato: entry.mandato as MandatoInfo,
+    work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
 
@@ -580,4 +590,104 @@ export const stopTimer = async (id: string): Promise<TimeEntry> => {
   return updateTimeEntry(id, {
     end_time: endTime
   });
+};
+
+// ============================================
+// VALUE TYPE STATS (Strategic Analysis)
+// ============================================
+export const getValueTypeStats = async (
+  mandatoId?: string,
+  dateRange?: { start: string; end: string }
+): Promise<ValueTypeStats[]> => {
+  const entries = await fetchAllTimeEntries({
+    mandatoId,
+    startDate: dateRange?.start,
+    endDate: dateRange?.end,
+    status: 'approved'
+  });
+  
+  const byValueType: Record<TimeEntryValueType, { minutes: number; count: number }> = {
+    core_ma: { minutes: 0, count: 0 },
+    soporte: { minutes: 0, count: 0 },
+    bajo_valor: { minutes: 0, count: 0 }
+  };
+  
+  entries.forEach(e => {
+    // Default to 'core_ma' for entries without value_type (backward compatibility)
+    const vt: TimeEntryValueType = (e.value_type as TimeEntryValueType) || 'core_ma';
+    byValueType[vt].minutes += e.duration_minutes || 0;
+    byValueType[vt].count += 1;
+  });
+  
+  const totalMinutes = Object.values(byValueType).reduce((sum, v) => sum + v.minutes, 0);
+  
+  return (['core_ma', 'soporte', 'bajo_valor'] as TimeEntryValueType[]).map(vt => ({
+    value_type: vt,
+    total_hours: byValueType[vt].minutes / 60,
+    percentage: totalMinutes > 0 ? (byValueType[vt].minutes / totalMinutes) * 100 : 0,
+    entries_count: byValueType[vt].count
+  }));
+};
+
+// ============================================
+// MANDATO INVESTMENT ANALYSIS
+// ============================================
+export interface MandatoInvestmentStats {
+  mandato_id: string;
+  mandato_codigo?: string;
+  mandato_descripcion?: string;
+  total_hours: number;
+  core_ma_hours: number;
+  soporte_hours: number;
+  bajo_valor_hours: number;
+  billable_hours: number;
+  value_efficiency: number; // % of core_ma hours vs total
+}
+
+export const getMandatoInvestmentStats = async (
+  mandatoId: string
+): Promise<MandatoInvestmentStats> => {
+  const entries = await fetchTimeEntries(mandatoId, { status: 'approved' });
+  
+  let totalMinutes = 0;
+  let coreMaMinutes = 0;
+  let soporteMinutes = 0;
+  let bajoValorMinutes = 0;
+  let billableMinutes = 0;
+  
+  entries.forEach(e => {
+    const duration = e.duration_minutes || 0;
+    totalMinutes += duration;
+    
+    const vt: TimeEntryValueType = (e.value_type as TimeEntryValueType) || 'core_ma';
+    switch (vt) {
+      case 'core_ma':
+        coreMaMinutes += duration;
+        break;
+      case 'soporte':
+        soporteMinutes += duration;
+        break;
+      case 'bajo_valor':
+        bajoValorMinutes += duration;
+        break;
+    }
+    
+    if (e.is_billable) {
+      billableMinutes += duration;
+    }
+  });
+  
+  const mandato = entries[0]?.mandato;
+  
+  return {
+    mandato_id: mandatoId,
+    mandato_codigo: mandato?.codigo,
+    mandato_descripcion: mandato?.descripcion,
+    total_hours: totalMinutes / 60,
+    core_ma_hours: coreMaMinutes / 60,
+    soporte_hours: soporteMinutes / 60,
+    bajo_valor_hours: bajoValorMinutes / 60,
+    billable_hours: billableMinutes / 60,
+    value_efficiency: totalMinutes > 0 ? (coreMaMinutes / totalMinutes) * 100 : 0
+  };
 };

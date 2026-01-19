@@ -376,6 +376,33 @@ export type TimeEntryWorkType =
 
 export type TimeEntryStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
 
+// ============================================
+// TIME ENTRY VALUE CLASSIFICATION
+// ============================================
+export type TimeEntryValueType = 'core_ma' | 'soporte' | 'bajo_valor';
+
+export const VALUE_TYPE_CONFIG: Record<TimeEntryValueType, { 
+  label: string; 
+  color: string; 
+  description: string;
+}> = {
+  core_ma: { 
+    label: 'Core M&A', 
+    color: '#10B981', 
+    description: 'Trabajo directo en operaciones' 
+  },
+  soporte: { 
+    label: 'Soporte', 
+    color: '#F59E0B', 
+    description: 'Apoyo a operaciones activas' 
+  },
+  bajo_valor: { 
+    label: 'Bajo Valor', 
+    color: '#EF4444', 
+    description: 'Tareas administrativas/rutinarias' 
+  }
+};
+
 // Tipo de tarea configurable desde admin
 export interface WorkTaskType {
   id: string;
@@ -383,8 +410,15 @@ export interface WorkTaskType {
   description?: string | null;
   is_active: boolean;
   sort_order: number;
+  default_value_type?: TimeEntryValueType;
   created_at: string;
   updated_at: string;
+}
+
+// Partial type for joined queries (only id and name)
+export interface WorkTaskTypeBasic {
+  id: string;
+  name: string;
 }
 
 export interface TimeEntry {
@@ -406,6 +440,9 @@ export interface TimeEntry {
   notes?: string;
   rejection_reason?: string;
   
+  // Clasificación de valor estratégico
+  value_type?: TimeEntryValueType;
+  
   approved_by?: string;
   approved_at?: string;
   
@@ -424,7 +461,7 @@ export interface TimeEntry {
     fase: ChecklistFase;
   };
   mandato?: MandatoInfo;
-  work_task_type?: WorkTaskType;
+  work_task_type?: WorkTaskTypeBasic;
 }
 
 export interface TimeStats {
@@ -434,6 +471,16 @@ export interface TimeStats {
   hours_by_phase: { fase: string; hours: number }[];
   hours_by_user: { user_id: string; user_name: string; hours: number }[];
   hours_by_type: { work_type: string; hours: number }[];
+  // Estadísticas por tipo de valor
+  hours_by_value_type?: { value_type: TimeEntryValueType; hours: number; percentage: number }[];
+}
+
+// Estadísticas de tipo de valor para dashboards
+export interface ValueTypeStats {
+  value_type: TimeEntryValueType;
+  total_hours: number;
+  percentage: number;
+  entries_count: number;
 }
 
 // ============================================
@@ -628,6 +675,7 @@ export interface TimeFilterState {
 
 export interface MandatoInfo {
   id: string;
+  codigo?: string;
   descripcion: string;
   tipo: MandatoTipo;
   estado: MandatoEstado;
