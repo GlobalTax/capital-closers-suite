@@ -89,15 +89,32 @@ serve(async (req) => {
     }
 
     // Verificar que el usuario es super_admin
-    const { data: adminUser } = await supabaseAdmin
+    console.log(`[${requestId}] Checking role for user: ${callingUser.id}`)
+    
+    const { data: adminUser, error: roleError } = await supabaseAdmin
       .from('admin_users')
-      .select('role')
+      .select('role, email, is_active')
       .eq('user_id', callingUser.id)
       .single()
 
-    if (adminUser?.role !== 'super_admin') {
+    console.log(`[${requestId}] Role check result:`, { 
+      adminUser, 
+      roleError: roleError?.message,
+      role: adminUser?.role 
+    })
+
+    if (roleError) {
+      console.error(`[${requestId}] Error fetching admin user:`, roleError)
       return new Response(
-        JSON.stringify({ error: 'Solo los super administradores pueden crear usuarios' }),
+        JSON.stringify({ error: 'Error al verificar permisos', request_id: requestId }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!adminUser || adminUser.role !== 'super_admin') {
+      console.warn(`[${requestId}] Non-super_admin attempted user creation. Role: ${adminUser?.role || 'none'}`)
+      return new Response(
+        JSON.stringify({ error: 'Solo los super administradores pueden crear usuarios', request_id: requestId }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
