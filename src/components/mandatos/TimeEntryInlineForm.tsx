@@ -164,7 +164,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         work_type: 'Otro',
         value_type: valueType,
         is_billable: isBillable,
-        status: 'draft',
+        status: 'approved',
         notes: notes.trim() || undefined,
         work_task_type_id: workTaskTypeId
       });
