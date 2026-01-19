@@ -7,6 +7,7 @@ import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
 import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
 import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
 import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
+import { AtRiskMandatosPanel } from "@/components/mandatos/AtRiskMandatosPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllTimeEntries, getAllTimeStats } from "@/services/timeTracking";
@@ -122,6 +123,14 @@ export default function HorasEquipo() {
       />
 
       <TeamTimeStats stats={teamStats} loading={loading} />
+
+      {/* At-Risk Mandatos Panel */}
+      <AtRiskMandatosPanel
+        entries={timeEntries}
+        minHoursThreshold={30}
+        maxProbability={40}
+        loading={loading}
+      />
 
       <TimeFilters
         filters={filters}

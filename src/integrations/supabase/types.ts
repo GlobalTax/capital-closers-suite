@@ -3012,9 +3012,11 @@ export type Database = {
           email_valid: boolean | null
           employee_range: string
           empresa_id: string | null
+          fbclid: string | null
           final_valuation: number | null
           followup_count: number | null
           form_submitted_at: string | null
+          gclid: string | null
           growth_rate: number | null
           has_adjustments: boolean | null
           id: string
@@ -3050,6 +3052,11 @@ export type Database = {
           unique_token: string | null
           user_agent: string | null
           user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           valuation_range_max: number | null
           valuation_range_min: number | null
           valuation_status: string | null
@@ -3117,9 +3124,11 @@ export type Database = {
           email_valid?: boolean | null
           employee_range: string
           empresa_id?: string | null
+          fbclid?: string | null
           final_valuation?: number | null
           followup_count?: number | null
           form_submitted_at?: string | null
+          gclid?: string | null
           growth_rate?: number | null
           has_adjustments?: boolean | null
           id?: string
@@ -3155,6 +3164,11 @@ export type Database = {
           unique_token?: string | null
           user_agent?: string | null
           user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           valuation_range_max?: number | null
           valuation_range_min?: number | null
           valuation_status?: string | null
@@ -3222,9 +3236,11 @@ export type Database = {
           email_valid?: boolean | null
           employee_range?: string
           empresa_id?: string | null
+          fbclid?: string | null
           final_valuation?: number | null
           followup_count?: number | null
           form_submitted_at?: string | null
+          gclid?: string | null
           growth_rate?: number | null
           has_adjustments?: boolean | null
           id?: string
@@ -3260,6 +3276,11 @@ export type Database = {
           unique_token?: string | null
           user_agent?: string | null
           user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           valuation_range_max?: number | null
           valuation_range_min?: number | null
           valuation_status?: string | null
