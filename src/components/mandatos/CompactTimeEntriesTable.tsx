@@ -165,18 +165,12 @@ export function CompactTimeEntriesTable({
   // Empty state
   if (entries.length === 0) {
     return (
-      <div className="text-center py-16 animate-in fade-in-50 duration-300">
-        <Timer className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-        <p className="text-lg font-medium text-foreground">Aún no hay registros esta semana</p>
-        <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-          Usa el timer global o registra tiempo manualmente
+      <div className="text-center py-12 animate-in fade-in-50 duration-300">
+        <Timer className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+        <p className="text-base font-medium text-foreground">Sin registros en este período</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Usa el formulario de arriba para registrar tiempo
         </p>
-        {onOpenDialog && (
-          <Button className="mt-6" onClick={onOpenDialog}>
-            <Timer className="mr-2 h-4 w-4" />
-            Registrar Tiempo
-          </Button>
-        )}
       </div>
     );
   }

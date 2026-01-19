@@ -1,12 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
-import { Timer } from "lucide-react";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { CompactTimeEntriesTable } from "@/components/mandatos/CompactTimeEntriesTable";
-import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
+import { TimeEntryInlineForm } from "@/components/mandatos/TimeEntryInlineForm";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
@@ -19,7 +15,6 @@ export default function MisHoras() {
   const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
   const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [availableTasks, setAvailableTasks] = useState<MandatoChecklistTask[]>([]);
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -143,19 +138,10 @@ export default function MisHoras() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header with prominent action */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mis Horas</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Tu inversión de tiempo</p>
-        </div>
-        <Button 
-          onClick={() => setDialogOpen(true)}
-          className="px-5"
-        >
-          <Timer className="mr-2 h-4 w-4" />
-          Registrar Tiempo
-        </Button>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Mis Horas</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Tu inversión de tiempo</p>
       </div>
 
       {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
@@ -208,6 +194,9 @@ export default function MisHoras() {
         </div>
       </div>
 
+      {/* Inline Time Entry Form */}
+      <TimeEntryInlineForm onSuccess={loadMyTimeData} />
+
       {/* Filter Bar - Horizontal chips */}
       <TimeFilterBar 
         filters={filters} 
@@ -230,19 +219,9 @@ export default function MisHoras() {
             currentUserId={currentUserId} 
             isAdmin={isAdmin} 
             onRefresh={loadMyTimeData}
-            onOpenDialog={() => setDialogOpen(true)}
           />
         )}
       </div>
-
-      <TimeTrackingDialog 
-        open={dialogOpen} 
-        onOpenChange={setDialogOpen} 
-        onSuccess={() => { 
-          setDialogOpen(false); 
-          loadMyTimeData(); 
-        }} 
-      />
     </div>
   );
 }
