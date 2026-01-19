@@ -1,11 +1,63 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Square } from 'lucide-react';
+import { Play, Pause, Square, ChevronDown, Users, FileText, Handshake, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTimerStore, formatTime } from '@/stores/useTimerStore';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useTimerStore, formatTime, TimeEntryValueType } from '@/stores/useTimerStore';
+import { useAllWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { cn } from '@/lib/utils';
 
+// Quick actions configuration
+const QUICK_ACTIONS = [
+  {
+    id: 'compradores',
+    label: 'Compradores/Vendedores',
+    icon: Users,
+    workTaskTypeName: 'Potenciales Compradores / Vendedores',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'datapack',
+    label: 'Datapack',
+    icon: FileText,
+    workTaskTypeName: 'Datapack',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'reunion',
+    label: 'Reunión',
+    icon: Handshake,
+    workTaskTypeName: 'Reunión / Puesta en Contacto',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'interno',
+    label: 'Trabajo interno',
+    icon: Building2,
+    workTaskTypeName: 'Material Interno',
+    valueType: 'soporte' as TimeEntryValueType,
+  },
+];
+
 export function GlobalTimer() {
-  const { timerState, startTimer, pauseTimer, resumeTimer, stopTimer, getElapsedSeconds } = useTimerStore();
+  const { 
+    timerState, 
+    startTimer, 
+    startTimerWithPreset,
+    pauseTimer, 
+    resumeTimer, 
+    stopTimer, 
+    getElapsedSeconds,
+    presetWorkTaskTypeName 
+  } = useTimerStore();
+  const { data: workTaskTypes } = useAllWorkTaskTypes();
   const [displayTime, setDisplayTime] = useState('00:00:00');
   
   // Update display every second when running
@@ -25,18 +77,66 @@ export function GlobalTimer() {
     return () => clearInterval(interval);
   }, [timerState, getElapsedSeconds]);
   
-  // Idle state - show start button
+  const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
+    // Find the work task type ID by name
+    const workTaskType = workTaskTypes?.find(t => t.name === action.workTaskTypeName);
+    
+    startTimerWithPreset({
+      workTaskTypeId: workTaskType?.id || '',
+      workTaskTypeName: action.workTaskTypeName,
+      valueType: action.valueType,
+    });
+  };
+  
+  // Idle state - show dropdown with quick actions
   if (timerState === 'idle') {
     return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="gap-2 h-8"
-        onClick={startTimer}
-      >
-        <Play className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Iniciar</span>
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2 h-8">
+            <Play className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Iniciar</span>
+            <ChevronDown className="h-3 w-3 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        
+        <DropdownMenuContent align="end" className="w-64">
+          {/* Normal start */}
+          <DropdownMenuItem onClick={startTimer} className="gap-2">
+            <Play className="h-4 w-4" />
+            Iniciar trabajo
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+            ⚡ Acciones Rápidas
+          </DropdownMenuLabel>
+          
+          {/* Quick actions */}
+          {QUICK_ACTIONS.map((action) => (
+            <DropdownMenuItem 
+              key={action.id}
+              onClick={() => handleQuickAction(action)}
+              className="gap-2"
+            >
+              <action.icon className="h-4 w-4 text-muted-foreground" />
+              <span className="flex-1">{action.label}</span>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-[10px] px-1.5",
+                  action.valueType === 'core_ma' 
+                    ? "border-emerald-500/30 text-emerald-600" 
+                    : "border-amber-500/30 text-amber-600"
+                )}
+              >
+                {action.valueType === 'core_ma' ? 'CORE' : 'SOPORTE'}
+              </Badge>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
   
@@ -66,6 +166,13 @@ export function GlobalTimer() {
       <span className="font-mono text-sm font-medium tabular-nums min-w-[64px]">
         {displayTime}
       </span>
+      
+      {/* Preset indicator (compact) */}
+      {presetWorkTaskTypeName && (
+        <span className="hidden md:inline text-xs text-muted-foreground truncate max-w-[100px]" title={presetWorkTaskTypeName}>
+          {presetWorkTaskTypeName.split(' ')[0]}
+        </span>
+      )}
       
       {/* Controls */}
       <div className="flex items-center gap-1">
