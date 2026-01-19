@@ -8976,6 +8976,9 @@ export type Database = {
           task_id: string | null
           updated_at: string | null
           user_id: string
+          value_type:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           work_task_type_id: string | null
           work_type: string
         }
@@ -8996,6 +8999,9 @@ export type Database = {
           task_id?: string | null
           updated_at?: string | null
           user_id: string
+          value_type?:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           work_task_type_id?: string | null
           work_type: string
         }
@@ -9016,6 +9022,9 @@ export type Database = {
           task_id?: string | null
           updated_at?: string | null
           user_id?: string
+          value_type?:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           work_task_type_id?: string | null
           work_type?: string
         }
@@ -14226,6 +14235,9 @@ export type Database = {
       work_task_types: {
         Row: {
           created_at: string | null
+          default_value_type:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -14235,6 +14247,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          default_value_type?:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -14244,6 +14259,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          default_value_type?:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -14810,6 +14828,54 @@ export type Database = {
           sector_name?: string | null
         }
         Relationships: []
+      }
+      v_time_entry_value_stats: {
+        Row: {
+          entries_count: number | null
+          mandato_id: string | null
+          total_hours: number | null
+          total_minutes: number | null
+          value_type:
+            | Database["public"]["Enums"]["time_entry_value_type"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -15455,6 +15521,7 @@ export type Database = {
         | "planificacion_fiscal"
         | "reestructuraciones"
       service_type_enum: "vender" | "comprar" | "otros"
+      time_entry_value_type: "core_ma" | "soporte" | "bajo_valor"
       transaction_status: "pendiente" | "completada" | "cancelada"
       transaction_type:
         | "ingreso"
@@ -15673,6 +15740,7 @@ export const Constants = {
         "reestructuraciones",
       ],
       service_type_enum: ["vender", "comprar", "otros"],
+      time_entry_value_type: ["core_ma", "soporte", "bajo_valor"],
       transaction_status: ["pendiente", "completada", "cancelada"],
       transaction_type: [
         "ingreso",
