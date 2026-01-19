@@ -58,6 +58,7 @@ interface ScatterDataPoint {
   z: number;
   mandato_id: string;
   codigo: string;
+  empresa_nombre?: string;
   descripcion: string;
   estado: string;
   pipeline_stage?: string;
@@ -111,10 +112,15 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 
   return (
     <div className="bg-popover border border-border rounded-lg shadow-xl p-4 min-w-[240px]">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-base">{data.codigo}</span>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span className="text-base font-medium">
+          {data.codigo}
+          {data.empresa_nombre && (
+            <span className="text-muted-foreground font-normal"> · {data.empresa_nombre}</span>
+          )}
+        </span>
         <span
-          className="text-xs px-2 py-0.5 rounded-full"
+          className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
           style={{
             backgroundColor: `${quadrantConfig.color}15`,
             color: quadrantConfig.color
@@ -181,6 +187,7 @@ export function ValueVsInvestmentChart({
     const mandatoMap = new Map<string, {
       mandato_id: string;
       codigo: string;
+      empresa_nombre?: string;
       descripcion: string;
       estado: string;
       pipeline_stage?: string;
@@ -200,6 +207,7 @@ export function ValueVsInvestmentChart({
         mandatoMap.set(entry.mandato_id, {
           mandato_id: entry.mandato_id,
           codigo: entry.mandato?.codigo || 'Sin código',
+          empresa_nombre: entry.mandato?.empresa_principal?.nombre,
           descripcion: entry.mandato?.descripcion || 'Sin descripción',
           estado: entry.mandato?.estado || 'activo',
           pipeline_stage: entry.mandato?.pipeline_stage,
@@ -219,6 +227,7 @@ export function ValueVsInvestmentChart({
         z: m.valor || 500000,
         mandato_id: m.mandato_id,
         codigo: m.codigo,
+        empresa_nombre: m.empresa_nombre,
         descripcion: m.descripcion,
         estado: m.estado,
         pipeline_stage: m.pipeline_stage,

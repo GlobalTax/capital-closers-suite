@@ -684,6 +684,8 @@ export interface MandatoInfo {
   probability?: number;
   valor?: number;
   pipeline_stage?: PipelineStage;
+  // Company info
+  empresa_principal?: { nombre: string } | null;
 }
 
 // ============================================
