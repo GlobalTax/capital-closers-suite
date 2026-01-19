@@ -1,28 +1,30 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { TeamTimeStats } from "@/components/mandatos/TeamTimeStats";
+import { ExecutiveTimeKPIs } from "@/components/mandatos/ExecutiveTimeKPIs";
 import { TimeFilters } from "@/components/mandatos/TimeFilters";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
-import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
-import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
-import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
-import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
 import { ValueVsInvestmentChart } from "@/components/mandatos/ValueVsInvestmentChart";
+import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
 import { AtRiskMandatosPanel } from "@/components/mandatos/AtRiskMandatosPanel";
+import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
+import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllTimeEntries, getAllTimeStats } from "@/services/timeTracking";
+import { fetchAllTimeEntries } from "@/services/timeTracking";
 import { toast } from "sonner";
-import type { TimeEntry, TeamStats, TimeFilterState } from "@/types";
+import type { TimeEntry, TimeFilterState } from "@/types";
 import { startOfWeek, endOfWeek } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 
 export default function HorasEquipo() {
   const { user, adminUser } = useAuth();
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [mandatos, setMandatos] = useState<{ id: string; name: string }[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [filters, setFilters] = useState<TimeFilterState>({
     startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
     endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -82,16 +84,6 @@ export default function HorasEquipo() {
       });
 
       setTimeEntries(entries);
-
-      // Load team stats
-      const stats = await getAllTimeStats({
-        startDate: filters.startDate.toISOString(),
-        endDate: filters.endDate.toISOString(),
-        userId: filters.userId !== 'all' ? filters.userId : undefined,
-        mandatoId: filters.mandatoId !== 'all' ? filters.mandatoId : undefined
-      });
-
-      setTeamStats(stats);
     } catch (error: any) {
       console.error("Error loading team time data:", error);
       toast.error("Error al cargar datos del equipo");
@@ -108,7 +100,7 @@ export default function HorasEquipo() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-medium">Acceso Denegado</h2>
+          <h2 className="text-2xl">Acceso Denegado</h2>
           <p className="text-muted-foreground">
             Solo los Super Administradores pueden acceder a esta sección.
           </p>
@@ -118,22 +110,16 @@ export default function HorasEquipo() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
-        title="Horas del Equipo"
-        description="Panel de control para supervisar el tiempo del equipo"
+        title="Inversión del Equipo"
+        description="¿Estamos invirtiendo bien el tiempo?"
       />
 
-      <TeamTimeStats stats={teamStats} loading={loading} />
+      {/* Executive KPIs - The 3-second answer */}
+      <ExecutiveTimeKPIs entries={timeEntries} loading={loading} />
 
-      {/* At-Risk Mandatos Panel */}
-      <AtRiskMandatosPanel
-        entries={timeEntries}
-        minHoursThreshold={30}
-        maxProbability={40}
-        loading={loading}
-      />
-
+      {/* Compact Filters */}
       <TimeFilters
         filters={filters}
         onChange={setFilters}
@@ -142,14 +128,7 @@ export default function HorasEquipo() {
         showUserFilter={true}
       />
 
-      {/* Main chart - Investment by Mandato */}
-      <InvestmentByMandatoChart 
-        entries={timeEntries} 
-        limit={10}
-        loading={loading}
-      />
-
-      {/* Strategic Scatter Plot */}
+      {/* Main Chart - Strategic Matrix (LARGE) */}
       <ValueVsInvestmentChart
         entries={timeEntries}
         hoursThreshold={40}
@@ -157,16 +136,43 @@ export default function HorasEquipo() {
         loading={loading}
       />
 
-      {/* Secondary charts grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HoursByWeekChart entries={timeEntries} weeks={4} />
-        <HoursByTypeChart entries={timeEntries} />
-      </div>
+      {/* Risk Alerts */}
+      <AtRiskMandatosPanel
+        entries={timeEntries}
+        minHoursThreshold={30}
+        maxProbability={40}
+        loading={loading}
+      />
 
-      <HoursTrendChart entries={timeEntries} weeks={8} />
+      {/* Investment by Mandato */}
+      <InvestmentByMandatoChart 
+        entries={timeEntries} 
+        limit={10}
+        loading={loading}
+      />
 
+      {/* Collapsible Detailed Analysis */}
+      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-between text-muted-foreground hover:text-foreground h-12"
+          >
+            <span>Análisis detallado</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <HoursByWeekChart entries={timeEntries} weeks={4} />
+            <HoursTrendChart entries={timeEntries} weeks={8} />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Time Entries Table */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Registros de Tiempo del Equipo</h3>
+        <h3 className="text-lg">Registros de Tiempo</h3>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">
             Cargando registros...
