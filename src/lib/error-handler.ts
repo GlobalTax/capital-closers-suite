@@ -66,9 +66,12 @@ export function handleError(error: unknown, context?: string) {
     });
   } else if (error instanceof Error) {
     console.error(`[ERROR] ${context || 'Unknown'}:`, error.message, error);
+    
+    // Mostrar el mensaje real del error, no uno genérico
+    const errorMessage = error.message || 'Ha ocurrido un error inesperado.';
     toast({
-      title: 'Error',
-      description: 'Ha ocurrido un error inesperado. Por favor, intenta de nuevo.',
+      title: context || 'Error',
+      description: errorMessage,
       variant: 'destructive',
     });
   } else {

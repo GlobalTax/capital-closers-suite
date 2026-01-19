@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useCreateAdminUser } from "@/hooks/queries/useAdminUsers";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,7 +21,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Loader2 } from "lucide-react";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const formSchema = z.object({
+  full_name: z.string()
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede superar 100 caracteres")
+    .trim(),
+  email: z.string()
+    .min(1, "El email es obligatorio")
+    .email("Email inválido"),
+  role: z.enum(['super_admin', 'admin', 'viewer'], {
+    required_error: "Selecciona un rol",
+  }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface NuevoUsuarioDialogProps {
   open: boolean;
@@ -27,24 +58,30 @@ interface NuevoUsuarioDialogProps {
 }
 
 export function NuevoUsuarioDialog({ open, onOpenChange }: NuevoUsuarioDialogProps) {
-  const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    role: 'admin' as 'super_admin' | 'admin' | 'viewer',
-  });
-
   const [createdUser, setCreatedUser] = useState<{
     email: string;
     temporary_password: string;
   } | null>(null);
-
   const [copied, setCopied] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    mode: "onChange",
+    defaultValues: {
+      full_name: '',
+      email: '',
+      role: 'admin',
+    },
+  });
 
   const { mutate: createUser, isPending } = useCreateAdminUser();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createUser(formData, {
+  const onSubmit = (values: FormValues) => {
+    createUser({
+      full_name: values.full_name,
+      email: values.email,
+      role: values.role,
+    }, {
       onSuccess: (result) => {
         setCreatedUser({
           email: result.email,
@@ -55,7 +92,7 @@ export function NuevoUsuarioDialog({ open, onOpenChange }: NuevoUsuarioDialogPro
   };
 
   const handleClose = () => {
-    setFormData({ email: '', full_name: '', role: 'admin' });
+    form.reset();
     setCreatedUser(null);
     setCopied(false);
     onOpenChange(false);
@@ -68,6 +105,8 @@ export function NuevoUsuarioDialog({ open, onOpenChange }: NuevoUsuarioDialogPro
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const isFormValid = form.formState.isValid;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -88,11 +127,11 @@ export function NuevoUsuarioDialog({ open, onOpenChange }: NuevoUsuarioDialogPro
             <Alert>
               <AlertDescription className="space-y-3">
                 <div>
-                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-sm font-medium">Email</p>
                   <p className="text-sm mt-1">{createdUser.email}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Contraseña Temporal</Label>
+                  <p className="text-sm font-medium">Contraseña Temporal</p>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="flex-1 p-2 bg-muted rounded text-sm font-mono">
                       {createdUser.temporary_password}
@@ -122,56 +161,109 @@ export function NuevoUsuarioDialog({ open, onOpenChange }: NuevoUsuarioDialogPro
             </DialogFooter>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Nombre Completo *</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                required
-                placeholder="Juan Pérez"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Indicador de campos obligatorios */}
+              <p className="text-sm text-muted-foreground">
+                <span className="text-destructive">*</span> Campos obligatorios
+              </p>
+
+              {/* Resumen de errores */}
+              {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+                  <p className="text-sm text-destructive font-medium">
+                    Por favor corrige los siguientes errores:
+                  </p>
+                  <ul className="text-sm text-destructive/80 mt-1 list-disc list-inside">
+                    {Object.entries(form.formState.errors).map(([key, error]) => (
+                      <li key={key}>{error?.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre Completo *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: Juan Pérez" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                placeholder="usuario@empresa.com"
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email" 
+                        placeholder="usuario@empresa.com" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Rol *</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: any) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="viewer">Visor (solo lectura)</SelectItem>
-                  <SelectItem value="admin">Administrador (gestión completa)</SelectItem>
-                  <SelectItem value="super_admin">Super Administrador (control total)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Rol *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un rol" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="viewer">Visor (solo lectura)</SelectItem>
+                        <SelectItem value="admin">Administrador (gestión completa)</SelectItem>
+                        <SelectItem value="super_admin">Super Administrador (control total)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Creando...' : 'Crear Usuario'}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleClose}>
+                  Cancelar
+                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button 
+                          type="submit" 
+                          disabled={isPending || !isFormValid}
+                        >
+                          {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          {isPending ? 'Creando...' : 'Crear Usuario'}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {!isFormValid && !isPending && (
+                      <TooltipContent>
+                        <p>Completa los campos obligatorios para continuar</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </DialogFooter>
+            </form>
+          </Form>
         )}
       </DialogContent>
     </Dialog>

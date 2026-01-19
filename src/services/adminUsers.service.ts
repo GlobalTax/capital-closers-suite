@@ -45,32 +45,54 @@ class AdminUsersService extends BaseService<AdminUser, CreateAdminUserDto, Updat
     temporary_password: string;
     message: string;
   }> {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('No hay sesión activa');
-      }
-
-      const response = await supabase.functions.invoke('create-admin-user', {
-        body: {
-          email: data.email,
-          full_name: data.full_name,
-          role: data.role,
-        },
-      });
-
-      if (response.error) {
-        // Intentar extraer mensaje específico del contexto del error
-        const errorMessage = response.error.context?.body?.error || response.error.message || 'Error al crear usuario';
-        throw new Error(errorMessage);
-      }
-
-      return response.data;
-    } catch (error) {
-      handleError(error, 'Error al crear usuario temporal');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      const error = new Error('No hay sesión activa');
+      (error as any).status = 401;
       throw error;
     }
+
+    const response = await supabase.functions.invoke('create-admin-user', {
+      body: {
+        email: data.email,
+        full_name: data.full_name,
+        role: data.role,
+      },
+    });
+
+    if (response.error) {
+      // Extraer mensaje del error de forma robusta
+      let errorMessage = 'Error al crear usuario';
+      let errorCode = 'UNKNOWN';
+      let status = 500;
+      
+      // Intentar obtener el body JSON del error
+      try {
+        if (response.error.context) {
+          status = response.error.context.status || 500;
+          const errorBody = await response.error.context.json();
+          errorMessage = errorBody?.error || errorMessage;
+          errorCode = errorBody?.error_code || errorCode;
+        }
+      } catch {
+        errorMessage = response.error.message || errorMessage;
+      }
+      
+      console.error('[AdminUsersService] Create user error:', {
+        status,
+        code: errorCode,
+        message: errorMessage,
+      });
+      
+      // Crear error con información estructurada
+      const error = new Error(errorMessage);
+      (error as any).code = errorCode;
+      (error as any).status = status;
+      throw error;
+    }
+
+    return response.data;
   }
 
   /**

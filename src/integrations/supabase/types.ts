@@ -11029,9 +11029,12 @@ export type Database = {
           ebitda_multiple_high: number | null
           ebitda_multiple_low: number | null
           ebitda_multiple_used: number | null
+          email_message_id: string | null
           email_opened: boolean | null
           email_opened_at: string | null
           email_outbox_id: string | null
+          email_sent: boolean | null
+          email_sent_at: string | null
           email_subject: string | null
           financial_years: Json
           id: string
@@ -11084,9 +11087,12 @@ export type Database = {
           ebitda_multiple_high?: number | null
           ebitda_multiple_low?: number | null
           ebitda_multiple_used?: number | null
+          email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
           email_outbox_id?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           email_subject?: string | null
           financial_years?: Json
           id?: string
@@ -11139,9 +11145,12 @@ export type Database = {
           ebitda_multiple_high?: number | null
           ebitda_multiple_low?: number | null
           ebitda_multiple_used?: number | null
+          email_message_id?: string | null
           email_opened?: boolean | null
           email_opened_at?: string | null
           email_outbox_id?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           email_subject?: string | null
           financial_years?: Json
           id?: string
