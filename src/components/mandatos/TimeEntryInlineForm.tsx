@@ -140,6 +140,13 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         return;
       }
 
+      // Validate description length (DB requires minimum 10 characters)
+      const trimmedDescription = description.trim();
+      if (trimmedDescription.length > 0 && trimmedDescription.length < 10) {
+        toast.error("La descripción debe tener al menos 10 caracteres");
+        return;
+      }
+
       const startDateTime = new Date(`${advancedDate}T${advancedStartTime}`);
       const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
 
@@ -153,7 +160,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         duration_minutes: durationMinutes,
-        description: description.trim() || `Trabajo registrado manualmente`,
+        description: trimmedDescription || 'Trabajo registrado manualmente',
         work_type: 'Otro',
         value_type: valueType,
         is_billable: isBillable,
@@ -254,13 +261,18 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
 
         {/* Description */}
         <div className="flex-1 min-w-[180px]">
-          <Label className="text-xs text-muted-foreground">Descripción (opcional)</Label>
+          <div className="flex justify-between items-center">
+            <Label className="text-xs text-muted-foreground">Descripción (opcional)</Label>
+            {description.trim().length > 0 && description.trim().length < 10 && (
+              <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
+            )}
+          </div>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Breve descripción..."
             maxLength={100}
-            className="h-9"
+            className={`h-9 ${description.trim().length > 0 && description.trim().length < 10 ? 'border-destructive' : ''}`}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && isValid) {
                 handleSubmit(e);
