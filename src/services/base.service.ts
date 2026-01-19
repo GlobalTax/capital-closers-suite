@@ -123,9 +123,18 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
       .single();
 
     if (error) {
+      console.error(`[${this.tableName}] Create error:`, {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      
       throw new DatabaseError(`Error al crear ${this.tableName}`, {
         table: this.tableName,
         code: error.code,
+        message: error.message,
+        hint: error.hint,
       });
     }
 
@@ -150,9 +159,18 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
       .single();
 
     if (error) {
+      console.error(`[${this.tableName}] Update error:`, {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      
       throw new DatabaseError(`Error al actualizar ${this.tableName}`, {
         table: this.tableName,
         code: error.code,
+        message: error.message,
+        hint: error.hint,
       });
     }
 
