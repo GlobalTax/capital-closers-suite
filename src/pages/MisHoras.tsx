@@ -1,17 +1,17 @@
 import { useEffect, useState, useMemo } from "react";
-import { Plus } from "lucide-react";
+import { Timer } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
+import { CompactTimeEntriesTable } from "@/components/mandatos/CompactTimeEntriesTable";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
-import { TimeFilters } from "@/components/mandatos/TimeFilters";
+import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
 import type { TimeEntry, MandatoChecklistTask, TimeFilterState, TimeEntryValueType } from "@/types";
-import { startOfWeek, startOfMonth, endOfDay, differenceInDays, isToday, isThisWeek } from "date-fns";
+import { startOfWeek, startOfMonth, endOfDay, isToday, isThisWeek } from "date-fns";
 import { VALUE_TYPE_CONFIG } from "@/types";
 
 export default function MisHoras() {
@@ -67,7 +67,13 @@ export default function MisHoras() {
         mandatoId: sanitizedMandatoId,
         status: filters.status !== 'all' ? filters.status : undefined
       });
-      setTimeEntries(entries);
+      
+      // Client-side filter for value type
+      const filteredEntries = filters.valueType !== 'all' 
+        ? entries.filter(e => e.value_type === filters.valueType)
+        : entries;
+      
+      setTimeEntries(filteredEntries);
 
       const allUserEntries = await fetchMyTimeEntries(user.id, { status: 'approved' });
       setAllEntries(allUserEntries);
@@ -136,45 +142,51 @@ export default function MisHoras() {
     : 0;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Mis Horas" description="Tu inversión de tiempo en mandatos" />
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header with prominent action */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Mis Horas</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Tu inversión de tiempo</p>
+        </div>
+        <Button 
+          onClick={() => setDialogOpen(true)}
+          className="px-5"
+        >
+          <Timer className="mr-2 h-4 w-4" />
           Registrar Tiempo
         </Button>
       </div>
 
       {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
 
-      {/* Compact Personal KPIs */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-0 shadow-sm bg-card/50">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-sm text-muted-foreground mb-1">Hoy</p>
-            <p className="text-3xl tabular-nums tracking-tight">{todayHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-card/50">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-sm text-muted-foreground mb-1">Esta Semana</p>
-            <p className="text-3xl tabular-nums tracking-tight">{thisWeekHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-card/50">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-sm text-muted-foreground mb-1">Este Mes</p>
-            <p className="text-3xl tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-card/50">
-          <CardContent className="pt-5 pb-5">
-            <p className="text-sm text-muted-foreground mb-1">Ratio Core M&A</p>
-            <p className="text-3xl tabular-nums tracking-tight" style={{ color: VALUE_TYPE_CONFIG.core_ma.color }}>
+      {/* Compact KPIs - Horizontal inline */}
+      <div className="flex flex-wrap items-center gap-6 py-4 px-1">
+        <div>
+          <p className="text-3xl font-light tabular-nums tracking-tight">{todayHours.toFixed(1)}h</p>
+          <p className="text-xs text-muted-foreground">hoy</p>
+        </div>
+        <div className="h-8 w-px bg-border" />
+        <div>
+          <p className="text-3xl font-light tabular-nums tracking-tight">{thisWeekHours.toFixed(1)}h</p>
+          <p className="text-xs text-muted-foreground">esta semana</p>
+        </div>
+        <div className="h-8 w-px bg-border" />
+        <div>
+          <p className="text-3xl font-light tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
+          <p className="text-xs text-muted-foreground">este mes</p>
+        </div>
+        <div className="h-8 w-px bg-border hidden sm:block" />
+        <div className="hidden sm:block">
+          <div className="flex items-center gap-2">
+            <p 
+              className="text-3xl font-light tabular-nums tracking-tight"
+              style={{ color: VALUE_TYPE_CONFIG.core_ma.color }}
+            >
               {corePercentage.toFixed(0)}%
             </p>
             {/* Mini stacked bar */}
-            <div className="h-1.5 rounded-full overflow-hidden flex bg-muted/30 mt-3">
+            <div className="h-6 w-24 rounded-full overflow-hidden flex bg-muted/30">
               {(['core_ma', 'soporte', 'bajo_valor'] as TimeEntryValueType[]).map(type => {
                 const pct = valueDistribution.total > 0 
                   ? (valueDistribution[type] / valueDistribution.total) * 100 
@@ -191,25 +203,34 @@ export default function MisHoras() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="text-xs text-muted-foreground">Core M&A</p>
+        </div>
       </div>
 
-      <TimeFilters filters={filters} onChange={setFilters} mandatos={mandatos} showUserFilter={false} />
+      {/* Filter Bar - Horizontal chips */}
+      <TimeFilterBar 
+        filters={filters} 
+        onChange={setFilters} 
+        mandatos={mandatos} 
+        showUserFilter={false} 
+      />
 
-      {/* Time Entries Table */}
-      <div className="space-y-4">
-        <h3 className="text-lg">Mis Registros</h3>
+      {/* Time Entries - Compact grouped */}
+      <div className="pt-2">
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Cargando registros...</div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted/30 rounded-md animate-pulse" />
+            ))}
+          </div>
         ) : (
-          <TimeEntriesTable 
+          <CompactTimeEntriesTable 
             entries={timeEntries} 
             currentUserId={currentUserId} 
             isAdmin={isAdmin} 
             onRefresh={loadMyTimeData}
-            showMandato={true}
-            pageSize={20}
+            onOpenDialog={() => setDialogOpen(true)}
           />
         )}
       </div>
