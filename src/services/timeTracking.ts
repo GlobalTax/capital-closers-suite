@@ -35,7 +35,10 @@ export const fetchTimeEntries = async (
         codigo,
         descripcion,
         tipo,
-        estado
+        estado,
+        probability,
+        valor,
+        pipeline_stage
       )
     `)
     .order('start_time', { ascending: false });
@@ -185,7 +188,10 @@ export const fetchAllTimeEntries = async (
         codigo,
         descripcion,
         tipo,
-        estado
+        estado,
+        probability,
+        valor,
+        pipeline_stage
       )
     `)
     .order('start_time', { ascending: false });
@@ -690,4 +696,99 @@ export const getMandatoInvestmentStats = async (
     billable_hours: billableMinutes / 60,
     value_efficiency: totalMinutes > 0 ? (coreMaMinutes / totalMinutes) * 100 : 0
   };
+};
+
+// ============================================
+// TOP MANDATOS BY HOURS (for Investment Chart)
+// ============================================
+export interface MandatoHoursData {
+  mandato_id: string;
+  codigo: string;
+  descripcion: string;
+  probability?: number;
+  valor?: number;
+  pipeline_stage?: string;
+  estado?: string;
+  total_hours: number;
+  core_ma_hours: number;
+  soporte_hours: number;
+  bajo_valor_hours: number;
+  core_ma_pct: number;
+  soporte_pct: number;
+  bajo_valor_pct: number;
+}
+
+export const getTopMandatosByHours = async (
+  entries: TimeEntry[],
+  limit: number = 10
+): Promise<MandatoHoursData[]> => {
+  // Aggregate by mandato_id
+  const mandatoMap = new Map<string, {
+    mandato: MandatoInfo | undefined;
+    totalMinutes: number;
+    coreMaMinutes: number;
+    soporteMinutes: number;
+    bajoValorMinutes: number;
+  }>();
+
+  entries.forEach(entry => {
+    const mandatoId = entry.mandato_id;
+    if (!mandatoId) return;
+
+    const existing = mandatoMap.get(mandatoId) || {
+      mandato: entry.mandato,
+      totalMinutes: 0,
+      coreMaMinutes: 0,
+      soporteMinutes: 0,
+      bajoValorMinutes: 0
+    };
+
+    const duration = entry.duration_minutes || 0;
+    existing.totalMinutes += duration;
+
+    const vt: TimeEntryValueType = (entry.value_type as TimeEntryValueType) || 'core_ma';
+    switch (vt) {
+      case 'core_ma':
+        existing.coreMaMinutes += duration;
+        break;
+      case 'soporte':
+        existing.soporteMinutes += duration;
+        break;
+      case 'bajo_valor':
+        existing.bajoValorMinutes += duration;
+        break;
+    }
+
+    mandatoMap.set(mandatoId, existing);
+  });
+
+  // Convert to array and sort by total hours
+  const result: MandatoHoursData[] = Array.from(mandatoMap.entries())
+    .map(([mandatoId, data]) => {
+      const totalHours = data.totalMinutes / 60;
+      const coreMaHours = data.coreMaMinutes / 60;
+      const soporteHours = data.soporteMinutes / 60;
+      const bajoValorHours = data.bajoValorMinutes / 60;
+
+      return {
+        mandato_id: mandatoId,
+        codigo: data.mandato?.codigo || `M-${mandatoId.slice(0, 4)}`,
+        descripcion: data.mandato?.descripcion || 'Sin descripción',
+        probability: data.mandato?.probability,
+        valor: data.mandato?.valor,
+        pipeline_stage: data.mandato?.pipeline_stage,
+        estado: data.mandato?.estado,
+        total_hours: totalHours,
+        core_ma_hours: coreMaHours,
+        soporte_hours: soporteHours,
+        bajo_valor_hours: bajoValorHours,
+        core_ma_pct: totalHours > 0 ? (coreMaHours / totalHours) * 100 : 0,
+        soporte_pct: totalHours > 0 ? (soporteHours / totalHours) * 100 : 0,
+        bajo_valor_pct: totalHours > 0 ? (bajoValorHours / totalHours) * 100 : 0
+      };
+    })
+    .sort((a, b) => b.total_hours - a.total_hours)
+    .slice(0, limit);
+
+  return result;
 };
