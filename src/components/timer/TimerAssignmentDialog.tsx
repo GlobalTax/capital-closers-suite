@@ -40,7 +40,16 @@ interface FormData {
 }
 
 export function TimerAssignmentDialog() {
-  const { isAssignmentModalOpen, pendingTimeSeconds, closeAssignmentModal, resetTimer } = useTimerStore();
+  const { 
+    isAssignmentModalOpen, 
+    pendingTimeSeconds, 
+    closeAssignmentModal, 
+    resetTimer,
+    presetWorkTaskTypeId,
+    presetWorkTaskTypeName,
+    presetValueType,
+    clearPresets,
+  } = useTimerStore();
   const { data: workTaskTypes = [], isLoading: loadingTaskTypes } = useActiveWorkTaskTypes();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -57,18 +66,18 @@ export function TimerAssignmentDialog() {
     },
   });
   
-  // Reset form when modal opens
+  // Reset form when modal opens, using presets if available
   useEffect(() => {
     if (isAssignmentModalOpen) {
       reset({
         mandatoId: '',
-        valueType: 'soporte',
-        workTaskTypeId: '',
+        valueType: presetValueType || 'soporte',
+        workTaskTypeId: presetWorkTaskTypeId || '',
         description: '',
-        isBillable: false,
+        isBillable: presetValueType === 'core_ma',
       });
     }
-  }, [isAssignmentModalOpen, reset]);
+  }, [isAssignmentModalOpen, presetWorkTaskTypeId, presetValueType, reset]);
   
   const selectedMandatoId = watch('mandatoId');
   const selectedValueType = watch('valueType');
@@ -154,6 +163,11 @@ export function TimerAssignmentDialog() {
           <DialogTitle className="text-3xl font-mono font-bold tabular-nums">
             {displayTime}
           </DialogTitle>
+          {presetWorkTaskTypeName && (
+            <p className="text-sm text-muted-foreground mt-1">
+              📌 {presetWorkTaskTypeName}
+            </p>
+          )}
         </DialogHeader>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">

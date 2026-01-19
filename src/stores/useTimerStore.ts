@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type TimerState = 'idle' | 'running' | 'paused';
+export type TimeEntryValueType = 'core_ma' | 'soporte' | 'bajo_valor';
 
 interface TimerStore {
   // Timer state
@@ -10,12 +11,23 @@ interface TimerStore {
   pausedAt: string | null;
   accumulatedSeconds: number;
   
+  // Presets from quick actions
+  presetWorkTaskTypeId: string | null;
+  presetWorkTaskTypeName: string | null;
+  presetValueType: TimeEntryValueType | null;
+  
   // Actions
   startTimer: () => void;
+  startTimerWithPreset: (preset: {
+    workTaskTypeId: string;
+    workTaskTypeName: string;
+    valueType: TimeEntryValueType;
+  }) => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
   stopTimer: () => number; // Returns total seconds
   resetTimer: () => void;
+  clearPresets: () => void;
   
   // Assignment modal
   isAssignmentModalOpen: boolean;
@@ -38,12 +50,32 @@ export const useTimerStore = create<TimerStore>()(
       isAssignmentModalOpen: false,
       pendingTimeSeconds: 0,
       
+      // Presets
+      presetWorkTaskTypeId: null,
+      presetWorkTaskTypeName: null,
+      presetValueType: null,
+      
       startTimer: () => {
         set({
           timerState: 'running',
           startedAt: new Date().toISOString(),
           pausedAt: null,
           accumulatedSeconds: 0,
+          presetWorkTaskTypeId: null,
+          presetWorkTaskTypeName: null,
+          presetValueType: null,
+        });
+      },
+      
+      startTimerWithPreset: (preset) => {
+        set({
+          timerState: 'running',
+          startedAt: new Date().toISOString(),
+          pausedAt: null,
+          accumulatedSeconds: 0,
+          presetWorkTaskTypeId: preset.workTaskTypeId,
+          presetWorkTaskTypeName: preset.workTaskTypeName,
+          presetValueType: preset.valueType,
         });
       },
       
@@ -90,6 +122,17 @@ export const useTimerStore = create<TimerStore>()(
           pausedAt: null,
           accumulatedSeconds: 0,
           pendingTimeSeconds: 0,
+          presetWorkTaskTypeId: null,
+          presetWorkTaskTypeName: null,
+          presetValueType: null,
+        });
+      },
+      
+      clearPresets: () => {
+        set({
+          presetWorkTaskTypeId: null,
+          presetWorkTaskTypeName: null,
+          presetValueType: null,
         });
       },
       
@@ -108,6 +151,9 @@ export const useTimerStore = create<TimerStore>()(
           startedAt: null,
           pausedAt: null,
           accumulatedSeconds: 0,
+          presetWorkTaskTypeId: null,
+          presetWorkTaskTypeName: null,
+          presetValueType: null,
         });
       },
       
@@ -137,6 +183,9 @@ export const useTimerStore = create<TimerStore>()(
         startedAt: state.startedAt,
         pausedAt: state.pausedAt,
         accumulatedSeconds: state.accumulatedSeconds,
+        presetWorkTaskTypeId: state.presetWorkTaskTypeId,
+        presetWorkTaskTypeName: state.presetWorkTaskTypeName,
+        presetValueType: state.presetValueType,
       }),
     }
   )
