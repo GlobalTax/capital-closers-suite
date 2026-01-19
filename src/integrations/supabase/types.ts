@@ -166,6 +166,7 @@ export type Database = {
           last_campaign_id: number | null
           last_campaign_name: string | null
           last_email_click_at: string | null
+          lead_form: string | null
           phone: string | null
           referrer: string | null
           sectors_of_interest: string | null
@@ -217,6 +218,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           phone?: string | null
           referrer?: string | null
           sectors_of_interest?: string | null
@@ -268,6 +270,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           phone?: string | null
           referrer?: string | null
           sectors_of_interest?: string | null
@@ -285,6 +288,13 @@ export type Database = {
             columns: ["acquisition_channel_id"]
             isOneToOne: false
             referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acquisition_leads_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
             referencedColumns: ["id"]
           },
         ]
@@ -857,6 +867,7 @@ export type Database = {
           firm_type: string
           id: string
           ip_address: string | null
+          lead_form: string | null
           pdf_url: string | null
           phone: string | null
           phone_e164: string | null
@@ -897,6 +908,7 @@ export type Database = {
           firm_type: string
           id?: string
           ip_address?: string | null
+          lead_form?: string | null
           pdf_url?: string | null
           phone?: string | null
           phone_e164?: string | null
@@ -937,6 +949,7 @@ export type Database = {
           firm_type?: string
           id?: string
           ip_address?: string | null
+          lead_form?: string | null
           pdf_url?: string | null
           phone?: string | null
           phone_e164?: string | null
@@ -956,6 +969,13 @@ export type Database = {
             columns: ["acquisition_channel_id"]
             isOneToOne: false
             referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advisor_valuations_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
             referencedColumns: ["id"]
           },
         ]
@@ -1048,6 +1068,60 @@ export type Database = {
           id?: string
           updated_at?: string | null
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      apollo_visitor_imports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          import_type: string
+          imported_count: number | null
+          list_id: string
+          list_type: string
+          results: Json | null
+          skipped_count: number | null
+          status: string
+          total_found: number | null
+          updated_at: string
+          updated_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          import_type?: string
+          imported_count?: number | null
+          list_id: string
+          list_type?: string
+          results?: Json | null
+          skipped_count?: number | null
+          status?: string
+          total_found?: number | null
+          updated_at?: string
+          updated_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          import_type?: string
+          imported_count?: number | null
+          list_id?: string
+          list_type?: string
+          results?: Json | null
+          skipped_count?: number | null
+          status?: string
+          total_found?: number | null
+          updated_at?: string
+          updated_count?: number | null
         }
         Relationships: []
       }
@@ -1523,6 +1597,78 @@ export type Database = {
           label?: string
           updated_at?: string | null
           value?: string
+        }
+        Relationships: []
+      }
+      brevo_contacts: {
+        Row: {
+          attributes: Json | null
+          brevo_created_at: string | null
+          brevo_id: number | null
+          brevo_modified_at: string | null
+          company: string | null
+          crm_entity_id: string | null
+          crm_entity_type: string | null
+          email: string
+          email_blacklisted: boolean | null
+          first_name: string | null
+          id: string
+          import_batch_id: string | null
+          imported_at: string
+          is_synced_to_crm: boolean | null
+          last_name: string | null
+          list_ids: number[] | null
+          list_names: string[] | null
+          notes: string | null
+          sms: string | null
+          sms_blacklisted: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json | null
+          brevo_created_at?: string | null
+          brevo_id?: number | null
+          brevo_modified_at?: string | null
+          company?: string | null
+          crm_entity_id?: string | null
+          crm_entity_type?: string | null
+          email: string
+          email_blacklisted?: boolean | null
+          first_name?: string | null
+          id?: string
+          import_batch_id?: string | null
+          imported_at?: string
+          is_synced_to_crm?: boolean | null
+          last_name?: string | null
+          list_ids?: number[] | null
+          list_names?: string[] | null
+          notes?: string | null
+          sms?: string | null
+          sms_blacklisted?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json | null
+          brevo_created_at?: string | null
+          brevo_id?: number | null
+          brevo_modified_at?: string | null
+          company?: string | null
+          crm_entity_id?: string | null
+          crm_entity_type?: string | null
+          email?: string
+          email_blacklisted?: boolean | null
+          first_name?: string | null
+          id?: string
+          import_batch_id?: string | null
+          imported_at?: string
+          is_synced_to_crm?: boolean | null
+          last_name?: string | null
+          list_ids?: number[] | null
+          list_names?: string[] | null
+          notes?: string | null
+          sms?: string | null
+          sms_blacklisted?: boolean | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2270,6 +2416,7 @@ export type Database = {
           last_campaign_id: number | null
           last_campaign_name: string | null
           last_email_click_at: string | null
+          lead_form: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           motivation: string | null
           notes: string | null
@@ -2323,6 +2470,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
           notes?: string | null
@@ -2376,6 +2524,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           motivation?: string | null
           notes?: string | null
@@ -2407,6 +2556,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "collaborator_applications_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2453,6 +2609,7 @@ export type Database = {
           last_campaign_id: number | null
           last_campaign_name: string | null
           last_email_click_at: string | null
+          lead_form: string | null
           message: string | null
           notes: string | null
           page_origin: string
@@ -2515,6 +2672,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           message?: string | null
           notes?: string | null
           page_origin?: string
@@ -2577,6 +2735,7 @@ export type Database = {
           last_campaign_id?: number | null
           last_campaign_name?: string | null
           last_email_click_at?: string | null
+          lead_form?: string | null
           message?: string | null
           notes?: string | null
           page_origin?: string
@@ -2603,6 +2762,13 @@ export type Database = {
             columns: ["acquisition_channel_id"]
             isOneToOne: false
             referencedRelation: "acquisition_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_acquisition_inquiries_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
             referencedColumns: ["id"]
           },
           {
@@ -2651,6 +2817,7 @@ export type Database = {
           project_status: string | null
           revenue_amount: number | null
           sector: string
+          sector_pe: string | null
           short_description: string | null
           short_description_ca: string | null
           short_description_en: string | null
@@ -2692,6 +2859,7 @@ export type Database = {
           project_status?: string | null
           revenue_amount?: number | null
           sector: string
+          sector_pe?: string | null
           short_description?: string | null
           short_description_ca?: string | null
           short_description_en?: string | null
@@ -2733,6 +2901,7 @@ export type Database = {
           project_status?: string | null
           revenue_amount?: number | null
           sector?: string
+          sector_pe?: string | null
           short_description?: string | null
           short_description_ca?: string | null
           short_description_en?: string | null
@@ -2773,6 +2942,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_admin_users_safe"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "company_operations_sector_pe_fkey"
+            columns: ["sector_pe"]
+            isOneToOne: false
+            referencedRelation: "pe_sector_taxonomy"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2825,6 +3001,7 @@ export type Database = {
           email_opened: boolean | null
           email_opened_at: string | null
           email_opens_count: number | null
+          email_outbox_id: string | null
           email_sent: boolean | null
           email_sent_at: string | null
           email_soft_bounced: boolean | null
@@ -2852,6 +3029,7 @@ export type Database = {
           last_email_click_at: string | null
           last_modified_field: string | null
           lead_entry_date: string | null
+          lead_form: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           location: string | null
           net_profit_margin: number | null
@@ -2928,6 +3106,7 @@ export type Database = {
           email_opened?: boolean | null
           email_opened_at?: string | null
           email_opens_count?: number | null
+          email_outbox_id?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           email_soft_bounced?: boolean | null
@@ -2955,6 +3134,7 @@ export type Database = {
           last_email_click_at?: string | null
           last_modified_field?: string | null
           lead_entry_date?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
@@ -3031,6 +3211,7 @@ export type Database = {
           email_opened?: boolean | null
           email_opened_at?: string | null
           email_opens_count?: number | null
+          email_outbox_id?: string | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           email_soft_bounced?: boolean | null
@@ -3058,6 +3239,7 @@ export type Database = {
           last_email_click_at?: string | null
           last_modified_field?: string | null
           lead_entry_date?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
@@ -3116,6 +3298,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "company_valuations_email_outbox_id_fkey"
+            columns: ["email_outbox_id"]
+            isOneToOne: false
+            referencedRelation: "email_outbox"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_valuations_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
@@ -3128,6 +3317,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "company_valuations_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3192,6 +3388,7 @@ export type Database = {
           last_clicked_url: string | null
           last_email_click_at: string | null
           lead_entry_date: string | null
+          lead_form: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           notes: string | null
           phone: string | null
@@ -3263,6 +3460,7 @@ export type Database = {
           last_clicked_url?: string | null
           last_email_click_at?: string | null
           lead_entry_date?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           notes?: string | null
           phone?: string | null
@@ -3334,6 +3532,7 @@ export type Database = {
           last_clicked_url?: string | null
           last_email_click_at?: string | null
           lead_entry_date?: string | null
+          lead_form?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           notes?: string | null
           phone?: string | null
@@ -3401,6 +3600,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "contact_leads_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4956,6 +5162,81 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          email_type: string
+          error_details: Json | null
+          first_attempt_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number
+          metadata: Json | null
+          next_retry_at: string | null
+          provider_message_id: string | null
+          provider_name: string | null
+          provider_response: Json | null
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          template_id: string | null
+          valuation_id: string | null
+          valuation_type: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          email_type: string
+          error_details?: Json | null
+          first_attempt_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number
+          metadata?: Json | null
+          next_retry_at?: string | null
+          provider_message_id?: string | null
+          provider_name?: string | null
+          provider_response?: Json | null
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template_id?: string | null
+          valuation_id?: string | null
+          valuation_type: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          email_type?: string
+          error_details?: Json | null
+          first_attempt_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number
+          metadata?: Json | null
+          next_retry_at?: string | null
+          provider_message_id?: string | null
+          provider_name?: string | null
+          provider_response?: Json | null
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template_id?: string | null
+          valuation_id?: string | null
+          valuation_type?: string
+        }
+        Relationships: []
+      }
       email_recipients_config: {
         Row: {
           created_at: string | null
@@ -5129,6 +5410,45 @@ export type Database = {
             foreignKeyName: "empresa_documentos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
+      empresa_favorites: {
+        Row: {
+          added_by: string | null
+          created_at: string | null
+          empresa_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_favorites_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_favorites_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
           },
@@ -5320,7 +5640,16 @@ export type Database = {
       empresas: {
         Row: {
           actividades_destacadas: string[] | null
+          alexa_ranking: number | null
           año_datos_financieros: number | null
+          apollo_enriched_at: string | null
+          apollo_intent_level: string | null
+          apollo_last_synced_at: string | null
+          apollo_org_id: string | null
+          apollo_raw_data: Json | null
+          apollo_score: number | null
+          apollo_visitor_date: string | null
+          apollo_visitor_source: string | null
           brevo_id: string | null
           brevo_last_modified_at: string | null
           brevo_synced_at: string | null
@@ -5329,6 +5658,7 @@ export type Database = {
           cnae_codigo: string | null
           cnae_descripcion: string | null
           created_at: string | null
+          departmental_headcount: Json | null
           descripcion: string | null
           deuda: number | null
           ebitda: number | null
@@ -5336,28 +5666,42 @@ export type Database = {
           empleados: number | null
           es_target: boolean | null
           estado_target: string | null
+          facebook_url: string | null
           facturacion: number | null
           fecha_enriquecimiento: string | null
+          founded_year: number | null
           fuente_enriquecimiento: string | null
           id: string
           import_log_id: string | null
+          keywords: string[] | null
+          linkedin_url: string | null
           margen_ebitda: number | null
           nivel_interes: string | null
           nombre: string
           potencial_search_fund: boolean | null
           revenue: number | null
-          sector: string
+          sector: string | null
           sector_id: string | null
           sitio_web: string | null
           source_pro_valuation_id: string | null
           source_valuation_id: string | null
           subsector: string | null
+          technologies: Json | null
           ubicacion: string | null
           updated_at: string | null
         }
         Insert: {
           actividades_destacadas?: string[] | null
+          alexa_ranking?: number | null
           año_datos_financieros?: number | null
+          apollo_enriched_at?: string | null
+          apollo_intent_level?: string | null
+          apollo_last_synced_at?: string | null
+          apollo_org_id?: string | null
+          apollo_raw_data?: Json | null
+          apollo_score?: number | null
+          apollo_visitor_date?: string | null
+          apollo_visitor_source?: string | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
@@ -5366,6 +5710,7 @@ export type Database = {
           cnae_codigo?: string | null
           cnae_descripcion?: string | null
           created_at?: string | null
+          departmental_headcount?: Json | null
           descripcion?: string | null
           deuda?: number | null
           ebitda?: number | null
@@ -5373,28 +5718,42 @@ export type Database = {
           empleados?: number | null
           es_target?: boolean | null
           estado_target?: string | null
+          facebook_url?: string | null
           facturacion?: number | null
           fecha_enriquecimiento?: string | null
+          founded_year?: number | null
           fuente_enriquecimiento?: string | null
           id?: string
           import_log_id?: string | null
+          keywords?: string[] | null
+          linkedin_url?: string | null
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre: string
           potencial_search_fund?: boolean | null
           revenue?: number | null
-          sector: string
+          sector?: string | null
           sector_id?: string | null
           sitio_web?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
+          technologies?: Json | null
           ubicacion?: string | null
           updated_at?: string | null
         }
         Update: {
           actividades_destacadas?: string[] | null
+          alexa_ranking?: number | null
           año_datos_financieros?: number | null
+          apollo_enriched_at?: string | null
+          apollo_intent_level?: string | null
+          apollo_last_synced_at?: string | null
+          apollo_org_id?: string | null
+          apollo_raw_data?: Json | null
+          apollo_score?: number | null
+          apollo_visitor_date?: string | null
+          apollo_visitor_source?: string | null
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
@@ -5403,6 +5762,7 @@ export type Database = {
           cnae_codigo?: string | null
           cnae_descripcion?: string | null
           created_at?: string | null
+          departmental_headcount?: Json | null
           descripcion?: string | null
           deuda?: number | null
           ebitda?: number | null
@@ -5410,22 +5770,27 @@ export type Database = {
           empleados?: number | null
           es_target?: boolean | null
           estado_target?: string | null
+          facebook_url?: string | null
           facturacion?: number | null
           fecha_enriquecimiento?: string | null
+          founded_year?: number | null
           fuente_enriquecimiento?: string | null
           id?: string
           import_log_id?: string | null
+          keywords?: string[] | null
+          linkedin_url?: string | null
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre?: string
           potencial_search_fund?: boolean | null
           revenue?: number | null
-          sector?: string
+          sector?: string | null
           sector_id?: string | null
           sitio_web?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
+          technologies?: Json | null
           ubicacion?: string | null
           updated_at?: string | null
         }
@@ -6022,6 +6387,7 @@ export type Database = {
           id: string
           ip_address: unknown
           is_deleted: boolean | null
+          lead_form: string | null
           message: string
           notes: string | null
           page_origin: string
@@ -6071,6 +6437,7 @@ export type Database = {
           id?: string
           ip_address?: unknown
           is_deleted?: boolean | null
+          lead_form?: string | null
           message: string
           notes?: string | null
           page_origin: string
@@ -6120,6 +6487,7 @@ export type Database = {
           id?: string
           ip_address?: unknown
           is_deleted?: boolean | null
+          lead_form?: string | null
           message?: string
           notes?: string | null
           page_origin?: string
@@ -6162,6 +6530,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "general_contact_leads_lead_form_fkey"
+            columns: ["lead_form"]
+            isOneToOne: false
+            referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7435,6 +7810,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_forms: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       lead_security: {
         Row: {
@@ -9227,6 +9632,38 @@ export type Database = {
           },
         ]
       }
+      mna_boutique_favorites: {
+        Row: {
+          added_by: string | null
+          boutique_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          boutique_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          boutique_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mna_boutique_favorites_boutique_id_fkey"
+            columns: ["boutique_id"]
+            isOneToOne: true
+            referencedRelation: "mna_boutiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mna_boutique_people: {
         Row: {
           boutique_id: string
@@ -9294,6 +9731,9 @@ export type Database = {
       }
       mna_boutiques: {
         Row: {
+          apollo_last_synced_at: string | null
+          apollo_org_id: string | null
+          apollo_raw_data: Json | null
           cities: string[] | null
           country_base: string | null
           created_at: string
@@ -9307,6 +9747,7 @@ export type Database = {
           founded_year: number | null
           geography_focus: string[] | null
           id: string
+          import_source: string | null
           is_deleted: boolean | null
           linkedin_url: string | null
           name: string
@@ -9320,6 +9761,9 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          apollo_last_synced_at?: string | null
+          apollo_org_id?: string | null
+          apollo_raw_data?: Json | null
           cities?: string[] | null
           country_base?: string | null
           created_at?: string
@@ -9333,6 +9777,7 @@ export type Database = {
           founded_year?: number | null
           geography_focus?: string[] | null
           id?: string
+          import_source?: string | null
           is_deleted?: boolean | null
           linkedin_url?: string | null
           name: string
@@ -9346,6 +9791,9 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          apollo_last_synced_at?: string | null
+          apollo_org_id?: string | null
+          apollo_raw_data?: Json | null
           cities?: string[] | null
           country_base?: string | null
           created_at?: string
@@ -9359,6 +9807,7 @@ export type Database = {
           founded_year?: number | null
           geography_focus?: string[] | null
           id?: string
+          import_source?: string | null
           is_deleted?: boolean | null
           linkedin_url?: string | null
           name?: string
@@ -10329,6 +10778,45 @@ export type Database = {
         }
         Relationships: []
       }
+      pe_sector_taxonomy: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          name_en: string
+          name_es: string
+          parent_sector: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          name_en: string
+          name_es: string
+          parent_sector?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          name_en?: string
+          name_es?: string
+          parent_sector?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pipeline_stages: {
         Row: {
           color: string
@@ -10543,6 +11031,7 @@ export type Database = {
           ebitda_multiple_used: number | null
           email_opened: boolean | null
           email_opened_at: string | null
+          email_outbox_id: string | null
           email_subject: string | null
           financial_years: Json
           id: string
@@ -10597,6 +11086,7 @@ export type Database = {
           ebitda_multiple_used?: number | null
           email_opened?: boolean | null
           email_opened_at?: string | null
+          email_outbox_id?: string | null
           email_subject?: string | null
           financial_years?: Json
           id?: string
@@ -10651,6 +11141,7 @@ export type Database = {
           ebitda_multiple_used?: number | null
           email_opened?: boolean | null
           email_opened_at?: string | null
+          email_outbox_id?: string | null
           email_subject?: string | null
           financial_years?: Json
           id?: string
@@ -10685,6 +11176,13 @@ export type Database = {
           weaknesses?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "professional_valuations_email_outbox_id_fkey"
+            columns: ["email_outbox_id"]
+            isOneToOne: false
+            referencedRelation: "email_outbox"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "professional_valuations_parent_id_fkey"
             columns: ["parent_id"]
@@ -11419,6 +11917,48 @@ export type Database = {
           },
         ]
       }
+      search_analytics: {
+        Row: {
+          created_at: string | null
+          filters_applied: Json | null
+          id: string
+          result_clicked_id: string | null
+          result_clicked_type: string | null
+          results_count: number | null
+          search_query: string
+          search_source: string | null
+          search_type: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          filters_applied?: Json | null
+          id?: string
+          result_clicked_id?: string | null
+          result_clicked_type?: string | null
+          results_count?: number | null
+          search_query: string
+          search_source?: string | null
+          search_type?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          filters_applied?: Json | null
+          id?: string
+          result_clicked_id?: string | null
+          result_clicked_type?: string | null
+          results_count?: number | null
+          search_query?: string
+          search_source?: string | null
+          search_type?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       searcher_leads: {
         Row: {
           additional_criteria: string | null
@@ -11449,6 +11989,7 @@ export type Database = {
           phone: string | null
           preferred_locations: string[] | null
           preferred_sectors: string[] | null
+          preferred_sectors_pe: string[] | null
           referrer: string | null
           search_phase: string | null
           status: string
@@ -11489,6 +12030,7 @@ export type Database = {
           phone?: string | null
           preferred_locations?: string[] | null
           preferred_sectors?: string[] | null
+          preferred_sectors_pe?: string[] | null
           referrer?: string | null
           search_phase?: string | null
           status?: string
@@ -11529,6 +12071,7 @@ export type Database = {
           phone?: string | null
           preferred_locations?: string[] | null
           preferred_sectors?: string[] | null
+          preferred_sectors_pe?: string[] | null
           referrer?: string | null
           search_phase?: string | null
           status?: string
@@ -12313,7 +12856,9 @@ export type Database = {
           scrape_source_urls: string[] | null
           searcher_lead_id: string | null
           sector_exclusions: string[] | null
+          sector_exclusions_pe: string[] | null
           sector_focus: string[] | null
+          sector_focus_pe: string[] | null
           size_criteria: Json | null
           source_last_verified_at: string | null
           source_url: string | null
@@ -12348,7 +12893,9 @@ export type Database = {
           scrape_source_urls?: string[] | null
           searcher_lead_id?: string | null
           sector_exclusions?: string[] | null
+          sector_exclusions_pe?: string[] | null
           sector_focus?: string[] | null
+          sector_focus_pe?: string[] | null
           size_criteria?: Json | null
           source_last_verified_at?: string | null
           source_url?: string | null
@@ -12383,7 +12930,9 @@ export type Database = {
           scrape_source_urls?: string[] | null
           searcher_lead_id?: string | null
           sector_exclusions?: string[] | null
+          sector_exclusions_pe?: string[] | null
           sector_focus?: string[] | null
+          sector_focus_pe?: string[] | null
           size_criteria?: Json | null
           source_last_verified_at?: string | null
           source_url?: string | null
