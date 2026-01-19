@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { TimeFilterState, TimeEntryWorkType, TimeEntryStatus } from "@/types";
+import type { TimeFilterState, TimeEntryWorkType, TimeEntryStatus, TimeEntryValueType } from "@/types";
+import { VALUE_TYPE_CONFIG } from "@/types";
 
 interface TimeFiltersProps {
   filters: TimeFilterState;
@@ -34,6 +35,7 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
       mandatoId: 'all',
       status: 'all' as any,
       workType: 'Otro' as any,
+      valueType: 'all',
       onlyBillable: false
     });
   };
@@ -47,7 +49,7 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Fecha Inicio */}
           <div className="space-y-2">
             <Label>Desde</Label>
@@ -142,6 +144,35 @@ export function TimeFilters({ filters, onChange, users = [], mandatos = [], show
               </Select>
             </div>
           )}
+
+          {/* Tipo de Valor (NUEVO) */}
+          <div className="space-y-2">
+            <Label>Tipo de Valor</Label>
+            <Select
+              value={filters.valueType || 'all'}
+              onValueChange={(value) => onChange({ ...filters, valueType: value as TimeEntryValueType | 'all' })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(Object.entries(VALUE_TYPE_CONFIG) as [TimeEntryValueType, typeof VALUE_TYPE_CONFIG[TimeEntryValueType]][]).map(
+                  ([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full" 
+                          style={{ backgroundColor: config.color }} 
+                        />
+                        <span>{config.label}</span>
+                      </div>
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Estado */}
           <div className="space-y-2">

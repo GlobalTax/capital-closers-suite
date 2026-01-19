@@ -670,6 +670,7 @@ export interface TimeFilterState {
   mandatoId: string | 'all';
   status: TimeEntryStatus | 'all';
   workType: TimeEntryWorkType | 'all' | 'Otro';
+  valueType: TimeEntryValueType | 'all';
   onlyBillable: boolean;
 }
 

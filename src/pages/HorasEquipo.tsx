@@ -30,6 +30,7 @@ export default function HorasEquipo() {
     mandatoId: 'all',
     status: 'all',
     workType: 'Otro',
+    valueType: 'all',
     onlyBillable: false
   });
 

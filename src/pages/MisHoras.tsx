@@ -35,6 +35,7 @@ export default function MisHoras() {
     mandatoId: 'all',
     status: 'all',
     workType: 'Otro',
+    valueType: 'all',
     onlyBillable: false
   });
 
