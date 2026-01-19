@@ -38,7 +38,8 @@ export const fetchTimeEntries = async (
         estado,
         probability,
         valor,
-        pipeline_stage
+        pipeline_stage,
+        empresa_principal:empresas(nombre)
       )
     `)
     .order('start_time', { ascending: false });
@@ -191,7 +192,8 @@ export const fetchAllTimeEntries = async (
         estado,
         probability,
         valor,
-        pipeline_stage
+        pipeline_stage,
+        empresa_principal:empresas(nombre)
       )
     `)
     .order('start_time', { ascending: false });
