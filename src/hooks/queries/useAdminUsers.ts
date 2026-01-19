@@ -28,21 +28,32 @@ export function useCreateAdminUser() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin_users'] });
       toast.success(`Usuario creado: ${result.email}`);
-      toast.info(`Contraseña temporal: ${result.temporary_password}`, {
-        duration: 15000,
-        description: 'Guarda esta contraseña, no se volverá a mostrar.',
-      });
     },
     onError: (error: any) => {
-      // Manejar errores específicos
-      const errorMessage = error?.message || 'Error al crear usuario';
+      const errorMessage = error?.message || 'Error desconocido';
+      const status = error?.status;
       
-      if (errorMessage.includes('ya está registrado')) {
-        toast.error('Este email ya está registrado', {
-          description: 'El usuario ya existe en el sistema. Puedes editarlo desde la lista.',
+      // Errores específicos por código HTTP
+      if (status === 409 || errorMessage.includes('ya está registrado')) {
+        toast.error('Email duplicado', {
+          description: 'Este email ya existe en el sistema. Puedes editarlo desde la lista.',
+        });
+      } else if (status === 403) {
+        toast.error('Sin permisos', {
+          description: 'Solo los super administradores pueden crear usuarios.',
+        });
+      } else if (status === 401) {
+        toast.error('Sesión expirada', {
+          description: 'Por favor, inicia sesión nuevamente.',
+        });
+      } else if (status === 400) {
+        toast.error('Datos inválidos', {
+          description: errorMessage,
         });
       } else {
-        handleError(error, 'Error al crear usuario');
+        toast.error('Error al crear usuario', {
+          description: errorMessage,
+        });
       }
     },
   });
