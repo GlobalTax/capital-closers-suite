@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AlertsCenter } from "@/components/alerts/AlertsCenter";
+import { GlobalTimer } from "@/components/timer/GlobalTimer";
+import { TimerAssignmentDialog } from "@/components/timer/TimerAssignmentDialog";
 
 // Lazy load drawers para optimizar rendimiento
 const NuevoMandatoDrawer = lazy(() => import("@/components/mandatos/NuevoMandatoDrawer").then(m => ({ default: m.NuevoMandatoDrawer })));
@@ -137,6 +139,9 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Timer Global */}
+        <GlobalTimer />
+
         {/* Botón + Nuevo */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -258,6 +263,9 @@ export function Topbar() {
           />
         )}
       </Suspense>
+      
+      {/* Timer Assignment Modal */}
+      <TimerAssignmentDialog />
     </header>
   );
 }
