@@ -10,39 +10,44 @@ import {
   ZAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
+  ReferenceArea,
   Cell,
 } from "recharts";
-import { TrendingUp } from "lucide-react";
 import { TimeEntry } from "@/types";
+import { cn } from "@/lib/utils";
 
 type Quadrant = 'priorizar' | 'correcto' | 'no_urgente' | 'riesgo';
 
 interface QuadrantConfig {
   label: string;
   color: string;
+  bgColor: string;
   description: string;
 }
 
 const QUADRANT_CONFIG: Record<Quadrant, QuadrantConfig> = {
   priorizar: {
-    label: 'Priorizar',
+    label: 'PRIORIZAR',
     color: '#10B981',
-    description: 'Bajo tiempo, alta prob.'
+    bgColor: 'rgba(16, 185, 129, 0.04)',
+    description: 'Bajo tiempo, alta probabilidad'
   },
   correcto: {
-    label: 'Correcto',
+    label: 'CORRECTO',
     color: '#3B82F6',
-    description: 'Alto tiempo justificado'
+    bgColor: 'rgba(59, 130, 246, 0.04)',
+    description: 'Inversión justificada'
   },
   no_urgente: {
-    label: 'No Urgente',
+    label: 'MONITOREAR',
     color: '#6B7280',
-    description: 'Monitorear'
+    bgColor: 'rgba(107, 114, 128, 0.03)',
+    description: 'Sin urgencia'
   },
   riesgo: {
-    label: 'En Riesgo',
+    label: 'EN RIESGO',
     color: '#EF4444',
+    bgColor: 'rgba(239, 68, 68, 0.04)',
     description: 'Revisar o cortar'
   }
 };
@@ -105,78 +110,57 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   const quadrantConfig = QUADRANT_CONFIG[data.quadrant];
 
   return (
-    <div className="bg-popover border border-border rounded-lg shadow-lg p-3 min-w-[220px]">
+    <div className="bg-popover border border-border rounded-lg shadow-xl p-4 min-w-[240px]">
       <div className="flex items-center justify-between mb-2">
-        <span className="font-semibold text-sm">{data.codigo}</span>
+        <span className="text-base">{data.codigo}</span>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
           style={{
-            backgroundColor: `${quadrantConfig.color}20`,
+            backgroundColor: `${quadrantConfig.color}15`,
             color: quadrantConfig.color
           }}
         >
           {data.pipeline_stage || data.estado}
         </span>
       </div>
-      <p className="text-xs text-muted-foreground truncate mb-3 max-w-[200px]">
+      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
         {data.descripcion}
       </p>
-      <div className="space-y-1.5 text-xs">
+      <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">⏱️ Horas invertidas</span>
-          <span className="font-medium">{data.x.toFixed(1)}h</span>
+          <span className="text-muted-foreground">Horas invertidas</span>
+          <span className="tabular-nums">{data.x.toFixed(1)}h</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">📈 Probabilidad</span>
-          <span className="font-medium">{data.y}%</span>
+          <span className="text-muted-foreground">Probabilidad</span>
+          <span className="tabular-nums">{data.y}%</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">💰 Valor estimado</span>
-          <span className="font-medium">{formatCurrency(data.z)}</span>
+          <span className="text-muted-foreground">Valor estimado</span>
+          <span className="tabular-nums">{formatCurrency(data.z)}</span>
         </div>
       </div>
       <div
-        className="mt-3 pt-2 border-t border-border flex items-center gap-2"
+        className="mt-4 pt-3 border-t border-border flex items-center gap-2"
         style={{ color: quadrantConfig.color }}
       >
         <div
           className="w-2 h-2 rounded-full"
           style={{ backgroundColor: quadrantConfig.color }}
         />
-        <span className="text-xs font-medium">{quadrantConfig.label}</span>
-        <span className="text-xs text-muted-foreground">· {quadrantConfig.description}</span>
+        <span className="text-sm">{quadrantConfig.label}</span>
       </div>
     </div>
   );
 };
 
-const QuadrantLegend = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 text-xs">
-    {Object.entries(QUADRANT_CONFIG).map(([key, config]) => (
-      <div
-        key={key}
-        className="flex items-center gap-2 p-2 rounded-md bg-muted/30"
-      >
-        <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: config.color }}
-        />
-        <div className="min-w-0">
-          <p className="font-medium truncate">{config.label}</p>
-          <p className="text-muted-foreground truncate">{config.description}</p>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
 const LoadingSkeleton = () => (
-  <Card>
-    <CardHeader>
-      <Skeleton className="h-6 w-48" />
+  <Card className="border-0 shadow-sm bg-card/50">
+    <CardHeader className="pb-2">
+      <Skeleton className="h-5 w-48" />
     </CardHeader>
     <CardContent>
-      <Skeleton className="h-[350px] w-full" />
+      <Skeleton className="h-[500px] w-full" />
     </CardContent>
   </Card>
 );
@@ -232,7 +216,7 @@ export function ValueVsInvestmentChart({
       .map((m): ScatterDataPoint => ({
         x: m.total_hours,
         y: m.probability,
-        z: m.valor || 500000, // Default bubble size if no value
+        z: m.valor || 500000,
         mandato_id: m.mandato_id,
         codigo: m.codigo,
         descripcion: m.descripcion,
@@ -250,7 +234,7 @@ export function ValueVsInvestmentChart({
   const maxHours = useMemo(() => {
     if (!scatterData.length) return 100;
     const max = Math.max(...scatterData.map(d => d.x));
-    return Math.ceil(max / 10) * 10 + 10; // Round up and add padding
+    return Math.ceil(max / 20) * 20 + 20;
   }, [scatterData]);
 
   const valueRange = useMemo(() => {
@@ -259,21 +243,25 @@ export function ValueVsInvestmentChart({
     return [Math.min(...values), Math.max(...values)];
   }, [scatterData]);
 
+  // Count by quadrant for legend
+  const quadrantCounts = useMemo(() => {
+    const counts: Record<Quadrant, number> = { priorizar: 0, correcto: 0, no_urgente: 0, riesgo: 0 };
+    scatterData.forEach(d => counts[d.quadrant]++);
+    return counts;
+  }, [scatterData]);
+
   if (loading) {
     return <LoadingSkeleton />;
   }
 
   if (!scatterData.length) {
     return (
-      <Card className={className}>
+      <Card className={cn("border-0 shadow-sm bg-card/50", className)}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Valor vs Inversión
-          </CardTitle>
+          <CardTitle className="text-lg">Matriz Estratégica</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          <div className="flex items-center justify-center h-[400px] text-muted-foreground">
             No hay datos de mandatos para mostrar
           </div>
         </CardContent>
@@ -282,31 +270,90 @@ export function ValueVsInvestmentChart({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          Valor vs Inversión - Matriz Estratégica
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Tamaño de burbuja = Valor estimado del deal · Click para ver detalle
-        </p>
+    <Card className={cn("border-0 shadow-sm bg-card/50 backdrop-blur-sm", className)}>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl mb-1">Matriz Estratégica</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Tamaño = Valor del deal · Click para ver detalle
+            </p>
+          </div>
+          
+          {/* Inline Legend */}
+          <div className="hidden md:flex items-center gap-4 text-xs">
+            {(['priorizar', 'correcto', 'riesgo', 'no_urgente'] as Quadrant[]).map(q => (
+              <div key={q} className="flex items-center gap-1.5">
+                <div 
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: QUADRANT_CONFIG[q].color }}
+                />
+                <span className="text-muted-foreground">
+                  {QUADRANT_CONFIG[q].label}
+                </span>
+                <span className="text-foreground tabular-nums">
+                  ({quadrantCounts[q]})
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[350px] w-full">
+        <div className="h-[500px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart
-              margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+              margin={{ top: 30, right: 30, bottom: 30, left: 30 }}
             >
+              {/* Quadrant background areas */}
+              <ReferenceArea
+                x1={0}
+                x2={hoursThreshold}
+                y1={probabilityThreshold}
+                y2={100}
+                fill={QUADRANT_CONFIG.priorizar.bgColor}
+                fillOpacity={1}
+              />
+              <ReferenceArea
+                x1={hoursThreshold}
+                x2={maxHours}
+                y1={probabilityThreshold}
+                y2={100}
+                fill={QUADRANT_CONFIG.correcto.bgColor}
+                fillOpacity={1}
+              />
+              <ReferenceArea
+                x1={0}
+                x2={hoursThreshold}
+                y1={0}
+                y2={probabilityThreshold}
+                fill={QUADRANT_CONFIG.no_urgente.bgColor}
+                fillOpacity={1}
+              />
+              <ReferenceArea
+                x1={hoursThreshold}
+                x2={maxHours}
+                y1={0}
+                y2={probabilityThreshold}
+                fill={QUADRANT_CONFIG.riesgo.bgColor}
+                fillOpacity={1}
+              />
+
               <XAxis
                 type="number"
                 dataKey="x"
                 name="Horas"
                 domain={[0, maxHours]}
                 tickFormatter={(v) => `${v}h`}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
+                label={{ 
+                  value: 'Horas invertidas →', 
+                  position: 'bottom', 
+                  offset: 10,
+                  style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }
+                }}
               />
               <YAxis
                 type="number"
@@ -314,30 +361,23 @@ export function ValueVsInvestmentChart({
                 name="Probabilidad"
                 domain={[0, 100]}
                 tickFormatter={(v) => `${v}%`}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 tickLine={{ stroke: 'hsl(var(--border))' }}
+                label={{ 
+                  value: 'Probabilidad →', 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  offset: 10,
+                  style: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }
+                }}
               />
               <ZAxis
                 type="number"
                 dataKey="z"
-                range={[100, 600]}
+                range={[150, 800]}
                 domain={valueRange}
                 name="Valor"
-              />
-
-              {/* Quadrant reference lines */}
-              <ReferenceLine
-                x={hoursThreshold}
-                stroke="hsl(var(--muted-foreground))"
-                strokeDasharray="5 5"
-                strokeWidth={1}
-              />
-              <ReferenceLine
-                y={probabilityThreshold}
-                stroke="hsl(var(--muted-foreground))"
-                strokeDasharray="5 5"
-                strokeWidth={1}
               />
 
               <Tooltip
@@ -354,7 +394,7 @@ export function ValueVsInvestmentChart({
                   <Cell
                     key={`cell-${index}`}
                     fill={QUADRANT_CONFIG[entry.quadrant].color}
-                    fillOpacity={0.7}
+                    fillOpacity={0.75}
                     stroke={QUADRANT_CONFIG[entry.quadrant].color}
                     strokeWidth={2}
                   />
@@ -362,9 +402,36 @@ export function ValueVsInvestmentChart({
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
+          
+          {/* Quadrant Labels */}
+          <div className="absolute top-8 left-12 text-xs text-emerald-600/70 uppercase tracking-wide">
+            Priorizar
+          </div>
+          <div className="absolute top-8 right-12 text-xs text-blue-600/70 uppercase tracking-wide">
+            Correcto
+          </div>
+          <div className="absolute bottom-12 left-12 text-xs text-gray-500/70 uppercase tracking-wide">
+            Monitorear
+          </div>
+          <div className="absolute bottom-12 right-12 text-xs text-red-500/70 uppercase tracking-wide">
+            En Riesgo
+          </div>
         </div>
 
-        <QuadrantLegend />
+        {/* Mobile Legend */}
+        <div className="md:hidden grid grid-cols-2 gap-2 mt-4 text-xs">
+          {(['priorizar', 'correcto', 'riesgo', 'no_urgente'] as Quadrant[]).map(q => (
+            <div key={q} className="flex items-center gap-2 p-2 rounded bg-muted/20">
+              <div 
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: QUADRANT_CONFIG[q].color }}
+              />
+              <span className="text-muted-foreground truncate">
+                {QUADRANT_CONFIG[q].label} ({quadrantCounts[q]})
+              </span>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,26 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingDialog } from "@/components/mandatos/TimeTrackingDialog";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilters } from "@/components/mandatos/TimeFilters";
-import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
-import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
-import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
-import { TaskTimeWidget } from "@/components/mandatos/TaskTimeWidget";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchMyTimeEntries, getMyTimeStats, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
+import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
-import type { TimeEntry, TimeStats, MandatoChecklistTask, TimeFilterState } from "@/types";
+import type { TimeEntry, MandatoChecklistTask, TimeFilterState, TimeEntryValueType } from "@/types";
 import { startOfWeek, startOfMonth, endOfDay, differenceInDays, isToday, isThisWeek } from "date-fns";
+import { VALUE_TYPE_CONFIG } from "@/types";
 
 export default function MisHoras() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [allEntries, setAllEntries] = useState<TimeEntry[]>([]);
-  const [stats, setStats] = useState<TimeStats | null>(null);
   const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,7 +55,6 @@ export default function MisHoras() {
       
       setIsAdmin(adminUser?.role === 'admin' || adminUser?.role === 'super_admin');
 
-      // Sanitize mandatoId filter
       const sanitizedMandatoId = filters.mandatoId && 
                                   filters.mandatoId !== 'all' && 
                                   filters.mandatoId !== 'undefined'
@@ -76,9 +71,6 @@ export default function MisHoras() {
 
       const allUserEntries = await fetchMyTimeEntries(user.id, { status: 'approved' });
       setAllEntries(allUserEntries);
-
-      const userStats = await getMyTimeStats(user.id);
-      setStats(userStats);
 
       const timer = await getMyActiveTimer();
       setActiveTimer(timer);
@@ -120,46 +112,94 @@ export default function MisHoras() {
     }
   };
 
+  // Calculate metrics
   const todayHours = allEntries.filter(e => isToday(new Date(e.start_time))).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
   const thisWeekHours = allEntries.filter(e => isThisWeek(new Date(e.start_time), { weekStartsOn: 1 })).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
   const thisMonthStart = startOfMonth(new Date());
   const thisMonthHours = allEntries.filter(e => new Date(e.start_time) >= thisMonthStart).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
-  const billableHours = allEntries.filter(e => e.is_billable).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
-  const workingDays = Math.max(differenceInDays(new Date(), thisMonthStart) + 1, 1);
-  const averageDailyHours = thisMonthHours / workingDays;
+
+  // Value distribution for personal view
+  const valueDistribution = useMemo(() => {
+    const dist = { core_ma: 0, soporte: 0, bajo_valor: 0, total: 0 };
+    allEntries.forEach(entry => {
+      const hours = (entry.duration_minutes || 0) / 60;
+      dist.total += hours;
+      if (entry.value_type && entry.value_type in dist) {
+        dist[entry.value_type] += hours;
+      }
+    });
+    return dist;
+  }, [allEntries]);
+
+  const corePercentage = valueDistribution.total > 0 
+    ? (valueDistribution.core_ma / valueDistribution.total) * 100 
+    : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <PageHeader title="Mis Horas" description="Gestiona tu tiempo dedicado a mandatos" />
-        <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Registrar Tiempo</Button>
+        <PageHeader title="Mis Horas" description="Tu inversión de tiempo en mandatos" />
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Registrar Tiempo
+        </Button>
       </div>
 
       {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Hoy</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{todayHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Aprobadas hoy</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Esta Semana</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{thisWeekHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Últimos 7 días</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Horas Facturables</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{billableHours.toFixed(1)}h</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Promedio Diario</CardTitle></CardHeader><CardContent><div className="text-2xl font-medium">{averageDailyHours.toFixed(1)}h</div><p className="text-xs text-muted-foreground mt-1">Este mes</p></CardContent></Card>
+      {/* Compact Personal KPIs */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-0 shadow-sm bg-card/50">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-sm text-muted-foreground mb-1">Hoy</p>
+            <p className="text-3xl tabular-nums tracking-tight">{todayHours.toFixed(1)}h</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-card/50">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-sm text-muted-foreground mb-1">Esta Semana</p>
+            <p className="text-3xl tabular-nums tracking-tight">{thisWeekHours.toFixed(1)}h</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-card/50">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-sm text-muted-foreground mb-1">Este Mes</p>
+            <p className="text-3xl tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-card/50">
+          <CardContent className="pt-5 pb-5">
+            <p className="text-sm text-muted-foreground mb-1">Ratio Core M&A</p>
+            <p className="text-3xl tabular-nums tracking-tight" style={{ color: VALUE_TYPE_CONFIG.core_ma.color }}>
+              {corePercentage.toFixed(0)}%
+            </p>
+            {/* Mini stacked bar */}
+            <div className="h-1.5 rounded-full overflow-hidden flex bg-muted/30 mt-3">
+              {(['core_ma', 'soporte', 'bajo_valor'] as TimeEntryValueType[]).map(type => {
+                const pct = valueDistribution.total > 0 
+                  ? (valueDistribution[type] / valueDistribution.total) * 100 
+                  : 0;
+                return (
+                  <div 
+                    key={type}
+                    className="h-full"
+                    style={{ 
+                      width: `${pct}%`,
+                      backgroundColor: VALUE_TYPE_CONFIG[type].color 
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <TimeFilters filters={filters} onChange={setFilters} mandatos={mandatos} showUserFilter={false} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <HoursByWeekChart entries={allEntries} weeks={4} />
-        <HoursByTypeChart entries={allEntries} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <HoursTrendChart entries={allEntries} weeks={8} />
-        </div>
-        <TaskTimeWidget entries={allEntries} />
-      </div>
-
+      {/* Time Entries Table */}
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Mis Registros de Tiempo</h3>
+        <h3 className="text-lg">Mis Registros</h3>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Cargando registros...</div>
         ) : (
