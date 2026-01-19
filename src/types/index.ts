@@ -679,6 +679,10 @@ export interface MandatoInfo {
   descripcion: string;
   tipo: MandatoTipo;
   estado: MandatoEstado;
+  // Extended fields for investment analysis
+  probability?: number;
+  valor?: number;
+  pipeline_stage?: PipelineStage;
 }
 
 // ============================================

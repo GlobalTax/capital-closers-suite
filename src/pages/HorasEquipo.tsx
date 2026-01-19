@@ -6,11 +6,12 @@ import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
 import { HoursByTypeChart } from "@/components/mandatos/HoursByTypeChart";
 import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
+import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllTimeEntries, getAllTimeStats } from "@/services/timeTracking";
 import { toast } from "sonner";
-import type { TimeEntry, TeamStats, TimeFilterState, Mandato } from "@/types";
+import type { TimeEntry, TeamStats, TimeFilterState } from "@/types";
 import { startOfWeek, endOfWeek } from "date-fns";
 
 export default function HorasEquipo() {
@@ -130,6 +131,14 @@ export default function HorasEquipo() {
         showUserFilter={true}
       />
 
+      {/* Main chart - Investment by Mandato */}
+      <InvestmentByMandatoChart 
+        entries={timeEntries} 
+        limit={10}
+        loading={loading}
+      />
+
+      {/* Secondary charts grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <HoursByWeekChart entries={timeEntries} weeks={4} />
         <HoursByTypeChart entries={timeEntries} />
