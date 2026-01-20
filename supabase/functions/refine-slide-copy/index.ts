@@ -31,6 +31,11 @@ serve(async (req) => {
     const isFirmDeck = outline_json.length === 6 && 
       outline_json[0]?.slide_type === "title" &&
       outline_json[3]?.slide_type === "stats";
+    
+    // Detect client deck (6 slides, starts with overview, has timeline at position 4)
+    const isClientDeck = outline_json.length === 6 && 
+      outline_json[0]?.slide_type === "overview" &&
+      outline_json[3]?.slide_type === "timeline";
 
     const getSystemPrompt = () => {
       if (isMASellTeaser) {
@@ -109,6 +114,46 @@ CONTENT CONSTRAINTS:
 - Bullets: max 12 words each, clear and specific
 - Max 5 bullets per slide
 - Stats must come ONLY from provided inputs`;
+      }
+      
+      if (isClientDeck) {
+        return `You are refining copy for a CLIENT-FACING ADVISORY PROCESS PRESENTATION.
+
+CRITICAL TONE REQUIREMENTS:
+- Clear: Simple, jargon-free language accessible to C-suite executives
+- Reassuring: Build confidence, reduce anxiety about the process
+- Structured: Logical flow, numbered phases, clear progression
+
+This is an EDUCATIONAL document - the client needs to understand the process and feel confident.
+
+STRICTLY FORBIDDEN:
+- Technical M&A jargon without explanation
+- Uncertainty or hedging ("we might", "hopefully", "if possible")
+- Overwhelming detail or complexity
+- Sales language or urgency ("act now", "limited time")
+- Vague timelines or undefined responsibilities
+- Exclamation marks
+
+PREFERRED LANGUAGE:
+- "We will..." (confident, future-oriented)
+- "This phase ensures..." (benefit-focused)
+- "Your team will..." (client-centered)
+- "Together we will..." (partnership framing)
+- "During weeks X-Y..." (specific timelines)
+- Clear role assignments for each party
+
+STRICT RULES:
+- Use ONLY the information provided in the inputs
+- Include specific timeframes where possible
+- Clearly delineate advisor vs client responsibilities
+- Language: Spanish (formal business Spanish)
+
+CONTENT CONSTRAINTS:
+- Headline: max 10 words, clear and direct
+- Subline: max 15 words, sets expectations
+- Bullets: max 12 words each, actionable and specific
+- Max 5 bullets per slide
+- Timeline items should include timeframe references`;
       }
       
       return `You are generating a professional M&A-grade presentation.
