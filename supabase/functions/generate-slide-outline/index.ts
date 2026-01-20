@@ -26,8 +26,16 @@ const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: num
     ],
   },
   firm_deck: {
-    allowedTypes: ["title", "overview", "bullets", "stats", "team", "closing"],
+    allowedTypes: ["title", "overview", "bullets", "stats", "closing"],
     slideCount: 6,
+    fixedSequence: [
+      { type: "title", name: "Positioning Statement" },
+      { type: "overview", name: "What We Do & For Whom" },
+      { type: "bullets", name: "Our Approach" },
+      { type: "stats", name: "Experience & Credibility" },
+      { type: "bullets", name: "How We Work" },
+      { type: "closing", name: "Call to Action" }
+    ],
   },
   client_deck: {
     allowedTypes: ["title", "overview", "bullets", "timeline", "team", "closing"],
@@ -92,13 +100,15 @@ serve(async (req) => {
       .map(type => `- ${type}: ${SLIDE_CONTENT_SCHEMAS[type] || "headline, subline"}`)
       .join("\n");
 
-    // Check if this is the M&A sell-side teaser (special sober tone)
+    // Check if this is a specialized template
     const isMASellTeaser = presentation_type === "teaser_ma_sell";
+    const isFirmDeck = presentation_type === "firm_deck";
     const fixedSequence = config.fixedSequence;
     
     // Build the AI prompt with content generation
-    const baseRules = isMASellTeaser 
-      ? `You are an M&A presentation strategist creating a CONFIDENTIAL SELL-SIDE TEASER for sophisticated investors.
+    const getBaseRules = () => {
+      if (isMASellTeaser) {
+        return `You are an M&A presentation strategist creating a CONFIDENTIAL SELL-SIDE TEASER for sophisticated investors.
 
 CRITICAL TONE REQUIREMENTS:
 - Very sober and professional - this is for PE/VC/strategic buyers
@@ -129,8 +139,50 @@ SLIDE STRUCTURE (FIXED - 8 slides):
 5. Market & Positioning - Market size, trends, competitive position
 6. Financial Snapshot - Key metrics: Revenue, EBITDA, margins, growth
 7. Growth & Value Creation - Growth drivers, synergies, upside potential
-8. Transaction & Next Steps - Process overview, timeline, advisor contact`
-      : `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.`;
+8. Transaction & Next Steps - Process overview, timeline, advisor contact`;
+      }
+      
+      if (isFirmDeck) {
+        return `You are creating a PROFESSIONAL FIRM PRESENTATION for an M&A advisory firm.
+
+CRITICAL TONE REQUIREMENTS:
+- Authoritative: Speak with confidence and demonstrated expertise
+- Calm: No urgency, no pressure, no excitement - measured and composed
+- Non-commercial: This is NOT a sales pitch - it's a professional introduction
+- Let credentials and track record speak for themselves
+- Focus on competence and methodology, not promises
+- Understated confidence rather than aggressive positioning
+
+STRICTLY FORBIDDEN:
+- "We are the best/leading/top" (unless backed by specific ranking/award)
+- "Partner with us today!" or any urgency-driven language
+- Exclamation marks (!)
+- Promotional or marketing language
+- Vague claims like "world-class service", "unmatched expertise"
+- "Why choose us" framing (too commercial)
+- Superlatives without evidence
+
+PREFERRED LANGUAGE:
+- "We advise..." (factual, present tense)
+- "Our approach centers on..." (methodological)
+- "XX transactions completed since YYYY" (specific, verifiable)
+- "Clients include..." (evidence-based)
+- "Our process involves..." (structured, clear)
+- "We focus on..." (scope definition)
+
+SLIDE STRUCTURE (FIXED - 6 slides):
+1. Positioning Statement - Who we are, one powerful line
+2. What We Do & For Whom - Services offered, target clients
+3. Our Approach - Methodology, differentiators
+4. Experience & Credibility - Track record, numbers that matter
+5. How We Work - Process, engagement model
+6. Call to Action - Contact, next step`;
+      }
+      
+      return `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.`;
+    };
+    
+    const baseRules = getBaseRules();
 
     const systemPrompt = `${baseRules}
 
@@ -149,20 +201,36 @@ ${slideContentRequirements}
 
 You MUST use the generate_slides tool to return the structured response.`;
 
-    const userPrompt = isMASellTeaser 
-      ? `Create a confidential M&A sell-side teaser with exactly 8 slides following this EXACT sequence:
+    const getUserPrompt = () => {
+      if (isMASellTeaser) {
+        return `Create a confidential M&A sell-side teaser with exactly 8 slides following this EXACT sequence:
 ${fixedSequence?.map((s, i) => `${i + 1}. ${s.name} (type: ${s.type})`).join("\n")}
 
 Company/Project Details:
 ${JSON.stringify(inputs_json, null, 2)}
 
-Generate sober, investor-grade content. Use ONLY the provided data. Do not invent metrics or claims. Maintain a measured, professional tone throughout.`
-      : `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.
+Generate sober, investor-grade content. Use ONLY the provided data. Do not invent metrics or claims. Maintain a measured, professional tone throughout.`;
+      }
+      
+      if (isFirmDeck) {
+        return `Create a professional firm presentation with exactly 6 slides following this EXACT sequence:
+${fixedSequence?.map((s, i) => `${i + 1}. ${s.name} (type: ${s.type})`).join("\n")}
+
+Firm Details:
+${JSON.stringify(inputs_json, null, 2)}
+
+Generate authoritative, calm, non-commercial content. Let credentials speak for themselves. Use ONLY the provided data. Do not invent statistics or claims. Maintain a measured, confident tone throughout.`;
+      }
+      
+      return `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.
 
 Company/Project Details:
 ${JSON.stringify(inputs_json, null, 2)}
 
 Generate professional content for each slide based on these details. Use the provided numbers and highlights. Make content compelling for investors/buyers.`;
+    };
+    
+    const userPrompt = getUserPrompt();
 
     // Define the tool for structured output
     const tools = [
