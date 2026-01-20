@@ -23,7 +23,18 @@ interface RiskFlag {
   recommendation: string;
 }
 
+interface CriteriaScore {
+  score: number;
+  issues: string[];
+}
+
 export interface ValidationReport {
+  approval_decision: 'APPROVED' | 'NOT_APPROVED';
+  approval_justification: string;
+  professional_quality: CriteriaScore;
+  credibility: CriteriaScore;
+  confidentiality_compliance: CriteriaScore;
+  investor_suitability: CriteriaScore;
   overall_quality_score: number;
   issues_per_slide: Array<{
     slide_index: number;

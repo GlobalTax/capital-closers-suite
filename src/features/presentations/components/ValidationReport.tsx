@@ -24,6 +24,12 @@ import {
   Sparkles,
   FileWarning,
   ChevronRight,
+  ShieldCheck,
+  ShieldX,
+  Award,
+  Lock,
+  Users,
+  Briefcase,
 } from "lucide-react";
 import {
   ValidationReport as ValidationReportType,
@@ -41,6 +47,41 @@ interface ValidationReportProps {
   report: ValidationReportType | null;
   slides: PresentationSlide[];
   onApplyFix?: (slideIndex: number, location: string, suggested: string) => void;
+}
+
+function CriteriaCard({ 
+  icon: Icon, 
+  label, 
+  score, 
+  issues 
+}: { 
+  icon: React.ElementType; 
+  label: string; 
+  score: number; 
+  issues: string[];
+}) {
+  const isPass = score >= 7;
+  return (
+    <div className={`p-3 rounded-lg border ${isPass ? 'bg-green-500/5 border-green-500/20' : 'bg-destructive/5 border-destructive/20'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${isPass ? 'text-green-500' : 'text-destructive'}`} />
+          <span className="text-sm font-medium">{label}</span>
+        </div>
+        <span className={`text-lg font-bold ${getScoreColor(score)}`}>{score}/10</span>
+      </div>
+      {issues.length > 0 && (
+        <ul className="text-xs text-muted-foreground space-y-1 mt-2">
+          {issues.map((issue, i) => (
+            <li key={i} className="flex items-start gap-1">
+              <span className="text-destructive">•</span>
+              <span>{issue}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export function ValidationReport({
@@ -72,10 +113,63 @@ export function ValidationReport({
 
         <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">
+            {/* Approval Decision Banner */}
+            <div className={`p-4 rounded-lg border ${
+              report.approval_decision === 'APPROVED' 
+                ? 'bg-green-500/10 border-green-500/30' 
+                : 'bg-destructive/10 border-destructive/30'
+            }`}>
+              <div className="flex items-center gap-3">
+                {report.approval_decision === 'APPROVED' ? (
+                  <ShieldCheck className="h-8 w-8 text-green-500" />
+                ) : (
+                  <ShieldX className="h-8 w-8 text-destructive" />
+                )}
+                <div className="flex-1">
+                  <div className={`text-xl font-bold ${
+                    report.approval_decision === 'APPROVED' ? 'text-green-600' : 'text-destructive'
+                  }`}>
+                    {report.approval_decision === 'APPROVED' ? 'APROBADA' : 'NO APROBADA'}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {report.approval_justification}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Criteria Scores Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <CriteriaCard 
+                icon={Award} 
+                label="Calidad Profesional" 
+                score={report.professional_quality.score} 
+                issues={report.professional_quality.issues} 
+              />
+              <CriteriaCard 
+                icon={Briefcase} 
+                label="Credibilidad" 
+                score={report.credibility.score} 
+                issues={report.credibility.issues} 
+              />
+              <CriteriaCard 
+                icon={Lock} 
+                label="Confidencialidad" 
+                score={report.confidentiality_compliance.score} 
+                issues={report.confidentiality_compliance.issues} 
+              />
+              <CriteriaCard 
+                icon={Users} 
+                label="Idoneidad Inversores" 
+                score={report.investor_suitability.score} 
+                issues={report.investor_suitability.issues} 
+              />
+            </div>
+
             {/* Quality Score */}
             <div className="p-4 rounded-lg border bg-card">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Puntuación de Calidad</span>
+                <span className="text-sm font-medium">Puntuación General</span>
                 <span className={`text-2xl font-bold ${getScoreColor(score)}`}>
                   {score.toFixed(1)}/10
                 </span>

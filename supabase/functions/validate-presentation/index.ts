@@ -18,6 +18,24 @@ interface SlideInput {
 }
 
 interface ValidationReport {
+  approval_decision: 'APPROVED' | 'NOT_APPROVED';
+  approval_justification: string;
+  professional_quality: {
+    score: number;
+    issues: string[];
+  };
+  credibility: {
+    score: number;
+    issues: string[];
+  };
+  confidentiality_compliance: {
+    score: number;
+    issues: string[];
+  };
+  investor_suitability: {
+    score: number;
+    issues: string[];
+  };
   overall_quality_score: number;
   issues_per_slide: Array<{
     slide_index: number;
@@ -68,29 +86,46 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are validating a confidential M&A presentation.
+    const systemPrompt = `You are approving a confidential M&A presentation for external distribution to investors.
 
-Check for:
-- Violations of copy constraints (headline max 10 words, bullets max 12 words each, max 5 bullets per slide)
-- Unsupported or risky claims (unqualified superlatives like "best", "leader", "dominant" without evidence)
-- Inconsistent terminology (same concept referred to differently across slides)
-- Excessive text density (too many words per slide, walls of text)
-- Any invented or implied data (claims not supported by the provided inputs)
+YOUR TASK: Determine if this presentation should be APPROVED or NOT_APPROVED for external distribution.
 
-IMPORTANT CONSTRAINTS TO VERIFY:
-- Headlines: maximum 10 words
-- Sublines: maximum 15 words
-- Bullets: maximum 12 words each, maximum 5 bullets per slide
-- Stats: must have clear labels, values should be numeric
-- No marketing language or promotional tone
-- Numbers must be verifiable against inputs
+EVALUATION CRITERIA (score each 1-10):
+
+1. PROFESSIONAL QUALITY
+   - Clean, error-free copy (no typos, grammar issues)
+   - Proper formatting and structure
+   - Consistent terminology throughout
+   - Headlines max 10 words, bullets max 12 words each
+
+2. CREDIBILITY  
+   - All claims are factual and verifiable
+   - Numbers have clear sources or context
+   - No unqualified superlatives ("best", "leader" without evidence)
+   - No invented or implied data
+
+3. CONFIDENTIALITY COMPLIANCE
+   - Proper confidentiality disclaimers present
+   - No sensitive information exposed inappropriately
+   - Appropriate NDA language if required
+   - No personally identifiable information leaks
+
+4. INVESTOR SUITABILITY
+   - Professional investment tone (not marketing)
+   - Clear value proposition
+   - Appropriate level of detail for investors
+   - No promotional or sales language
+
+DECISION RULES:
+- APPROVED: All criteria score >= 7 AND no high-severity issues
+- NOT_APPROVED: Any criteria score < 7 OR any high-severity issue present
 
 SEVERITY LEVELS:
-- high: Must fix before sharing (invented data, legal risk, major constraint violations)
+- high: Must fix before sharing (invented data, legal risk, confidentiality breach)
 - medium: Should fix (risky claims, moderate constraint violations)
-- low: Optional improvements (terminology consistency, minor density issues)
+- low: Optional improvements (terminology, minor density issues)
 
-Return a comprehensive validation report.`;
+Be strict but fair. A presentation must meet investor-grade standards.`;
 
     const userPrompt = `Validate this M&A presentation:
 
@@ -118,13 +153,54 @@ Analyze each slide and return a validation report.`;
           type: 'function',
           function: {
             name: 'submit_validation_report',
-            description: 'Submit the validation report for the M&A presentation',
+            description: 'Submit the approval decision and validation report for the M&A presentation',
             parameters: {
               type: 'object',
               properties: {
+                approval_decision: {
+                  type: 'string',
+                  enum: ['APPROVED', 'NOT_APPROVED'],
+                  description: 'Final decision for external distribution'
+                },
+                approval_justification: {
+                  type: 'string',
+                  description: 'Short justification for the approval decision (2-3 sentences)'
+                },
+                professional_quality: {
+                  type: 'object',
+                  properties: {
+                    score: { type: 'number', minimum: 1, maximum: 10 },
+                    issues: { type: 'array', items: { type: 'string' } }
+                  },
+                  required: ['score', 'issues']
+                },
+                credibility: {
+                  type: 'object',
+                  properties: {
+                    score: { type: 'number', minimum: 1, maximum: 10 },
+                    issues: { type: 'array', items: { type: 'string' } }
+                  },
+                  required: ['score', 'issues']
+                },
+                confidentiality_compliance: {
+                  type: 'object',
+                  properties: {
+                    score: { type: 'number', minimum: 1, maximum: 10 },
+                    issues: { type: 'array', items: { type: 'string' } }
+                  },
+                  required: ['score', 'issues']
+                },
+                investor_suitability: {
+                  type: 'object',
+                  properties: {
+                    score: { type: 'number', minimum: 1, maximum: 10 },
+                    issues: { type: 'array', items: { type: 'string' } }
+                  },
+                  required: ['score', 'issues']
+                },
                 overall_quality_score: {
                   type: 'number',
-                  description: 'Quality score from 1-10 (10 being perfect)',
+                  description: 'Overall quality score from 1-10',
                   minimum: 1,
                   maximum: 10
                 },
@@ -187,7 +263,7 @@ Analyze each slide and return a validation report.`;
                   }
                 }
               },
-              required: ['overall_quality_score', 'issues_per_slide', 'suggested_fixes', 'risk_flags']
+              required: ['approval_decision', 'approval_justification', 'professional_quality', 'credibility', 'confidentiality_compliance', 'investor_suitability', 'overall_quality_score', 'issues_per_slide', 'suggested_fixes', 'risk_flags']
             }
           }
         }],
