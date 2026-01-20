@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-slide-outline]
 verify_jwt = true
+
+[functions.refine-slide-copy]
+verify_jwt = true
