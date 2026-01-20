@@ -1,5 +1,13 @@
 import { cn } from "@/lib/utils";
-import type { PresentationSlide, SlideContent, BrandKit, SlideLayout } from "@/types/presentations";
+import type { PresentationSlide, SlideContent, BrandKit, SlideLayout, LayoutVariant } from "@/types/presentations";
+import { getLayoutComponent, ColorScheme, SlideContentData } from "./layouts";
+import { 
+  TableLayoutA, TableLayoutB, TableLayoutC,
+  ChartLayoutA, ChartLayoutB, ChartLayoutC,
+  IconsGridLayoutA, IconsGridLayoutB, IconsGridLayoutC,
+  QuoteLayoutA, QuoteLayoutB, QuoteLayoutC,
+  ProcessLayoutA, ProcessLayoutB, ProcessLayoutC,
+} from "./layouts";
 
 interface SlideCanvasProps {
   slide: PresentationSlide;
@@ -160,6 +168,7 @@ export function SlideCanvas({ slide, brandKit, isPresenting = false, className }
         {/* Layout-specific content */}
         <SlideLayoutContent 
           layout={slide.layout} 
+          variant={slide.layout_variant || 'A'}
           content={content} 
           accentColor={accentColor}
           mutedColor={mutedColor}
@@ -169,6 +178,7 @@ export function SlideCanvas({ slide, brandKit, isPresenting = false, className }
           logoUrl={logoUrl}
           fontHeading={fontHeading}
           schemeName={schemeName}
+          scheme={scheme}
         />
       </div>
 
@@ -186,6 +196,7 @@ export function SlideCanvas({ slide, brandKit, isPresenting = false, className }
 
 interface SlideLayoutContentProps {
   layout: SlideLayout;
+  variant: LayoutVariant;
   content: SlideContent;
   accentColor: string;
   mutedColor: string;
@@ -195,10 +206,12 @@ interface SlideLayoutContentProps {
   logoUrl?: string;
   fontHeading?: string;
   schemeName: string;
+  scheme: ColorScheme;
 }
 
 function SlideLayoutContent({ 
   layout, 
+  variant,
   content, 
   accentColor, 
   mutedColor,
@@ -208,7 +221,16 @@ function SlideLayoutContent({
   logoUrl,
   fontHeading,
   schemeName,
+  scheme,
 }: SlideLayoutContentProps) {
+  // Try to get premium layout component
+  const LayoutComponent = getLayoutComponent(layout as any, variant);
+  
+  if (LayoutComponent) {
+    return <LayoutComponent content={content as SlideContentData} scheme={scheme} />;
+  }
+
+  // Fallback to legacy layouts
   switch (layout) {
     case 'title':
     case 'hero':

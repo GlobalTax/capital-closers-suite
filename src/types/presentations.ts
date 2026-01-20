@@ -25,6 +25,11 @@ export type SlideLayout =
   | 'market'
   | 'closing'
   | 'disclaimer'
+  | 'table'
+  | 'chart'
+  | 'icons'
+  | 'quote'
+  | 'process'
   | 'custom';
 
 export type PresentationStatus = 'draft' | 'review' | 'approved' | 'archived';
@@ -147,6 +152,7 @@ export interface PresentationSlide {
   project_id: string;
   order_index: number;
   layout: SlideLayout;
+  layout_variant: LayoutVariant;
   headline: string | null;
   subline: string | null;
   content: SlideContent;
@@ -320,5 +326,10 @@ export const LAYOUT_DEFINITIONS: Record<SlideLayout, { name: string; icon: strin
   market: { name: 'Mercado', icon: 'Globe' },
   closing: { name: 'Cierre', icon: 'CheckCircle' },
   disclaimer: { name: 'Disclaimer', icon: 'AlertCircle' },
+  table: { name: 'Tabla', icon: 'Table2' },
+  chart: { name: 'Gráfico', icon: 'PieChart' },
+  icons: { name: 'Iconos', icon: 'Grid3X3' },
+  quote: { name: 'Cita', icon: 'Quote' },
+  process: { name: 'Proceso', icon: 'GitBranch' },
   custom: { name: 'Personalizado', icon: 'Palette' },
 };
