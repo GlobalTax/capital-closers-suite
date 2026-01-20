@@ -6,10 +6,24 @@ const corsHeaders = {
 };
 
 // Template configurations with allowed slide types and expected counts
-const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: number }> = {
+const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: number; fixedSequence?: { type: string; name: string }[] }> = {
   teaser_sell: {
     allowedTypes: ["title", "overview", "bullets", "financials", "stats", "market", "closing"],
     slideCount: 8,
+  },
+  teaser_ma_sell: {
+    allowedTypes: ["disclaimer", "bullets", "overview", "market", "financials", "closing"],
+    slideCount: 8,
+    fixedSequence: [
+      { type: "disclaimer", name: "Confidentiality & Disclaimer" },
+      { type: "bullets", name: "Investment Highlights" },
+      { type: "overview", name: "Company Overview" },
+      { type: "bullets", name: "Business Model" },
+      { type: "market", name: "Market & Positioning" },
+      { type: "financials", name: "Financial Snapshot" },
+      { type: "bullets", name: "Growth & Value Creation" },
+      { type: "closing", name: "Transaction & Next Steps" }
+    ],
   },
   firm_deck: {
     allowedTypes: ["title", "overview", "bullets", "stats", "team", "closing"],
@@ -78,25 +92,72 @@ serve(async (req) => {
       .map(type => `- ${type}: ${SLIDE_CONTENT_SCHEMAS[type] || "headline, subline"}`)
       .join("\n");
 
+    // Check if this is the M&A sell-side teaser (special sober tone)
+    const isMASellTeaser = presentation_type === "teaser_ma_sell";
+    const fixedSequence = config.fixedSequence;
+    
     // Build the AI prompt with content generation
-    const systemPrompt = `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.
+    const baseRules = isMASellTeaser 
+      ? `You are an M&A presentation strategist creating a CONFIDENTIAL SELL-SIDE TEASER for sophisticated investors.
+
+CRITICAL TONE REQUIREMENTS:
+- Very sober and professional - this is for PE/VC/strategic buyers
+- Investor-grade language with M&A terminology
+- NO sales language, marketing speak, or promotional tone
+- NO superlatives (best, leading, exceptional) unless supported by hard data
+- NO exclamation marks or emotional language
+- Use factual, neutral, measured descriptions
+- Present information objectively and credibly
+
+FORBIDDEN PHRASES:
+- "unique opportunity", "exceptional", "best-in-class", "world-class"
+- "explosive growth", "revolutionizing", "game-changing"
+- "must-see", "once-in-a-lifetime", "incredible"
+- Any hyperbolic or promotional language
+
+PREFERRED M&A LANGUAGE:
+- "Attractive entry point", "Established market position"
+- "Demonstrated growth trajectory", "Recurring revenue base"
+- "Strategic optionality", "Identified value creation levers"
+- "Proven track record", "Defensible market position"
+
+SLIDE STRUCTURE (FIXED - 8 slides):
+1. Confidentiality & Disclaimer - Legal notice, project code name
+2. Investment Highlights - 4-5 key reasons to consider this opportunity
+3. Company Overview - Business description, founding, geography, employees
+4. Business Model - Revenue streams, customer base, value proposition
+5. Market & Positioning - Market size, trends, competitive position
+6. Financial Snapshot - Key metrics: Revenue, EBITDA, margins, growth
+7. Growth & Value Creation - Growth drivers, synergies, upside potential
+8. Transaction & Next Steps - Process overview, timeline, advisor contact`
+      : `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.`;
+
+    const systemPrompt = `${baseRules}
 
 Rules:
-- Generate exactly ${config.slideCount} slides using ONLY these types: ${config.allowedTypes.join(", ")}
+- Generate exactly ${config.slideCount} slides${fixedSequence ? ` following the EXACT sequence provided` : ` using ONLY these types: ${config.allowedTypes.join(", ")}`}
 - Each slide must have REAL content based on the inputs (not placeholders)
 - Layouts represent visual structure:
   - A (Statement): Single headline/statement, minimal text, high impact
   - B (Bullets): Headline with bullet points, detailed information  
   - C (Two-column): Comparative or side-by-side information
 - Content must be professional, concise, and relevant for M&A audiences
-- Use actual numbers from inputs when available, or create realistic estimates
+- Use actual numbers from inputs when available${isMASellTeaser ? " - DO NOT invent metrics" : ", or create realistic estimates"}
 
 Slide content requirements by type:
 ${slideContentRequirements}
 
 You MUST use the generate_slides tool to return the structured response.`;
 
-    const userPrompt = `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.
+    const userPrompt = isMASellTeaser 
+      ? `Create a confidential M&A sell-side teaser with exactly 8 slides following this EXACT sequence:
+${fixedSequence?.map((s, i) => `${i + 1}. ${s.name} (type: ${s.type})`).join("\n")}
+
+Company/Project Details:
+${JSON.stringify(inputs_json, null, 2)}
+
+Generate sober, investor-grade content. Use ONLY the provided data. Do not invent metrics or claims. Maintain a measured, professional tone throughout.`
+      : `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.
 
 Company/Project Details:
 ${JSON.stringify(inputs_json, null, 2)}

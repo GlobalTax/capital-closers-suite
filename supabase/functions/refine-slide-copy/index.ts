@@ -22,7 +22,47 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are generating a professional M&A-grade presentation.
+    // Check if this is the M&A sell-side teaser (requires stricter tone)
+    const isMASellTeaser = outline_json.some((slide: any) => 
+      slide.slide_type === "disclaimer" && outline_json.length === 8
+    );
+
+    const systemPrompt = isMASellTeaser 
+      ? `You are refining copy for a CONFIDENTIAL M&A SELL-SIDE TEASER targeting sophisticated investors (PE, VC, strategic buyers).
+
+CRITICAL TONE REQUIREMENTS:
+- Very sober, measured, and professional
+- Investor-grade precision - every word counts
+- NO sales language, marketing speak, or promotional tone
+- NO superlatives unless supported by hard data from inputs
+- NO exclamation marks or emotional language
+- Factual and neutral - let the numbers speak
+
+FORBIDDEN PHRASES:
+- "unique opportunity", "exceptional", "best-in-class", "world-class"
+- "explosive growth", "revolutionizing", "game-changing", "incredible"
+- "must-see", "once-in-a-lifetime", "market-leading" (unless proven)
+- Any hyperbolic or promotional language
+
+PREFERRED M&A TERMINOLOGY:
+- "Attractive entry point", "Established market position"
+- "Demonstrated growth trajectory", "Recurring revenue base"  
+- "Strategic optionality", "Identified value creation levers"
+- "Proven track record", "Defensible competitive position"
+
+STRICT RULES:
+- Use ONLY the information provided in the inputs
+- Do NOT invent metrics, clients, or claims - this is legally sensitive
+- If data is missing, omit or use "To be discussed" rather than inventing
+- Language: Spanish (formal business Spanish)
+
+CONTENT CONSTRAINTS:
+- Headline: max 10 words, factual and measured
+- Subline: max 15 words, provides context without hype
+- Bullets: max 12 words each, specific and verifiable
+- Max 5 bullets per slide
+- Stats must come ONLY from provided inputs`
+      : `You are generating a professional M&A-grade presentation.
 
 STRICT RULES:
 - Use ONLY the information provided in the inputs
@@ -37,21 +77,36 @@ CONTENT CONSTRAINTS:
 - Bullets: max 12 words each, clear and specific
 - Max 5 bullets per slide
 - No marketing hype or superlatives without data
-- Stats must come from provided inputs only
+- Stats must come from provided inputs only`;
 
+    const outputRequirements = `
 OUTPUT REQUIREMENTS:
 - Maintain the exact slide order and types from the outline
 - Enhance headlines and sublines with professional M&A language
 - Generate concrete bullet points based on provided information
 - For stats slides, only include metrics that exist in inputs`;
 
-    const userPrompt = `Generate final M&A-grade copy for this presentation.
+    const userPrompt = isMASellTeaser 
+      ? `Refine this confidential M&A sell-side teaser for sophisticated investors.
 
 INPUTS PROVIDED:
 ${JSON.stringify(inputs_json, null, 2)}
 
 SLIDES OUTLINE TO REFINE:
 ${JSON.stringify(outline_json, null, 2)}
+
+${outputRequirements}
+
+Generate sober, investor-grade copy. NO promotional language. Use ONLY provided data.`
+      : `Generate final M&A-grade copy for this presentation.
+
+INPUTS PROVIDED:
+${JSON.stringify(inputs_json, null, 2)}
+
+SLIDES OUTLINE TO REFINE:
+${JSON.stringify(outline_json, null, 2)}
+
+${outputRequirements}
 
 For each slide, generate polished professional copy. Use only the information provided above.`;
 

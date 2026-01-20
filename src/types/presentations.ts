@@ -5,6 +5,7 @@
 // Database enums
 export type PresentationType = 
   | 'teaser_sell' 
+  | 'teaser_ma_sell'
   | 'firm_deck' 
   | 'client_deck' 
   | 'mandate_deck' 
@@ -205,6 +206,11 @@ export const TEMPLATE_DEFINITIONS: Record<PresentationType, { name: string; desc
     description: 'Presentación confidencial para potenciales compradores',
     slideCount: 8,
   },
+  teaser_ma_sell: {
+    name: 'Teaser M&A Sell-Side',
+    description: 'Teaser confidencial para inversores (8 slides, tono sobrio)',
+    slideCount: 8,
+  },
   firm_deck: {
     name: 'Presentación de Firma',
     description: 'Credenciales y servicios de la firma',
@@ -235,6 +241,7 @@ export const TEMPLATE_DEFINITIONS: Record<PresentationType, { name: string; desc
 // Allowed slide types per template (for AI outline generation)
 export const TEMPLATE_ALLOWED_TYPES: Record<PresentationType, SlideLayout[]> = {
   teaser_sell: ["title", "overview", "bullets", "financials", "stats", "market", "closing"],
+  teaser_ma_sell: ["disclaimer", "bullets", "overview", "market", "financials", "closing"],
   firm_deck: ["title", "overview", "bullets", "stats", "team", "closing"],
   client_deck: ["title", "overview", "bullets", "timeline", "team", "closing"],
   mandate_deck: ["title", "overview", "bullets", "comparison", "stats", "market", "closing"],

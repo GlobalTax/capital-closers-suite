@@ -5,6 +5,7 @@ import {
   Target, 
   FileType,
   Sparkles,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ interface TemplateSelectorProps {
 
 const TEMPLATE_ICONS: Record<PresentationType, React.ElementType> = {
   teaser_sell: Target,
+  teaser_ma_sell: Briefcase,
   firm_deck: Building2,
   client_deck: Users,
   mandate_deck: FileText,
@@ -27,6 +29,7 @@ const TEMPLATE_ICONS: Record<PresentationType, React.ElementType> = {
 
 const TEMPLATE_COLORS: Record<PresentationType, string> = {
   teaser_sell: 'text-blue-500',
+  teaser_ma_sell: 'text-indigo-500',
   firm_deck: 'text-emerald-500',
   client_deck: 'text-violet-500',
   mandate_deck: 'text-amber-500',
