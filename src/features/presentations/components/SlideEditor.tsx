@@ -15,6 +15,7 @@ import {
   Unlock,
   CheckCircle,
   Shield,
+  Globe,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,8 +45,11 @@ import { toast } from "sonner";
 import { usePolishSlides, applyPolishedContent } from "@/hooks/usePolishSlides";
 import { useValidatePresentation, ValidationReport as ValidationReportType } from "@/hooks/useValidatePresentation";
 import { useApproveSlide, useUnlockSlide, isSlideProtected } from "@/hooks/usePresentationVersions";
+import { useTranslateSlides, applyTranslatedContent } from "@/hooks/useTranslateSlides";
 import { PolishPreview } from "./PolishPreview";
 import { ValidationReport } from "./ValidationReport";
+import { TranslateDialog } from "./TranslateDialog";
+import { TranslatePreview } from "./TranslatePreview";
 import type { PresentationSlide, SlideContent, SlideLayout } from "@/types/presentations";
 import type { PolishedSlide } from "@/hooks/usePolishSlides";
 
@@ -75,11 +79,17 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
   const [showValidationReport, setShowValidationReport] = useState(false);
   const [validationReport, setValidationReport] = useState<ValidationReportType | null>(null);
   const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
+  const [showTranslateDialog, setShowTranslateDialog] = useState(false);
+  const [showTranslatePreview, setShowTranslatePreview] = useState(false);
+  const [translatedSlides, setTranslatedSlides] = useState<any[]>([]);
+  const [targetLanguage, setTargetLanguage] = useState("");
+  const [translationWarnings, setTranslationWarnings] = useState<string[]>([]);
 
   const polishMutation = usePolishSlides();
   const validateMutation = useValidatePresentation();
   const approveMutation = useApproveSlide();
   const unlockMutation = useUnlockSlide();
+  const translateMutation = useTranslateSlides();
 
   const isProtected = isSlideProtected(slide);
   const isApproved = slide.approval_status === 'approved';
@@ -194,6 +204,54 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
   const handleUnlockSlide = async () => {
     await unlockMutation.mutateAsync({ slideId: slide.id, projectId: slide.project_id });
     setShowUnlockConfirm(false);
+  };
+
+  const handleTranslate = async (language: string) => {
+    const slidesToTranslate = allSlides.length > 0 ? allSlides : [slide];
+    
+    try {
+      const result = await translateMutation.mutateAsync({
+        slides: slidesToTranslate,
+        targetLanguage: language,
+      });
+      setTranslatedSlides(result.slides);
+      setTargetLanguage(result.target_language);
+      setTranslationWarnings(result.warnings || []);
+      setShowTranslateDialog(false);
+      setShowTranslatePreview(true);
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  const handleApplyTranslation = () => {
+    if (!onBulkUpdate || translatedSlides.length === 0) {
+      // Single slide update
+      const translated = translatedSlides[0];
+      if (translated) {
+        const updates = applyTranslatedContent([slide], [translated]);
+        if (updates[0]) {
+          onUpdate(updates[0]);
+        }
+      }
+    } else {
+      // Bulk update
+      const slidesToUpdate = allSlides.length > 0 ? allSlides : [slide];
+      const updates = applyTranslatedContent(slidesToUpdate, translatedSlides);
+      
+      const bulkUpdates = updates
+        .map((update, idx) => {
+          const original = slidesToUpdate[idx];
+          if (!original || !update.id) return null;
+          return { slideId: update.id, updates: update };
+        })
+        .filter(Boolean) as { slideId: string; updates: Partial<PresentationSlide> }[];
+
+      onBulkUpdate(bulkUpdates);
+    }
+
+    setShowTranslatePreview(false);
+    toast.success(`Traducción a ${targetLanguage} aplicada`);
   };
 
   return (
@@ -356,8 +414,9 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
           </div>
         </div>
 
-        {/* Polish AI Button */}
+        {/* AI Tools */}
         <div className="pt-4 border-t space-y-3">
+          {/* Polish AI Button */}
           <div>
             <Button
               variant="outline"
@@ -374,6 +433,26 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
             </Button>
             <p className="text-xs text-muted-foreground mt-1 text-center">
               Mejora claridad, elimina lenguaje de marketing
+            </p>
+          </div>
+
+          {/* Translate Button */}
+          <div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowTranslateDialog(true)}
+              disabled={translateMutation.isPending}
+            >
+              {translateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Globe className="h-4 w-4 mr-2" />
+              )}
+              {allSlides.length > 1 ? 'Traducir Presentación' : 'Traducir Slide'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Traduce preservando números y formato
             </p>
           </div>
 
@@ -517,6 +596,28 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {/* Translate Dialog */}
+    <TranslateDialog
+      open={showTranslateDialog}
+      onOpenChange={setShowTranslateDialog}
+      onTranslate={handleTranslate}
+      isTranslating={translateMutation.isPending}
+      slideCount={allSlides.length > 0 ? allSlides.length : 1}
+      protectedSlideCount={allSlides.filter(s => isSlideProtected(s)).length}
+    />
+
+    {/* Translate Preview */}
+    {showTranslatePreview && (
+      <TranslatePreview
+        originalSlides={allSlides.length > 0 ? allSlides : [slide]}
+        translatedSlides={translatedSlides}
+        targetLanguage={targetLanguage}
+        warnings={translationWarnings}
+        onApply={handleApplyTranslation}
+        onCancel={() => setShowTranslatePreview(false)}
+      />
+    )}
   </div>
 );
 }
