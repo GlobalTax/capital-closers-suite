@@ -10,6 +10,7 @@ import {
   Trash2,
   Sparkles,
   Loader2,
+  ClipboardCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +26,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { usePolishSlides, applyPolishedContent } from "@/hooks/usePolishSlides";
+import { useValidatePresentation, ValidationReport as ValidationReportType } from "@/hooks/useValidatePresentation";
 import { PolishPreview } from "./PolishPreview";
+import { ValidationReport } from "./ValidationReport";
 import type { PresentationSlide, SlideContent, SlideLayout } from "@/types/presentations";
 import type { PolishedSlide } from "@/hooks/usePolishSlides";
 
@@ -52,8 +55,11 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
   const [localContent, setLocalContent] = useState<SlideContent>(slide.content as SlideContent || {});
   const [showPolishPreview, setShowPolishPreview] = useState(false);
   const [polishedSlides, setPolishedSlides] = useState<PolishedSlide[]>([]);
+  const [showValidationReport, setShowValidationReport] = useState(false);
+  const [validationReport, setValidationReport] = useState<ValidationReportType | null>(null);
 
   const polishMutation = usePolishSlides();
+  const validateMutation = useValidatePresentation();
 
   // Sync when slide changes
   useEffect(() => {
@@ -93,6 +99,18 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
       setShowPolishPreview(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al pulir slides');
+    }
+  };
+
+  const handleValidatePresentation = async () => {
+    const slidesToValidate = allSlides.length > 0 ? allSlides : [slide];
+    
+    try {
+      const result = await validateMutation.mutateAsync({ slides: slidesToValidate });
+      setValidationReport(result);
+      setShowValidationReport(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al validar presentación');
     }
   };
 
@@ -270,23 +288,45 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
         </div>
 
         {/* Polish AI Button */}
-        <div className="pt-4 border-t">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handlePolishSlides}
-            disabled={polishMutation.isPending}
-          >
-            {polishMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            {allSlides.length > 1 ? 'Pulir Todos los Slides con IA' : 'Pulir con IA'}
-          </Button>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            Mejora claridad, elimina lenguaje de marketing
-          </p>
+        <div className="pt-4 border-t space-y-3">
+          <div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handlePolishSlides}
+              disabled={polishMutation.isPending}
+            >
+              {polishMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {allSlides.length > 1 ? 'Pulir Todos los Slides con IA' : 'Pulir con IA'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Mejora claridad, elimina lenguaje de marketing
+            </p>
+          </div>
+
+          {/* Validate Button */}
+          <div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleValidatePresentation}
+              disabled={validateMutation.isPending}
+            >
+              {validateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+              )}
+              {allSlides.length > 1 ? 'Validar Presentación' : 'Validar Slide'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Verifica cumplimiento y detecta riesgos
+            </p>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
@@ -298,6 +338,13 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
       polishedSlides={polishedSlides}
       onApply={handleApplyPolish}
       isApplying={false}
+    />
+
+    <ValidationReport
+      open={showValidationReport}
+      onOpenChange={setShowValidationReport}
+      report={validationReport}
+      slides={allSlides.length > 0 ? allSlides : [slide]}
     />
   </div>
 );
