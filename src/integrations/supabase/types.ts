@@ -1600,6 +1600,69 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_kits: {
+        Row: {
+          accent_color: string | null
+          background_dark: string | null
+          background_light: string | null
+          created_at: string | null
+          created_by: string | null
+          disclaimer_text: string | null
+          font_body: string | null
+          font_heading: string | null
+          footer_text: string | null
+          id: string
+          is_default: boolean | null
+          logo_dark_url: string | null
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string | null
+          watermark_text: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          background_dark?: string | null
+          background_light?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          disclaimer_text?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          footer_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+          watermark_text?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          background_dark?: string | null
+          background_light?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          disclaimer_text?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          footer_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string | null
+          watermark_text?: string | null
+        }
+        Relationships: []
+      }
       brevo_contacts: {
         Row: {
           attributes: Json | null
@@ -10955,6 +11018,441 @@ export type Database = {
         }
         Relationships: []
       }
+      presentation_assets: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          metadata: Json | null
+          name: string
+          project_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          project_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          created_by: string | null
+          details: Json | null
+          id: string
+          ip_address: unknown
+          project_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          project_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          project_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_audit_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_comments: {
+        Row: {
+          author_email: string | null
+          author_name: string
+          content: string
+          created_at: string | null
+          id: string
+          is_resolved: boolean | null
+          parent_id: string | null
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          slide_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_email?: string | null
+          author_name: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          parent_id?: string | null
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          slide_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_email?: string | null
+          author_name?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          parent_id?: string | null
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          slide_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_comments_slide_id_fkey"
+            columns: ["slide_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_slides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_projects: {
+        Row: {
+          brand_kit_id: string | null
+          client_name: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          empresa_id: string | null
+          id: string
+          is_confidential: boolean | null
+          metadata: Json | null
+          project_code: string | null
+          status: string | null
+          theme: string | null
+          title: string
+          type: Database["public"]["Enums"]["presentation_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          brand_kit_id?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          empresa_id?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          metadata?: Json | null
+          project_code?: string | null
+          status?: string | null
+          theme?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["presentation_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          brand_kit_id?: string | null
+          client_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          empresa_id?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          metadata?: Json | null
+          project_code?: string | null
+          status?: string | null
+          theme?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["presentation_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_projects_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_projects_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_projects_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
+      presentation_sharing_links: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_accessed_at: string | null
+          max_views: number | null
+          password_hash: string | null
+          permission: Database["public"]["Enums"]["share_permission"]
+          project_id: string
+          recipient_email: string | null
+          recipient_name: string | null
+          token: string
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          max_views?: number | null
+          password_hash?: string | null
+          permission?: Database["public"]["Enums"]["share_permission"]
+          project_id: string
+          recipient_email?: string | null
+          recipient_name?: string | null
+          token?: string
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          max_views?: number | null
+          password_hash?: string | null
+          permission?: Database["public"]["Enums"]["share_permission"]
+          project_id?: string
+          recipient_email?: string | null
+          recipient_name?: string | null
+          token?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_sharing_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_slides: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          background_color: string | null
+          background_image_url: string | null
+          content: Json | null
+          created_at: string | null
+          headline: string | null
+          id: string
+          is_hidden: boolean | null
+          is_locked: boolean | null
+          layout: Database["public"]["Enums"]["slide_layout"]
+          notes: string | null
+          order_index: number
+          project_id: string
+          subline: string | null
+          text_color: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          background_color?: string | null
+          background_image_url?: string | null
+          content?: Json | null
+          created_at?: string | null
+          headline?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          is_locked?: boolean | null
+          layout?: Database["public"]["Enums"]["slide_layout"]
+          notes?: string | null
+          order_index?: number
+          project_id: string
+          subline?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          background_color?: string | null
+          background_image_url?: string | null
+          content?: Json | null
+          created_at?: string | null
+          headline?: string | null
+          id?: string
+          is_hidden?: boolean | null
+          is_locked?: boolean | null
+          layout?: Database["public"]["Enums"]["slide_layout"]
+          notes?: string | null
+          order_index?: number
+          project_id?: string
+          subline?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_slides_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slides_config: Json
+          thumbnail_url: string | null
+          type: Database["public"]["Enums"]["presentation_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slides_config?: Json
+          thumbnail_url?: string | null
+          type: Database["public"]["Enums"]["presentation_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slides_config?: Json
+          thumbnail_url?: string | null
+          type?: Database["public"]["Enums"]["presentation_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      presentation_versions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          snapshot: Json
+          version_number?: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_evaluations: {
         Row: {
           business_model: string
@@ -15526,6 +16024,13 @@ export type Database = {
         | "relacion_cliente"
         | "otro"
       mandato_outcome: "open" | "won" | "lost" | "cancelled"
+      presentation_type:
+        | "teaser_sell"
+        | "firm_deck"
+        | "client_deck"
+        | "one_pager"
+        | "mandate_deck"
+        | "custom"
       proposal_status:
         | "draft"
         | "sent"
@@ -15542,6 +16047,21 @@ export type Database = {
         | "planificacion_fiscal"
         | "reestructuraciones"
       service_type_enum: "vender" | "comprar" | "otros"
+      share_permission: "view" | "download_pdf" | "edit"
+      slide_layout:
+        | "title"
+        | "hero"
+        | "stats"
+        | "bullets"
+        | "comparison"
+        | "timeline"
+        | "team"
+        | "financials"
+        | "closing"
+        | "custom"
+        | "disclaimer"
+        | "overview"
+        | "market"
       time_entry_value_type: "core_ma" | "soporte" | "bajo_valor"
       transaction_status: "pendiente" | "completada" | "cancelada"
       transaction_type:
@@ -15743,6 +16263,14 @@ export const Constants = {
         "otro",
       ],
       mandato_outcome: ["open", "won", "lost", "cancelled"],
+      presentation_type: [
+        "teaser_sell",
+        "firm_deck",
+        "client_deck",
+        "one_pager",
+        "mandate_deck",
+        "custom",
+      ],
       proposal_status: [
         "draft",
         "sent",
@@ -15761,6 +16289,22 @@ export const Constants = {
         "reestructuraciones",
       ],
       service_type_enum: ["vender", "comprar", "otros"],
+      share_permission: ["view", "download_pdf", "edit"],
+      slide_layout: [
+        "title",
+        "hero",
+        "stats",
+        "bullets",
+        "comparison",
+        "timeline",
+        "team",
+        "financials",
+        "closing",
+        "custom",
+        "disclaimer",
+        "overview",
+        "market",
+      ],
       time_entry_value_type: ["core_ma", "soporte", "bajo_valor"],
       transaction_status: ["pendiente", "completada", "cancelada"],
       transaction_type: [
