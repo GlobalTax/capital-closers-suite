@@ -2273,6 +2273,57 @@ export type Database = {
         }
         Relationships: []
       }
+      capittal_contact_sync_log: {
+        Row: {
+          completed_at: string | null
+          contacts_archived: number | null
+          contacts_created: number | null
+          contacts_processed: number | null
+          contacts_skipped: number | null
+          contacts_updated: number | null
+          created_at: string | null
+          error_message: string | null
+          errors: Json | null
+          id: string
+          last_capittal_timestamp: string | null
+          started_at: string | null
+          status: string | null
+          triggered_by: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contacts_archived?: number | null
+          contacts_created?: number | null
+          contacts_processed?: number | null
+          contacts_skipped?: number | null
+          contacts_updated?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          errors?: Json | null
+          id?: string
+          last_capittal_timestamp?: string | null
+          started_at?: string | null
+          status?: string | null
+          triggered_by: string
+        }
+        Update: {
+          completed_at?: string | null
+          contacts_archived?: number | null
+          contacts_created?: number | null
+          contacts_processed?: number | null
+          contacts_skipped?: number | null
+          contacts_updated?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          errors?: Json | null
+          id?: string
+          last_capittal_timestamp?: string | null
+          started_at?: string | null
+          status?: string | null
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       carousel_logos: {
         Row: {
           company_name: string
