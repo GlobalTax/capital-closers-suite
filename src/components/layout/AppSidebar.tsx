@@ -33,6 +33,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   ShieldCheck,
+  Presentation,
 } from "lucide-react";
 import {
   Sidebar,
@@ -113,6 +114,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Tareas", url: "/tareas", icon: CheckSquare },
       { title: "Documentos", url: "/documentos", icon: FolderOpen },
       { title: "Generador Docs", url: "/gestor-documentos", icon: FileText },
+      { title: "Presentaciones", url: "/presentaciones", icon: Presentation },
       { title: "Reportes", url: "/reportes", icon: BarChart3 },
     ],
   },
