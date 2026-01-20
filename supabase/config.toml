@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.send-lead-confirmation]
 verify_jwt = false
+
+[functions.generate-slide-outline]
+verify_jwt = true
