@@ -57,6 +57,22 @@ export interface SlideContent {
   confidentialityText?: string;
 }
 
+// Brand Kit for consistent styling
+export interface BrandKit {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  textColor: string;
+  mutedTextColor: string;
+  logoUrl?: string;
+  logoDarkUrl?: string;
+  fontHeading?: string;
+  fontBody?: string;
+  footerText?: string;
+  disclaimerText?: string;
+}
+
 // Database row types
 export interface PresentationProject {
   id: string;

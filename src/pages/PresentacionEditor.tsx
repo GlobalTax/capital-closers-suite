@@ -11,6 +11,7 @@ import {
   FileText,
   Save,
   MoreHorizontal,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import { SlideList } from "@/features/presentations/components/SlideList";
 import { SlideCanvas } from "@/features/presentations/components/SlideCanvas";
 import { SlideEditor } from "@/features/presentations/components/SlideEditor";
 import { ShareLinkManager } from "@/features/presentations/components/ShareLinkManager";
+import { BrandKitEditor } from "@/features/presentations/components/BrandKitEditor";
 import { 
   usePresentationProject, 
   usePresentationSlides,
@@ -37,8 +39,9 @@ import {
   useDuplicateSlide,
   useReorderSlides,
 } from "@/hooks/usePresentations";
-import type { SlideLayout, PresentationSlide } from "@/types/presentations";
+import type { SlideLayout, PresentationSlide, BrandKit } from "@/types/presentations";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type PreviewMode = 'desktop' | 'mobile' | 'pdf';
 
@@ -50,6 +53,8 @@ export default function PresentacionEditor() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
+  const [showBrandKit, setShowBrandKit] = useState(false);
+  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
 
   const { data: project, isLoading: loadingProject } = usePresentationProject(id);
   const { data: slides = [], isLoading: loadingSlides } = usePresentationSlides(id);
@@ -60,6 +65,11 @@ export default function PresentacionEditor() {
   const deleteSlide = useDeleteSlide();
   const duplicateSlide = useDuplicateSlide();
   const reorderSlides = useReorderSlides();
+
+  const handleSaveBrandKit = useCallback((kit: BrandKit) => {
+    setBrandKit(kit);
+    toast.success("Brand Kit guardado");
+  }, []);
 
   // Select first slide if none selected
   const selectedSlide = useMemo(() => {
@@ -214,6 +224,18 @@ export default function PresentacionEditor() {
           </SheetContent>
         </Sheet>
 
+        <Sheet open={showBrandKit} onOpenChange={setShowBrandKit}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <Palette className="h-4 w-4 mr-1" />
+              Brand Kit
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-[400px] p-0">
+            <BrandKitEditor brandKit={brandKit} onSave={handleSaveBrandKit} />
+          </SheetContent>
+        </Sheet>
+
         <Button variant="ghost" size="sm" onClick={handleExportPDF}>
           <Download className="h-4 w-4 mr-1" />
           PDF
@@ -257,7 +279,7 @@ export default function PresentacionEditor() {
               )}
             >
               {selectedSlide && (
-                <SlideCanvas slide={selectedSlide} />
+                <SlideCanvas slide={selectedSlide} brandKit={brandKit} />
               )}
             </div>
           </div>
