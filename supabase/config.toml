@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.validate-presentation]
 verify_jwt = true
+
+[functions.translate-slides]
+verify_jwt = true
