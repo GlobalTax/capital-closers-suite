@@ -11,11 +11,16 @@ import {
   Sparkles,
   Loader2,
   ClipboardCheck,
+  Lock,
+  Unlock,
+  CheckCircle,
+  Shield,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -24,9 +29,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { usePolishSlides, applyPolishedContent } from "@/hooks/usePolishSlides";
 import { useValidatePresentation, ValidationReport as ValidationReportType } from "@/hooks/useValidatePresentation";
+import { useApproveSlide, useUnlockSlide, isSlideProtected } from "@/hooks/usePresentationVersions";
 import { PolishPreview } from "./PolishPreview";
 import { ValidationReport } from "./ValidationReport";
 import type { PresentationSlide, SlideContent, SlideLayout } from "@/types/presentations";
@@ -57,9 +74,15 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
   const [polishedSlides, setPolishedSlides] = useState<PolishedSlide[]>([]);
   const [showValidationReport, setShowValidationReport] = useState(false);
   const [validationReport, setValidationReport] = useState<ValidationReportType | null>(null);
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
 
   const polishMutation = usePolishSlides();
   const validateMutation = useValidatePresentation();
+  const approveMutation = useApproveSlide();
+  const unlockMutation = useUnlockSlide();
+
+  const isProtected = isSlideProtected(slide);
+  const isApproved = slide.approval_status === 'approved';
 
   // Sync when slide changes
   useEffect(() => {
@@ -164,12 +187,58 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
     toast.success('Cambios editoriales aplicados');
   };
 
+  const handleApproveSlide = async () => {
+    await approveMutation.mutateAsync({ slideId: slide.id, projectId: slide.project_id });
+  };
+
+  const handleUnlockSlide = async () => {
+    await unlockMutation.mutateAsync({ slideId: slide.id, projectId: slide.project_id });
+    setShowUnlockConfirm(false);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Approval Status Banner */}
+      {isProtected && (
+        <div className={`px-4 py-2 flex items-center justify-between ${
+          isApproved 
+            ? 'bg-green-50 border-b border-green-200 dark:bg-green-950/30 dark:border-green-900' 
+            : 'bg-amber-50 border-b border-amber-200 dark:bg-amber-950/30 dark:border-amber-900'
+        }`}>
+          <div className="flex items-center gap-2">
+            {isApproved ? (
+              <>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Slide aprobado
+                </span>
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Slide bloqueado
+                </span>
+              </>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setShowUnlockConfirm(true)}
+          >
+            <Unlock className="h-3 w-3 mr-1" />
+            Desbloquear
+          </Button>
+        </div>
+      )}
+
       <Tabs defaultValue="content" className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-4">
           <TabsTrigger value="content">Contenido</TabsTrigger>
           <TabsTrigger value="style">Estilo</TabsTrigger>
+          <TabsTrigger value="approval">Aprobación</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -328,8 +397,82 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
             </p>
           </div>
         </div>
-      </TabsContent>
-    </Tabs>
+        </TabsContent>
+
+        {/* Approval Tab */}
+        <TabsContent value="approval" className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">Estado de Aprobación</h3>
+              <p className="text-sm text-muted-foreground">
+                Los slides aprobados no se modificarán al regenerar la presentación con IA.
+              </p>
+            </div>
+
+            {/* Current status */}
+            <div className={`p-4 rounded-lg border ${
+              isApproved 
+                ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
+                : isProtected
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
+                  : 'bg-muted/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                {isApproved ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : isProtected ? (
+                  <Lock className="h-5 w-5 text-amber-600" />
+                ) : (
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">
+                  {isApproved ? 'Aprobado' : isProtected ? 'Bloqueado' : 'Pendiente de revisión'}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {isApproved 
+                  ? 'Este slide está aprobado y protegido. No se modificará al regenerar.'
+                  : isProtected
+                    ? 'Este slide está bloqueado manualmente. No se modificará al regenerar.'
+                    : 'Este slide puede ser modificado al regenerar con IA.'}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <Separator />
+
+            {isProtected ? (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowUnlockConfirm(true)}
+              >
+                <Unlock className="h-4 w-4 mr-2" />
+                Desbloquear para edición
+              </Button>
+            ) : (
+              <Button 
+                className="w-full bg-green-600 hover:bg-green-700"
+                onClick={handleApproveSlide}
+                disabled={approveMutation.isPending}
+              >
+                {approveMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Aprobar y proteger slide
+              </Button>
+            )}
+
+            <p className="text-xs text-center text-muted-foreground">
+              {isProtected 
+                ? 'Al desbloquear, el slide volverá a ser editable y podrá ser regenerado.'
+                : 'Al aprobar, el contenido quedará protegido durante regeneraciones futuras.'}
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
 
     <PolishPreview
       open={showPolishPreview}
@@ -346,6 +489,34 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
       report={validationReport}
       slides={allSlides.length > 0 ? allSlides : [slide]}
     />
+
+    {/* Unlock Confirmation Dialog */}
+    <AlertDialog open={showUnlockConfirm} onOpenChange={setShowUnlockConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Desbloquear este slide?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Al desbloquear, el slide volverá a ser editable y podrá ser modificado 
+            al regenerar la presentación con IA. El contenido actual se mantendrá, 
+            pero perderá la protección.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleUnlockSlide}
+            disabled={unlockMutation.isPending}
+          >
+            {unlockMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Unlock className="h-4 w-4 mr-2" />
+            )}
+            Desbloquear
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 );
 }

@@ -23,15 +23,25 @@ import {
   Copy, 
   Trash2,
   Plus,
+  Lock,
+  CheckCircle,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isSlideProtected } from "@/hooks/usePresentationVersions";
 import type { PresentationSlide, SlideLayout, LAYOUT_DEFINITIONS } from "@/types/presentations";
 
 interface SlideListProps {
@@ -171,6 +181,9 @@ function SortableSlideItem({
     transition,
   };
 
+  const isProtected = isSlideProtected(slide);
+  const isApproved = slide.approval_status === 'approved';
+
   return (
     <div
       ref={setNodeRef}
@@ -179,16 +192,45 @@ function SortableSlideItem({
         "group relative rounded-lg border bg-card transition-all",
         isSelected && "ring-2 ring-primary",
         isDragging && "opacity-50",
-        slide.is_hidden && "opacity-50"
+        slide.is_hidden && "opacity-50",
+        isProtected && "border-green-500/30 bg-green-50/30 dark:bg-green-950/10"
       )}
     >
+      {/* Protection indicator */}
+      {isProtected && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="absolute -top-1 -right-1 z-10">
+              <div className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center shadow-sm",
+                isApproved 
+                  ? "bg-green-500 text-white" 
+                  : "bg-amber-500 text-white"
+              )}>
+                {isApproved ? (
+                  <CheckCircle className="h-3 w-3" />
+                ) : (
+                  <Lock className="h-3 w-3" />
+                )}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="text-xs">
+            {isApproved ? "Aprobado - No se regenerará" : "Bloqueado - No se regenerará"}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       <div
         className="flex items-start gap-2 p-2 cursor-pointer"
         onClick={onSelect}
       >
         {/* Drag handle */}
         <button
-          className="mt-1 cursor-grab text-muted-foreground hover:text-foreground"
+          className={cn(
+            "mt-1 cursor-grab text-muted-foreground hover:text-foreground",
+            isProtected && "cursor-not-allowed opacity-50"
+          )}
           {...attributes}
           {...listeners}
         >
@@ -202,7 +244,10 @@ function SortableSlideItem({
 
         {/* Slide preview */}
         <div className="flex-1 min-w-0">
-          <div className="aspect-[16/9] bg-muted rounded border overflow-hidden mb-1">
+          <div className={cn(
+            "aspect-[16/9] bg-muted rounded border overflow-hidden mb-1",
+            isProtected && "border-green-500/50"
+          )}>
             <div className="w-full h-full p-2 text-[6px] leading-tight overflow-hidden">
               <div className="font-medium truncate">{slide.headline || 'Sin título'}</div>
               {slide.subline && (
@@ -210,8 +255,15 @@ function SortableSlideItem({
               )}
             </div>
           </div>
-          <div className="text-xs text-muted-foreground capitalize truncate">
-            {slide.layout}
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground capitalize truncate">
+              {slide.layout}
+            </span>
+            {isApproved && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 text-green-600 border-green-300">
+                Aprobado
+              </Badge>
+            )}
           </div>
         </div>
       </div>

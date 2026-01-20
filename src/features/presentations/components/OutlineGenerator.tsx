@@ -10,17 +10,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useGenerateOutline, SlideOutlineItem, mapSlideTypeToLayout } from "@/hooks/useGenerateOutline";
 import { useRefineSlidesCopy, RefinedSlide } from "@/hooks/useRefineSlidesCopy";
-import type { PresentationType, SlideLayout, SlideContent } from "@/types/presentations";
+import type { PresentationType, SlideLayout, SlideContent, PresentationSlide } from "@/types/presentations";
 import { TEMPLATE_DEFINITIONS, LAYOUT_DEFINITIONS } from "@/types/presentations";
+import { isSlideProtected, getProtectedSlideIds } from "@/hooks/usePresentationVersions";
 
 interface OutlineGeneratorProps {
   presentationType: PresentationType;
+  existingSlides?: PresentationSlide[];
   onApplyOutline: (slides: Array<{
     layout: SlideLayout;
     headline: string;
     subline?: string;
     content: SlideContent;
-  }>) => void;
+  }>, protectedSlideIds?: string[]) => void;
   onCancel: () => void;
 }
 
@@ -148,7 +150,7 @@ function refinedToOutlineItem(refined: RefinedSlide): SlideOutlineItem {
   };
 }
 
-export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }: OutlineGeneratorProps) {
+export function OutlineGenerator({ presentationType, existingSlides = [], onApplyOutline, onCancel }: OutlineGeneratorProps) {
   const [step, setStep] = useState<GenerationStep>("inputs");
   const [formData, setFormData] = useState<InputFormData>({
     company_name: "",
@@ -165,6 +167,11 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
   const generateMutation = useGenerateOutline();
   const refineMutation = useRefineSlidesCopy();
   const templateDef = TEMPLATE_DEFINITIONS[presentationType];
+
+  // Calculate protected slides
+  const protectedSlides = existingSlides.filter(isSlideProtected);
+  const protectedSlideIds = getProtectedSlideIds(existingSlides);
+  const hasProtectedSlides = protectedSlides.length > 0;
 
   const handleInputChange = (field: keyof InputFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -227,7 +234,7 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
       subline: item.subline,
       content: item.content,
     }));
-    onApplyOutline(slides);
+    onApplyOutline(slides, hasProtectedSlides ? protectedSlideIds : undefined);
   };
 
   // Input step
@@ -241,6 +248,11 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             La IA generará {templateDef.slideCount} slides para tu {templateDef.name}
+            {hasProtectedSlides && (
+              <span className="text-green-600 font-medium">
+                {' '}({protectedSlides.length} slides protegidos se preservarán)
+              </span>
+            )}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
