@@ -70,22 +70,22 @@ async function fetchSyncHistory(limit = 10): Promise<SyncLogEntry[]> {
 }
 
 async function fetchSyncStats(): Promise<SyncStats> {
-  const [stateResult, todayLogsResult, totalResult] = await Promise.all([
-    fetchSyncState(),
-    supabase
-      .from('capittal_contact_sync_log' as any)
-      .select('contacts_created, contacts_updated')
-      .gte('started_at', new Date().toISOString().split('T')[0])
-      .eq('status', 'completed'),
-    supabase
-      .from('contactos')
-      .select('id', { count: 'exact', head: true })
-      .eq('source', 'capittal'),
-  ]);
+  const stateResult = await fetchSyncState();
+  
+  const todayLogsResult = await (supabase as any)
+    .from('capittal_contact_sync_log')
+    .select('contacts_created, contacts_updated')
+    .gte('started_at', new Date().toISOString().split('T')[0])
+    .eq('status', 'completed');
+
+  const totalResult = await (supabase as any)
+    .from('contactos')
+    .select('id', { count: 'exact', head: true })
+    .eq('source', 'capittal');
 
   const todayLogs = (todayLogsResult.data || []) as any[];
-  const todayCreated = todayLogs.reduce((sum, log) => sum + (log.contacts_created || 0), 0);
-  const todayUpdated = todayLogs.reduce((sum, log) => sum + (log.contacts_updated || 0), 0);
+  const todayCreated = todayLogs.reduce((sum: number, log: any) => sum + (log.contacts_created || 0), 0);
+  const todayUpdated = todayLogs.reduce((sum: number, log: any) => sum + (log.contacts_updated || 0), 0);
 
   return {
     totalSynced: totalResult.count || 0,
