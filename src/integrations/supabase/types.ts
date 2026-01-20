@@ -2429,6 +2429,36 @@ export type Database = {
         }
         Relationships: []
       }
+      capittal_sync_state: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          last_modified_timestamp: string | null
+          last_sync_at: string | null
+          polling_interval_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_modified_timestamp?: string | null
+          last_sync_at?: string | null
+          polling_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_modified_timestamp?: string | null
+          last_sync_at?: string | null
+          polling_interval_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       carousel_logos: {
         Row: {
           company_name: string
@@ -4020,16 +4050,19 @@ export type Database = {
           brevo_id: string | null
           brevo_last_modified_at: string | null
           brevo_synced_at: string | null
+          capittal_synced_at: string | null
           cargo: string | null
           created_at: string | null
           email: string
           empresa_principal_id: string | null
+          external_capittal_id: string | null
           id: string
           import_log_id: string | null
           linkedin: string | null
           merged_into_contacto_id: string | null
           nombre: string
           notas: string | null
+          source: string | null
           telefono: string | null
           updated_at: string | null
           valuation_id: string | null
@@ -4040,16 +4073,19 @@ export type Database = {
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
+          capittal_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
           email: string
           empresa_principal_id?: string | null
+          external_capittal_id?: string | null
           id?: string
           import_log_id?: string | null
           linkedin?: string | null
           merged_into_contacto_id?: string | null
           nombre: string
           notas?: string | null
+          source?: string | null
           telefono?: string | null
           updated_at?: string | null
           valuation_id?: string | null
@@ -4060,16 +4096,19 @@ export type Database = {
           brevo_id?: string | null
           brevo_last_modified_at?: string | null
           brevo_synced_at?: string | null
+          capittal_synced_at?: string | null
           cargo?: string | null
           created_at?: string | null
           email?: string
           empresa_principal_id?: string | null
+          external_capittal_id?: string | null
           id?: string
           import_log_id?: string | null
           linkedin?: string | null
           merged_into_contacto_id?: string | null
           nombre?: string
           notas?: string | null
+          source?: string | null
           telefono?: string | null
           updated_at?: string | null
           valuation_id?: string | null
