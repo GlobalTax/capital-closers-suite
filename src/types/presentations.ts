@@ -56,7 +56,56 @@ export interface SlideContent {
   }>;
   footnote?: string;
   confidentialityText?: string;
+  
+  // NEW: Table content
+  table?: {
+    headers: string[];
+    rows: string[][];
+    highlightColumn?: number;
+    showRowNumbers?: boolean;
+    caption?: string;
+  };
+  
+  // NEW: Chart content
+  chart?: {
+    type: 'bar' | 'line' | 'pie' | 'donut';
+    data: Array<{ label: string; value: number; color?: string }>;
+    title?: string;
+    showLegend?: boolean;
+  };
+  
+  // NEW: Icons grid content
+  icons?: Array<{
+    name: string; // Lucide icon name
+    label: string;
+    description?: string;
+  }>;
+  
+  // NEW: Quote content
+  quote?: {
+    text: string;
+    author?: string;
+    role?: string;
+    company?: string;
+  };
+  
+  // NEW: Process/steps content
+  process?: Array<{
+    number: number;
+    title: string;
+    description?: string;
+  }>;
+  
+  // NEW: Image with text
+  image?: {
+    url: string;
+    alt?: string;
+    position?: 'left' | 'right' | 'center' | 'background';
+    size?: 'small' | 'medium' | 'large' | 'full';
+  };
 }
+
+export type LayoutVariant = 'A' | 'B' | 'C';
 
 // Brand Kit for consistent styling
 export interface BrandKit {

@@ -32,6 +32,37 @@ export interface SlideContentData {
   }>;
   footnote?: string;
   confidentialityText?: string;
+  
+  // Visual content types
+  table?: {
+    headers: string[];
+    rows: string[][];
+    highlightColumn?: number;
+    showRowNumbers?: boolean;
+    caption?: string;
+  };
+  chart?: {
+    type: 'bar' | 'line' | 'pie' | 'donut';
+    data: Array<{ label: string; value: number; color?: string }>;
+    title?: string;
+    showLegend?: boolean;
+  };
+  icons?: Array<{
+    name: string;
+    label: string;
+    description?: string;
+  }>;
+  quote?: {
+    text: string;
+    author?: string;
+    role?: string;
+    company?: string;
+  };
+  process?: Array<{
+    number: number;
+    title: string;
+    description?: string;
+  }>;
 }
 
 export interface ColorScheme {

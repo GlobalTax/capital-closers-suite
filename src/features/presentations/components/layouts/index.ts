@@ -33,6 +33,21 @@ export {
   MarketLayout,
 } from './SpecialLayouts';
 
+// Table layouts
+export { TableLayoutA, TableLayoutB, TableLayoutC } from './TableLayouts';
+
+// Chart layouts
+export { ChartLayoutA, ChartLayoutB, ChartLayoutC } from './ChartLayouts';
+
+// Icons grid layouts
+export { IconsGridLayoutA, IconsGridLayoutB, IconsGridLayoutC } from './IconsGridLayouts';
+
+// Quote layouts
+export { QuoteLayoutA, QuoteLayoutB, QuoteLayoutC } from './QuoteLayout';
+
+// Process layouts
+export { ProcessLayoutA, ProcessLayoutB, ProcessLayoutC } from './ProcessLayouts';
+
 // Layout variant selector helper
 import { LayoutVariant, ColorScheme, SlideContentData } from './types';
 import * as Stats from './StatsLayouts';
@@ -43,11 +58,17 @@ import * as Timeline from './TimelineLayouts';
 import * as Financials from './FinancialsLayouts';
 import * as Overview from './OverviewLayouts';
 import * as Special from './SpecialLayouts';
+import * as Tables from './TableLayouts';
+import * as Charts from './ChartLayouts';
+import * as IconsGrid from './IconsGridLayouts';
+import * as Quotes from './QuoteLayout';
+import * as Process from './ProcessLayouts';
 
 type LayoutType = 
   | 'stats' | 'bullets' | 'team' | 'comparison' 
   | 'timeline' | 'financials' | 'overview' | 'market'
-  | 'closing' | 'disclaimer' | 'hero' | 'title' | 'custom';
+  | 'closing' | 'disclaimer' | 'hero' | 'title' | 'custom'
+  | 'table' | 'chart' | 'icons' | 'quote' | 'process';
 
 export function getLayoutComponent(
   layout: LayoutType,
@@ -67,6 +88,11 @@ export function getLayoutComponent(
     hero: { A: Special.HeroStatLayout, B: Special.HeroStatLayout, C: Special.HeroStatLayout },
     title: { A: null, B: null, C: null },
     custom: { A: null, B: null, C: null },
+    table: { A: Tables.TableLayoutA, B: Tables.TableLayoutB, C: Tables.TableLayoutC },
+    chart: { A: Charts.ChartLayoutA, B: Charts.ChartLayoutB, C: Charts.ChartLayoutC },
+    icons: { A: IconsGrid.IconsGridLayoutA, B: IconsGrid.IconsGridLayoutB, C: IconsGrid.IconsGridLayoutC },
+    quote: { A: Quotes.QuoteLayoutA, B: Quotes.QuoteLayoutB, C: Quotes.QuoteLayoutC },
+    process: { A: Process.ProcessLayoutA, B: Process.ProcessLayoutB, C: Process.ProcessLayoutC },
   };
 
   return layouts[layout]?.[variant] || null;
