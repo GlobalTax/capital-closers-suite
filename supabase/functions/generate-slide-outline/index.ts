@@ -38,8 +38,16 @@ const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: num
     ],
   },
   client_deck: {
-    allowedTypes: ["title", "overview", "bullets", "timeline", "team", "closing"],
+    allowedTypes: ["overview", "bullets", "timeline", "team", "closing"],
     slideCount: 6,
+    fixedSequence: [
+      { type: "overview", name: "Context & Objectives" },
+      { type: "bullets", name: "The Challenge" },
+      { type: "bullets", name: "Our Methodology" },
+      { type: "timeline", name: "Execution Phases" },
+      { type: "team", name: "Roles & Responsibilities" },
+      { type: "closing", name: "Next Steps" }
+    ],
   },
   mandate_deck: {
     allowedTypes: ["title", "overview", "bullets", "comparison", "stats", "market", "closing"],
@@ -103,6 +111,7 @@ serve(async (req) => {
     // Check if this is a specialized template
     const isMASellTeaser = presentation_type === "teaser_ma_sell";
     const isFirmDeck = presentation_type === "firm_deck";
+    const isClientDeck = presentation_type === "client_deck";
     const fixedSequence = config.fixedSequence;
     
     // Build the AI prompt with content generation
@@ -179,6 +188,42 @@ SLIDE STRUCTURE (FIXED - 6 slides):
 6. Call to Action - Contact, next step`;
       }
       
+      if (isClientDeck) {
+        return `You are creating a CLIENT-FACING ADVISORY PROCESS PRESENTATION for a client who has engaged or is about to engage advisory services.
+
+CRITICAL TONE REQUIREMENTS:
+- Clear: Simple, jargon-free explanations accessible to executives
+- Reassuring: Build confidence, demonstrate competence, reduce client anxiety
+- Structured: Logical flow, numbered steps, clear progression
+
+This is an EDUCATIONAL document explaining the advisory process - NOT a sales pitch.
+The client needs to understand what happens next and feel confident in the process.
+
+STRICTLY FORBIDDEN:
+- Technical M&A jargon without explanation
+- Uncertainty or hedging language ("we might", "hopefully")
+- Overwhelming detail or complexity
+- Sales language or urgency
+- Vague timelines or undefined responsibilities
+
+PREFERRED LANGUAGE:
+- "We will..." (confident, future-oriented)
+- "This phase ensures..." (benefit-focused)
+- "Your team will..." (client-centered)
+- "Together we will..." (partnership framing)
+- Clear numbered lists and phases
+- Simple analogies where helpful
+- Specific timelines ("weeks 1-3")
+
+SLIDE STRUCTURE (FIXED - 6 slides):
+1. Context & Objectives - Why we're here, what we aim to achieve
+2. The Challenge - Situation analysis, complexity to address
+3. Our Methodology - Framework, approach, principles
+4. Execution Phases - Step-by-step process, milestones
+5. Roles & Responsibilities - Who does what, client vs advisor
+6. Next Steps - Immediate actions, timeline`;
+      }
+      
       return `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.`;
     };
     
@@ -220,6 +265,16 @@ Firm Details:
 ${JSON.stringify(inputs_json, null, 2)}
 
 Generate authoritative, calm, non-commercial content. Let credentials speak for themselves. Use ONLY the provided data. Do not invent statistics or claims. Maintain a measured, confident tone throughout.`;
+      }
+      
+      if (isClientDeck) {
+        return `Create a client-facing advisory process presentation with exactly 6 slides following this EXACT sequence:
+${fixedSequence?.map((s, i) => `${i + 1}. ${s.name} (type: ${s.type})`).join("\n")}
+
+Client/Project Details:
+${JSON.stringify(inputs_json, null, 2)}
+
+Generate clear, reassuring, and structured content. Focus on explaining the process and building confidence. Use simple language accessible to executives. Include specific timelines and clear role definitions.`;
       }
       
       return `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.

@@ -243,7 +243,7 @@ export const TEMPLATE_ALLOWED_TYPES: Record<PresentationType, SlideLayout[]> = {
   teaser_sell: ["title", "overview", "bullets", "financials", "stats", "market", "closing"],
   teaser_ma_sell: ["disclaimer", "bullets", "overview", "market", "financials", "closing"],
   firm_deck: ["title", "overview", "bullets", "stats", "closing"],
-  client_deck: ["title", "overview", "bullets", "timeline", "team", "closing"],
+  client_deck: ["overview", "bullets", "timeline", "team", "closing"],
   mandate_deck: ["title", "overview", "bullets", "comparison", "stats", "market", "closing"],
   one_pager: ["title", "overview", "closing"],
   custom: ["title", "hero", "overview", "bullets", "stats", "financials", "timeline", "team", "comparison", "market", "closing", "disclaimer", "custom"],
