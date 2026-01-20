@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronsUpDown, Building2, TrendingUp, TrendingDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, TrendingUp, TrendingDown, Target, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useMandatos } from "@/hooks/queries/useMandatos";
+import { INTERNAL_PROJECTS, INTERNAL_PROJECT_LABELS } from "@/lib/constants";
 
 interface MandatoSelectProps {
   value: string;
@@ -26,7 +27,14 @@ interface MandatoSelectProps {
   includeGeneralWork?: boolean;
 }
 
-const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
+const INTERNAL_PROJECT_IDS = Object.values(INTERNAL_PROJECTS);
+
+// Icon component mapping
+const IconMap = {
+  Target,
+  Users,
+  FileText,
+};
 
 export function MandatoSelect({
   value,
@@ -38,10 +46,19 @@ export function MandatoSelect({
   const [open, setOpen] = useState(false);
   const { data: mandatos = [], isLoading } = useMandatos();
 
-  // Filter mandatos by status (exclude cerrado, cancelado)
+  // Filter mandatos by status (exclude cerrado, cancelado) and exclude internal projects
   const activeMandatos = useMemo(() => {
     return mandatos.filter(m => 
-      !['cerrado', 'cancelado'].includes(m.estado || '')
+      !['cerrado', 'cancelado'].includes(m.estado || '') &&
+      !INTERNAL_PROJECT_IDS.includes(m.id as typeof INTERNAL_PROJECT_IDS[number])
+    );
+  }, [mandatos]);
+
+  // Get internal projects from mandatos
+  const internalProjects = useMemo(() => {
+    return mandatos.filter(m => 
+      INTERNAL_PROJECT_IDS.includes(m.id as typeof INTERNAL_PROJECT_IDS[number]) &&
+      m.estado === 'activo'
     );
   }, [mandatos]);
 
@@ -58,9 +75,12 @@ export function MandatoSelect({
 
   // Get selected mandato label
   const selectedLabel = useMemo(() => {
-    if (value === GENERAL_WORK_ID) {
-      return "🏢 Trabajo General M&A";
+    // Check if it's an internal project
+    const internalInfo = INTERNAL_PROJECT_LABELS[value];
+    if (internalInfo) {
+      return `📁 ${internalInfo.label}`;
     }
+    
     const mandato = mandatos.find(m => m.id === value);
     if (mandato) {
       const empresaNombre = mandato.empresa_principal?.nombre || 'Sin empresa';
@@ -73,6 +93,12 @@ export function MandatoSelect({
     const empresaNombre = mandato.empresa_principal?.nombre || 'Sin empresa';
     const desc = mandato.descripcion || `Mandato ${mandato.tipo}`;
     return { empresaNombre, desc };
+  };
+
+  const getInternalProjectIcon = (projectId: string) => {
+    const info = INTERNAL_PROJECT_LABELS[projectId];
+    if (!info) return Target;
+    return IconMap[info.icon as keyof typeof IconMap] || Target;
   };
 
   return (
@@ -101,31 +127,38 @@ export function MandatoSelect({
           <CommandList>
             <CommandEmpty>No se encontraron mandatos.</CommandEmpty>
             
-            {/* Trabajo General */}
-            {includeGeneralWork && (
+            {/* Proyectos Internos */}
+            {includeGeneralWork && internalProjects.length > 0 && (
               <>
-                <CommandGroup heading="Trabajo General">
-                  <CommandItem
-                    value="trabajo-general-ma"
-                    onSelect={() => {
-                      onValueChange(GENERAL_WORK_ID);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === GENERAL_WORK_ID ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Trabajo General M&A</span>
-                      <span className="text-xs text-muted-foreground">
-                        Horas internas no asignadas
-                      </span>
-                    </div>
-                  </CommandItem>
+                <CommandGroup heading="📁 Proyectos Internos">
+                  {internalProjects.map((project) => {
+                    const info = INTERNAL_PROJECT_LABELS[project.id];
+                    const IconComponent = getInternalProjectIcon(project.id);
+                    return (
+                      <CommandItem
+                        key={project.id}
+                        value={`interno-${info?.label || project.id}`}
+                        onSelect={() => {
+                          onValueChange(project.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === project.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <IconComponent className="mr-2 h-4 w-4 text-violet-500" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{info?.label || 'Proyecto Interno'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {info?.description || project.descripcion}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
                 <CommandSeparator />
               </>
