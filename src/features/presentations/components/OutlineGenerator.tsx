@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wand2, Loader2, Check, ChevronRight } from "lucide-react";
+import { Wand2, Loader2, Check, ChevronRight, ListOrdered, BarChart3, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useGenerateOutline, SlideOutlineItem, mapSlideTypeToLayout } from "@/hooks/useGenerateOutline";
 import type { PresentationType, SlideLayout, SlideContent } from "@/types/presentations";
 import { TEMPLATE_DEFINITIONS, LAYOUT_DEFINITIONS } from "@/types/presentations";
@@ -16,6 +17,7 @@ interface OutlineGeneratorProps {
   onApplyOutline: (slides: Array<{
     layout: SlideLayout;
     headline: string;
+    subline?: string;
     content: SlideContent;
   }>) => void;
   onCancel: () => void;
@@ -36,6 +38,86 @@ const LAYOUT_BADGES: Record<"A" | "B" | "C", { label: string; variant: "default"
   C: { label: "Two-col", variant: "outline" },
 };
 
+// Helper to render content preview
+function ContentPreview({ content, slideType }: { content: SlideContent; slideType: string }) {
+  const hasContent = content.bullets?.length || content.stats?.length || content.teamMembers?.length || content.columns?.length;
+  
+  if (!hasContent) return null;
+
+  return (
+    <div className="mt-2 pl-4 border-l-2 border-muted space-y-2">
+      {content.bullets && content.bullets.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <ListOrdered className="h-3 w-3" />
+            <span>Puntos ({content.bullets.length})</span>
+          </div>
+          <ul className="text-xs text-muted-foreground space-y-0.5">
+            {content.bullets.slice(0, 3).map((bullet, i) => (
+              <li key={i} className="truncate">• {bullet}</li>
+            ))}
+            {content.bullets.length > 3 && (
+              <li className="text-muted-foreground/60">+ {content.bullets.length - 3} más...</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {content.stats && content.stats.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <BarChart3 className="h-3 w-3" />
+            <span>Métricas ({content.stats.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {content.stats.slice(0, 4).map((stat, i) => (
+              <div key={i} className="text-xs bg-muted/50 px-2 py-1 rounded">
+                <span className="font-medium">{stat.prefix}{stat.value}{stat.suffix}</span>
+                <span className="text-muted-foreground ml-1">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {content.teamMembers && content.teamMembers.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="h-3 w-3" />
+            <span>Equipo ({content.teamMembers.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {content.teamMembers.map((member, i) => (
+              <div key={i} className="text-xs bg-muted/50 px-2 py-1 rounded">
+                <span className="font-medium">{member.name}</span>
+                <span className="text-muted-foreground ml-1">- {member.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {content.columns && content.columns.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {content.columns.map((col, i) => (
+            <div key={i} className="text-xs">
+              <div className="font-medium text-muted-foreground">{col.title}</div>
+              <ul className="text-muted-foreground/80">
+                {col.items.slice(0, 2).map((item, j) => (
+                  <li key={j} className="truncate">• {item}</li>
+                ))}
+                {col.items.length > 2 && (
+                  <li className="text-muted-foreground/60">+ {col.items.length - 2} más</li>
+                )}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }: OutlineGeneratorProps) {
   const [step, setStep] = useState<"inputs" | "preview">("inputs");
   const [formData, setFormData] = useState<InputFormData>({
@@ -47,6 +129,7 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
     target_audience: "",
   });
   const [outline, setOutline] = useState<SlideOutlineItem[]>([]);
+  const [expandedSlides, setExpandedSlides] = useState<Set<number>>(new Set());
 
   const generateMutation = useGenerateOutline();
   const templateDef = TEMPLATE_DEFINITIONS[presentationType];
@@ -67,17 +150,32 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
         inputs_json,
       });
       setOutline(result);
+      // Expand all slides by default to show content
+      setExpandedSlides(new Set(result.map((_, i) => i)));
       setStep("preview");
     } catch {
       // Error handled in hook
     }
   };
 
+  const toggleSlideExpanded = (index: number) => {
+    setExpandedSlides(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
   const handleApply = () => {
     const slides = outline.map(item => ({
       layout: mapSlideTypeToLayout(item.slide_type, item.layout),
-      headline: item.purpose,
-      content: {} as SlideContent,
+      headline: item.headline,
+      subline: item.subline,
+      content: item.content,
     }));
     onApplyOutline(slides);
   };
@@ -88,16 +186,16 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5 text-primary" />
-            Generar Esquema con IA
+            Generar Presentación con IA
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Proporciona contexto para generar un esquema de {templateDef.slideCount} slides para tu {templateDef.name}
+            La IA generará {templateDef.slideCount} slides con contenido completo para tu {templateDef.name}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="company_name">Nombre de Empresa/Proyecto</Label>
+              <Label htmlFor="company_name">Nombre de Empresa/Proyecto *</Label>
               <Input
                 id="company_name"
                 value={formData.company_name}
@@ -106,7 +204,7 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sector">Sector</Label>
+              <Label htmlFor="sector">Sector *</Label>
               <Input
                 id="sector"
                 value={formData.sector}
@@ -118,7 +216,7 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="revenue">Facturación (€)</Label>
+              <Label htmlFor="revenue">Facturación</Label>
               <Input
                 id="revenue"
                 value={formData.revenue}
@@ -127,12 +225,12 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ebitda">EBITDA (€)</Label>
+              <Label htmlFor="ebitda">EBITDA</Label>
               <Input
                 id="ebitda"
                 value={formData.ebitda}
                 onChange={e => handleInputChange("ebitda", e.target.value)}
-                placeholder="Ej: €3M"
+                placeholder="Ej: €3M (20% margen)"
               />
             </div>
           </div>
@@ -153,9 +251,12 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
               id="highlights"
               value={formData.highlights}
               onChange={e => handleInputChange("highlights", e.target.value)}
-              placeholder="Ej:&#10;Líder regional en su segmento&#10;85% ingresos recurrentes&#10;Crecimiento 30% anual"
-              rows={4}
+              placeholder="Ej:&#10;Líder regional en su segmento&#10;85% ingresos recurrentes&#10;Crecimiento 30% anual&#10;+500 clientes B2B"
+              rows={5}
             />
+            <p className="text-xs text-muted-foreground">
+              Cuantos más detalles proporciones, mejor será el contenido generado
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
@@ -164,17 +265,17 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
             </Button>
             <Button 
               onClick={handleGenerate} 
-              disabled={generateMutation.isPending}
+              disabled={generateMutation.isPending || !formData.company_name || !formData.sector}
             >
               {generateMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generando...
+                  Generando contenido...
                 </>
               ) : (
                 <>
                   <Wand2 className="h-4 w-4 mr-2" />
-                  Generar Esquema
+                  Generar Presentación
                 </>
               )}
             </Button>
@@ -190,42 +291,67 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Check className="h-5 w-5 text-green-500" />
-          Esquema Generado
+          Presentación Generada
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Revisa el esquema y aplícalo para crear los slides
+          Revisa el contenido generado. Podrás editarlo después de aplicar.
         </p>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-3">
+        <ScrollArea className="h-[450px] pr-4">
+          <div className="space-y-2">
             {outline.map((item, index) => {
               const layoutInfo = LAYOUT_DEFINITIONS[item.slide_type as keyof typeof LAYOUT_DEFINITIONS];
               const badgeInfo = LAYOUT_BADGES[item.layout];
+              const isExpanded = expandedSlides.has(index);
+              const hasContent = item.content.bullets?.length || item.content.stats?.length || 
+                                item.content.teamMembers?.length || item.content.columns?.length;
               
               return (
-                <div 
-                  key={index}
-                  className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                <Collapsible 
+                  key={index} 
+                  open={isExpanded}
+                  onOpenChange={() => toggleSlideExpanded(index)}
                 >
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                    {item.slide_index + 1}
+                  <div className="rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-start gap-3 p-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                          {item.slide_index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium capitalize">
+                              {layoutInfo?.name || item.slide_type}
+                            </span>
+                            <Badge variant={badgeInfo.variant} className="text-xs">
+                              {badgeInfo.label}
+                            </Badge>
+                            {hasContent && (
+                              <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                                Con contenido
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground">
+                            {item.headline}
+                          </p>
+                          {item.subline && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {item.subline}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className={`h-4 w-4 text-muted-foreground flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-3 pb-3">
+                        <ContentPreview content={item.content} slideType={item.slide_type} />
+                      </div>
+                    </CollapsibleContent>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium capitalize">
-                        {layoutInfo?.name || item.slide_type}
-                      </span>
-                      <Badge variant={badgeInfo.variant} className="text-xs">
-                        {badgeInfo.label}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {item.purpose}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                </div>
+                </Collapsible>
               );
             })}
           </div>
@@ -241,7 +367,7 @@ export function OutlineGenerator({ presentationType, onApplyOutline, onCancel }:
             </Button>
             <Button onClick={handleApply}>
               <Check className="h-4 w-4 mr-2" />
-              Aplicar Esquema
+              Aplicar Presentación
             </Button>
           </div>
         </div>

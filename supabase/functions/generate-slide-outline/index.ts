@@ -33,12 +33,21 @@ const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: num
   },
 };
 
-interface SlideOutline {
-  slide_index: number;
-  slide_type: string;
-  layout: "A" | "B" | "C";
-  purpose: string;
-}
+// Content types for each slide layout
+const SLIDE_CONTENT_SCHEMAS: Record<string, string> = {
+  title: "headline (company/project name), subline (tagline or date)",
+  overview: "headline, subline, bullets (3-5 key highlights about the company/opportunity)",
+  bullets: "headline, bullets (4-6 detailed points with supporting information)",
+  stats: "headline, stats (3-4 metrics with value, label, and optional prefix/suffix like € or %)",
+  financials: "headline, stats (revenue, EBITDA, margin, growth as numeric metrics)",
+  market: "headline, subline, bullets (market size, trends, competitive position)",
+  team: "headline, team_members (2-4 people with name and role)",
+  timeline: "headline, bullets (4-6 milestones or process steps)",
+  comparison: "headline, columns (2 columns with title and items for comparison)",
+  closing: "headline (call to action or contact info), subline (next steps)",
+  hero: "headline (bold statement), subline (supporting message)",
+  disclaimer: "headline, bodyText (legal/confidentiality text)",
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -64,36 +73,117 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build the AI prompt
-    const systemPrompt = `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a structured slide outline that follows best practices for the specific presentation type.
+    // Build slide content requirements
+    const slideContentRequirements = config.allowedTypes
+      .map(type => `- ${type}: ${SLIDE_CONTENT_SCHEMAS[type] || "headline, subline"}`)
+      .join("\n");
+
+    // Build the AI prompt with content generation
+    const systemPrompt = `You are an M&A presentation strategist specializing in investment banking and corporate finance materials. Your task is to create a COMPLETE slide deck with real content based on the provided inputs.
 
 Rules:
-- Return structure only (no final copy or detailed content)
-- Use ONLY these allowed slide types: ${config.allowedTypes.join(", ")}
+- Generate exactly ${config.slideCount} slides using ONLY these types: ${config.allowedTypes.join(", ")}
+- Each slide must have REAL content based on the inputs (not placeholders)
 - Layouts represent visual structure:
   - A (Statement): Single headline/statement, minimal text, high impact
-  - B (Bullets): Headline with bullet points, detailed information
+  - B (Bullets): Headline with bullet points, detailed information  
   - C (Two-column): Comparative or side-by-side information
-- Target exactly ${config.slideCount} slides
-- Each slide must have a clear strategic purpose
-- Order slides logically for narrative flow
+- Content must be professional, concise, and relevant for M&A audiences
+- Use actual numbers from inputs when available, or create realistic estimates
 
-Output a valid JSON array with objects containing:
-- slide_index (0-based integer)
-- slide_type (from allowed list)
-- layout ("A", "B", or "C")
-- purpose (1 sentence describing the slide's strategic goal)
+Slide content requirements by type:
+${slideContentRequirements}
 
-Return ONLY the JSON array, no markdown, no explanation.`;
+You MUST use the generate_slides tool to return the structured response.`;
 
-    const userPrompt = `Create a slide outline for a "${presentation_type}" presentation.
+    const userPrompt = `Create a complete ${presentation_type} presentation with ${config.slideCount} slides.
 
-Context/Inputs:
+Company/Project Details:
 ${JSON.stringify(inputs_json, null, 2)}
 
-Generate exactly ${config.slideCount} slides using only these types: ${config.allowedTypes.join(", ")}`;
+Generate professional content for each slide based on these details. Use the provided numbers and highlights. Make content compelling for investors/buyers.`;
 
-    // Call Lovable AI Gateway
+    // Define the tool for structured output
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "generate_slides",
+          description: "Generate a complete slide deck with content",
+          parameters: {
+            type: "object",
+            properties: {
+              slides: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    slide_index: { type: "number", description: "0-based slide index" },
+                    slide_type: { type: "string", enum: config.allowedTypes },
+                    layout: { type: "string", enum: ["A", "B", "C"] },
+                    headline: { type: "string", description: "Main headline for the slide" },
+                    subline: { type: "string", description: "Optional subheadline or supporting text" },
+                    content: {
+                      type: "object",
+                      properties: {
+                        bullets: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "Bullet points for the slide"
+                        },
+                        stats: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              value: { type: "string" },
+                              label: { type: "string" },
+                              prefix: { type: "string" },
+                              suffix: { type: "string" }
+                            },
+                            required: ["value", "label"]
+                          },
+                          description: "Statistics/KPIs for stats or financials slides"
+                        },
+                        team_members: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              name: { type: "string" },
+                              role: { type: "string" }
+                            },
+                            required: ["name", "role"]
+                          },
+                          description: "Team members for team slides"
+                        },
+                        columns: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              title: { type: "string" },
+                              items: { type: "array", items: { type: "string" } }
+                            },
+                            required: ["title", "items"]
+                          },
+                          description: "Columns for comparison slides"
+                        },
+                        bodyText: { type: "string", description: "Body text for disclaimer or custom slides" }
+                      }
+                    }
+                  },
+                  required: ["slide_index", "slide_type", "layout", "headline"]
+                }
+              }
+            },
+            required: ["slides"]
+          }
+        }
+      }
+    ];
+
+    // Call Lovable AI Gateway with tool calling
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -106,7 +196,9 @@ Generate exactly ${config.slideCount} slides using only these types: ${config.al
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.3,
+        tools,
+        tool_choice: { type: "function", function: { name: "generate_slides" } },
+        temperature: 0.4,
       }),
     });
 
@@ -129,49 +221,49 @@ Generate exactly ${config.slideCount} slides using only these types: ${config.al
     }
 
     const aiResponse = await response.json();
-    const content = aiResponse.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("No content in AI response");
+    
+    // Extract tool call response
+    const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.function.name !== "generate_slides") {
+      console.error("No tool call in response:", JSON.stringify(aiResponse));
+      throw new Error("AI did not return structured slide data");
     }
 
-    // Parse JSON from response (handle potential markdown wrapping)
-    let outline: SlideOutline[];
+    let slidesData;
     try {
-      // Try to extract JSON from potential markdown code blocks
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : content.trim();
-      outline = JSON.parse(jsonString);
+      slidesData = JSON.parse(toolCall.function.arguments);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response as JSON");
+      console.error("Failed to parse tool arguments:", toolCall.function.arguments);
+      throw new Error("Failed to parse AI response");
     }
 
-    // Validate the outline
-    if (!Array.isArray(outline)) {
-      throw new Error("AI response is not an array");
+    const slides = slidesData.slides;
+    if (!Array.isArray(slides)) {
+      throw new Error("AI response does not contain slides array");
     }
 
-    // Validate each slide
-    const validatedOutline = outline.map((slide, index) => {
-      // Ensure slide_index is sequential
-      const validSlide: SlideOutline = {
+    // Validate and clean each slide
+    const validatedSlides = slides.map((slide: Record<string, unknown>, index: number) => {
+      const slideType = config.allowedTypes.includes(slide.slide_type as string) 
+        ? slide.slide_type as string
+        : config.allowedTypes[Math.min(index, config.allowedTypes.length - 1)];
+      
+      const layout = ["A", "B", "C"].includes(slide.layout as string) 
+        ? slide.layout as string
+        : "A";
+
+      return {
         slide_index: index,
-        slide_type: config.allowedTypes.includes(slide.slide_type) 
-          ? slide.slide_type 
-          : config.allowedTypes[0],
-        layout: ["A", "B", "C"].includes(slide.layout) 
-          ? slide.layout as "A" | "B" | "C"
-          : "A",
-        purpose: typeof slide.purpose === "string" 
-          ? slide.purpose.slice(0, 200) 
-          : "Slide content",
+        slide_type: slideType,
+        layout,
+        headline: typeof slide.headline === "string" ? slide.headline.slice(0, 200) : "Slide " + (index + 1),
+        subline: typeof slide.subline === "string" ? slide.subline.slice(0, 300) : undefined,
+        content: slide.content || {},
       };
-      return validSlide;
     });
 
     return new Response(
-      JSON.stringify(validatedOutline),
+      JSON.stringify(validatedSlides),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
