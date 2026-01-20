@@ -7,7 +7,7 @@ import {
   Trash2,
   Edit,
   Eye,
-  Share2,
+  Wand2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -27,11 +27,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { TemplateSelector } from "@/features/presentations/components/TemplateSelector";
-import { usePresentationProjects, useCreateProject, useDeleteProject } from "@/hooks/usePresentations";
-import { TEMPLATE_DEFINITIONS, type PresentationType } from "@/types/presentations";
+import { OutlineGenerator } from "@/features/presentations/components/OutlineGenerator";
+import { usePresentationProjects, useCreateProject, useDeleteProject, useCreateSlide } from "@/hooks/usePresentations";
+import { TEMPLATE_DEFINITIONS, type PresentationType, type SlideLayout, type SlideContent } from "@/types/presentations";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Presentaciones() {
   const navigate = useNavigate();
@@ -39,10 +42,13 @@ export default function Presentaciones() {
   const [selectedTemplate, setSelectedTemplate] = useState<PresentationType | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [creationMode, setCreationMode] = useState<'template' | 'ai'>('template');
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   const { data: projects = [], isLoading } = usePresentationProjects();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
+  const createSlide = useCreateSlide();
 
   const filteredProjects = projects.filter(p => 
     p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,6 +57,12 @@ export default function Presentaciones() {
 
   const handleCreate = async () => {
     if (!selectedTemplate || !newTitle.trim()) return;
+
+    if (creationMode === 'ai') {
+      // Show AI generator instead of creating immediately
+      setShowAIGenerator(true);
+      return;
+    }
 
     const result = await createProject.mutateAsync({
       project: {
@@ -68,10 +80,64 @@ export default function Presentaciones() {
     navigate(`/presentaciones/${result.id}/editor`);
   };
 
+  const handleApplyAIOutline = async (slides: Array<{
+    layout: SlideLayout;
+    headline: string;
+    content: SlideContent;
+  }>) => {
+    if (!selectedTemplate || !newTitle.trim()) return;
+
+    try {
+      // Create project without template slides
+      const result = await createProject.mutateAsync({
+        project: {
+          title: newTitle.trim(),
+          type: selectedTemplate,
+          status: 'draft',
+          is_confidential: true,
+        },
+        templateType: 'custom', // Use custom to avoid default slides
+      });
+
+      // Create slides from AI outline
+      for (let i = 0; i < slides.length; i++) {
+        const slide = slides[i];
+        await createSlide.mutateAsync({
+          project_id: result.id,
+          order_index: i,
+          layout: slide.layout,
+          headline: slide.headline,
+          content: slide.content,
+          is_hidden: false,
+          is_locked: false,
+        });
+      }
+
+      toast.success(`Presentación creada con ${slides.length} slides`);
+      setShowNewDialog(false);
+      setShowAIGenerator(false);
+      setSelectedTemplate(null);
+      setNewTitle('');
+      setCreationMode('template');
+      navigate(`/presentaciones/${result.id}/editor`);
+    } catch (error) {
+      console.error("Error creating presentation:", error);
+      toast.error("Error al crear la presentación");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Eliminar esta presentación?')) {
       await deleteProject.mutateAsync(id);
     }
+  };
+
+  const handleCloseDialog = () => {
+    setShowNewDialog(false);
+    setShowAIGenerator(false);
+    setSelectedTemplate(null);
+    setNewTitle('');
+    setCreationMode('template');
   };
 
   return (
@@ -210,48 +276,101 @@ export default function Presentaciones() {
       )}
 
       {/* New Presentation Dialog */}
-      <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={showNewDialog} onOpenChange={handleCloseDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nueva Presentación</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6 pt-4">
-            {/* Template selection */}
-            <div className="space-y-3">
-              <Label>Selecciona una plantilla</Label>
-              <TemplateSelector
-                selectedType={selectedTemplate}
-                onSelect={setSelectedTemplate}
-              />
-            </div>
+          {showAIGenerator && selectedTemplate ? (
+            <OutlineGenerator
+              presentationType={selectedTemplate}
+              onApplyOutline={handleApplyAIOutline}
+              onCancel={() => setShowAIGenerator(false)}
+            />
+          ) : (
+            <div className="space-y-6 pt-4">
+              {/* Creation mode tabs */}
+              <Tabs value={creationMode} onValueChange={(v) => setCreationMode(v as 'template' | 'ai')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="template">
+                    <Presentation className="h-4 w-4 mr-2" />
+                    Desde Plantilla
+                  </TabsTrigger>
+                  <TabsTrigger value="ai">
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Generar con IA
+                  </TabsTrigger>
+                </TabsList>
 
-            {/* Title input - only show after template selection */}
-            {selectedTemplate && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
-                <Label>Nombre de la presentación</Label>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ej: Teaser Proyecto Alpha"
-                  autoFocus
-                />
+                <TabsContent value="template" className="mt-6">
+                  {/* Template selection */}
+                  <div className="space-y-3">
+                    <Label>Selecciona una plantilla</Label>
+                    <TemplateSelector
+                      selectedType={selectedTemplate}
+                      onSelect={setSelectedTemplate}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="ai" className="mt-6">
+                  <div className="space-y-3">
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                      <div className="flex gap-3">
+                        <Wand2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium mb-1">Generación Inteligente</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Selecciona un tipo de presentación y la IA generará un esquema 
+                            personalizado basado en los datos que proporciones.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <Label>Selecciona el tipo de presentación</Label>
+                    <TemplateSelector
+                      selectedType={selectedTemplate}
+                      onSelect={setSelectedTemplate}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              {/* Title input - only show after template selection */}
+              {selectedTemplate && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
+                  <Label>Nombre de la presentación</Label>
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Ej: Teaser Proyecto Alpha"
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="ghost" onClick={handleCloseDialog}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!selectedTemplate || !newTitle.trim() || createProject.isPending}
+                >
+                  {createProject.isPending ? 'Creando...' : (
+                    creationMode === 'ai' ? (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Continuar con IA
+                      </>
+                    ) : 'Crear Presentación'
+                  )}
+                </Button>
               </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" onClick={() => setShowNewDialog(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!selectedTemplate || !newTitle.trim() || createProject.isPending}
-              >
-                {createProject.isPending ? 'Creando...' : 'Crear Presentación'}
-              </Button>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

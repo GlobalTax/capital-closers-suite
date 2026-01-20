@@ -216,6 +216,24 @@ export const TEMPLATE_DEFINITIONS: Record<PresentationType, { name: string; desc
   },
 };
 
+// Allowed slide types per template (for AI outline generation)
+export const TEMPLATE_ALLOWED_TYPES: Record<PresentationType, SlideLayout[]> = {
+  teaser_sell: ["title", "overview", "bullets", "financials", "stats", "market", "closing"],
+  firm_deck: ["title", "overview", "bullets", "stats", "team", "closing"],
+  client_deck: ["title", "overview", "bullets", "timeline", "team", "closing"],
+  mandate_deck: ["title", "overview", "bullets", "comparison", "stats", "market", "closing"],
+  one_pager: ["title", "overview", "closing"],
+  custom: ["title", "hero", "overview", "bullets", "stats", "financials", "timeline", "team", "comparison", "market", "closing", "disclaimer", "custom"],
+};
+
+// AI Outline types
+export interface SlideOutlineItem {
+  slide_index: number;
+  slide_type: string;
+  layout: "A" | "B" | "C";
+  purpose: string;
+}
+
 // Layout definitions with display info
 export const LAYOUT_DEFINITIONS: Record<SlideLayout, { name: string; icon: string }> = {
   title: { name: 'Portada', icon: 'FileText' },
