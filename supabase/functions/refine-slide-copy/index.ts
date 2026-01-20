@@ -22,13 +22,19 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Check if this is the M&A sell-side teaser (requires stricter tone)
+    // Detect template type from structure
     const isMASellTeaser = outline_json.some((slide: any) => 
       slide.slide_type === "disclaimer" && outline_json.length === 8
     );
+    
+    // Detect firm deck (6 slides, starts with title, has stats at position 4)
+    const isFirmDeck = outline_json.length === 6 && 
+      outline_json[0]?.slide_type === "title" &&
+      outline_json[3]?.slide_type === "stats";
 
-    const systemPrompt = isMASellTeaser 
-      ? `You are refining copy for a CONFIDENTIAL M&A SELL-SIDE TEASER targeting sophisticated investors (PE, VC, strategic buyers).
+    const getSystemPrompt = () => {
+      if (isMASellTeaser) {
+        return `You are refining copy for a CONFIDENTIAL M&A SELL-SIDE TEASER targeting sophisticated investors (PE, VC, strategic buyers).
 
 CRITICAL TONE REQUIREMENTS:
 - Very sober, measured, and professional
@@ -61,8 +67,51 @@ CONTENT CONSTRAINTS:
 - Subline: max 15 words, provides context without hype
 - Bullets: max 12 words each, specific and verifiable
 - Max 5 bullets per slide
-- Stats must come ONLY from provided inputs`
-      : `You are generating a professional M&A-grade presentation.
+- Stats must come ONLY from provided inputs`;
+      }
+      
+      if (isFirmDeck) {
+        return `You are refining copy for a PROFESSIONAL FIRM PRESENTATION for an M&A advisory firm.
+
+CRITICAL TONE REQUIREMENTS:
+- Authoritative: Confident, expertise-driven language
+- Calm: No urgency, no pressure, measured and composed
+- Non-commercial: This is NOT a sales pitch - professional introduction only
+- Let credentials and track record speak for themselves
+- Understated confidence, not aggressive positioning
+
+STRICTLY FORBIDDEN:
+- "We are the best/leading/top" (unless backed by specific ranking/award)
+- "Partner with us today!" or any urgency-driven language
+- Exclamation marks (!)
+- Promotional or marketing language
+- Vague claims like "world-class service", "unmatched expertise"
+- "Why choose us" framing (too commercial)
+- Superlatives without evidence
+
+PREFERRED LANGUAGE:
+- "We advise..." (factual, present tense)
+- "Our approach centers on..." (methodological)
+- "XX transactions completed since YYYY" (specific, verifiable)
+- "Clients include..." (evidence-based)
+- "Our process involves..." (structured, clear)
+- "We focus on..." (scope definition)
+
+STRICT RULES:
+- Use ONLY the information provided in the inputs
+- Do NOT invent statistics, client names, or transaction counts
+- If data is missing, use general language rather than fabricating
+- Language: Spanish (formal business Spanish)
+
+CONTENT CONSTRAINTS:
+- Headline: max 10 words, confident but measured
+- Subline: max 15 words, provides context
+- Bullets: max 12 words each, clear and specific
+- Max 5 bullets per slide
+- Stats must come ONLY from provided inputs`;
+      }
+      
+      return `You are generating a professional M&A-grade presentation.
 
 STRICT RULES:
 - Use ONLY the information provided in the inputs
@@ -78,6 +127,9 @@ CONTENT CONSTRAINTS:
 - Max 5 bullets per slide
 - No marketing hype or superlatives without data
 - Stats must come from provided inputs only`;
+    };
+    
+    const systemPrompt = getSystemPrompt();
 
     const outputRequirements = `
 OUTPUT REQUIREMENTS:
