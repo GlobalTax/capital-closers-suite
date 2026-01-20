@@ -5,6 +5,31 @@
 export const APP_NAME = "Capittal CRM";
 export const APP_VERSION = "1.0.0";
 
+// Proyectos Internos (para horas no asignadas a mandatos de cliente)
+export const INTERNAL_PROJECTS = {
+  BUSINESS_DEVELOPMENT: "00000000-0000-0000-0000-000000000001",
+  REUNIONES_INTERNAS: "00000000-0000-0000-0000-000000000002",
+  ADMINISTRATIVO: "00000000-0000-0000-0000-000000000003",
+} as const;
+
+export const INTERNAL_PROJECT_LABELS: Record<string, { label: string; description: string; icon: string }> = {
+  [INTERNAL_PROJECTS.BUSINESS_DEVELOPMENT]: { 
+    label: "Business Development", 
+    description: "Captación de operaciones, networking", 
+    icon: "Target" 
+  },
+  [INTERNAL_PROJECTS.REUNIONES_INTERNAS]: { 
+    label: "Reuniones Internas", 
+    description: "Reuniones de equipo, formación", 
+    icon: "Users" 
+  },
+  [INTERNAL_PROJECTS.ADMINISTRATIVO]: { 
+    label: "Administrativo", 
+    description: "Tareas administrativas, reporting", 
+    icon: "FileText" 
+  },
+};
+
 // Tipos de Mandato
 export const MANDATO_TIPOS = ["compra", "venta"] as const;
 
