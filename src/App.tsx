@@ -46,6 +46,10 @@ const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
 const GestorDocumentos = lazy(() => import("./pages/GestorDocumentos"));
 const SearchFunds = lazy(() => import("./pages/SearchFunds"));
 const SearchFundDetalle = lazy(() => import("./pages/SearchFundDetalle"));
+const Presentaciones = lazy(() => import("./pages/Presentaciones"));
+const PresentacionEditor = lazy(() => import("./pages/PresentacionEditor"));
+const PresenterMode = lazy(() => import("./pages/PresenterMode"));
+const PublicViewer = lazy(() => import("./pages/PublicViewer"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -88,6 +92,15 @@ function AppContent() {
             <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
             <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
             <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
+          
+          {/* Presentation routes */}
+          <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />
+          <Route path="/presentaciones/:id/editor" element={<ProtectedRoute><PresentacionEditor /></ProtectedRoute>} />
+          <Route path="/presentaciones/:id/present" element={<ProtectedRoute><PresenterMode /></ProtectedRoute>} />
+          
+          {/* Public share link viewer */}
+          <Route path="/p/:token" element={<PublicViewer />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

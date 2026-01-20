@@ -2,10 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as presentationsService from "@/services/presentations.service";
 import type { 
-  PresentationProjectInsert, 
-  PresentationProjectUpdate,
-  PresentationSlideInsert,
-  PresentationSlideUpdate,
+  PresentationProject,
+  PresentationSlide,
   PresentationType,
 } from "@/types/presentations";
 
@@ -38,7 +36,7 @@ export function useCreateProject() {
       project, 
       templateType 
     }: { 
-      project: PresentationProjectInsert; 
+      project: Partial<PresentationProject>; 
       templateType: PresentationType;
     }) => {
       // Create project
@@ -54,7 +52,7 @@ export function useCreateProject() {
           content: slideData.content || {},
           is_hidden: false,
           is_locked: false,
-        } as PresentationSlideInsert);
+        } as Partial<PresentationSlide>);
       }
       
       return newProject;
@@ -74,7 +72,7 @@ export function useUpdateProject() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: PresentationProjectUpdate }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<PresentationProject> }) =>
       presentationsService.updateProject(id, updates),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['presentation-projects'] });
@@ -136,7 +134,7 @@ export function useUpdateSlide() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: PresentationSlideUpdate }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<PresentationSlide> }) =>
       presentationsService.updateSlide(id, updates),
     onSuccess: (slide) => {
       queryClient.invalidateQueries({ queryKey: ['presentation-slides', slide.project_id] });
