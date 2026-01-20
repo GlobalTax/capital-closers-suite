@@ -16,6 +16,15 @@ import {
   CheckCircle,
   Shield,
   Globe,
+  Table2,
+  PieChart,
+  Grid3X3,
+  Quote,
+  GitBranch,
+  Clock,
+  TrendingUp,
+  FileText,
+  AlertCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +59,8 @@ import { PolishPreview } from "./PolishPreview";
 import { ValidationReport } from "./ValidationReport";
 import { TranslateDialog } from "./TranslateDialog";
 import { TranslatePreview } from "./TranslatePreview";
-import type { PresentationSlide, SlideContent, SlideLayout } from "@/types/presentations";
+import { VariantSelector, TableEditor, ChartEditor, IconPicker, QuoteEditor, ProcessEditor } from "./editors";
+import type { PresentationSlide, SlideContent, SlideLayout, LayoutVariant } from "@/types/presentations";
 import type { PolishedSlide } from "@/hooks/usePolishSlides";
 
 interface SlideEditorProps {
@@ -64,10 +74,25 @@ const LAYOUTS: { value: SlideLayout; label: string; icon: React.ElementType }[] 
   { value: 'title', label: 'Portada', icon: Type },
   { value: 'bullets', label: 'Puntos', icon: List },
   { value: 'stats', label: 'Estadísticas', icon: BarChart3 },
-  { value: 'overview', label: 'Visión General', icon: Type },
+  { value: 'overview', label: 'Visión General', icon: FileText },
   { value: 'team', label: 'Equipo', icon: Users },
   { value: 'comparison', label: 'Comparativa', icon: Columns },
-  { value: 'closing', label: 'Cierre', icon: Type },
+  { value: 'timeline', label: 'Timeline', icon: Clock },
+  { value: 'financials', label: 'Financieros', icon: TrendingUp },
+  { value: 'market', label: 'Mercado', icon: Globe },
+  { value: 'table', label: 'Tabla', icon: Table2 },
+  { value: 'chart', label: 'Gráfico', icon: PieChart },
+  { value: 'icons', label: 'Iconos', icon: Grid3X3 },
+  { value: 'quote', label: 'Cita', icon: Quote },
+  { value: 'process', label: 'Proceso', icon: GitBranch },
+  { value: 'closing', label: 'Cierre', icon: CheckCircle },
+  { value: 'disclaimer', label: 'Disclaimer', icon: AlertCircle },
+];
+
+// Layouts that support A/B/C variants
+const VARIANT_ENABLED_LAYOUTS: SlideLayout[] = [
+  'stats', 'bullets', 'team', 'comparison', 'timeline', 
+  'financials', 'overview', 'table', 'chart', 'icons', 'quote', 'process'
 ];
 
 export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: SlideEditorProps) {
@@ -307,7 +332,7 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-80">
                 {LAYOUTS.map((layout) => (
                   <SelectItem key={layout.value} value={layout.value}>
                     <div className="flex items-center gap-2">
@@ -319,6 +344,15 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
               </SelectContent>
             </Select>
           </div>
+
+          {/* Variant selector for supported layouts */}
+          {VARIANT_ENABLED_LAYOUTS.includes(slide.layout) && (
+            <VariantSelector
+              value={(slide.layout_variant as LayoutVariant) || 'A'}
+              onChange={(variant) => onUpdate({ layout_variant: variant })}
+              layout={slide.layout}
+            />
+          )}
 
           {/* Headline */}
           <div className="space-y-2">
@@ -341,6 +375,8 @@ export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: S
               placeholder="Subtítulo opcional"
             />
           </div>
+
+          <Separator />
 
           {/* Layout-specific content editors */}
           <LayoutContentEditor
@@ -635,9 +671,9 @@ function LayoutContentEditor({
     case 'bullets':
     case 'overview':
     case 'market':
-    case 'financials':
       return <BulletsEditor content={content} onUpdate={onUpdate} />;
     case 'stats':
+    case 'financials':
       return <StatsEditor content={content} onUpdate={onUpdate} />;
     case 'team':
       return <TeamEditor content={content} onUpdate={onUpdate} />;
@@ -646,6 +682,42 @@ function LayoutContentEditor({
     case 'closing':
     case 'disclaimer':
       return <BodyTextEditor content={content} onUpdate={onUpdate} />;
+    case 'table':
+      return (
+        <TableEditor 
+          table={content.table} 
+          onUpdate={(table) => onUpdate({ table })} 
+        />
+      );
+    case 'chart':
+      return (
+        <ChartEditor 
+          chart={content.chart} 
+          onUpdate={(chart) => onUpdate({ chart })} 
+        />
+      );
+    case 'icons':
+      return (
+        <IconPicker 
+          icons={content.icons} 
+          onUpdate={(icons) => onUpdate({ icons })} 
+        />
+      );
+    case 'quote':
+      return (
+        <QuoteEditor 
+          quote={content.quote} 
+          onUpdate={(quote) => onUpdate({ quote })} 
+        />
+      );
+    case 'process':
+    case 'timeline':
+      return (
+        <ProcessEditor 
+          process={content.process} 
+          onUpdate={(process) => onUpdate({ process })} 
+        />
+      );
     default:
       return null;
   }
