@@ -11370,6 +11370,7 @@ export type Database = {
           is_hidden: boolean | null
           is_locked: boolean | null
           layout: Database["public"]["Enums"]["slide_layout"]
+          layout_variant: string | null
           notes: string | null
           order_index: number
           project_id: string
@@ -11390,6 +11391,7 @@ export type Database = {
           is_hidden?: boolean | null
           is_locked?: boolean | null
           layout?: Database["public"]["Enums"]["slide_layout"]
+          layout_variant?: string | null
           notes?: string | null
           order_index?: number
           project_id: string
@@ -11410,6 +11412,7 @@ export type Database = {
           is_hidden?: boolean | null
           is_locked?: boolean | null
           layout?: Database["public"]["Enums"]["slide_layout"]
+          layout_variant?: string | null
           notes?: string | null
           order_index?: number
           project_id?: string
