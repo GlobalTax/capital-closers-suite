@@ -8,6 +8,8 @@ import {
   Palette,
   Plus,
   Trash2,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,11 +23,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { usePolishSlides, applyPolishedContent } from "@/hooks/usePolishSlides";
+import { PolishPreview } from "./PolishPreview";
 import type { PresentationSlide, SlideContent, SlideLayout } from "@/types/presentations";
+import type { PolishedSlide } from "@/hooks/usePolishSlides";
 
 interface SlideEditorProps {
   slide: PresentationSlide;
+  allSlides?: PresentationSlide[];
   onUpdate: (updates: Partial<PresentationSlide>) => void;
+  onBulkUpdate?: (updates: { slideId: string; updates: Partial<PresentationSlide> }[]) => void;
 }
 
 const LAYOUTS: { value: SlideLayout; label: string; icon: React.ElementType }[] = [
@@ -38,10 +46,14 @@ const LAYOUTS: { value: SlideLayout; label: string; icon: React.ElementType }[] 
   { value: 'closing', label: 'Cierre', icon: Type },
 ];
 
-export function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
+export function SlideEditor({ slide, allSlides = [], onUpdate, onBulkUpdate }: SlideEditorProps) {
   const [localHeadline, setLocalHeadline] = useState(slide.headline || '');
   const [localSubline, setLocalSubline] = useState(slide.subline || '');
   const [localContent, setLocalContent] = useState<SlideContent>(slide.content as SlideContent || {});
+  const [showPolishPreview, setShowPolishPreview] = useState(false);
+  const [polishedSlides, setPolishedSlides] = useState<PolishedSlide[]>([]);
+
+  const polishMutation = usePolishSlides();
 
   // Sync when slide changes
   useEffect(() => {
@@ -70,6 +82,68 @@ export function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
 
   const handleLayoutChange = (layout: SlideLayout) => {
     onUpdate({ layout });
+  };
+
+  const handlePolishSlides = async () => {
+    const slidesToPolish = allSlides.length > 0 ? allSlides : [slide];
+    
+    try {
+      const result = await polishMutation.mutateAsync(slidesToPolish);
+      setPolishedSlides(result.slides);
+      setShowPolishPreview(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al pulir slides');
+    }
+  };
+
+  const handleApplyPolish = () => {
+    if (!onBulkUpdate || polishedSlides.length === 0) {
+      // Single slide update fallback
+      const polished = polishedSlides[0];
+      if (polished) {
+        const originalContent = slide.content as Record<string, unknown> || {};
+        const newContent: Record<string, unknown> = { ...originalContent };
+        if (polished.bullets) newContent.bullets = polished.bullets;
+        if (polished.stats) newContent.stats = polished.stats;
+        if (polished.bodyText) newContent.bodyText = polished.bodyText;
+        if (polished.teamMembers) newContent.teamMembers = polished.teamMembers;
+        if (polished.columns) newContent.columns = polished.columns;
+
+        onUpdate({
+          headline: polished.headline,
+          subline: polished.subline ?? slide.subline,
+          content: newContent,
+        });
+      }
+    } else {
+      // Bulk update for all slides
+      const updates = polishedSlides.map((polished) => {
+        const original = allSlides[polished.slide_index];
+        if (!original) return null;
+
+        const originalContent = original.content as Record<string, unknown> || {};
+        const newContent: Record<string, unknown> = { ...originalContent };
+        if (polished.bullets) newContent.bullets = polished.bullets;
+        if (polished.stats) newContent.stats = polished.stats;
+        if (polished.bodyText) newContent.bodyText = polished.bodyText;
+        if (polished.teamMembers) newContent.teamMembers = polished.teamMembers;
+        if (polished.columns) newContent.columns = polished.columns;
+
+        return {
+          slideId: original.id,
+          updates: {
+            headline: polished.headline,
+            subline: polished.subline ?? original.subline,
+            content: newContent,
+          }
+        };
+      }).filter(Boolean) as { slideId: string; updates: Partial<PresentationSlide> }[];
+
+      onBulkUpdate(updates);
+    }
+    
+    setShowPolishPreview(false);
+    toast.success('Cambios editoriales aplicados');
   };
 
   return (
@@ -190,14 +264,43 @@ export function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
                 size="sm"
                 onClick={() => onUpdate({ text_color: null })}
               >
-                Reset
-              </Button>
-            </div>
+              Reset
+            </Button>
           </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+        </div>
+
+        {/* Polish AI Button */}
+        <div className="pt-4 border-t">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handlePolishSlides}
+            disabled={polishMutation.isPending}
+          >
+            {polishMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            {allSlides.length > 1 ? 'Pulir Todos los Slides con IA' : 'Pulir con IA'}
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Mejora claridad, elimina lenguaje de marketing
+          </p>
+        </div>
+      </TabsContent>
+    </Tabs>
+
+    <PolishPreview
+      open={showPolishPreview}
+      onOpenChange={setShowPolishPreview}
+      originalSlides={allSlides.length > 0 ? allSlides : [slide]}
+      polishedSlides={polishedSlides}
+      onApply={handleApplyPolish}
+      isApplying={false}
+    />
+  </div>
+);
 }
 
 function LayoutContentEditor({

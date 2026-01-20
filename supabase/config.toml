@@ -50,3 +50,6 @@ verify_jwt = true
 
 [functions.refine-slide-copy]
 verify_jwt = true
+
+[functions.polish-slides]
+verify_jwt = true
