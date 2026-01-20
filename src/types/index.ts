@@ -424,7 +424,8 @@ export interface WorkTaskTypeBasic {
 export interface TimeEntry {
   id: string;
   task_id?: string;
-  mandato_id: string;
+  mandato_id?: string | null;  // Now nullable - can be null when linked to a contact
+  contacto_id?: string | null; // NEW: Link to contact/lead for time entries without mandate
   user_id: string;
   work_task_type_id?: string;
   
@@ -461,7 +462,20 @@ export interface TimeEntry {
     fase: ChecklistFase;
   };
   mandato?: MandatoInfo;
+  contacto?: ContactoInfo; // NEW: Contact info when linked to a lead
   work_task_type?: WorkTaskTypeBasic;
+}
+
+// Contact info for time entries linked to leads
+export interface ContactoInfo {
+  id: string;
+  nombre: string;
+  apellidos?: string;
+  email?: string;
+  empresa_principal?: {
+    id: string;
+    nombre: string;
+  };
 }
 
 export interface TimeStats {

@@ -324,7 +324,7 @@ export function TimeEntriesTable({
                     <span className="font-medium">{entry.user?.full_name || 'Usuario'}</span>
                   </TableCell>
                   
-                  {/* MANDATO (clickable) */}
+                  {/* MANDATO or LEAD (clickable) */}
                   {showMandato && (
                     <TableCell>
                       {entry.mandato ? (
@@ -345,8 +345,25 @@ export function TimeEntriesTable({
                             {getMandatoEstadoBadge(entry.mandato.estado)}
                           </div>
                         </Link>
+                      ) : entry.contacto ? (
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                              Lead
+                            </Badge>
+                          </div>
+                          <div className="text-sm font-medium mt-0.5">
+                            {entry.contacto.empresa_principal?.nombre || 
+                             `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim()}
+                          </div>
+                          {entry.contacto.email && (
+                            <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+                              {entry.contacto.email}
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Sin mandato</span>
+                        <span className="text-muted-foreground text-sm">Sin asignar</span>
                       )}
                     </TableCell>
                   )}

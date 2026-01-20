@@ -12,8 +12,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { createTimeEntry } from "@/services/timeTracking";
-import { MandatoSelect } from "@/components/shared/MandatoSelect";
+import { MandatoLeadSelect } from "@/components/shared/MandatoLeadSelect";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
+import type { SearchItemType } from "@/hooks/useMandatoLeadSearch";
 import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 
 interface TimeEntryInlineFormProps {
@@ -28,10 +29,11 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Form state
+  // Form state - now with type tracking
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
-  const [selectedMandatoId, setSelectedMandatoId] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [selectedType, setSelectedType] = useState<SearchItemType | null>(null);
   const [valueType, setValueType] = useState<TimeEntryValueType>('core_ma');
   const [workTaskTypeId, setWorkTaskTypeId] = useState('');
   const [description, setDescription] = useState('');
@@ -52,25 +54,31 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     setTimeout(() => hoursInputRef.current?.focus(), 100);
   }, []);
 
-  // Smart defaults based on mandate selection
+  // Smart defaults based on selection type
   useEffect(() => {
-    if (selectedMandatoId && selectedMandatoId !== GENERAL_WORK_ID) {
+    if (selectedType === 'contacto') {
+      // Lead selected → soporte, not billable
+      setValueType('soporte');
+      setIsBillable(false);
+    } else if (selectedType === 'mandato') {
+      // Mandate selected → core_ma, billable
       setValueType('core_ma');
       setIsBillable(true);
-    } else if (selectedMandatoId === GENERAL_WORK_ID) {
+    } else if (selectedType === 'internal' || selectedId === GENERAL_WORK_ID) {
+      // General work → soporte, not billable
       setValueType('soporte');
       setIsBillable(false);
     }
-  }, [selectedMandatoId]);
+  }, [selectedId, selectedType]);
 
   // Load tasks when mandato changes
   useEffect(() => {
-    if (selectedMandatoId && selectedMandatoId !== GENERAL_WORK_ID) {
-      loadTasksForMandato(selectedMandatoId);
+    if (selectedType === 'mandato' && selectedId && selectedId !== GENERAL_WORK_ID) {
+      loadTasksForMandato(selectedId);
     } else {
       setTasks([]);
     }
-  }, [selectedMandatoId]);
+  }, [selectedId, selectedType]);
 
   const loadTasksForMandato = async (mandatoId: string) => {
     try {
@@ -99,7 +107,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const resetForm = () => {
     setHours('0');
     setMinutes('30');
-    setSelectedMandatoId('');
+    setSelectedId('');
+    setSelectedType(null);
     setValueType('core_ma');
     setWorkTaskTypeId('');
     setDescription('');
@@ -118,13 +127,13 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     try {
       setLoading(true);
       
-      if (!selectedMandatoId) {
-        toast.error("Debes seleccionar un mandato");
+      if (!selectedId || !selectedType) {
+        toast.error("Debes seleccionar un mandato o lead");
         return;
       }
 
-      if (!isValidUUID(selectedMandatoId)) {
-        toast.error("El mandato seleccionado no es válido");
+      if (!isValidUUID(selectedId)) {
+        toast.error("La selección no es válida");
         return;
       }
 
@@ -153,9 +162,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      await createTimeEntry({
-        task_id: taskId && taskId !== '__none__' ? taskId : undefined,
-        mandato_id: selectedMandatoId,
+      // Prepare entry based on selection type
+      const entryData: Record<string, any> = {
         user_id: user.id,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
@@ -166,8 +174,20 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         is_billable: isBillable,
         status: 'approved',
         notes: notes.trim() || undefined,
-        work_task_type_id: workTaskTypeId
-      });
+        work_task_type_id: workTaskTypeId,
+        mandato_id: null,
+        contacto_id: null,
+      };
+
+      // Set the correct ID based on type
+      if (selectedType === 'mandato' || selectedType === 'internal') {
+        entryData.mandato_id = selectedId;
+        entryData.task_id = taskId && taskId !== '__none__' ? taskId : undefined;
+      } else if (selectedType === 'contacto') {
+        entryData.contacto_id = selectedId;
+      }
+
+      await createTimeEntry(entryData);
 
       toast.success("Tiempo registrado ✓");
       resetForm();
@@ -181,11 +201,11 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   };
 
   const totalDuration = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-  const isValid = selectedMandatoId && workTaskTypeId && totalDuration > 0;
+  const isValid = selectedId && selectedType && workTaskTypeId && totalDuration > 0;
 
   return (
     <form onSubmit={handleSubmit} className="bg-muted/30 rounded-lg border p-4 space-y-4">
-      {/* Row 1: Duration + Mandato + Task Type + Description + Button */}
+      {/* Row 1: Duration + Mandato/Lead + Task Type + Description + Button */}
       <div className="flex flex-wrap items-end gap-3">
         {/* Duration */}
         <div className="flex items-end gap-1">
@@ -225,16 +245,19 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
           </div>
         </div>
 
-        {/* Mandato */}
+        {/* Mandato/Lead Select */}
         <div className="flex-1 min-w-[200px]">
           <Label className="text-xs text-muted-foreground">Mandato</Label>
-          <MandatoSelect
-            value={selectedMandatoId}
-            onValueChange={(value) => {
-              setSelectedMandatoId(value);
+          <MandatoLeadSelect
+            value={selectedId}
+            valueType={selectedType}
+            onValueChange={(value, type) => {
+              setSelectedId(value);
+              setSelectedType(type);
               setTaskId('');
             }}
             includeGeneralWork={true}
+            includeLeads={true}
           />
         </div>
 
@@ -382,8 +405,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
               />
             </div>
 
-            {/* Checklist Task */}
-            {selectedMandatoId && selectedMandatoId !== GENERAL_WORK_ID && tasks.length > 0 && (
+            {/* Checklist Task (only for mandatos) */}
+            {selectedType === 'mandato' && selectedId && selectedId !== GENERAL_WORK_ID && tasks.length > 0 && (
               <div className="flex-1 min-w-[200px]">
                 <Label className="text-xs text-muted-foreground">Vincular a tarea</Label>
                 <Select

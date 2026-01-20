@@ -219,7 +219,7 @@ export function CompactTimeEntriesTable({
                       title={valueConfig?.label || 'Sin tipo'}
                     />
 
-                    {/* Mandato + Task */}
+                    {/* Mandato or Lead */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {entry.mandato ? (
@@ -236,9 +236,20 @@ export function CompactTimeEntriesTable({
                             </span>
                             <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity" />
                           </Link>
+                        ) : entry.contacto ? (
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 shrink-0">
+                              Lead
+                            </Badge>
+                            <span className="text-sm truncate max-w-[160px]">
+                              {entry.contacto.empresa_principal?.nombre || 
+                               `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim()}
+                            </span>
+                          </div>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Sin mandato</span>
+                          <span className="text-sm text-muted-foreground">Sin asignar</span>
                         )}
+                      </div>
                       </div>
                       {entry.work_task_type?.name && (
                         <span className="text-xs text-muted-foreground">

@@ -22,17 +22,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { MandatoSelect } from '@/components/shared/MandatoSelect';
+import { MandatoLeadSelect } from '@/components/shared/MandatoLeadSelect';
 import { useTimerStore, formatTime } from '@/stores/useTimerStore';
 import { useActiveWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { createTimeEntry } from '@/services/timeTracking';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
+import type { SearchItemType } from '@/hooks/useMandatoLeadSearch';
 
-// UUID for "Trabajo General" (matches MandatoSelect)
+// UUID for "Trabajo General" (matches MandatoLeadSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
 
 interface FormData {
-  mandatoId: string;
+  selectedId: string;
+  selectedType: SearchItemType | null;
   valueType: TimeEntryValueType;
   workTaskTypeId: string;
   description: string;
@@ -58,7 +60,8 @@ export function TimerAssignmentDialog() {
   
   const { register, handleSubmit, watch, setValue, reset } = useForm<FormData>({
     defaultValues: {
-      mandatoId: '',
+      selectedId: '',
+      selectedType: null,
       valueType: 'soporte',
       workTaskTypeId: '',
       description: '',
@@ -70,7 +73,8 @@ export function TimerAssignmentDialog() {
   useEffect(() => {
     if (isAssignmentModalOpen) {
       reset({
-        mandatoId: '',
+        selectedId: '',
+        selectedType: null,
         valueType: presetValueType || 'soporte',
         workTaskTypeId: presetWorkTaskTypeId || '',
         description: '',
@@ -79,26 +83,31 @@ export function TimerAssignmentDialog() {
     }
   }, [isAssignmentModalOpen, presetWorkTaskTypeId, presetValueType, reset]);
   
-  const selectedMandatoId = watch('mandatoId');
+  const selectedId = watch('selectedId');
+  const selectedType = watch('selectedType');
   const selectedValueType = watch('valueType');
   
-  // Smart defaults: Update valueType and isBillable based on mandato selection
+  // Smart defaults: Update valueType and isBillable based on selection type
   useEffect(() => {
-    if (selectedMandatoId && selectedMandatoId !== GENERAL_WORK_ID && selectedMandatoId !== '__none__' && selectedMandatoId !== '') {
+    if (selectedType === 'contacto') {
+      // Lead selected → soporte, not billable
+      setValue('valueType', 'soporte');
+      setValue('isBillable', false);
+    } else if (selectedType === 'mandato' && selectedId !== GENERAL_WORK_ID && selectedId !== '') {
       // Mandato selected → CORE M&A by default, billable
       setValue('valueType', 'core_ma');
       setValue('isBillable', true);
-    } else if (selectedMandatoId === GENERAL_WORK_ID) {
+    } else if (selectedType === 'internal' || selectedId === GENERAL_WORK_ID) {
       // General work → SOPORTE by default, not billable
       setValue('valueType', 'soporte');
       setValue('isBillable', false);
     }
-  }, [selectedMandatoId, setValue]);
+  }, [selectedId, selectedType, setValue]);
   
   const onSubmit = async (data: FormData) => {
-    // Validate mandato
-    if (!data.mandatoId || data.mandatoId === '__none__') {
-      toast.error('Selecciona un mandato');
+    // Validate selection
+    if (!data.selectedId || !data.selectedType) {
+      toast.error('Selecciona un mandato o lead');
       return;
     }
     
@@ -115,11 +124,8 @@ export function TimerAssignmentDialog() {
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (pendingTimeSeconds * 1000));
       
-      // If "Trabajo General" selected, we need a special mandato or null handling
-      const mandatoIdToSave = data.mandatoId === GENERAL_WORK_ID ? null : data.mandatoId;
-      
-      await createTimeEntry({
-        mandato_id: mandatoIdToSave as string,
+      // Prepare entry based on selection type
+      const entryData: Record<string, any> = {
         work_task_type_id: data.workTaskTypeId,
         value_type: data.valueType,
         start_time: startTime.toISOString(),
@@ -128,7 +134,18 @@ export function TimerAssignmentDialog() {
         description: data.description?.trim() || 'Trabajo registrado con timer',
         is_billable: data.isBillable,
         work_type: 'Otro',
-      });
+        mandato_id: null,
+        contacto_id: null,
+      };
+
+      // Set the correct ID based on type
+      if (data.selectedType === 'mandato' || data.selectedType === 'internal') {
+        entryData.mandato_id = data.selectedId;
+      } else if (data.selectedType === 'contacto') {
+        entryData.contacto_id = data.selectedId;
+      }
+      
+      await createTimeEntry(entryData);
       
       toast.success('Tiempo registrado', {
         description: `${displayTime} guardados como ${VALUE_TYPE_CONFIG[data.valueType].label}`,
@@ -171,14 +188,19 @@ export function TimerAssignmentDialog() {
         </DialogHeader>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          {/* 1. Mandato Select */}
+          {/* 1. Mandato/Lead Select */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Mandato</Label>
-            <MandatoSelect
-              value={selectedMandatoId}
-              onValueChange={(value) => setValue('mandatoId', value)}
-              placeholder="Seleccionar mandato..."
+            <MandatoLeadSelect
+              value={selectedId}
+              valueType={selectedType}
+              onValueChange={(value, type) => {
+                setValue('selectedId', value);
+                setValue('selectedType', type);
+              }}
+              placeholder="Seleccionar mandato o lead..."
               includeGeneralWork
+              includeLeads
             />
           </div>
           
