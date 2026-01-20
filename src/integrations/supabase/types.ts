@@ -9241,13 +9241,14 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          contacto_id: string | null
           created_at: string | null
           description: string
           duration_minutes: number | null
           end_time: string | null
           id: string
           is_billable: boolean | null
-          mandato_id: string
+          mandato_id: string | null
           notes: string | null
           rejection_reason: string | null
           start_time: string
@@ -9264,13 +9265,14 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          contacto_id?: string | null
           created_at?: string | null
           description: string
           duration_minutes?: number | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null
-          mandato_id: string
+          mandato_id?: string | null
           notes?: string | null
           rejection_reason?: string | null
           start_time: string
@@ -9287,13 +9289,14 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          contacto_id?: string | null
           created_at?: string | null
           description?: string
           duration_minutes?: number | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null
-          mandato_id?: string
+          mandato_id?: string | null
           notes?: string | null
           rejection_reason?: string | null
           start_time?: string
@@ -9308,6 +9311,13 @@ export type Database = {
           work_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mandato_time_entries_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mandato_time_entries_mandato_id_fkey"
             columns: ["mandato_id"]

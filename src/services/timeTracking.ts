@@ -1,11 +1,40 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { TimeEntry, TimeEntryWorkType, TimeEntryStatus, TimeEntryValueType, TimeStats, TeamStats, MandatoInfo, ValueTypeStats } from "@/types";
+import type { TimeEntry, TimeEntryWorkType, TimeEntryStatus, TimeEntryValueType, TimeStats, TeamStats, MandatoInfo, ContactoInfo, ValueTypeStats } from "@/types";
 
 // Helper to validate UUID
 const isValidUUID = (str: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
+
+// Common select query for time entries with optional mandato and contacto
+const TIME_ENTRY_SELECT = `
+  *,
+  work_task_type:work_task_types(id, name),
+  task:mandato_checklist_tasks(
+    id,
+    tarea,
+    fase
+  ),
+  mandato:mandatos(
+    id,
+    codigo,
+    descripcion,
+    tipo,
+    estado,
+    probability,
+    valor,
+    pipeline_stage,
+    empresa_principal:empresas(nombre)
+  ),
+  contacto:contactos(
+    id,
+    nombre,
+    apellidos,
+    email,
+    empresa_principal:empresas(id, nombre)
+  )
+`;
 
 // ============================================
 // FETCH TIME ENTRIES (with optional mandatoId)
@@ -22,26 +51,7 @@ export const fetchTimeEntries = async (
 ): Promise<TimeEntry[]> => {
   let query = supabase
     .from('mandato_time_entries')
-    .select(`
-      *,
-      work_task_type:work_task_types(id, name),
-      task:mandato_checklist_tasks(
-        id,
-        tarea,
-        fase
-      ),
-      mandato:mandatos!inner(
-        id,
-        codigo,
-        descripcion,
-        tipo,
-        estado,
-        probability,
-        valor,
-        pipeline_stage,
-        empresa_principal:empresas(nombre)
-      )
-    `)
+    .select(TIME_ENTRY_SELECT)
     .order('start_time', { ascending: false });
 
   if (mandatoId) {
@@ -82,7 +92,8 @@ export const fetchTimeEntries = async (
       full_name: usersMap.get(entry.user_id)!.full_name || 'Usuario',
       email: usersMap.get(entry.user_id)!.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo,
+    mandato: entry.mandato as MandatoInfo | null,
+    contacto: entry.contacto as ContactoInfo | null,
     work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
@@ -101,22 +112,7 @@ export const fetchMyTimeEntries = async (
 ): Promise<TimeEntry[]> => {
   let query = supabase
     .from('mandato_time_entries')
-    .select(`
-      *,
-      work_task_type:work_task_types(id, name),
-      task:mandato_checklist_tasks(
-        id,
-        tarea,
-        fase
-      ),
-      mandato:mandatos!inner(
-        id,
-        codigo,
-        descripcion,
-        tipo,
-        estado
-      )
-    `)
+    .select(TIME_ENTRY_SELECT)
     .eq('user_id', userId)
     .order('start_time', { ascending: false });
 
@@ -154,7 +150,8 @@ export const fetchMyTimeEntries = async (
       full_name: adminUser.full_name || 'Usuario',
       email: adminUser.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo,
+    mandato: entry.mandato as MandatoInfo | null,
+    contacto: entry.contacto as ContactoInfo | null,
     work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
@@ -176,26 +173,7 @@ export const fetchAllTimeEntries = async (
 ): Promise<TimeEntry[]> => {
   let query = supabase
     .from('mandato_time_entries')
-    .select(`
-      *,
-      work_task_type:work_task_types(id, name),
-      task:mandato_checklist_tasks(
-        id,
-        tarea,
-        fase
-      ),
-      mandato:mandatos!inner(
-        id,
-        codigo,
-        descripcion,
-        tipo,
-        estado,
-        probability,
-        valor,
-        pipeline_stage,
-        empresa_principal:empresas(nombre)
-      )
-    `)
+    .select(TIME_ENTRY_SELECT)
     .order('start_time', { ascending: false });
 
   if (filters?.startDate) {
@@ -250,7 +228,8 @@ export const fetchAllTimeEntries = async (
       full_name: usersMap.get(entry.user_id)!.full_name || 'Usuario',
       email: usersMap.get(entry.user_id)!.email || ''
     } : undefined,
-    mandato: entry.mandato as MandatoInfo,
+    mandato: entry.mandato as MandatoInfo | null,
+    contacto: entry.contacto as ContactoInfo | null,
     work_task_type: entry.work_task_type as { id: string; name: string } | undefined
   })) as TimeEntry[];
 };
@@ -470,23 +449,41 @@ export const createTimeEntry = async (
 ): Promise<TimeEntry> => {
   console.log('[TimeTracking] Creando entrada:', {
     mandato_id: entry.mandato_id,
+    contacto_id: entry.contacto_id,
     work_task_type_id: entry.work_task_type_id,
     user_id: entry.user_id
   });
 
+  // Validate: must have either mandato_id OR contacto_id
+  if (!entry.mandato_id && !entry.contacto_id) {
+    throw new Error('Debe seleccionar un mandato o un lead');
+  }
+
+  // Prepare the entry data, ensuring null values for empty IDs
+  const entryData = {
+    ...entry,
+    mandato_id: entry.mandato_id || null,
+    contacto_id: entry.contacto_id || null,
+  };
+
   const { data, error } = await supabase
     .from('mandato_time_entries')
-    .insert([entry] as any)
+    .insert([entryData] as any)
     .select()
     .single();
 
   if (error) {
     console.error('[TimeTracking] Error al crear entrada:', error);
     
-    // Detectar error de FK y dar mensaje más claro
+    // Detect constraint violation error
+    if (error.message?.includes('chk_mandato_or_contacto')) {
+      throw new Error('Debe seleccionar un mandato o un lead');
+    }
+    
+    // Detect FK error and give clearer message
     if (error.message?.includes('foreign key constraint') || 
         error.code === '23503') {
-      throw new Error('El mandato seleccionado no existe. Selecciona un mandato válido.');
+      throw new Error('El mandato o lead seleccionado no existe. Selecciona uno válido.');
     }
     throw error;
   }
