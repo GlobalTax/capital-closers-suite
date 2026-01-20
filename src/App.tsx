@@ -43,6 +43,7 @@ const SyncValuations = lazy(() => import("./pages/SyncValuations"));
 const SyncOperations = lazy(() => import("./pages/SyncOperations"));
 const ConfiguracionTareasTiempo = lazy(() => import("./pages/ConfiguracionTareasTiempo"));
 const BrevoIntegration = lazy(() => import("./pages/BrevoIntegration"));
+const SyncContactsCapittal = lazy(() => import("./pages/SyncContactsCapittal"));
 const GestorDocumentos = lazy(() => import("./pages/GestorDocumentos"));
 const SearchFunds = lazy(() => import("./pages/SearchFunds"));
 const SearchFundDetalle = lazy(() => import("./pages/SearchFundDetalle"));
@@ -92,6 +93,7 @@ function AppContent() {
             <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
             <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
             <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
+            <Route path="/sync-contacts-capittal" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncContactsCapittal /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />
