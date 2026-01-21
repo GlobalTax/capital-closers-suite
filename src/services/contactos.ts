@@ -273,3 +273,76 @@ export const searchContactos = async (query: string): Promise<Contacto[]> => {
     throw new DatabaseError('Error inesperado al buscar contactos');
   }
 };
+
+/**
+ * Busca un contacto por email exacto (normalizado)
+ * Retorna el contacto si existe, o null si no se encuentra
+ */
+export const findContactoByEmail = async (email: string): Promise<Contacto | null> => {
+  if (!email) return null;
+  
+  try {
+    const normalizedEmail = normalizeEmail(email);
+    const { data, error } = await supabase
+      .from('contactos')
+      .select(`
+        *,
+        empresa_principal:empresas(id, nombre, cif)
+      `)
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+    
+    if (error) {
+      throw new DatabaseError('Error al buscar contacto por email', {
+        supabaseError: error,
+        table: 'contactos',
+      });
+    }
+    
+    return data as Contacto | null;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al buscar contacto por email');
+  }
+};
+
+/**
+ * Asocia un contacto existente a una empresa
+ */
+export const asociarContactoAEmpresa = async (
+  contactoId: string,
+  empresaId: string
+): Promise<Contacto> => {
+  if (!isValidUUID(contactoId)) {
+    throw new DatabaseError('ID de contacto inválido', { contactoId });
+  }
+  if (!isValidUUID(empresaId)) {
+    throw new DatabaseError('ID de empresa inválido', { empresaId });
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('contactos')
+      .update({ empresa_principal_id: empresaId })
+      .eq('id', contactoId)
+      .select(`
+        *,
+        empresa_principal:empresas(id, nombre, cif)
+      `)
+      .single();
+    
+    if (error) {
+      throw new DatabaseError('Error al asociar contacto a empresa', {
+        supabaseError: error,
+        table: 'contactos',
+        contactoId,
+        empresaId,
+      });
+    }
+    
+    return data as Contacto;
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al asociar contacto a empresa');
+  }
+};

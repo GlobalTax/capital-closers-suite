@@ -34,12 +34,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { createEmpresa } from "@/services/empresas";
-import { createContacto } from "@/services/contactos";
+import { createContacto, findContactoByEmail, asociarContactoAEmpresa } from "@/services/contactos";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import { toast } from "sonner";
 import { TARGET_ESTADOS, NIVEL_INTERES } from "@/lib/constants";
 import type { NivelInteres, TargetEstado } from "@/types";
-import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe, Loader2, AlertCircle } from "lucide-react";
+import { Building2, MapPin, Users, Euro, Briefcase, Mail, Phone, Globe, Loader2, AlertCircle, Link } from "lucide-react";
 
 const SECTORES = [
   "Tecnología",
@@ -137,12 +137,33 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
         sitio_web: values.sitioWeb?.trim() || undefined,
       });
 
-      if (values.contactoPrincipal || values.email) {
-        const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
+      // Manejar contacto: buscar existente o crear nuevo
+      if (values.email) {
+        const existingContact = await findContactoByEmail(values.email);
+        
+        if (existingContact) {
+          // Contacto existe: vincularlo a la nueva empresa
+          await asociarContactoAEmpresa(existingContact.id, nuevaEmpresa.id);
+          toast.info("Contacto existente vinculado", {
+            description: `${existingContact.nombre} ${existingContact.apellidos || ''} ya estaba en el CRM y se ha asociado a la empresa.`,
+          });
+        } else {
+          // Contacto no existe: crear nuevo
+          const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
+          await createContacto({
+            nombre: nombreParts[0] || "Contacto",
+            apellidos: nombreParts.slice(1).join(" ") || undefined,
+            email: values.email,
+            telefono: values.telefono || undefined,
+            empresa_principal_id: nuevaEmpresa.id,
+          });
+        }
+      } else if (values.contactoPrincipal) {
+        // Solo nombre de contacto sin email
+        const nombreParts = values.contactoPrincipal.split(" ");
         await createContacto({
           nombre: nombreParts[0] || "Contacto",
           apellidos: nombreParts.slice(1).join(" ") || undefined,
-          email: values.email || `contacto@${values.nombre.toLowerCase().replace(/\s/g, '')}.com`,
           telefono: values.telefono || undefined,
           empresa_principal_id: nuevaEmpresa.id,
         });
