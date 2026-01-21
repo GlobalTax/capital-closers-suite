@@ -47,4 +47,6 @@ export interface TaskCreationPayload {
   ai_generated: boolean;
   ai_confidence?: number;
   source_text?: string;
+  creado_por?: string;
+  tipo?: 'individual' | 'grupal';
 }

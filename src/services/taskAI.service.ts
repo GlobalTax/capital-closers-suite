@@ -36,17 +36,23 @@ export async function parseTaskInput(rawText: string): Promise<TaskAIResponse> {
   return response.json();
 }
 
-export function mapParsedTaskToTarea(task: ParsedTask, sourceText: string): TaskCreationPayload {
+export function mapParsedTaskToTarea(
+  task: ParsedTask, 
+  sourceText: string,
+  userId?: string
+): TaskCreationPayload {
   return {
     titulo: task.title,
     descripcion: task.description || undefined,
     estado: 'pendiente',
     prioridad: task.priority,
     fecha_vencimiento: task.due_date || undefined,
-    asignado_a: task.assigned_to_id || undefined,
+    asignado_a: task.assigned_to_id || userId,
     ai_generated: true,
-    ai_confidence: 0.85, // Default confidence
+    ai_confidence: 0.85,
     source_text: sourceText,
+    creado_por: userId,
+    tipo: 'individual' as const,
   };
 }
 
@@ -63,7 +69,7 @@ export async function createTasksFromAI(
   for (const task of tasks) {
     try {
       if (targetType === 'tarea') {
-        const payload = mapParsedTaskToTarea(task, sourceText);
+        const payload = mapParsedTaskToTarea(task, sourceText, user?.id);
         
         const { data, error } = await supabase
           .from('tareas')
