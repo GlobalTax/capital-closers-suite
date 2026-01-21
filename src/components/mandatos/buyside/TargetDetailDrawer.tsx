@@ -32,6 +32,7 @@ import { TargetOfertasList } from "./TargetOfertasList";
 import { InteraccionTimeline } from "@/components/targets/InteraccionTimeline";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
+import { AsociarContactoEmpresaDialog } from "@/components/contactos/AsociarContactoEmpresaDialog";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { useQuery } from "@tanstack/react-query";
 import { getContactosByEmpresa, fetchInteraccionesByEmpresa } from "@/services/interacciones";
@@ -79,6 +80,7 @@ export function TargetDetailDrawer({
   const [activeTab, setActiveTab] = useState("info");
   const [nuevoContactoOpen, setNuevoContactoOpen] = useState(false);
   const [importLinkOpen, setImportLinkOpen] = useState(false);
+  const [asociarContactoOpen, setAsociarContactoOpen] = useState(false);
   const [nuevaInteraccionOpen, setNuevaInteraccionOpen] = useState(false);
 
   const empresa = target?.empresa;
@@ -332,6 +334,7 @@ export function TargetDetailDrawer({
                   empresaId={empresa.id}
                   onAddContacto={() => setNuevoContactoOpen(true)}
                   onImportFromLink={() => setImportLinkOpen(true)}
+                  onAsociarExistente={() => setAsociarContactoOpen(true)}
                   onInteraccion={(contactoId) => {
                     setNuevaInteraccionOpen(true);
                   }}
@@ -402,6 +405,16 @@ export function TargetDetailDrawer({
         onSuccess={() => {
           refetchContactos();
           setImportLinkOpen(false);
+        }}
+      />
+
+      <AsociarContactoEmpresaDialog
+        open={asociarContactoOpen}
+        onOpenChange={setAsociarContactoOpen}
+        empresaId={empresa.id}
+        empresaNombre={empresa.nombre}
+        onSuccess={() => {
+          refetchContactos();
         }}
       />
 

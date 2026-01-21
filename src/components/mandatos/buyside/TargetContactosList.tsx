@@ -20,6 +20,7 @@ interface TargetContactosListProps {
   onAddContacto: () => void;
   onImportFromLink: () => void;
   onInteraccion: (contactoId: string) => void;
+  onAsociarExistente?: () => void;
 }
 
 export function TargetContactosList({
@@ -28,6 +29,7 @@ export function TargetContactosList({
   onAddContacto,
   onImportFromLink,
   onInteraccion,
+  onAsociarExistente,
 }: TargetContactosListProps) {
   const navigate = useNavigate();
 
@@ -39,11 +41,17 @@ export function TargetContactosList({
           <p className="text-sm text-muted-foreground mb-4">
             No hay contactos asociados a este target
           </p>
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={onAddContacto}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Añadir contacto
+              Nuevo
             </Button>
+            {onAsociarExistente && (
+              <Button variant="outline" size="sm" onClick={onAsociarExistente}>
+                <User className="h-3.5 w-3.5 mr-1" />
+                Asociar Existente
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onImportFromLink}>
               <Link2 className="h-3.5 w-3.5 mr-1" />
               Importar
@@ -58,14 +66,20 @@ export function TargetContactosList({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">Contactos ({contactos.length})</h4>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {onAsociarExistente && (
+            <Button variant="ghost" size="sm" onClick={onAsociarExistente} title="Asociar contacto existente">
+              <User className="h-3.5 w-3.5 mr-1" />
+              Asociar
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={onImportFromLink}>
             <Link2 className="h-3.5 w-3.5 mr-1" />
             Link
           </Button>
           <Button variant="outline" size="sm" onClick={onAddContacto}>
             <Plus className="h-3.5 w-3.5 mr-1" />
-            Añadir
+            Nuevo
           </Button>
         </div>
       </div>
