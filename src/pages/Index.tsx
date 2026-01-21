@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import type { Interaccion } from "@/services/interacciones";
 import { AlertsSummaryWidget } from "@/components/dashboard/AlertsSummaryWidget";
 import { useAlertsRealtime } from "@/hooks/useAlertsRealtime";
+import { DailyDigestCard } from "@/components/tasks/DailyDigestCard";
+import { TaskHealthAlerts } from "@/components/tasks/TaskHealthAlerts";
 
 interface ProximaAccion extends Interaccion {
   contacto?: { nombre: string; apellidos: string };
@@ -225,8 +227,14 @@ export default function Index() {
         </Card>
       </div>
 
+      {/* AI Daily Digest */}
+      <DailyDigestCard />
+
       {/* Widget de Alertas M&A */}
       <AlertsSummaryWidget />
+
+      {/* Task Health Alerts */}
+      <TaskHealthAlerts compact onTaskClick={() => navigate('/tareas')} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Próximas Acciones */}

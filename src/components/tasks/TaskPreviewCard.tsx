@@ -1,19 +1,27 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, User, X, Briefcase, Building2 } from "lucide-react";
+import { Calendar, Clock, User, X, Briefcase, Building2, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { ParsedTask } from "@/types/taskAI";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TaskPreviewCardProps {
   task: ParsedTask;
   index: number;
   onRemove?: () => void;
   onEdit?: () => void;
+  assignmentConfidence?: number;
+  assignmentReason?: string;
 }
 
-export function TaskPreviewCard({ task, index, onRemove }: TaskPreviewCardProps) {
+export function TaskPreviewCard({ task, index, onRemove, assignmentConfidence, assignmentReason }: TaskPreviewCardProps) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgente': return 'destructive';
@@ -72,10 +80,34 @@ export function TaskPreviewCard({ task, index, onRemove }: TaskPreviewCardProps)
             )}
 
             {task.assigned_to_name && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <User className="h-3 w-3" />
-                <span>{task.assigned_to_name}</span>
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={cn(
+                      "flex items-center gap-1",
+                      assignmentConfidence && assignmentConfidence > 0.7 
+                        ? "text-green-600 dark:text-green-400" 
+                        : "text-muted-foreground"
+                    )}>
+                      <User className="h-3 w-3" />
+                      <span>{task.assigned_to_name}</span>
+                      {assignmentConfidence && (
+                        <Sparkles className="h-2.5 w-2.5 text-primary" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  {assignmentReason && (
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs">{assignmentReason}</p>
+                      {assignmentConfidence && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Confianza: {Math.round(assignmentConfidence * 100)}%
+                        </p>
+                      )}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {task.context_type !== 'general' && (
