@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -28,18 +29,27 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, SlidersHorizontal, X, TrendingUp, Users, Calculator, Building2, Megaphone } from "lucide-react";
+import { Search, Filter, SlidersHorizontal, X, TrendingUp, Users, Calculator, Building2, RefreshCw, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { LeadDetailSheet, LeadDetailData } from "@/components/leads/LeadDetailSheet";
-import { InlineEditText, InlineEditSelect } from "@/components/shared/InlineEdit";
+import { InlineEditSelect } from "@/components/shared/InlineEdit";
+import { LeadContactCell } from "@/components/leads/LeadContactCell";
+import { LeadCanalCell } from "@/components/leads/LeadCanalCell";
+import { LeadFinanceCell } from "@/components/leads/LeadFinanceCell";
+import { ApolloStatusBadge } from "@/components/leads/ApolloStatusBadge";
+import { LeadQuickFilters, QuickFilterKey, applyQuickFilters } from "@/components/leads/LeadQuickFilters";
+import { LeadActionsMenu } from "@/components/leads/LeadActionsMenu";
+import { LeadBulkActions } from "@/components/leads/LeadBulkActions";
 
 type LeadRow = {
   id: string;
   tipo: 'contact' | 'valuation' | 'collaborator';
   nombre: string;
   email: string;
+  phone?: string;
   empresa?: string;
+  sector?: string;
   status: string;
   fecha: string;
   dias: number;
@@ -47,6 +57,9 @@ type LeadRow = {
   facturacion?: number;
   ebitda?: number;
   canal?: string;
+  leadForm?: string;
+  apolloStatus?: string;
+  isPro?: boolean;
   acquisition_channel_id?: string;
 };
 
@@ -79,6 +92,8 @@ export default function GestionLeads() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [quickFilters, setQuickFilters] = useState<QuickFilterKey[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   const [valoracionMin, setValoracionMin] = useState<string>("");
   const [valoracionMax, setValoracionMax] = useState<string>("");
@@ -91,7 +106,7 @@ export default function GestionLeads() {
   
   const queryClient = useQueryClient();
 
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: leads = [], isLoading, refetch } = useQuery({
     queryKey: ['gestion-leads', filterType, filterStatus],
     queryFn: async (): Promise<LeadRow[]> => {
       const allLeads: LeadRow[] = [];
@@ -101,7 +116,8 @@ export default function GestionLeads() {
           .from('contact_leads')
           .select(`
             *,
-            acquisition_channels (id, name)
+            acquisition_channels (id, name),
+            lead_forms (name)
           `)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false });
@@ -112,11 +128,16 @@ export default function GestionLeads() {
             tipo: 'contact' as const,
             nombre: c.full_name,
             email: c.email,
+            phone: c.phone || undefined,
             empresa: c.company || undefined,
+            sector: (c as any).industry || undefined,
             status: c.status,
             fecha: c.created_at,
             dias: Math.floor((Date.now() - new Date(c.status_updated_at || c.created_at).getTime()) / (1000 * 60 * 60 * 24)),
             canal: c.acquisition_channels?.name || undefined,
+            leadForm: c.lead_forms?.name || undefined,
+            apolloStatus: c.apollo_status || undefined,
+            isPro: (c as any).is_pro || false,
             acquisition_channel_id: c.acquisition_channel_id || undefined,
           })));
         }
@@ -127,7 +148,8 @@ export default function GestionLeads() {
           .from('company_valuations')
           .select(`
             *,
-            acquisition_channels (id, name)
+            acquisition_channels (id, name),
+            lead_forms (name)
           `)
           .eq('is_deleted', false)
           .order('created_at', { ascending: false });
@@ -138,7 +160,9 @@ export default function GestionLeads() {
             tipo: 'valuation' as const,
             nombre: v.contact_name,
             email: v.email,
+            phone: v.phone || undefined,
             empresa: v.company_name,
+            sector: v.industry || undefined,
             status: v.valuation_status || 'new',
             fecha: v.created_at,
             dias: Math.floor((Date.now() - new Date(v.last_activity_at || v.created_at).getTime()) / (1000 * 60 * 60 * 24)),
@@ -146,6 +170,9 @@ export default function GestionLeads() {
             facturacion: v.revenue ? Number(v.revenue) : undefined,
             ebitda: v.ebitda ? Number(v.ebitda) : undefined,
             canal: v.acquisition_channels?.name || undefined,
+            leadForm: v.lead_forms?.name || undefined,
+            apolloStatus: v.apollo_status || undefined,
+            isPro: false,
             acquisition_channel_id: v.acquisition_channel_id || undefined,
           })));
         }
@@ -167,6 +194,7 @@ export default function GestionLeads() {
             tipo: 'collaborator' as const,
             nombre: c.full_name,
             email: c.email,
+            phone: c.phone || undefined,
             empresa: c.company || undefined,
             status: c.status,
             fecha: c.created_at,
@@ -204,43 +232,13 @@ export default function GestionLeads() {
     }
   });
 
-  // Mutation para actualizar campos de leads
-  const updateLeadFieldMutation = useMutation({
-    mutationFn: async ({ leadId, leadType, field, value }: {
-      leadId: string;
-      leadType: 'contact' | 'valuation' | 'collaborator';
-      field: string;
-      value: any;
-    }) => {
-      const tableMap: Record<string, 'contact_leads' | 'company_valuations' | 'collaborator_applications'> = {
-        contact: 'contact_leads',
-        valuation: 'company_valuations',
-        collaborator: 'collaborator_applications'
-      };
-      
-      const fieldMap: Record<string, Record<string, string>> = {
-        contact: { nombre: 'full_name', empresa: 'company' },
-        valuation: { nombre: 'contact_name', empresa: 'company_name' },
-        collaborator: { nombre: 'full_name', empresa: 'company' }
-      };
-
-      const actualField = fieldMap[leadType]?.[field] || field;
-      
-      const { error } = await supabase
-        .from(tableMap[leadType])
-        .update({ [actualField]: value })
-        .eq('id', leadId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gestion-leads'] });
-      toast.success('Actualizado correctamente');
-    },
-    onError: () => {
-      toast.error('Error al actualizar');
-    }
-  });
+  const toggleQuickFilter = (key: QuickFilterKey) => {
+    setQuickFilters(prev => 
+      prev.includes(key) 
+        ? prev.filter(f => f !== key)
+        : [...prev, key]
+    );
+  };
 
   const activeNumericFilters = useMemo(() => {
     let count = 0;
@@ -250,7 +248,7 @@ export default function GestionLeads() {
     return count;
   }, [valoracionMin, valoracionMax, facturacionMin, facturacionMax, ebitdaMin, ebitdaMax]);
 
-  const hasActiveFilters = searchTerm || activeNumericFilters > 0;
+  const hasActiveFilters = searchTerm || activeNumericFilters > 0 || quickFilters.length > 0;
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -260,15 +258,17 @@ export default function GestionLeads() {
     setFacturacionMax("");
     setEbitdaMin("");
     setEbitdaMax("");
+    setQuickFilters([]);
   };
 
   const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
+    let result = leads.filter(lead => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm || 
         lead.nombre.toLowerCase().includes(searchLower) ||
         lead.email.toLowerCase().includes(searchLower) ||
-        (lead.empresa?.toLowerCase().includes(searchLower));
+        (lead.empresa?.toLowerCase().includes(searchLower)) ||
+        (lead.sector?.toLowerCase().includes(searchLower));
 
       const valMinNum = valoracionMin ? Number(valoracionMin) : null;
       const valMaxNum = valoracionMax ? Number(valoracionMax) : null;
@@ -297,7 +297,12 @@ export default function GestionLeads() {
 
       return matchesSearch && matchesValoracion && matchesFacturacion && matchesEbitda;
     });
-  }, [leads, searchTerm, valoracionMin, valoracionMax, facturacionMin, facturacionMax, ebitdaMin, ebitdaMax]);
+
+    // Apply quick filters
+    result = applyQuickFilters(result, quickFilters);
+
+    return result;
+  }, [leads, searchTerm, valoracionMin, valoracionMax, facturacionMin, facturacionMax, ebitdaMin, ebitdaMax, quickFilters]);
 
   const stats = useMemo(() => {
     const total = leads.length;
@@ -317,22 +322,86 @@ export default function GestionLeads() {
   };
 
   const tipoLabels = {
-    contact: 'Contacto',
+    contact: 'Comercial',
     valuation: 'Valoración',
     collaborator: 'Colaborador'
   };
 
+  // Selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredLeads.map(l => `${l.tipo}-${l.id}`)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectRow = (leadKey: string, checked: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(leadKey);
+      } else {
+        next.delete(leadKey);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkMarkContacted = async () => {
+    const leadsToUpdate = filteredLeads.filter(l => selectedIds.has(`${l.tipo}-${l.id}`));
+    for (const lead of leadsToUpdate) {
+      await updateStatusMutation.mutateAsync({
+        leadId: lead.id,
+        leadType: lead.tipo,
+        newStatus: 'contacted'
+      });
+    }
+    setSelectedIds(new Set());
+  };
+
+  const handleExport = () => {
+    const leadsToExport = filteredLeads.filter(l => selectedIds.has(`${l.tipo}-${l.id}`));
+    const csv = [
+      ['Tipo', 'Nombre', 'Email', 'Empresa', 'Sector', 'Estado', 'Canal', 'Valoración', 'Facturación', 'EBITDA', 'Fecha'].join(','),
+      ...leadsToExport.map(l => [
+        tipoLabels[l.tipo],
+        l.nombre,
+        l.email,
+        l.empresa || '',
+        l.sector || '',
+        l.status,
+        l.canal || '',
+        l.valoracion || '',
+        l.facturacion || '',
+        l.ebitda || '',
+        format(new Date(l.fecha), 'dd/MM/yyyy')
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    toast.success(`${leadsToExport.length} leads exportados`);
+  };
+
+  const allSelected = filteredLeads.length > 0 && filteredLeads.every(l => selectedIds.has(`${l.tipo}-${l.id}`));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Gestión de Leads"
-        description="Actualiza manualmente el estado de los leads en el funnel comercial"
+        description="Gestiona el funnel comercial de leads"
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card>
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-3 pb-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground uppercase">Total</span>
@@ -341,7 +410,7 @@ export default function GestionLeads() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-3 pb-2">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-blue-500" />
               <span className="text-xs text-muted-foreground uppercase">Contactos</span>
@@ -350,7 +419,7 @@ export default function GestionLeads() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-3 pb-2">
             <div className="flex items-center gap-2">
               <Calculator className="w-4 h-4 text-purple-500" />
               <span className="text-xs text-muted-foreground uppercase">Valoraciones</span>
@@ -359,7 +428,7 @@ export default function GestionLeads() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-3 pb-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-green-500" />
               <span className="text-xs text-muted-foreground uppercase">Colaboradores</span>
@@ -368,7 +437,7 @@ export default function GestionLeads() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-3 pb-2">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-amber-500" />
               <span className="text-xs text-muted-foreground uppercase">Valoración Total</span>
@@ -378,71 +447,87 @@ export default function GestionLeads() {
         </Card>
       </div>
 
-      {/* Filtros principales */}
-      <div className="flex flex-wrap gap-4 items-start">
-        <div className="flex-1 min-w-[300px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Buscar por nombre, email o empresa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+      {/* Búsqueda y filtros */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex-1 min-w-[280px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Buscar por nombre, email, empresa o sector..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[160px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="contact">Contactos</SelectItem>
+              <SelectItem value="valuation">Valoraciones</SelectItem>
+              <SelectItem value="collaborator">Colaboradores</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo estado</SelectItem>
+              <SelectItem value="new">Nuevo</SelectItem>
+              <SelectItem value="contacted">Contactado</SelectItem>
+              <SelectItem value="qualified">Calificado</SelectItem>
+              <SelectItem value="converted">Convertido</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="default" className="gap-2">
+                <SlidersHorizontal className="w-4 h-4" />
+                Avanzados
+                {activeNumericFilters > 0 && (
+                  <Badge variant="secondary" className="ml-1 bg-primary text-primary-foreground text-xs">
+                    {activeNumericFilters}
+                  </Badge>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </Collapsible>
+
+          <Button variant="outline" size="icon" onClick={() => refetch()} title="Actualizar">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+
+          <Button variant="outline" size="icon" onClick={handleExport} title="Exportar todos">
+            <Download className="w-4 h-4" />
+          </Button>
+
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearAllFilters}
+              className="text-muted-foreground"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
         </div>
 
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[200px]">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los tipos</SelectItem>
-            <SelectItem value="contact">Contactos</SelectItem>
-            <SelectItem value="valuation">Valoraciones</SelectItem>
-            <SelectItem value="collaborator">Colaboradores</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            <SelectItem value="new">Nuevo</SelectItem>
-            <SelectItem value="contacted">En Contacto</SelectItem>
-            <SelectItem value="qualified">Calificado</SelectItem>
-            <SelectItem value="converted">Convertido</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" size="default" className="gap-2">
-              <SlidersHorizontal className="w-4 h-4" />
-              Filtros avanzados
-              {activeNumericFilters > 0 && (
-                <Badge variant="secondary" className="ml-1 bg-primary text-primary-foreground">
-                  {activeNumericFilters}
-                </Badge>
-              )}
-            </Button>
-          </CollapsibleTrigger>
-        </Collapsible>
-
-        {hasActiveFilters && (
-          <Button 
-            variant="ghost" 
-            size="default" 
-            onClick={clearAllFilters}
-            className="text-muted-foreground"
-          >
-            <X className="w-4 h-4 mr-1" />
-            Limpiar filtros
-          </Button>
-        )}
+        {/* Quick filters */}
+        <LeadQuickFilters
+          activeFilters={quickFilters}
+          onToggleFilter={toggleQuickFilter}
+        />
       </div>
 
       {/* Panel de filtros avanzados expandible */}
@@ -471,7 +556,6 @@ export default function GestionLeads() {
                   className="flex-1"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Ej: 500000 para 500K€</p>
             </div>
             
             <div className="space-y-2">
@@ -496,7 +580,6 @@ export default function GestionLeads() {
                   className="flex-1"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Ej: 1000000 para 1M€</p>
             </div>
             
             <div className="space-y-2">
@@ -521,7 +604,6 @@ export default function GestionLeads() {
                   className="flex-1"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Ej: 100000 para 100K€</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -529,145 +611,144 @@ export default function GestionLeads() {
 
       {/* Contador de resultados */}
       <div className="text-sm text-muted-foreground">
-        Mostrando {filteredLeads.length} de {leads.length} leads
-        {hasActiveFilters && " (filtrados)"}
+        {filteredLeads.length} contactos
+        {hasActiveFilters && ` (de ${leads.length})`}
       </div>
 
-      {/* Tabla */}
+      {/* Tabla condensada */}
       <div className="rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">Tipo</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="hidden md:table-cell">Email</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Canal</TableHead>
-              <TableHead className="text-right w-[90px]">Valoración</TableHead>
-              <TableHead className="text-right w-[90px]">Facturación</TableHead>
-              <TableHead className="text-right w-[80px]">EBITDA</TableHead>
-              <TableHead className="w-[130px]">Estado</TableHead>
-              <TableHead className="w-[60px]">Días</TableHead>
-              <TableHead className="hidden lg:table-cell w-[90px]">Fecha</TableHead>
-              <TableHead className="w-[70px]">Acciones</TableHead>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Seleccionar todos"
+                  className={someSelected ? "data-[state=checked]:bg-primary/50" : ""}
+                />
+              </TableHead>
+              <TableHead className="min-w-[180px]">Contacto</TableHead>
+              <TableHead className="w-[90px]">Origen</TableHead>
+              <TableHead className="min-w-[120px]">Canal</TableHead>
+              <TableHead className="min-w-[120px]">Empresa</TableHead>
+              <TableHead className="w-[80px]">Sector</TableHead>
+              <TableHead className="w-[100px]">Fin.</TableHead>
+              <TableHead className="w-[70px]">Apollo</TableHead>
+              <TableHead className="w-[110px]">Estado</TableHead>
+              <TableHead className="w-[70px]">Fecha</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8">
+                <TableCell colSpan={11} className="text-center py-8">
                   Cargando leads...
                 </TableCell>
               </TableRow>
             ) : filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8">
+                <TableCell colSpan={11} className="text-center py-8">
                   No se encontraron leads
                 </TableCell>
               </TableRow>
             ) : (
-              filteredLeads.map(lead => (
-                <TableRow key={`${lead.tipo}-${lead.id}`} className="text-sm">
-                  <TableCell className="py-2">
-                    <Badge className={`${tipoBadgeColors[lead.tipo]} text-white text-xs`}>
-                      {tipoLabels[lead.tipo]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <InlineEditText
-                      value={lead.nombre}
-                      onSave={async (newValue) => {
-                        await updateLeadFieldMutation.mutateAsync({
-                          leadId: lead.id,
-                          leadType: lead.tipo,
-                          field: 'nombre',
-                          value: newValue
-                        });
-                      }}
-                      className="font-medium"
-                    />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs py-2 hidden md:table-cell">{lead.email}</TableCell>
-                  <TableCell className="py-2">
-                    <InlineEditText
-                      value={lead.empresa || ""}
-                      onSave={async (newValue) => {
-                        await updateLeadFieldMutation.mutateAsync({
-                          leadId: lead.id,
-                          leadType: lead.tipo,
-                          field: 'empresa',
-                          value: newValue || null
-                        });
-                      }}
-                      className="text-xs"
-                      placeholder="-"
-                    />
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {lead.canal ? (
-                      <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
-                        <Megaphone className="w-3 h-3" />
-                        {lead.canal}
+              filteredLeads.map(lead => {
+                const leadKey = `${lead.tipo}-${lead.id}`;
+                const isSelected = selectedIds.has(leadKey);
+                
+                return (
+                  <TableRow 
+                    key={leadKey} 
+                    className="text-sm"
+                    data-state={isSelected ? "selected" : undefined}
+                  >
+                    <TableCell className="py-2">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleSelectRow(leadKey, !!checked)}
+                        aria-label={`Seleccionar ${lead.nombre}`}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <LeadContactCell
+                        nombre={lead.nombre}
+                        email={lead.email}
+                        phone={lead.phone}
+                        isPro={lead.isPro}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge className={`${tipoBadgeColors[lead.tipo]} text-white text-[10px] px-1.5`}>
+                        {tipoLabels[lead.tipo]}
                       </Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium py-2">
-                    {lead.valoracion ? (
-                      <span className="text-amber-600 text-xs">{formatCurrency(lead.valoracion)}</span>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell className="text-right py-2 text-xs">
-                    {lead.facturacion ? formatCurrency(lead.facturacion) : '-'}
-                  </TableCell>
-                  <TableCell className="text-right py-2 text-xs">
-                    {lead.ebitda ? formatCurrency(lead.ebitda) : '-'}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <InlineEditSelect
-                      value={lead.status}
-                      options={STATUS_OPTIONS}
-                      onSave={async (newStatus) => {
-                        await updateStatusMutation.mutateAsync({
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <LeadCanalCell canal={lead.canal} leadForm={lead.leadForm} />
+                    </TableCell>
+                    <TableCell className="py-2 text-xs">
+                      {lead.empresa || <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-muted-foreground">
+                      {lead.sector || '-'}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <LeadFinanceCell
+                        valoracion={lead.valoracion}
+                        facturacion={lead.facturacion}
+                        ebitda={lead.ebitda}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <ApolloStatusBadge status={lead.apolloStatus} />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <InlineEditSelect
+                        value={lead.status}
+                        options={STATUS_OPTIONS}
+                        onSave={async (newStatus) => {
+                          await updateStatusMutation.mutateAsync({
+                            leadId: lead.id,
+                            leadType: lead.tipo,
+                            newStatus
+                          });
+                        }}
+                        renderDisplay={(val) => (
+                          <Badge className={`${STATUS_COLORS[val] || 'bg-gray-100 text-gray-800'} text-[10px]`}>
+                            {STATUS_OPTIONS.find(o => o.value === val)?.label || val}
+                          </Badge>
+                        )}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-muted-foreground">
+                      {format(new Date(lead.fecha), 'dd/MM/yy')}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <LeadActionsMenu
+                        onView={() => setSelectedLead(lead)}
+                        onMarkContacted={() => updateStatusMutation.mutate({
                           leadId: lead.id,
                           leadType: lead.tipo,
-                          newStatus
-                        });
-                      }}
-                      renderDisplay={(val) => (
-                        <Badge className={`${STATUS_COLORS[val] || 'bg-gray-100 text-gray-800'} text-xs`}>
-                          {STATUS_OPTIONS.find(o => o.value === val)?.label || val}
-                        </Badge>
-                      )}
-                    />
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {lead.dias > 7 ? (
-                      <Badge variant="destructive" className="text-xs">{lead.dias}d</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">{lead.dias}d</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs py-2 hidden lg:table-cell">
-                    {format(new Date(lead.fecha), 'dd/MM/yy')}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 text-xs"
-                      onClick={() => setSelectedLead(lead)}
-                    >
-                      Ver
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+                          newStatus: 'contacted'
+                        })}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Bulk actions bar */}
+      <LeadBulkActions
+        selectedCount={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        onMarkContacted={handleBulkMarkContacted}
+        onExport={handleExport}
+      />
 
       {/* Panel lateral de detalle */}
       <LeadDetailSheet 
