@@ -3,6 +3,7 @@ import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifi
 import { InformacionFinancieraEditable } from "@/components/mandatos/InformacionFinancieraEditable";
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { ServicioHonorariosCard } from "@/components/mandatos/ServicioHonorariosCard";
+import { EmpresaIdentificacionCard } from "@/components/mandatos/EmpresaIdentificacionCard";
 import type { Mandato } from "@/types";
 
 interface ResumenTabProps {
@@ -29,6 +30,12 @@ export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdate
       {/* Mostrar info específica de tipo solo para M&A */}
       {!isServicio && <MandatoTipoEspecifico mandato={mandato} />}
       
+      {/* Información identificativa de la empresa */}
+      {mandato.empresa_principal && (
+        <EmpresaIdentificacionCard empresa={mandato.empresa_principal} />
+      )}
+      
+      {/* Información financiera editable */}
       {mandato.empresa_principal && (
         <InformacionFinancieraEditable 
           empresa={mandato.empresa_principal} 
