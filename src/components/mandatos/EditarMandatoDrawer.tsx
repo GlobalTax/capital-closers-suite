@@ -46,6 +46,7 @@ const formSchema = z.object({
   fecha_cierre: z.string().optional().nullable(),
   prioridad: z.enum(["alta", "media", "baja", "urgente"]).optional().nullable(),
   descripcion: z.string().optional().nullable(),
+  nombre_proyecto: z.string().max(100).optional().nullable(),
   // Campos de compra
   rango_inversion_min: z.number().optional().nullable(),
   rango_inversion_max: z.number().optional().nullable(),
@@ -116,6 +117,7 @@ export function EditarMandatoDrawer({
       fecha_cierre: mandato.fecha_cierre?.split("T")[0] || null,
       prioridad: mandato.prioridad || null,
       descripcion: mandato.descripcion || null,
+      nombre_proyecto: mandato.nombre_proyecto || null,
       rango_inversion_min: mandato.rango_inversion_min || null,
       rango_inversion_max: mandato.rango_inversion_max || null,
       perfil_empresa_buscada: mandato.perfil_empresa_buscada || null,
@@ -139,6 +141,7 @@ export function EditarMandatoDrawer({
         fecha_cierre: mandato.fecha_cierre?.split("T")[0] || null,
         prioridad: mandato.prioridad || null,
         descripcion: mandato.descripcion || null,
+        nombre_proyecto: mandato.nombre_proyecto || null,
         rango_inversion_min: mandato.rango_inversion_min || null,
         rango_inversion_max: mandato.rango_inversion_max || null,
         perfil_empresa_buscada: mandato.perfil_empresa_buscada || null,

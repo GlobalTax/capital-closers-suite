@@ -68,7 +68,7 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
               <Building2 className="h-6 w-6 text-blue-500" />
             )}
             <h1 className="text-3xl font-medium">
-              {mandato.empresa_principal?.nombre || "Mandato"}
+              {mandato.empresa_principal?.nombre || mandato.cliente_externo || "Sin empresa"}
             </h1>
             {/* Badge de tipo */}
             <Badge className={cn("gap-1", tipoBadgeClass)}>
@@ -83,6 +83,12 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
               </Badge>
             )}
           </div>
+          {/* Nombre del proyecto */}
+          {mandato.nombre_proyecto && (
+            <p className="text-lg text-primary font-medium mt-1">
+              {mandato.nombre_proyecto}
+            </p>
+          )}
           <p className="text-muted-foreground">
             {isBuySide ? "Mandato de Compra (Buy-Side)" : "Mandato de Venta (Sell-Side)"}
           </p>

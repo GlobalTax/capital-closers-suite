@@ -48,6 +48,7 @@ const mandatoSchema = z.object({
   }),
   empresaId: z.string().optional(),
   nuevaEmpresa: z.string().optional(),
+  nombre_proyecto: z.string().max(100, "El nombre del proyecto no puede exceder 100 caracteres").optional(),
   tipo: z.enum(["compra", "venta"]).optional(),
   valor: z.string().optional(),
   probabilidad: z.coerce.number().min(0).max(100).optional(),
@@ -117,6 +118,7 @@ export function NuevoMandatoDrawer({
       categoria: "operacion_ma",
       empresaId: "",
       nuevaEmpresa: "",
+      nombre_proyecto: "",
       tipo: "venta",
       valor: "",
       probabilidad: 50,
@@ -189,6 +191,7 @@ export function NuevoMandatoDrawer({
         descripcion: data.descripcion,
         estado: "activo",
         empresa_principal_id: empresaId || undefined,
+        nombre_proyecto: data.nombre_proyecto || undefined,
         valor: data.valor ? Number(data.valor.replace(/[^0-9]/g, '')) : undefined,
         prioridad: "media",
         fecha_cierre: data.fechaCierreEsperada || undefined,
@@ -423,6 +426,27 @@ export function NuevoMandatoDrawer({
                     )}
                   </div>
                 )}
+
+                {/* Nombre del Proyecto */}
+                <FormField
+                  control={form.control}
+                  name="nombre_proyecto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre del Proyecto (opcional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ej: Proyecto Eclipse, Operación Delta..." 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Nombre interno para identificar el mandato
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Tipo de Mandato (solo para M&A) */}
                 {!isServicio && (
