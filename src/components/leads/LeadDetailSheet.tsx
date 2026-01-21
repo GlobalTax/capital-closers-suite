@@ -24,13 +24,15 @@ import {
   TrendingUp, 
   Calculator,
   Megaphone,
-  Clock
+  Clock,
+  History
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAcquisitionChannels } from "@/hooks/useAcquisitionChannels";
 import { updateLeadChannel } from "@/services/leadChannel.service";
+import { LeadActivityTimeline } from "./LeadActivityTimeline";
 
 // Helper para formatear moneda
 const formatCurrency = (value: number | undefined): string => {
@@ -251,6 +253,17 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
               </div>
             </>
           )}
+
+          <Separator />
+
+          {/* Historial de Actividades */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Historial de Actividades
+            </h3>
+            <LeadActivityTimeline leadId={lead.id} leadType={lead.tipo} />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
