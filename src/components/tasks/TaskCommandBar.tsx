@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { useTaskAI } from "@/hooks/useTaskAI";
 import { TaskPreviewCard } from "./TaskPreviewCard";
 import type { ParsedTask } from "@/types/taskAI";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TaskCommandBarProps {
   onSuccess?: () => void;
@@ -38,6 +40,22 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
     error,
     reset,
   } = useTaskAI();
+
+  // Fetch available users for inline assignment
+  const { data: availableUsers = [] } = useQuery({
+    queryKey: ['admin-users-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('user_id, full_name')
+        .eq('is_active', true)
+        .order('full_name');
+      
+      if (error) throw error;
+      return (data || []).map(u => ({ id: u.user_id, name: u.full_name || 'Sin nombre' }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Sync parsed tasks to local state
   useEffect(() => {
@@ -77,6 +95,10 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
 
   const handleRemoveTask = (index: number) => {
     setLocalTasks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateTask = (index: number, updatedTask: ParsedTask) => {
+    setLocalTasks(prev => prev.map((t, i) => i === index ? updatedTask : t));
   };
 
   const handleCancel = () => {
@@ -165,6 +187,9 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
                 <Sparkles className="h-3 w-3 mr-1" />
                 {localTasks.length} tarea{localTasks.length > 1 ? 's' : ''} generada{localTasks.length > 1 ? 's' : ''}
               </Badge>
+              <span className="text-xs text-muted-foreground">
+                Haz clic en cualquier campo para editarlo
+              </span>
             </div>
           </div>
 
@@ -182,7 +207,10 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
                 key={index}
                 task={task}
                 index={index}
+                editable={true}
+                availableUsers={availableUsers}
                 onRemove={() => handleRemoveTask(index)}
+                onUpdate={(updatedTask) => handleUpdateTask(index, updatedTask)}
               />
             ))}
           </div>

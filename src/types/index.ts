@@ -244,6 +244,14 @@ export interface Tarea {
   fecha_vencimiento?: string;
   /** Position within Kanban column for ordering */
   order_index?: number;
+  /** AI-generated task flag */
+  ai_generated?: boolean;
+  /** AI confidence level (0-1) */
+  ai_confidence?: number;
+  /** Original source text from which task was created */
+  source_text?: string;
+  /** Task health status */
+  health_status?: 'healthy' | 'at_risk' | 'blocked';
   created_at: string;
   updated_at: string;
 }
