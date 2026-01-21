@@ -41,6 +41,9 @@ import { ApolloStatusBadge } from "@/components/leads/ApolloStatusBadge";
 import { LeadQuickFilters, QuickFilterKey, applyQuickFilters } from "@/components/leads/LeadQuickFilters";
 import { LeadActionsMenu } from "@/components/leads/LeadActionsMenu";
 import { LeadBulkActions } from "@/components/leads/LeadBulkActions";
+import { LeadActivityCell } from "@/components/leads/LeadActivityCell";
+import { QuickTimeEntryModal } from "@/components/leads/QuickTimeEntryModal";
+import { LeadConversionModal } from "@/components/leads/LeadConversionModal";
 
 type LeadRow = {
   id: string;
@@ -61,6 +64,8 @@ type LeadRow = {
   apolloStatus?: string;
   isPro?: boolean;
   acquisition_channel_id?: string;
+  totalHours?: number;
+  lastActivityDate?: string | null;
 };
 
 const formatCurrency = (value: number | undefined): string => {
@@ -103,6 +108,11 @@ export default function GestionLeads() {
   const [ebitdaMax, setEbitdaMax] = useState<string>("");
   
   const [selectedLead, setSelectedLead] = useState<LeadDetailData | null>(null);
+  
+  // Estados para modales de actividad y conversión
+  const [timeEntryLead, setTimeEntryLead] = useState<LeadRow | null>(null);
+  const [timeEntryType, setTimeEntryType] = useState<'llamada' | 'videollamada' | 'reunion'>('llamada');
+  const [conversionLead, setConversionLead] = useState<LeadRow | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -635,6 +645,7 @@ export default function GestionLeads() {
               <TableHead className="w-[80px]">Sector</TableHead>
               <TableHead className="w-[100px]">Fin.</TableHead>
               <TableHead className="w-[70px]">Apollo</TableHead>
+              <TableHead className="w-[90px]">Actividad</TableHead>
               <TableHead className="w-[110px]">Estado</TableHead>
               <TableHead className="w-[70px]">Fecha</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -704,6 +715,13 @@ export default function GestionLeads() {
                       <ApolloStatusBadge status={lead.apolloStatus} />
                     </TableCell>
                     <TableCell className="py-2">
+                      <LeadActivityCell
+                        totalHours={lead.totalHours}
+                        lastActivityDate={lead.lastActivityDate}
+                        daysSinceActivity={lead.dias}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
                       <InlineEditSelect
                         value={lead.status}
                         options={STATUS_OPTIONS}
@@ -727,6 +745,19 @@ export default function GestionLeads() {
                     <TableCell className="py-2">
                       <LeadActionsMenu
                         onView={() => setSelectedLead(lead)}
+                        onLogCall={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('llamada');
+                        }}
+                        onLogVideoCall={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('videollamada');
+                        }}
+                        onLogMeeting={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('reunion');
+                        }}
+                        onConvertToClient={lead.status === 'qualified' ? () => setConversionLead(lead) : undefined}
                         onMarkContacted={() => updateStatusMutation.mutate({
                           leadId: lead.id,
                           leadType: lead.tipo,
@@ -758,6 +789,43 @@ export default function GestionLeads() {
           if (!open) setSelectedLead(null);
         }}
       />
+
+      {/* Modal de imputación de tiempo */}
+      {timeEntryLead && (
+        <QuickTimeEntryModal
+          open={!!timeEntryLead}
+          onOpenChange={(open) => !open && setTimeEntryLead(null)}
+          lead={{
+            id: timeEntryLead.id,
+            tipo: timeEntryLead.tipo,
+            nombre: timeEntryLead.nombre,
+            email: timeEntryLead.email,
+            empresa: timeEntryLead.empresa,
+            sector: timeEntryLead.sector,
+          }}
+          preselectedType={timeEntryType}
+        />
+      )}
+
+      {/* Modal de conversión a cliente */}
+      {conversionLead && (
+        <LeadConversionModal
+          open={!!conversionLead}
+          onOpenChange={(open) => !open && setConversionLead(null)}
+          lead={{
+            id: conversionLead.id,
+            tipo: conversionLead.tipo,
+            nombre: conversionLead.nombre,
+            email: conversionLead.email,
+            empresa: conversionLead.empresa,
+            sector: conversionLead.sector,
+            valoracion: conversionLead.valoracion,
+            facturacion: conversionLead.facturacion,
+            ebitda: conversionLead.ebitda,
+            phone: conversionLead.phone,
+          }}
+        />
+      )}
     </div>
   );
 }
