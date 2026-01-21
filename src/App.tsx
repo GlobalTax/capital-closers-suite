@@ -51,6 +51,7 @@ const Presentaciones = lazy(() => import("./pages/Presentaciones"));
 const PresentacionEditor = lazy(() => import("./pages/PresentacionEditor"));
 const PresenterMode = lazy(() => import("./pages/PresenterMode"));
 const PublicViewer = lazy(() => import("./pages/PublicViewer"));
+const TeamWorkload = lazy(() => import("./pages/TeamWorkload"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -94,6 +95,7 @@ function AppContent() {
             <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
             <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
             <Route path="/sync-contacts-capittal" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncContactsCapittal /></AppLayout></ProtectedRoute>} />
+            <Route path="/team-workload" element={<ProtectedRoute requiredRole="admin"><AppLayout><TeamWorkload /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />

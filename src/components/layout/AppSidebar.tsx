@@ -134,6 +134,7 @@ const adminDashboardGroup: MenuGroup = {
   defaultOpen: false,
   items: [
     { title: "Configurar TV", url: "/dashboard-tv/configurar", icon: Settings },
+    { title: "Carga Equipo", url: "/team-workload", icon: Users },
   ],
 };
 
