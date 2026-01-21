@@ -11,9 +11,10 @@ interface ResumenTabProps {
   onAddContacto: () => void;
   onAsociarContacto: () => void;
   onUpdateEmpresa?: (empresaId: string, field: string, value: number | null) => Promise<void>;
+  onUpdateEmpresaText?: (empresaId: string, field: string, value: string | null) => Promise<void>;
 }
 
-export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdateEmpresa }: ResumenTabProps) {
+export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdateEmpresa, onUpdateEmpresaText }: ResumenTabProps) {
   const isServicio = mandato.categoria && mandato.categoria !== "operacion_ma";
 
   return (
@@ -32,7 +33,10 @@ export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdate
       
       {/* Información identificativa de la empresa */}
       {mandato.empresa_principal && (
-        <EmpresaIdentificacionCard empresa={mandato.empresa_principal} />
+        <EmpresaIdentificacionCard 
+          empresa={mandato.empresa_principal} 
+          onUpdate={onUpdateEmpresaText}
+        />
       )}
       
       {/* Información financiera editable */}

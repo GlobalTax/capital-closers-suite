@@ -153,6 +153,20 @@ export default function MandatoDetalle() {
               toast.success('Actualizado');
               refetch();
             }}
+            onUpdateEmpresaText={async (empresaId, field, value) => {
+              const { error } = await supabase
+                .from('empresas')
+                .update({ [field]: value })
+                .eq('id', empresaId);
+              
+              if (error) {
+                toast.error('Error al actualizar');
+                throw error;
+              }
+              
+              toast.success('Actualizado');
+              refetch();
+            }}
           />
         </TabsContent>
 
