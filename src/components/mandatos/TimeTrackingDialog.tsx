@@ -13,9 +13,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "@/hooks/use-toast";
 import { createTimeEntry } from "@/services/timeTracking";
-import { MandatoLeadSelect } from "@/components/shared/MandatoLeadSelect";
+import { MandatoSelect } from "@/components/shared/MandatoSelect";
+import { LeadByMandatoSelect } from "@/components/shared/LeadByMandatoSelect";
 import type { TimeEntryValueType } from "@/types";
-import type { SearchItemType } from "@/hooks/useMandatoLeadSearch";
 import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import type { MandatoChecklistTask } from "@/types";
 
@@ -30,6 +30,15 @@ interface TimeTrackingDialogProps {
 
 const GENERAL_WORK_ID = '00000000-0000-0000-0000-000000000001';
 
+// Internal project IDs that don't have leads
+const INTERNAL_PROJECT_IDS = [
+  GENERAL_WORK_ID,
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000005',
+];
+
 export function TimeTrackingDialog({
   open,
   onOpenChange,
@@ -43,11 +52,11 @@ export function TimeTrackingDialog({
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Form state - now with type tracking
+  // Form state - tiered selection: Mandato (required) → Lead (optional)
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
-  const [selectedId, setSelectedId] = useState(mandatoId || '');
-  const [selectedType, setSelectedType] = useState<SearchItemType | null>(mandatoId ? 'mandato' : null);
+  const [selectedMandatoId, setSelectedMandatoId] = useState(mandatoId || '');
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [valueType, setValueType] = useState<TimeEntryValueType>('core_ma');
   const [workTaskTypeId, setWorkTaskTypeId] = useState('');
   const [description, setDescription] = useState('');
@@ -60,6 +69,9 @@ export function TimeTrackingDialog({
   const [notes, setNotes] = useState('');
   
   const hoursInputRef = useRef<HTMLInputElement>(null);
+  
+  // Check if it's an internal project
+  const isInternalProject = INTERNAL_PROJECT_IDS.includes(selectedMandatoId);
   
   // Tipos de tarea desde la base de datos
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
@@ -76,8 +88,8 @@ export function TimeTrackingDialog({
     if (open) {
       setHours('0');
       setMinutes('30');
-      setSelectedId(mandatoId || '');
-      setSelectedType(mandatoId ? 'mandato' : null);
+      setSelectedMandatoId(mandatoId || '');
+      setSelectedLeadId(null);
       setValueType('core_ma');
       setWorkTaskTypeId('');
       setDescription('');
@@ -90,29 +102,29 @@ export function TimeTrackingDialog({
     }
   }, [open, mandatoId, defaultTaskId]);
 
-  // Smart defaults based on selection type
+  // Smart defaults based on mandato selection
   useEffect(() => {
-    if (selectedType === 'contacto') {
-      // Lead selected → soporte, not billable
+    if (isInternalProject) {
       setValueType('soporte');
       setIsBillable(false);
-    } else if (selectedType === 'mandato' && selectedId !== GENERAL_WORK_ID) {
-      // Mandate selected → core_ma, billable
+    } else if (selectedMandatoId) {
       setValueType('core_ma');
       setIsBillable(true);
-    } else if (selectedType === 'internal' || selectedId === GENERAL_WORK_ID) {
-      // General work → soporte, not billable
-      setValueType('soporte');
-      setIsBillable(false);
     }
-  }, [selectedId, selectedType]);
+  }, [selectedMandatoId, isInternalProject]);
+
+  // Reset lead when mandato changes
+  useEffect(() => {
+    setSelectedLeadId(null);
+    setTaskId('');
+  }, [selectedMandatoId]);
 
   // Load tasks when mandato changes
   useEffect(() => {
-    if (selectedType === 'mandato' && selectedId && selectedId !== GENERAL_WORK_ID && !mandatoId) {
-      loadTasksForMandato(selectedId);
+    if (selectedMandatoId && !isInternalProject && !mandatoId) {
+      loadTasksForMandato(selectedMandatoId);
     }
-  }, [selectedId, selectedType, mandatoId]);
+  }, [selectedMandatoId, isInternalProject, mandatoId]);
 
   const loadTasksForMandato = async (mandatoId: string) => {
     try {
@@ -145,20 +157,21 @@ export function TimeTrackingDialog({
     try {
       setLoading(true);
       
-      // Validate required fields
-      if (!selectedId || !selectedType) {
+      // Validate required fields - mandato is required
+      const effectiveMandatoId = mandatoId || selectedMandatoId;
+      if (!effectiveMandatoId) {
         toast({
           title: "Error",
-          description: "Debes seleccionar un mandato o lead",
+          description: "Debes seleccionar un mandato",
           variant: "destructive"
         });
         return;
       }
 
-      if (!isValidUUID(selectedId)) {
+      if (!isValidUUID(effectiveMandatoId)) {
         toast({
           title: "Error",
-          description: "La selección no es válida",
+          description: "El mandato seleccionado no es válido",
           variant: "destructive"
         });
         return;
@@ -191,7 +204,7 @@ export function TimeTrackingDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Prepare entry based on selection type
+      // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
       const entryData: Record<string, any> = {
         user_id: user.id,
         start_time: startDateTime.toISOString(),
@@ -204,17 +217,10 @@ export function TimeTrackingDialog({
         status: 'draft',
         notes: notes.trim() || undefined,
         work_task_type_id: workTaskTypeId,
-        mandato_id: null,
-        contacto_id: null,
+        mandato_id: effectiveMandatoId,
+        mandate_lead_id: selectedLeadId || null,
+        task_id: taskId && taskId !== '__none__' ? taskId : undefined,
       };
-
-      // Set the correct ID based on type
-      if (selectedType === 'mandato' || selectedType === 'internal') {
-        entryData.mandato_id = selectedId;
-        entryData.task_id = taskId && taskId !== '__none__' ? taskId : undefined;
-      } else if (selectedType === 'contacto') {
-        entryData.contacto_id = selectedId;
-      }
 
       await createTimeEntry(entryData);
 
@@ -238,7 +244,8 @@ export function TimeTrackingDialog({
   };
 
   const totalDuration = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-  const isValid = selectedId && selectedType && workTaskTypeId && totalDuration > 0;
+  const effectiveMandato = mandatoId || selectedMandatoId;
+  const isValid = effectiveMandato && workTaskTypeId && totalDuration > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -287,23 +294,33 @@ export function TimeTrackingDialog({
             </div>
           </div>
 
-          {/* Mandato/Lead Select */}
+          {/* Mandato Select (Required) */}
           {!mandatoId && (
-            <div>
-              <Label className="text-sm font-medium">Mandato *</Label>
-              <div className="mt-1.5">
-                <MandatoLeadSelect
-                  value={selectedId}
-                  valueType={selectedType}
-                  onValueChange={(value, type) => {
-                    setSelectedId(value);
-                    setSelectedType(type);
-                    setTaskId('');
-                  }}
-                  includeGeneralWork={true}
-                  includeLeads={true}
-                />
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">Mandato *</Label>
+                <div className="mt-1.5">
+                  <MandatoSelect
+                    value={selectedMandatoId}
+                    onValueChange={setSelectedMandatoId}
+                    includeGeneralWork={true}
+                  />
+                </div>
               </div>
+              
+              {/* Lead Select (Optional, dependent on mandato) */}
+              {selectedMandatoId && !isInternalProject && (
+                <div>
+                  <Label className="text-sm font-medium">Lead (opcional)</Label>
+                  <div className="mt-1.5">
+                    <LeadByMandatoSelect
+                      mandatoId={selectedMandatoId}
+                      value={selectedLeadId}
+                      onValueChange={setSelectedLeadId}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -429,8 +446,8 @@ export function TimeTrackingDialog({
                 </div>
               </div>
 
-              {/* Checklist Task - Optional (only for mandatos) */}
-              {selectedType === 'mandato' && (mandatoId || (selectedId && selectedId !== GENERAL_WORK_ID)) && tasks.length > 0 && (
+              {/* Checklist Task - Optional (only for real mandatos) */}
+              {(mandatoId || (selectedMandatoId && !isInternalProject)) && tasks.length > 0 && (
                 <div>
                   <Label className="text-sm">Vincular a tarea del checklist</Label>
                   <Select
