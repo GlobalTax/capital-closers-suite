@@ -141,7 +141,10 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
               </div>
             </div>
             <h4 className="font-medium text-sm truncate">
-              {mandato.empresa_principal?.nombre || mandato.cliente_externo || "Sin cliente"}
+              {mandato.empresa_principal?.nombre 
+                || (mandato.empresas?.[0] as any)?.empresa?.nombre
+                || mandato.cliente_externo 
+                || "Sin cliente"}
             </h4>
           </div>
         </div>
