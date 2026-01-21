@@ -386,6 +386,118 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_leads: {
+        Row: {
+          auto_match_attempted_at: string | null
+          cif: string | null
+          company_name: string
+          company_name_normalized: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contacto_id: string | null
+          country: string | null
+          created_at: string | null
+          ebitda: number | null
+          email_domain: string | null
+          empleados: number | null
+          empresa_id: string | null
+          facturacion: number | null
+          first_seen_at: string | null
+          id: string
+          last_updated_at: string | null
+          location: string | null
+          match_status: string | null
+          raw_data: Json | null
+          sector: string | null
+          source_id: string | null
+          source_table: string | null
+          source_type: string | null
+          subsector: string | null
+          website_domain: string | null
+        }
+        Insert: {
+          auto_match_attempted_at?: string | null
+          cif?: string | null
+          company_name: string
+          company_name_normalized?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contacto_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          ebitda?: number | null
+          email_domain?: string | null
+          empleados?: number | null
+          empresa_id?: string | null
+          facturacion?: number | null
+          first_seen_at?: string | null
+          id?: string
+          last_updated_at?: string | null
+          location?: string | null
+          match_status?: string | null
+          raw_data?: Json | null
+          sector?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          source_type?: string | null
+          subsector?: string | null
+          website_domain?: string | null
+        }
+        Update: {
+          auto_match_attempted_at?: string | null
+          cif?: string | null
+          company_name?: string
+          company_name_normalized?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contacto_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          ebitda?: number | null
+          email_domain?: string | null
+          empleados?: number | null
+          empresa_id?: string | null
+          facturacion?: number | null
+          first_seen_at?: string | null
+          id?: string
+          last_updated_at?: string | null
+          location?: string | null
+          match_status?: string | null
+          raw_data?: Json | null
+          sector?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          source_type?: string | null
+          subsector?: string | null
+          website_domain?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_leads_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "contactos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+        ]
+      }
       admin_notifications: {
         Row: {
           created_at: string | null
@@ -5141,6 +5253,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "document_folders_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+          {
             foreignKeyName: "document_folders_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
@@ -5300,6 +5419,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "documentos_parent_document_id_fkey"
@@ -7060,6 +7186,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "interacciones_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       investor_leads: {
@@ -8601,6 +8734,7 @@ export type Database = {
       }
       mandate_leads: {
         Row: {
+          admin_lead_id: string | null
           assigned_at: string | null
           assigned_to: string | null
           company_cif: string | null
@@ -8628,6 +8762,7 @@ export type Database = {
           valuation_id: string | null
         }
         Insert: {
+          admin_lead_id?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           company_cif?: string | null
@@ -8655,6 +8790,7 @@ export type Database = {
           valuation_id?: string | null
         }
         Update: {
+          admin_lead_id?: string | null
           assigned_at?: string | null
           assigned_to?: string | null
           company_cif?: string | null
@@ -8682,6 +8818,13 @@ export type Database = {
           valuation_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "mandate_leads_admin_lead_id_fkey"
+            columns: ["admin_lead_id"]
+            isOneToOne: false
+            referencedRelation: "admin_leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mandate_leads_assigned_to_fkey"
             columns: ["assigned_to"]
@@ -8744,6 +8887,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandate_leads_valuation_id_fkey"
@@ -8825,6 +8975,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_activity_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       mandato_alerts: {
@@ -8905,6 +9062,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
         ]
       }
@@ -9077,6 +9241,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       mandato_checklist_templates: {
@@ -9197,6 +9368,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_contactos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
         ]
       }
@@ -9379,6 +9557,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_empresas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       mandato_kanban_config: {
@@ -9506,6 +9691,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "mandato_time_entries_mandate_lead_id_fkey"
+            columns: ["mandate_lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandate_lead_id"]
+          },
+          {
             foreignKeyName: "mandato_time_entries_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
@@ -9539,6 +9731,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "mandato_time_entries_task_id_fkey"
@@ -9878,6 +10077,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandatos_parent_mandato_id_fkey"
+            columns: ["parent_mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
         ]
       }
@@ -12294,6 +12500,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       psh_plantillas: {
@@ -14302,6 +14515,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tareas_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       target_ofertas: {
@@ -15370,6 +15590,13 @@ export type Database = {
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mandato_checklist_tasks_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
         ]
       }
       v_active_alerts: {
@@ -15428,6 +15655,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_alerts_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
         ]
       }
@@ -15538,6 +15772,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
           },
           {
             foreignKeyName: "documentos_parent_document_id_fkey"
@@ -15844,6 +16085,105 @@ export type Database = {
             columns: ["mandato_id"]
             isOneToOne: false
             referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_time_entries_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+        ]
+      }
+      vw_mandate_pipeline: {
+        Row: {
+          admin_lead_id: string | null
+          admin_lead_match_status: string | null
+          contacto_email: string | null
+          contacto_nombre: string | null
+          contacto_telefono: string | null
+          dias_en_pipeline: number | null
+          ebitda: number | null
+          empleados: number | null
+          empresa_cif: string | null
+          empresa_id: string | null
+          empresa_nombre: string | null
+          facturacion: number | null
+          fecha_asignacion: string | null
+          fecha_responsable: string | null
+          fuente: string | null
+          lead_source_id: string | null
+          lead_source_type: string | null
+          mandate_lead_id: string | null
+          mandato_codigo: string | null
+          mandato_descripcion: string | null
+          mandato_estado: string | null
+          mandato_id: string | null
+          mandato_tipo: string | null
+          match_reason: string | null
+          match_score: number | null
+          match_type: string | null
+          prioridad: string | null
+          rango_inversion_max: number | null
+          rango_inversion_min: number | null
+          responsable_id: string | null
+          responsable_nombre: string | null
+          sector: string | null
+          sectores_interes: string[] | null
+          stage: string | null
+          ubicacion: string | null
+          ultima_actividad: string | null
+          valuation_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_leads_admin_lead_id_fkey"
+            columns: ["admin_lead_id"]
+            isOneToOne: false
+            referencedRelation: "admin_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_assigned_to_fkey"
+            columns: ["responsable_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_assigned_to_fkey"
+            columns: ["responsable_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_users_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
             referencedColumns: ["id"]
           },
         ]
