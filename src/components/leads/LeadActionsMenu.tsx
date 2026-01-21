@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Eye, Pencil, Phone, Trash2, Sparkles } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Phone, Video, Users, Clock, Trash2, Sparkles, UserCheck } from "lucide-react";
 
 interface LeadActionsMenuProps {
   onView: () => void;
@@ -14,6 +14,10 @@ interface LeadActionsMenuProps {
   onMarkContacted?: () => void;
   onEnrichApollo?: () => void;
   onDelete?: () => void;
+  onLogCall?: () => void;
+  onLogVideoCall?: () => void;
+  onLogMeeting?: () => void;
+  onConvertToClient?: () => void;
 }
 
 export function LeadActionsMenu({ 
@@ -21,7 +25,11 @@ export function LeadActionsMenu({
   onEdit, 
   onMarkContacted, 
   onEnrichApollo,
-  onDelete 
+  onDelete,
+  onLogCall,
+  onLogVideoCall,
+  onLogMeeting,
+  onConvertToClient,
 }: LeadActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -31,7 +39,7 @@ export function LeadActionsMenu({
           <span className="sr-only">Acciones</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onClick={onView}>
           <Eye className="mr-2 h-4 w-4" />
           Ver detalle
@@ -42,12 +50,49 @@ export function LeadActionsMenu({
             Editar
           </DropdownMenuItem>
         )}
+        
+        {/* Time tracking actions */}
+        {(onLogCall || onLogVideoCall || onLogMeeting) && (
+          <>
+            <DropdownMenuSeparator />
+            {onLogCall && (
+              <DropdownMenuItem onClick={onLogCall}>
+                <Phone className="mr-2 h-4 w-4 text-blue-500" />
+                Registrar llamada
+              </DropdownMenuItem>
+            )}
+            {onLogVideoCall && (
+              <DropdownMenuItem onClick={onLogVideoCall}>
+                <Video className="mr-2 h-4 w-4 text-purple-500" />
+                Registrar videollamada
+              </DropdownMenuItem>
+            )}
+            {onLogMeeting && (
+              <DropdownMenuItem onClick={onLogMeeting}>
+                <Users className="mr-2 h-4 w-4 text-orange-500" />
+                Registrar reunión
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+        
         {onMarkContacted && (
           <DropdownMenuItem onClick={onMarkContacted}>
             <Phone className="mr-2 h-4 w-4" />
             Marcar contactado
           </DropdownMenuItem>
         )}
+        
+        {onConvertToClient && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onConvertToClient} className="text-green-600 focus:text-green-600">
+              <UserCheck className="mr-2 h-4 w-4" />
+              Convertir a cliente
+            </DropdownMenuItem>
+          </>
+        )}
+        
         {onEnrichApollo && (
           <>
             <DropdownMenuSeparator />
