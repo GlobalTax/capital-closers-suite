@@ -37,6 +37,7 @@ interface TargetCardProps {
   onAddContacto: (empresaId: string) => void;
   onImportFromLink: (empresaId: string) => void;
   onInteraccionUpdate: () => void;
+  onAsociarExistente?: (empresaId: string) => void;
 }
 
 export function TargetCard({
@@ -49,6 +50,7 @@ export function TargetCard({
   onAddContacto,
   onImportFromLink,
   onInteraccionUpdate,
+  onAsociarExistente,
 }: TargetCardProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -180,6 +182,17 @@ export function TargetCard({
             )}
           </Button>
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          {onAsociarExistente && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAsociarExistente(empresa.id)}
+              title="Asociar contacto existente del CRM"
+            >
+              <User className="h-4 w-4 mr-1" />
+              Asociar
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -231,14 +244,24 @@ export function TargetCard({
                     <p className="text-sm text-muted-foreground">
                       No hay contactos asociados
                     </p>
-                    <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                      {onAsociarExistente && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onAsociarExistente(empresa.id)}
+                        >
+                          <User className="h-3 w-3 mr-1" />
+                          Asociar existente
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onAddContacto(empresa.id)}
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Añadir contacto
+                        Nuevo contacto
                       </Button>
                       <Button
                         variant="outline"
@@ -246,7 +269,7 @@ export function TargetCard({
                         onClick={() => onImportFromLink(empresa.id)}
                       >
                         <Link2 className="h-3 w-3 mr-1" />
-                        Importar desde Link
+                        Importar Link
                       </Button>
                     </div>
                   </div>
