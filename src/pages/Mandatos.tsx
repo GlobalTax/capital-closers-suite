@@ -579,6 +579,7 @@ export default function Mandatos() {
       render: (value: any, row: Mandato) => {
         const clientName = value?.nombre 
           || (row.empresas?.[0] as any)?.empresa?.nombre
+          || row.nombre_proyecto
           || row.cliente_externo
           || "Sin asignar";
         return <span className="font-medium">{clientName}</span>;

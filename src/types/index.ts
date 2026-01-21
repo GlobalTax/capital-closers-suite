@@ -206,6 +206,9 @@ export interface Mandato {
   // Search Fund flag
   potencial_searchfund?: boolean;
   
+  // Nombre del proyecto (fallback para cliente)
+  nombre_proyecto?: string;
+  
 }
 
 // ============================================
