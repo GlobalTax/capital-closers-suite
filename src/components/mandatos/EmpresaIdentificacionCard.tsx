@@ -2,29 +2,55 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, FileText, Factory, MapPin, Globe, Hash, ExternalLink } from "lucide-react";
+import { InlineEditText } from "@/components/shared/InlineEdit";
 import type { Empresa } from "@/types";
 
 interface EmpresaIdentificacionCardProps {
   empresa: Empresa;
+  onUpdate?: (empresaId: string, field: string, value: string | null) => Promise<void>;
 }
 
-interface InfoItemProps {
+interface EditableInfoItemProps {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  field: string;
   value: string | null | undefined;
+  empresaId: string;
+  onUpdate?: (empresaId: string, field: string, value: string | null) => Promise<void>;
   isLink?: boolean;
+  placeholder?: string;
 }
 
-function InfoItem({ icon: Icon, label, value, isLink }: InfoItemProps) {
-  if (!value) return null;
-  
+function EditableInfoItem({ 
+  icon: Icon, 
+  label, 
+  field,
+  value, 
+  empresaId,
+  onUpdate,
+  isLink,
+  placeholder = "Añadir..."
+}: EditableInfoItemProps) {
+  const handleSave = async (newValue: string) => {
+    if (onUpdate) {
+      await onUpdate(empresaId, field, newValue || null);
+    }
+  };
+
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      {isLink ? (
+      {onUpdate ? (
+        <InlineEditText
+          value={value || ""}
+          onSave={handleSave}
+          placeholder={placeholder}
+          className="text-sm font-medium"
+        />
+      ) : isLink && value ? (
         <a 
           href={value.startsWith('http') ? value : `https://${value}`}
           target="_blank"
@@ -34,13 +60,13 @@ function InfoItem({ icon: Icon, label, value, isLink }: InfoItemProps) {
           {value}
         </a>
       ) : (
-        <p className="text-sm font-medium">{value}</p>
+        <p className="text-sm font-medium">{value || "—"}</p>
       )}
     </div>
   );
 }
 
-export function EmpresaIdentificacionCard({ empresa }: EmpresaIdentificacionCardProps) {
+export function EmpresaIdentificacionCard({ empresa, onUpdate }: EmpresaIdentificacionCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -59,55 +85,80 @@ export function EmpresaIdentificacionCard({ empresa }: EmpresaIdentificacionCard
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <InfoItem 
+          <EditableInfoItem 
             icon={Building2} 
             label="Razón Social" 
-            value={empresa.nombre} 
+            field="nombre"
+            value={empresa.nombre}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
           />
           
-          <InfoItem 
+          <EditableInfoItem 
             icon={FileText} 
             label="CIF" 
-            value={empresa.cif} 
+            field="cif"
+            value={empresa.cif}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
           />
           
-          <InfoItem 
+          <EditableInfoItem 
             icon={Factory} 
             label="Sector" 
-            value={empresa.sector} 
+            field="sector"
+            value={empresa.sector}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
           />
           
-          <InfoItem 
+          <EditableInfoItem 
             icon={MapPin} 
             label="Ubicación" 
-            value={empresa.ubicacion} 
+            field="ubicacion"
+            value={empresa.ubicacion}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
           />
           
-          {empresa.sitio_web && (
-            <InfoItem 
-              icon={Globe} 
-              label="Web" 
-              value={empresa.sitio_web}
-              isLink 
-            />
-          )}
+          <EditableInfoItem 
+            icon={Globe} 
+            label="Web" 
+            field="sitio_web"
+            value={empresa.sitio_web}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
+            isLink
+          />
           
-          {empresa.cnae_codigo && (
-            <InfoItem 
-              icon={Hash} 
-              label="CNAE" 
-              value={empresa.cnae_codigo} 
-            />
-          )}
+          <EditableInfoItem 
+            icon={Hash} 
+            label="CNAE" 
+            field="cnae_codigo"
+            value={empresa.cnae_codigo}
+            empresaId={empresa.id}
+            onUpdate={onUpdate}
+          />
         </div>
         
-        {empresa.descripcion && (
-          <div className="pt-3 border-t">
+        {/* Descripción editable */}
+        <div className="pt-3 border-t space-y-1">
+          <p className="text-xs text-muted-foreground">Descripción</p>
+          {onUpdate ? (
+            <InlineEditText
+              value={empresa.descripcion || ""}
+              onSave={async (newValue) => {
+                await onUpdate(empresa.id, "descripcion", newValue || null);
+              }}
+              placeholder="Añadir descripción..."
+              className="text-sm text-muted-foreground leading-relaxed"
+            />
+          ) : (
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {empresa.descripcion}
+              {empresa.descripcion || "Sin descripción"}
             </p>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
