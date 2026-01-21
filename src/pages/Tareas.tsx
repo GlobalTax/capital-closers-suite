@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle } from "lucide-react";
+import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
 import type { Tarea, TareaEstado } from "@/types";
 import {
@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { NuevaTareaDrawer } from "@/components/tareas/NuevaTareaDrawer";
 import { EditarTareaDrawer } from "@/components/tareas/EditarTareaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
+import { TaskCommandBar } from "@/components/tasks/TaskCommandBar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,7 +78,15 @@ function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
         isOverdue && "border-destructive bg-destructive/5"
       )}
     >
-      <h4 className="font-medium text-sm mb-2">{tarea.titulo}</h4>
+      <div className="flex items-center gap-2 mb-2">
+        <h4 className="font-medium text-sm flex-1">{tarea.titulo}</h4>
+        {(tarea as any).ai_generated && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+            IA
+          </Badge>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground items-center">
         {tarea.prioridad && (
           <Badge variant={getPriorityColor(tarea.prioridad)} className="text-xs">
@@ -429,6 +438,9 @@ export default function Tareas() {
           Nueva Tarea
         </Button>
       </div>
+
+      {/* AI Command Bar */}
+      <TaskCommandBar onSuccess={() => refetch()} />
 
       {/* Filtros y Vista Toggle */}
       <Card className="p-4">
