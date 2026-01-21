@@ -250,7 +250,6 @@ export function CompactTimeEntriesTable({
                           <span className="text-sm text-muted-foreground">Sin asignar</span>
                         )}
                       </div>
-                      </div>
                       {entry.work_task_type?.name && (
                         <span className="text-xs text-muted-foreground">
                           {entry.work_task_type.name}
