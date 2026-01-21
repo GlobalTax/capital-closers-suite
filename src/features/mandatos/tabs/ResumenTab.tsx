@@ -3,7 +3,7 @@ import { MandatoTipoEspecifico } from "@/components/mandatos/MandatoTipoEspecifi
 import { InformacionFinancieraEditable } from "@/components/mandatos/InformacionFinancieraEditable";
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { ServicioHonorariosCard } from "@/components/mandatos/ServicioHonorariosCard";
-import { EmpresaIdentificacionCard } from "@/components/mandatos/EmpresaIdentificacionCard";
+import { EmpresaIdentificacionWrapper } from "@/components/mandatos/EmpresaIdentificacionWrapper";
 import type { Mandato } from "@/types";
 
 interface ResumenTabProps {
@@ -12,9 +12,17 @@ interface ResumenTabProps {
   onAsociarContacto: () => void;
   onUpdateEmpresa?: (empresaId: string, field: string, value: number | null) => Promise<void>;
   onUpdateEmpresaText?: (empresaId: string, field: string, value: string | null) => Promise<void>;
+  onVincularEmpresa: () => void;
 }
 
-export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdateEmpresa, onUpdateEmpresaText }: ResumenTabProps) {
+export function ResumenTab({ 
+  mandato, 
+  onAddContacto, 
+  onAsociarContacto, 
+  onUpdateEmpresa, 
+  onUpdateEmpresaText,
+  onVincularEmpresa 
+}: ResumenTabProps) {
   const isServicio = mandato.categoria && mandato.categoria !== "operacion_ma";
 
   return (
@@ -31,15 +39,14 @@ export function ResumenTab({ mandato, onAddContacto, onAsociarContacto, onUpdate
       {/* Mostrar info específica de tipo solo para M&A */}
       {!isServicio && <MandatoTipoEspecifico mandato={mandato} />}
       
-      {/* Información identificativa de la empresa */}
-      {mandato.empresa_principal && (
-        <EmpresaIdentificacionCard 
-          empresa={mandato.empresa_principal} 
-          onUpdate={onUpdateEmpresaText}
-        />
-      )}
+      {/* Información identificativa de la empresa (o estado vacío) */}
+      <EmpresaIdentificacionWrapper
+        mandato={mandato}
+        onUpdate={onUpdateEmpresaText}
+        onVincularEmpresa={onVincularEmpresa}
+      />
       
-      {/* Información financiera editable */}
+      {/* Información financiera editable - solo si hay empresa */}
       {mandato.empresa_principal && (
         <InformacionFinancieraEditable 
           empresa={mandato.empresa_principal} 
