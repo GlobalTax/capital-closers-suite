@@ -8,6 +8,7 @@ import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { TargetCard } from "@/components/targets/TargetCard";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
+import { AsociarContactoEmpresaDialog } from "@/components/contactos/AsociarContactoEmpresaDialog";
 import { TargetsTabBuySide } from "./TargetsTabBuySide";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,6 +56,11 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
   // Link import drawer (Apollo/LinkedIn)
   const [linkImportOpen, setLinkImportOpen] = useState(false);
   const [linkSelectedEmpresaId, setLinkSelectedEmpresaId] = useState<string | null>(null);
+  
+  // Asociar contacto existente dialog
+  const [asociarContactoOpen, setAsociarContactoOpen] = useState(false);
+  const [asociarContactoEmpresaId, setAsociarContactoEmpresaId] = useState<string | null>(null);
+  const [asociarContactoEmpresaNombre, setAsociarContactoEmpresaNombre] = useState<string>("");
   
   // Datos por empresa (interacciones + contactos)
   const [empresaData, setEmpresaData] = useState<Record<string, EmpresaData>>({});
@@ -161,6 +167,40 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
   const handleImportFromLink = (empresaId: string) => {
     setLinkSelectedEmpresaId(empresaId);
     setLinkImportOpen(true);
+  };
+
+  const handleAsociarExistente = (empresaId: string, empresaNombre?: string) => {
+    setAsociarContactoEmpresaId(empresaId);
+    setAsociarContactoEmpresaNombre(empresaNombre || "");
+    setAsociarContactoOpen(true);
+  };
+
+  const handleAsociarContactoSuccess = () => {
+    // Reload contactos for the empresa
+    if (asociarContactoEmpresaId) {
+      setEmpresaData(prev => ({
+        ...prev,
+        [asociarContactoEmpresaId]: {
+          ...prev[asociarContactoEmpresaId],
+          loadingContactos: true,
+        }
+      }));
+
+      getContactosByEmpresa(asociarContactoEmpresaId)
+        .then(contactos => {
+          setEmpresaData(prev => ({
+            ...prev,
+            [asociarContactoEmpresaId!]: {
+              ...prev[asociarContactoEmpresaId!],
+              contactos,
+              loadingContactos: false,
+            }
+          }));
+        })
+        .catch(error => {
+          console.error("Error recargando contactos:", error);
+        });
+    }
   };
 
   const handleInteraccionUpdate = (empresaId: string) => {
@@ -340,6 +380,7 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
                 onAddContacto={handleAddContacto}
                 onImportFromLink={() => handleImportFromLink(empresa.id)}
                 onInteraccionUpdate={() => handleInteraccionUpdate(empresa.id)}
+                onAsociarExistente={() => handleAsociarExistente(empresa.id, empresa.nombre)}
               />
             );
           })}
@@ -418,6 +459,15 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
         onOpenChange={setLinkImportOpen}
         mandatoId={mandato.id}
         onSuccess={handleLinkSuccess}
+      />
+
+      {/* Asociar contacto existente dialog */}
+      <AsociarContactoEmpresaDialog
+        open={asociarContactoOpen}
+        onOpenChange={setAsociarContactoOpen}
+        empresaId={asociarContactoEmpresaId || ""}
+        empresaNombre={asociarContactoEmpresaNombre}
+        onSuccess={handleAsociarContactoSuccess}
       />
     </div>
   );
