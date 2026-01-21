@@ -26,7 +26,10 @@ export interface ConversionData {
     estructura_honorarios?: string;
     porcentaje_exito?: number;
     fee_fijo?: number;
+    fee_minimo?: number;
     retainer_mensual?: number;
+    pipeline_stage?: string;
+    fecha_cierre_esperada?: string;
   };
   // Contacto data
   contacto: {
@@ -112,23 +115,25 @@ export async function convertLeadToClient(
       empresaId = newEmpresa.id;
     }
 
-    // 2. Create mandato
+    // 2. Create mandato with full fee structure
     const { data: newMandato, error: mandatoError } = await supabase
       .from('mandatos')
       .insert({
         codigo: data.mandato.codigo,
         descripcion: data.mandato.descripcion,
         tipo: data.mandato.tipo,
-        categoria: data.mandato.categoria || 'operation_ma',
+        categoria: data.mandato.categoria || 'operacion_ma',
         estado: 'activo',
-        pipeline_stage: 'propuesta',
+        pipeline_stage: data.mandato.pipeline_stage || 'prospeccion',
         valor: data.mandato.valor,
         empresa_principal_id: empresaId,
         estructura_honorarios: data.mandato.estructura_honorarios || 'exito',
         porcentaje_exito: data.mandato.porcentaje_exito,
         fee_fijo: data.mandato.fee_fijo,
+        fee_minimo: data.mandato.fee_minimo,
         retainer_mensual: data.mandato.retainer_mensual,
         fecha_inicio: new Date().toISOString().split('T')[0],
+        fecha_cierre: data.mandato.fecha_cierre_esperada,
       })
       .select('id')
       .single();
