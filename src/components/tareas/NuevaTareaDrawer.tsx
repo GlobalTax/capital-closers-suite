@@ -17,10 +17,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -30,13 +33,13 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, Users, Lock, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createTarea } from "@/services/tareas.service";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { TareaEstado, TareaPrioridad } from "@/types";
+import type { TareaEstado, TareaPrioridad, TareaTipo } from "@/types";
 
 const formSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres"),
@@ -47,6 +50,8 @@ const formSchema = z.object({
   estado: z.enum(["pendiente", "en_progreso", "completada"] as const),
   prioridad: z.enum(["alta", "media", "baja", "urgente"] as const),
   etiquetas: z.string().optional(),
+  tipo: z.enum(["individual", "grupal"] as const),
+  compartido_con: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -76,6 +81,15 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
     enabled: open,
   });
 
+  // Get current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -87,6 +101,8 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
       estado: "pendiente",
       prioridad: "media",
       etiquetas: "",
+      tipo: "individual",
+      compartido_con: [],
     },
   });
 
@@ -104,7 +120,10 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
         estado: values.estado as TareaEstado,
         prioridad: values.prioridad as TareaPrioridad,
         order_index: 0,
-      });
+        tipo: values.tipo as TareaTipo,
+        creado_por: currentUser?.id,
+        compartido_con: values.compartido_con || [],
+      } as any);
 
       toast.success("Tarea creada exitosamente");
       form.reset();
@@ -283,6 +302,82 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Tipo de tarea y visibilidad */}
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                <FormField
+                  control={form.control}
+                  name="tipo"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base flex items-center gap-2">
+                          {field.value === 'grupal' ? (
+                            <Users className="h-4 w-4" />
+                          ) : (
+                            <Lock className="h-4 w-4" />
+                          )}
+                          Tarea {field.value === 'grupal' ? 'Grupal' : 'Individual'}
+                        </FormLabel>
+                        <FormDescription>
+                          {field.value === 'grupal' 
+                            ? 'Visible para todo el equipo' 
+                            : 'Solo tú y los usuarios compartidos podrán verla'}
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value === 'grupal'}
+                          onCheckedChange={(checked) => field.onChange(checked ? 'grupal' : 'individual')}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Compartir con - solo para tareas individuales */}
+                {form.watch('tipo') === 'individual' && (
+                  <FormField
+                    control={form.control}
+                    name="compartido_con"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Share2 className="h-4 w-4" />
+                          Compartir con
+                        </FormLabel>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {usuarios
+                            .filter(u => u.user_id !== currentUser?.id)
+                            .map((user) => (
+                              <div key={user.user_id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={user.user_id}
+                                  checked={field.value?.includes(user.user_id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current, user.user_id]);
+                                    } else {
+                                      field.onChange(current.filter(id => id !== user.user_id));
+                                    }
+                                  }}
+                                />
+                                <label
+                                  htmlFor={user.user_id}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {user.full_name || 'Usuario'}
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <FormField

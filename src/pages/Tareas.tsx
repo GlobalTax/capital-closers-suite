@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Lock, Share2 } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
-import type { Tarea, TareaEstado } from "@/types";
+import type { Tarea, TareaEstado, TareaTipo } from "@/types";
 import {
   DndContext,
   DragEndEvent,
@@ -29,6 +30,8 @@ import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface TareaCardProps {
   tarea: Tarea;
@@ -79,8 +82,20 @@ function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
       )}
     >
       <div className="flex items-center gap-2 mb-2">
+        {/* Visibility indicator */}
+        {tarea.tipo === 'individual' ? (
+          <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+        ) : (
+          <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+        )}
         <h4 className="font-medium text-sm flex-1">{tarea.titulo}</h4>
-        {(tarea as any).ai_generated && (
+        {tarea.compartido_con && tarea.compartido_con.length > 0 && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            <Share2 className="h-2.5 w-2.5 mr-0.5" />
+            {tarea.compartido_con.length}
+          </Badge>
+        )}
+        {tarea.ai_generated && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
             <Sparkles className="h-2.5 w-2.5 mr-0.5" />
             IA
@@ -203,6 +218,16 @@ export default function Tareas() {
   const updateMutation = useUpdateTarea();
   const createMutation = useCreateTarea();
 
+  // Get current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
+  const [filtroTipo, setFiltroTipo] = useState<"mis_tareas" | "equipo" | "compartidas">("mis_tareas");
   const [filtroResponsable, setFiltroResponsable] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<TareaEstado | "">("");
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>("");
@@ -321,15 +346,40 @@ export default function Tareas() {
     setEditDrawerOpen(true);
   };
 
-  const tareasFiltradas = tareas.filter((tarea) => {
+  // Filter tasks by visibility type first
+  const tareasPorVisibilidad = useMemo(() => {
+    if (!currentUser) return tareas;
+    
+    return tareas.filter((tarea) => {
+      if (filtroTipo === "mis_tareas") {
+        // Individual tasks I created OR assigned to me
+        return (
+          tarea.creado_por === currentUser.id ||
+          tarea.asignado_a === currentUser.id
+        );
+      } else if (filtroTipo === "equipo") {
+        // Group tasks visible to everyone
+        return tarea.tipo === "grupal";
+      } else if (filtroTipo === "compartidas") {
+        // Individual tasks shared with me
+        return (
+          tarea.tipo === "individual" &&
+          tarea.compartido_con?.includes(currentUser.id)
+        );
+      }
+      return true;
+    });
+  }, [tareas, filtroTipo, currentUser]);
+
+  const tareasFiltradas = tareasPorVisibilidad.filter((tarea) => {
     if (filtroResponsable && tarea.asignado_a !== filtroResponsable) return false;
     if (filtroEstado && tarea.estado !== filtroEstado) return false;
     if (filtroPrioridad && tarea.prioridad !== filtroPrioridad) return false;
     return true;
   });
 
-  const responsablesUnicos = Array.from(new Set(tareas.map((t) => t.asignado_a).filter(Boolean)));
-  const prioridadesUnicas = Array.from(new Set(tareas.map((t) => t.prioridad).filter(Boolean)));
+  const responsablesUnicos = Array.from(new Set(tareasPorVisibilidad.map((t) => t.asignado_a).filter(Boolean)));
+  const prioridadesUnicas = Array.from(new Set(tareasPorVisibilidad.map((t) => t.prioridad).filter(Boolean)));
 
   const tareasPorEstado = {
     pendiente: tareasFiltradas
@@ -441,6 +491,26 @@ export default function Tareas() {
 
       {/* AI Command Bar */}
       <TaskCommandBar onSuccess={() => refetch()} />
+
+      {/* Tabs de Visibilidad */}
+      <Tabs value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="mis_tareas" className="gap-2">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Mis Tareas</span>
+            <span className="sm:hidden">Mías</span>
+          </TabsTrigger>
+          <TabsTrigger value="equipo" className="gap-2">
+            <Users className="h-4 w-4" />
+            Equipo
+          </TabsTrigger>
+          <TabsTrigger value="compartidas" className="gap-2">
+            <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Compartidas</span>
+            <span className="sm:hidden">Comp.</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Filtros y Vista Toggle */}
       <Card className="p-4">

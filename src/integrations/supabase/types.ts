@@ -14204,8 +14204,11 @@ export type Database = {
           ai_confidence: number | null
           ai_generated: boolean | null
           asignado_a: string | null
+          compartido_con: string[] | null
+          creado_por: string | null
           created_at: string | null
           descripcion: string | null
+          es_visible_equipo: boolean | null
           estado: string | null
           fecha_vencimiento: string | null
           health_status: string | null
@@ -14215,6 +14218,7 @@ export type Database = {
           order_index: number | null
           prioridad: string | null
           source_text: string | null
+          tipo: string | null
           titulo: string
           updated_at: string | null
         }
@@ -14222,8 +14226,11 @@ export type Database = {
           ai_confidence?: number | null
           ai_generated?: boolean | null
           asignado_a?: string | null
+          compartido_con?: string[] | null
+          creado_por?: string | null
           created_at?: string | null
           descripcion?: string | null
+          es_visible_equipo?: boolean | null
           estado?: string | null
           fecha_vencimiento?: string | null
           health_status?: string | null
@@ -14233,6 +14240,7 @@ export type Database = {
           order_index?: number | null
           prioridad?: string | null
           source_text?: string | null
+          tipo?: string | null
           titulo: string
           updated_at?: string | null
         }
@@ -14240,8 +14248,11 @@ export type Database = {
           ai_confidence?: number | null
           ai_generated?: boolean | null
           asignado_a?: string | null
+          compartido_con?: string[] | null
+          creado_por?: string | null
           created_at?: string | null
           descripcion?: string | null
+          es_visible_equipo?: boolean | null
           estado?: string | null
           fecha_vencimiento?: string | null
           health_status?: string | null
@@ -14251,6 +14262,7 @@ export type Database = {
           order_index?: number | null
           prioridad?: string | null
           source_text?: string | null
+          tipo?: string | null
           titulo?: string
           updated_at?: string | null
         }

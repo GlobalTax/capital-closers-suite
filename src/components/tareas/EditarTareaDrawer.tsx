@@ -17,10 +17,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -32,13 +35,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar as CalendarIcon, Loader2, Trash2, Sparkles } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, Trash2, Sparkles, Users, Lock, Share2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { updateTarea, deleteTarea } from "@/services/tareas.service";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { Tarea, TareaEstado, TareaPrioridad } from "@/types";
+import type { Tarea, TareaEstado, TareaPrioridad, TareaTipo } from "@/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +62,8 @@ const formSchema = z.object({
   fechaVencimiento: z.date().optional().nullable(),
   estado: z.enum(["pendiente", "en_progreso", "completada"] as const),
   prioridad: z.enum(["alta", "media", "baja", "urgente"] as const),
+  tipo: z.enum(["individual", "grupal"] as const),
+  compartido_con: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -99,6 +104,8 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
       fechaVencimiento: null,
       estado: "pendiente",
       prioridad: "media",
+      tipo: "individual",
+      compartido_con: [],
     },
   });
 
@@ -114,6 +121,8 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
           : null,
         estado: tarea.estado as "pendiente" | "en_progreso" | "completada",
         prioridad: tarea.prioridad as "alta" | "media" | "baja" | "urgente",
+        tipo: (tarea.tipo as "individual" | "grupal") || "individual",
+        compartido_con: tarea.compartido_con || [],
       });
     }
   }, [tarea, form]);
@@ -132,7 +141,9 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
           : null,
         estado: values.estado as TareaEstado,
         prioridad: values.prioridad as TareaPrioridad,
-      });
+        tipo: values.tipo as TareaTipo,
+        compartido_con: values.compartido_con || [],
+      } as any);
 
       toast.success("Tarea actualizada exitosamente");
       onOpenChange(false);
