@@ -62,3 +62,9 @@ verify_jwt = true
 
 [functions.task-ai]
 verify_jwt = true
+
+[functions.task-daily-digest]
+verify_jwt = true
+
+[functions.task-health-check]
+verify_jwt = true

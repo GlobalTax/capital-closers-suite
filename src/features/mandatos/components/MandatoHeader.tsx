@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, FilePlus, MoreVertical, Target, Building2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, FilePlus, MoreVertical, Target, Building2, Sparkles } from "lucide-react";
 import type { Mandato } from "@/types";
 import {
   DropdownMenu,
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { GenerateTasksDialog } from "@/components/mandatos/GenerateTasksDialog";
 
 interface MandatoHeaderProps {
   mandato: Mandato;
@@ -20,6 +22,7 @@ interface MandatoHeaderProps {
 
 export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }: MandatoHeaderProps) {
   const navigate = useNavigate();
+  const [showGenerateTasks, setShowGenerateTasks] = useState(false);
 
   const getBadgeVariant = (estado: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -87,6 +90,10 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
       </div>
 
       <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setShowGenerateTasks(true)}>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Generar Tareas IA
+        </Button>
         {onGenerateDocument && (
           <Button variant="outline" onClick={onGenerateDocument}>
             <FilePlus className="mr-2 h-4 w-4" />
@@ -115,6 +122,12 @@ export function MandatoHeader({ mandato, onEdit, onDelete, onGenerateDocument }:
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <GenerateTasksDialog
+        open={showGenerateTasks}
+        onOpenChange={setShowGenerateTasks}
+        mandato={mandato}
+      />
     </div>
   );
 }
