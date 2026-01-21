@@ -184,7 +184,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         entryData.mandato_id = selectedId;
         entryData.task_id = taskId && taskId !== '__none__' ? taskId : undefined;
       } else if (selectedType === 'contacto') {
-        entryData.contacto_id = selectedId;
+        // Now use mandate_lead_id instead of contacto_id
+        entryData.mandate_lead_id = selectedId;
       }
 
       await createTimeEntry(entryData);

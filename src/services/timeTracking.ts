@@ -450,12 +450,13 @@ export const createTimeEntry = async (
   console.log('[TimeTracking] Creando entrada:', {
     mandato_id: entry.mandato_id,
     contacto_id: entry.contacto_id,
+    mandate_lead_id: (entry as any).mandate_lead_id,
     work_task_type_id: entry.work_task_type_id,
     user_id: entry.user_id
   });
 
-  // Validate: must have either mandato_id OR contacto_id
-  if (!entry.mandato_id && !entry.contacto_id) {
+  // Validate: must have either mandato_id, contacto_id, OR mandate_lead_id
+  if (!entry.mandato_id && !entry.contacto_id && !(entry as any).mandate_lead_id) {
     throw new Error('Debe seleccionar un mandato o un lead');
   }
 
@@ -464,6 +465,7 @@ export const createTimeEntry = async (
     ...entry,
     mandato_id: entry.mandato_id || null,
     contacto_id: entry.contacto_id || null,
+    mandate_lead_id: (entry as any).mandate_lead_id || null,
   };
 
   const { data, error } = await supabase
@@ -476,7 +478,7 @@ export const createTimeEntry = async (
     console.error('[TimeTracking] Error al crear entrada:', error);
     
     // Detect constraint violation error
-    if (error.message?.includes('chk_mandato_or_contacto')) {
+    if (error.message?.includes('chk_mandato_or_lead') || error.message?.includes('chk_mandato_or_contacto')) {
       throw new Error('Debe seleccionar un mandato o un lead');
     }
     
