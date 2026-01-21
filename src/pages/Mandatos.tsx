@@ -576,9 +576,13 @@ export default function Mandatos() {
       key: "empresa_principal", 
       label: "Cliente", 
       sortable: true, 
-      render: (value: any) => (
-        <span className="font-medium">{value?.nombre || "Sin asignar"}</span>
-      )
+      render: (value: any, row: Mandato) => {
+        const clientName = value?.nombre 
+          || (row.empresas?.[0] as any)?.empresa?.nombre
+          || row.cliente_externo
+          || "Sin asignar";
+        return <span className="font-medium">{clientName}</span>;
+      }
     },
     potencial_sf: {
       key: "potencial_sf",
