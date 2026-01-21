@@ -138,45 +138,46 @@ export function useMandatoLeadSearch(
           }));
         }
 
-        // Search contactos/leads if enabled
+        // Search mandate_leads if enabled (leads are now managed through mandate_leads table)
         if (includeLeads) {
-          let contactoQuery = supabase
-            .from('contactos')
+          let leadQuery = supabase
+            .from('mandate_leads')
             .select(`
               id,
-              nombre,
-              apellidos,
-              email,
-              empresa_principal:empresas(id, nombre)
+              company_name,
+              contact_name,
+              contact_email,
+              sector,
+              stage,
+              mandato:mandatos(id, descripcion, codigo)
             `)
-            .is('merged_into_contacto_id', null)
-            .order('updated_at', { ascending: false })
+            .not('stage', 'in', '("cerrado_ganado","cerrado_perdido","descartado")')
+            .order('created_at', { ascending: false })
             .limit(limit);
 
           if (debouncedSearch) {
-            contactoQuery = contactoQuery.or(
-              `nombre.ilike.%${debouncedSearch}%,apellidos.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+            leadQuery = leadQuery.or(
+              `company_name.ilike.%${debouncedSearch}%,contact_name.ilike.%${debouncedSearch}%,contact_email.ilike.%${debouncedSearch}%`
             );
           }
 
-          const { data: contactos, error: contactoError } = await contactoQuery;
+          const { data: leads, error: leadError } = await leadQuery;
 
-          if (contactoError) {
-            console.error('[MandatoLeadSearch] Error fetching contactos:', contactoError);
-          } else if (contactos) {
-            results.contactos = contactos.map((c: any) => {
-              const fullName = [c.nombre, c.apellidos].filter(Boolean).join(' ');
-              const empresaNombre = c.empresa_principal?.nombre;
-
+          if (leadError) {
+            console.error('[MandatoLeadSearch] Error fetching mandate_leads:', leadError);
+          } else if (leads) {
+            results.contactos = leads.map((l: any) => {
+              const mandatoRef = l.mandato?.codigo || l.mandato?.descripcion || '';
+              
               return {
-                id: c.id,
+                id: l.id,
                 type: 'contacto' as const,
-                label: empresaNombre || fullName,
-                sublabel: empresaNombre ? fullName : c.email,
+                label: l.company_name || l.contact_name || 'Lead sin nombre',
+                sublabel: mandatoRef ? `${mandatoRef} · ${l.stage || 'nuevo'}` : l.contact_email,
                 icon: 'user' as const,
                 metadata: {
-                  empresaNombre,
-                  email: c.email,
+                  empresaNombre: l.company_name,
+                  email: l.contact_email,
                 },
               };
             });
@@ -241,31 +242,32 @@ export function useMandatoLeadItem(id: string | null, type: SearchItemType | nul
       }
 
       if (type === 'contacto') {
+        // Now fetch from mandate_leads instead of contactos
         const { data } = await supabase
-          .from('contactos')
+          .from('mandate_leads')
           .select(`
             id,
-            nombre,
-            apellidos,
-            email,
-            empresa_principal:empresas(id, nombre)
+            company_name,
+            contact_name,
+            contact_email,
+            stage,
+            mandato:mandatos(id, descripcion, codigo)
           `)
           .eq('id', id)
           .single();
 
         if (data) {
-          const fullName = [data.nombre, data.apellidos].filter(Boolean).join(' ');
-          const empresaNombre = (data.empresa_principal as any)?.nombre;
-
+          const mandatoRef = (data.mandato as any)?.codigo || (data.mandato as any)?.descripcion || '';
+          
           return {
             id: data.id,
             type: 'contacto',
-            label: empresaNombre || fullName,
-            sublabel: empresaNombre ? fullName : data.email,
+            label: data.company_name || data.contact_name || 'Lead sin nombre',
+            sublabel: mandatoRef ? `${mandatoRef} · ${data.stage || 'nuevo'}` : data.contact_email,
             icon: 'user',
             metadata: {
-              empresaNombre,
-              email: data.email,
+              empresaNombre: data.company_name,
+              email: data.contact_email,
             },
           };
         }
