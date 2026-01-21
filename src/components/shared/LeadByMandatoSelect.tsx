@@ -1,0 +1,217 @@
+import { useState, useMemo } from 'react';
+import { Check, ChevronsUpDown, User, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+import { useLeadsByMandato, type MandateLead } from '@/hooks/useLeadsByMandato';
+
+interface LeadByMandatoSelectProps {
+  mandatoId: string | null;
+  value: string | null;
+  onValueChange: (leadId: string | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+const GENERAL_WORK_ID = '00000000-0000-0000-0000-000000000001';
+
+export function LeadByMandatoSelect({
+  mandatoId,
+  value,
+  onValueChange,
+  placeholder = 'Sin lead (horas generales)',
+  disabled = false,
+}: LeadByMandatoSelectProps) {
+  const [open, setOpen] = useState(false);
+  
+  // Check if it's an internal project (no leads available)
+  const isInternalProject = !mandatoId || mandatoId === GENERAL_WORK_ID;
+  
+  // Fetch leads for the selected mandato
+  const { data: leads = [], isLoading } = useLeadsByMandato(
+    isInternalProject ? null : mandatoId
+  );
+  
+  // Get selected lead for display
+  const selectedLead = useMemo(() => {
+    if (!value || !leads.length) return null;
+    return leads.find(lead => lead.id === value) || null;
+  }, [value, leads]);
+  
+  // Get display label
+  const displayLabel = useMemo(() => {
+    if (!value) return placeholder;
+    if (selectedLead) {
+      return selectedLead.company_name || selectedLead.contact_name || 'Lead sin nombre';
+    }
+    return placeholder;
+  }, [value, selectedLead, placeholder]);
+  
+  // Handle selection
+  const handleSelect = (leadId: string | null) => {
+    onValueChange(leadId);
+    setOpen(false);
+  };
+  
+  // Get stage badge
+  const getStageBadge = (stage: string | null) => {
+    if (!stage) return null;
+    
+    const stageConfig: Record<string, { label: string; className: string }> = {
+      'nuevo': { label: 'Nuevo', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+      'contactado': { label: 'Contactado', className: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
+      'en_analisis': { label: 'En análisis', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+      'negociacion': { label: 'Negociación', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    };
+    
+    const config = stageConfig[stage] || { label: stage, className: 'bg-muted text-muted-foreground' };
+    
+    return (
+      <Badge variant="secondary" className={cn('text-[9px] px-1 py-0 h-4', config.className)}>
+        {config.label}
+      </Badge>
+    );
+  };
+  
+  // If internal project, show disabled state
+  if (isInternalProject) {
+    return (
+      <Button
+        variant="outline"
+        disabled
+        className="w-full justify-between h-9 font-normal text-muted-foreground"
+      >
+        <span className="flex items-center gap-2">
+          <Users className="h-3.5 w-3.5 opacity-50" />
+          N/A para proyectos internos
+        </span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    );
+  }
+  
+  // If no leads available
+  if (!isLoading && leads.length === 0) {
+    return (
+      <Button
+        variant="outline"
+        disabled
+        className="w-full justify-between h-9 font-normal text-muted-foreground"
+      >
+        <span className="flex items-center gap-2">
+          <Users className="h-3.5 w-3.5 opacity-50" />
+          Sin leads asignados
+        </span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled || isLoading}
+          className={cn(
+            'w-full justify-between h-9 font-normal',
+            !value && 'text-muted-foreground'
+          )}
+        >
+          {isLoading ? (
+            <span className="animate-pulse">Cargando leads...</span>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <User className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+              <span className="truncate">{displayLabel}</span>
+              {selectedLead && getStageBadge(selectedLead.stage)}
+            </div>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[350px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar lead..." />
+          <CommandList className="max-h-[250px]">
+            <CommandEmpty>No se encontraron leads</CommandEmpty>
+            
+            {/* Option for no lead (general hours) */}
+            <CommandGroup heading="Opciones">
+              <CommandItem
+                value="__sin_lead__"
+                onSelect={() => handleSelect(null)}
+                className="flex items-center gap-2"
+              >
+                <Check
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    !value ? 'opacity-100' : 'opacity-0'
+                  )}
+                />
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <span className="font-medium">Sin lead (horas generales)</span>
+                  <p className="text-xs text-muted-foreground">
+                    Tiempo dedicado al mandato en general
+                  </p>
+                </div>
+              </CommandItem>
+            </CommandGroup>
+            
+            {/* Leads list */}
+            {leads.length > 0 && (
+              <CommandGroup heading={`👤 Leads del mandato (${leads.length})`}>
+                {leads.map((lead) => (
+                  <CommandItem
+                    key={lead.id}
+                    value={`${lead.company_name || ''} ${lead.contact_name || ''} ${lead.id}`}
+                    onSelect={() => handleSelect(lead.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Check
+                      className={cn(
+                        'h-4 w-4 shrink-0',
+                        value === lead.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <User className="h-4 w-4 shrink-0 text-amber-600" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">
+                          {lead.company_name || 'Sin empresa'}
+                        </span>
+                        {getStageBadge(lead.stage)}
+                      </div>
+                      {lead.contact_name && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {lead.contact_name}
+                          {lead.contact_email && ` · ${lead.contact_email}`}
+                        </p>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
