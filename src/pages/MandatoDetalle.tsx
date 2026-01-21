@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { AsociarContactoDialog } from "@/components/contactos/AsociarContactoDialog";
+import { VincularEmpresaDialog } from "@/components/mandatos/VincularEmpresaDialog";
 import { useMandatoDetalle } from "@/hooks/useMandatoDetalle";
 import { useAuth } from "@/hooks/useAuth";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
@@ -34,6 +35,7 @@ export default function MandatoDetalle() {
   const { user, adminUser } = useAuth();
   const [openContactoDrawer, setOpenContactoDrawer] = useState(false);
   const [openAsociarDialog, setOpenAsociarDialog] = useState(false);
+  const [vincularEmpresaOpen, setVincularEmpresaOpen] = useState(false);
   const [editarMandatoOpen, setEditarMandatoOpen] = useState(false);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
@@ -167,6 +169,7 @@ export default function MandatoDetalle() {
               toast.success('Actualizado');
               refetch();
             }}
+            onVincularEmpresa={() => setVincularEmpresaOpen(true)}
           />
         </TabsContent>
 
@@ -265,6 +268,26 @@ export default function MandatoDetalle() {
           cif: mandato.empresa_principal?.cif,
         }}
         mandatoTipo={mandato.tipo}
+      />
+
+      <VincularEmpresaDialog
+        open={vincularEmpresaOpen}
+        onOpenChange={setVincularEmpresaOpen}
+        tipoMandato={mandato.tipo}
+        onVincular={async (empresaId) => {
+          const { error } = await supabase
+            .from('mandatos')
+            .update({ empresa_principal_id: empresaId })
+            .eq('id', id);
+          
+          if (error) {
+            toast.error('Error al vincular empresa');
+            throw error;
+          }
+          
+          toast.success('Empresa vinculada correctamente');
+          refetch();
+        }}
       />
     </div>
   );
