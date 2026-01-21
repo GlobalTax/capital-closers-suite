@@ -40,8 +40,8 @@ export async function getTeamWorkload(): Promise<UserWorkload[]> {
   // Get time entries for the last 7 days
   const { data: timeEntries } = await supabase
     .from('mandato_time_entries')
-    .select('user_id, duration_hours')
-    .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
+    .select('user_id, duration_minutes')
+    .gte('created_at', sevenDaysAgo.toISOString());
 
   // Get pending tasks count per user
   const { data: tasks } = await supabase
@@ -52,7 +52,7 @@ export async function getTeamWorkload(): Promise<UserWorkload[]> {
   // Calculate workload per user
   const workloads: UserWorkload[] = (teamMembers || []).map(member => {
     const userTimeEntries = (timeEntries || []).filter((t: any) => t.user_id === member.user_id);
-    const hoursThisWeek = userTimeEntries.reduce((sum: number, t: any) => sum + (t.duration_hours || 0), 0);
+    const hoursThisWeek = userTimeEntries.reduce((sum: number, t: any) => sum + ((t.duration_minutes || 0) / 60), 0);
     
     const pendingTasks = (tasks || []).filter(t => t.asignado_a === member.user_id).length;
     
