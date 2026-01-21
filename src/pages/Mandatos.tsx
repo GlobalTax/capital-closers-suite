@@ -86,6 +86,7 @@ import {
 const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: "codigo", label: "ID", visible: true, locked: true },
   { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
+  { key: "nombre_proyecto", label: "Proyecto", visible: true },
   { key: "potencial_sf", label: "SF", visible: true },
   { key: "teaser", label: "Teaser", visible: true },
   { key: "facturacion", label: "Facturación", visible: true },
@@ -579,11 +580,25 @@ export default function Mandatos() {
       render: (value: any, row: Mandato) => {
         const clientName = value?.nombre 
           || (row.empresas?.[0] as any)?.empresa?.nombre
-          || row.nombre_proyecto
           || row.cliente_externo
           || "Sin asignar";
         return <span className="font-medium">{clientName}</span>;
       }
+    },
+    nombre_proyecto: {
+      key: "nombre_proyecto",
+      label: "Proyecto",
+      sortable: true,
+      render: (value: string, row: Mandato) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <InlineEditText
+            value={value || ""}
+            placeholder="Sin nombre"
+            onSave={async (newValue) => handleInlineUpdate(row.id, { nombre_proyecto: newValue })}
+            className="text-muted-foreground"
+          />
+        </div>
+      ),
     },
     potencial_sf: {
       key: "potencial_sf",
