@@ -305,7 +305,12 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
               </div>
 
               {/* Tipo de tarea y visibilidad */}
-              <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+              <div className={cn(
+                "space-y-4 rounded-lg border p-4",
+                form.watch('tipo') === 'grupal' 
+                  ? "bg-amber-500/10 border-amber-500/30" 
+                  : "bg-muted/30"
+              )}>
                 <FormField
                   control={form.control}
                   name="tipo"
@@ -314,15 +319,15 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
                       <div className="space-y-0.5">
                         <FormLabel className="text-base flex items-center gap-2">
                           {field.value === 'grupal' ? (
-                            <Users className="h-4 w-4" />
+                            <Users className="h-4 w-4 text-amber-600" />
                           ) : (
                             <Lock className="h-4 w-4" />
                           )}
                           Tarea {field.value === 'grupal' ? 'Grupal' : 'Individual'}
                         </FormLabel>
-                        <FormDescription>
+                        <FormDescription className={field.value === 'grupal' ? "text-amber-600 font-medium" : ""}>
                           {field.value === 'grupal' 
-                            ? 'Visible para todo el equipo' 
+                            ? '⚠️ Todos los miembros del equipo podrán ver esta tarea' 
                             : 'Solo tú y los usuarios compartidos podrán verla'}
                         </FormDescription>
                       </div>
