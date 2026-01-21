@@ -20,6 +20,10 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       asignado_a: raw.asignado_a || undefined,
       mandato_id: raw.mandato_id || undefined,
       order_index: raw.order_index ?? 0,
+      tipo: ((raw as any).tipo as any) || 'individual',
+      creado_por: (raw as any).creado_por || undefined,
+      compartido_con: (raw as any).compartido_con || [],
+      es_visible_equipo: (raw as any).es_visible_equipo || false,
       created_at: raw.created_at || new Date().toISOString(),
       updated_at: raw.updated_at || new Date().toISOString(),
     } as Tarea;

@@ -11,6 +11,7 @@ export type TargetEstado = "pendiente" | "contactada" | "interesada" | "rechazad
 export type NivelInteres = "Alto" | "Medio" | "Bajo";
 export type TareaPrioridad = "alta" | "media" | "baja" | "urgente";
 export type TareaEstado = "pendiente" | "en_progreso" | "completada" | "cancelada";
+export type TareaTipo = "individual" | "grupal";
 export type DocumentoTipo = "Contrato" | "NDA" | "Due Diligence" | "Financiero" | "Legal" | "Otro";
 export type TransactionType = "ingreso" | "gasto" | "honorario" | "due_diligence" | "ajuste_valoracion" | "comision" | "otro";
 export type TransactionStatus = "pendiente" | "completada" | "cancelada";
@@ -252,6 +253,14 @@ export interface Tarea {
   source_text?: string;
   /** Task health status */
   health_status?: 'healthy' | 'at_risk' | 'blocked';
+  /** Task visibility type: individual (private) or grupal (public) */
+  tipo?: TareaTipo;
+  /** User who created the task */
+  creado_por?: string;
+  /** Array of user IDs the task is shared with (for individual tasks) */
+  compartido_con?: string[];
+  /** Override to make individual task visible to entire team */
+  es_visible_equipo?: boolean;
   created_at: string;
   updated_at: string;
 }
