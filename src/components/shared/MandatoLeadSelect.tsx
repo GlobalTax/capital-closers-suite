@@ -169,15 +169,23 @@ export function MandatoLeadSelect({
           <CommandList className="max-h-[300px]">
             {isLoading && (
               <div className="py-6 text-center text-sm text-muted-foreground">
-                Buscando...
+                <div className="animate-pulse">Buscando...</div>
               </div>
             )}
 
-            {!isLoading && !hasResults && searchTerm && (
+            {/* Error state */}
+            {!isLoading && searchResults?.error && (
+              <div className="py-6 text-center text-sm text-destructive">
+                <p>Error al buscar</p>
+                <p className="text-xs text-muted-foreground mt-1">{searchResults.error}</p>
+              </div>
+            )}
+
+            {!isLoading && !searchResults?.error && !hasResults && searchTerm && (
               <CommandEmpty>No se encontraron resultados</CommandEmpty>
             )}
 
-            {!isLoading && !hasResults && !searchTerm && (
+            {!isLoading && !searchResults?.error && !hasResults && !searchTerm && (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 <Search className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 Escribe para buscar mandatos o leads

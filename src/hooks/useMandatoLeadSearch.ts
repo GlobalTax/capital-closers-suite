@@ -64,7 +64,7 @@ export function useMandatoLeadSearch(
     includeGeneralWork = true,
     includeLeads = true,
     debounceMs = 300,
-    limit = 15,
+    limit = 10, // Reduced from 15 for faster queries
   } = options;
 
   const debouncedSearch = useDebounce(searchTerm.trim().toLowerCase(), debounceMs);
@@ -75,111 +75,123 @@ export function useMandatoLeadSearch(
       internalProjects: MandatoLeadSearchItem[];
       mandatos: MandatoLeadSearchItem[];
       contactos: MandatoLeadSearchItem[];
+      error?: string;
     }> => {
       const results = {
         internalProjects: [] as MandatoLeadSearchItem[],
         mandatos: [] as MandatoLeadSearchItem[],
         contactos: [] as MandatoLeadSearchItem[],
+        error: undefined as string | undefined,
       };
 
-      // Always include internal projects if enabled
-      if (includeGeneralWork) {
-        results.internalProjects = INTERNAL_PROJECTS.filter(
-          (p) =>
-            !debouncedSearch ||
-            p.label.toLowerCase().includes(debouncedSearch) ||
-            p.sublabel?.toLowerCase().includes(debouncedSearch)
-        );
-      }
-
-      // Search mandatos
-      let mandatoQuery = supabase
-        .from('mandatos')
-        .select(`
-          id,
-          codigo,
-          descripcion,
-          tipo,
-          estado,
-          empresa_principal:empresas(id, nombre)
-        `)
-        .not('estado', 'in', '("cerrado","cancelado")')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (debouncedSearch) {
-        mandatoQuery = mandatoQuery.or(
-          `descripcion.ilike.%${debouncedSearch}%,codigo.ilike.%${debouncedSearch}%`
-        );
-      }
-
-      const { data: mandatos } = await mandatoQuery;
-
-      if (mandatos) {
-        results.mandatos = mandatos.map((m: any) => ({
-          id: m.id,
-          type: 'mandato' as const,
-          label: m.codigo
-            ? `${m.codigo} · ${m.descripcion || 'Sin descripción'}`
-            : m.descripcion || 'Sin descripción',
-          sublabel: m.empresa_principal?.nombre || undefined,
-          icon: 'briefcase' as const,
-          metadata: {
-            codigo: m.codigo,
-            tipo: m.tipo,
-            estado: m.estado,
-            empresaNombre: m.empresa_principal?.nombre,
-          },
-        }));
-      }
-
-      // Search contactos/leads if enabled
-      if (includeLeads) {
-        let contactoQuery = supabase
-          .from('contactos')
-          .select(`
-            id,
-            nombre,
-            apellidos,
-            email,
-            empresa_principal:empresas(id, nombre)
-          `)
-          .is('merged_into_contacto_id', null)
-          .order('updated_at', { ascending: false })
-          .limit(limit);
-
-        if (debouncedSearch) {
-          contactoQuery = contactoQuery.or(
-            `nombre.ilike.%${debouncedSearch}%,apellidos.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+      try {
+        // Always include internal projects if enabled
+        if (includeGeneralWork) {
+          results.internalProjects = INTERNAL_PROJECTS.filter(
+            (p) =>
+              !debouncedSearch ||
+              p.label.toLowerCase().includes(debouncedSearch) ||
+              p.sublabel?.toLowerCase().includes(debouncedSearch)
           );
         }
 
-        const { data: contactos } = await contactoQuery;
+        // Search mandatos with optimized query
+        let mandatoQuery = supabase
+          .from('mandatos')
+          .select(`
+            id,
+            codigo,
+            descripcion,
+            tipo,
+            estado,
+            empresa_principal:empresas(id, nombre)
+          `)
+          .not('estado', 'in', '("cerrado","cancelado")')
+          .order('created_at', { ascending: false })
+          .limit(limit);
 
-        if (contactos) {
-          results.contactos = contactos.map((c: any) => {
-            const fullName = [c.nombre, c.apellidos].filter(Boolean).join(' ');
-            const empresaNombre = c.empresa_principal?.nombre;
-
-            return {
-              id: c.id,
-              type: 'contacto' as const,
-              label: empresaNombre || fullName,
-              sublabel: empresaNombre ? fullName : c.email,
-              icon: 'user' as const,
-              metadata: {
-                empresaNombre,
-                email: c.email,
-              },
-            };
-          });
+        if (debouncedSearch) {
+          mandatoQuery = mandatoQuery.or(
+            `descripcion.ilike.%${debouncedSearch}%,codigo.ilike.%${debouncedSearch}%`
+          );
         }
+
+        const { data: mandatos, error: mandatoError } = await mandatoQuery;
+
+        if (mandatoError) {
+          console.error('[MandatoLeadSearch] Error fetching mandatos:', mandatoError);
+        } else if (mandatos) {
+          results.mandatos = mandatos.map((m: any) => ({
+            id: m.id,
+            type: 'mandato' as const,
+            label: m.codigo
+              ? `${m.codigo} · ${m.descripcion || 'Sin descripción'}`
+              : m.descripcion || 'Sin descripción',
+            sublabel: m.empresa_principal?.nombre || undefined,
+            icon: 'briefcase' as const,
+            metadata: {
+              codigo: m.codigo,
+              tipo: m.tipo,
+              estado: m.estado,
+              empresaNombre: m.empresa_principal?.nombre,
+            },
+          }));
+        }
+
+        // Search contactos/leads if enabled
+        if (includeLeads) {
+          let contactoQuery = supabase
+            .from('contactos')
+            .select(`
+              id,
+              nombre,
+              apellidos,
+              email,
+              empresa_principal:empresas(id, nombre)
+            `)
+            .is('merged_into_contacto_id', null)
+            .order('updated_at', { ascending: false })
+            .limit(limit);
+
+          if (debouncedSearch) {
+            contactoQuery = contactoQuery.or(
+              `nombre.ilike.%${debouncedSearch}%,apellidos.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+            );
+          }
+
+          const { data: contactos, error: contactoError } = await contactoQuery;
+
+          if (contactoError) {
+            console.error('[MandatoLeadSearch] Error fetching contactos:', contactoError);
+          } else if (contactos) {
+            results.contactos = contactos.map((c: any) => {
+              const fullName = [c.nombre, c.apellidos].filter(Boolean).join(' ');
+              const empresaNombre = c.empresa_principal?.nombre;
+
+              return {
+                id: c.id,
+                type: 'contacto' as const,
+                label: empresaNombre || fullName,
+                sublabel: empresaNombre ? fullName : c.email,
+                icon: 'user' as const,
+                metadata: {
+                  empresaNombre,
+                  email: c.email,
+                },
+              };
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error('[MandatoLeadSearch] Unexpected error:', err);
+        results.error = err?.message || 'Error al buscar';
       }
 
       return results;
     },
     staleTime: 30000,
     gcTime: 60000,
+    retry: 1, // Reduce retries for faster feedback
   });
 }
 
