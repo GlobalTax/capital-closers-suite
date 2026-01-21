@@ -14033,7 +14033,9 @@ export type Database = {
           descripcion: string | null
           estado: string | null
           fecha_vencimiento: string | null
+          health_status: string | null
           id: string
+          last_activity_at: string | null
           mandato_id: string | null
           order_index: number | null
           prioridad: string | null
@@ -14049,7 +14051,9 @@ export type Database = {
           descripcion?: string | null
           estado?: string | null
           fecha_vencimiento?: string | null
+          health_status?: string | null
           id?: string
+          last_activity_at?: string | null
           mandato_id?: string | null
           order_index?: number | null
           prioridad?: string | null
@@ -14065,7 +14069,9 @@ export type Database = {
           descripcion?: string | null
           estado?: string | null
           fecha_vencimiento?: string | null
+          health_status?: string | null
           id?: string
+          last_activity_at?: string | null
           mandato_id?: string | null
           order_index?: number | null
           prioridad?: string | null
