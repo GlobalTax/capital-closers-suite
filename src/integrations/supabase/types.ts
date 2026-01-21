@@ -2160,6 +2160,7 @@ export type Database = {
           created_at: string | null
           email: string
           first_name: string
+          first_seen_at: string | null
           full_name: string | null
           id: string
           import_batch_id: string | null
@@ -2167,10 +2168,18 @@ export type Database = {
           imported_at: string | null
           imported_by: string | null
           internal_notes: string | null
+          investment_range: string | null
+          investor_type: string | null
+          last_activity_at: string | null
           last_name: string | null
           origin: string
           phone: string | null
           position: string | null
+          preferred_language: string | null
+          preferred_location: string | null
+          rod_downloads_count: number | null
+          sectors_of_interest: string | null
+          source: string | null
           status: string | null
           updated_at: string | null
         }
@@ -2180,6 +2189,7 @@ export type Database = {
           created_at?: string | null
           email: string
           first_name: string
+          first_seen_at?: string | null
           full_name?: string | null
           id?: string
           import_batch_id?: string | null
@@ -2187,10 +2197,18 @@ export type Database = {
           imported_at?: string | null
           imported_by?: string | null
           internal_notes?: string | null
+          investment_range?: string | null
+          investor_type?: string | null
+          last_activity_at?: string | null
           last_name?: string | null
           origin?: string
           phone?: string | null
           position?: string | null
+          preferred_language?: string | null
+          preferred_location?: string | null
+          rod_downloads_count?: number | null
+          sectors_of_interest?: string | null
+          source?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -2200,6 +2218,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           first_name?: string
+          first_seen_at?: string | null
           full_name?: string | null
           id?: string
           import_batch_id?: string | null
@@ -2207,10 +2226,18 @@ export type Database = {
           imported_at?: string | null
           imported_by?: string | null
           internal_notes?: string | null
+          investment_range?: string | null
+          investor_type?: string | null
+          last_activity_at?: string | null
           last_name?: string | null
           origin?: string
           phone?: string | null
           position?: string | null
+          preferred_language?: string | null
+          preferred_location?: string | null
+          rod_downloads_count?: number | null
+          sectors_of_interest?: string | null
+          source?: string | null
           status?: string | null
           updated_at?: string | null
         }
