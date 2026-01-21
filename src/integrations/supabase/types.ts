@@ -5963,6 +5963,7 @@ export type Database = {
           margen_ebitda: number | null
           nivel_interes: string | null
           nombre: string
+          origen: string | null
           potencial_search_fund: boolean | null
           revenue: number | null
           sector: string | null
@@ -6015,6 +6016,7 @@ export type Database = {
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre: string
+          origen?: string | null
           potencial_search_fund?: boolean | null
           revenue?: number | null
           sector?: string | null
@@ -6067,6 +6069,7 @@ export type Database = {
           margen_ebitda?: number | null
           nivel_interes?: string | null
           nombre?: string
+          origen?: string | null
           potencial_search_fund?: boolean | null
           revenue?: number | null
           sector?: string | null
