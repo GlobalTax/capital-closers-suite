@@ -30,7 +30,9 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Loader2, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarIcon, Loader2, Trash2, Sparkles } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { updateTarea, deleteTarea } from "@/services/tareas.service";
@@ -48,6 +50,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { TaskEventHistory } from "@/components/tasks/TaskEventHistory";
 
 const formSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres"),
@@ -165,11 +168,21 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
         <div className="mx-auto w-full max-w-2xl">
           <DrawerHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <DrawerTitle>Editar Tarea</DrawerTitle>
-                <DrawerDescription>
-                  Modifica los detalles de la tarea
-                </DrawerDescription>
+              <div className="flex items-center gap-2">
+                <div>
+                  <DrawerTitle className="flex items-center gap-2">
+                    Editar Tarea
+                    {tarea?.ai_generated && (
+                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        IA
+                      </Badge>
+                    )}
+                  </DrawerTitle>
+                  <DrawerDescription>
+                    Modifica los detalles de la tarea
+                  </DrawerDescription>
+                </div>
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -352,7 +365,15 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
                 />
               </div>
 
-              <div className="flex gap-2 justify-end">
+              {/* AI Event History - only for AI-generated tasks */}
+              {tarea?.ai_generated && (
+                <>
+                  <Separator />
+                  <TaskEventHistory taskId={tarea.id} />
+                </>
+              )}
+
+              <div className="flex gap-2 justify-end pt-4">
                 <Button
                   type="button"
                   variant="outline"
