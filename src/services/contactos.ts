@@ -283,13 +283,14 @@ export const findContactoByEmail = async (email: string): Promise<Contacto | nul
   
   try {
     const normalizedEmail = normalizeEmail(email);
+    // Usar ilike para búsqueda case-insensitive, consistente con el índice único
     const { data, error } = await supabase
       .from('contactos')
       .select(`
         *,
         empresa_principal:empresas(id, nombre, cif)
       `)
-      .eq('email', normalizedEmail)
+      .ilike('email', normalizedEmail)
       .maybeSingle();
     
     if (error) {

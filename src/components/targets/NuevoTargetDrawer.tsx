@@ -137,35 +137,43 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
         sitio_web: values.sitioWeb?.trim() || undefined,
       });
 
-      // Manejar contacto: buscar existente o crear nuevo
-      if (values.email) {
-        const existingContact = await findContactoByEmail(values.email);
-        
-        if (existingContact) {
-          // Contacto existe: vincularlo a la nueva empresa
-          await asociarContactoAEmpresa(existingContact.id, nuevaEmpresa.id);
-          toast.info("Contacto existente vinculado", {
-            description: `${existingContact.nombre} ${existingContact.apellidos || ''} ya estaba en el CRM y se ha asociado a la empresa.`,
-          });
-        } else {
-          // Contacto no existe: crear nuevo
-          const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
+      // Manejar contacto: buscar existente o crear nuevo (NO bloqueante para el target)
+      try {
+        if (values.email) {
+          const existingContact = await findContactoByEmail(values.email);
+          
+          if (existingContact) {
+            // Contacto existe: vincularlo a la nueva empresa
+            await asociarContactoAEmpresa(existingContact.id, nuevaEmpresa.id);
+            toast.info("Contacto existente vinculado", {
+              description: `${existingContact.nombre} ${existingContact.apellidos || ''} ya estaba en el CRM y se ha asociado a la empresa.`,
+            });
+          } else {
+            // Contacto no existe: crear nuevo
+            const nombreParts = (values.contactoPrincipal || "Contacto").split(" ");
+            await createContacto({
+              nombre: nombreParts[0] || "Contacto",
+              apellidos: nombreParts.slice(1).join(" ") || undefined,
+              email: values.email,
+              telefono: values.telefono || undefined,
+              empresa_principal_id: nuevaEmpresa.id,
+            });
+          }
+        } else if (values.contactoPrincipal) {
+          // Solo nombre de contacto sin email
+          const nombreParts = values.contactoPrincipal.split(" ");
           await createContacto({
             nombre: nombreParts[0] || "Contacto",
             apellidos: nombreParts.slice(1).join(" ") || undefined,
-            email: values.email,
             telefono: values.telefono || undefined,
             empresa_principal_id: nuevaEmpresa.id,
           });
         }
-      } else if (values.contactoPrincipal) {
-        // Solo nombre de contacto sin email
-        const nombreParts = values.contactoPrincipal.split(" ");
-        await createContacto({
-          nombre: nombreParts[0] || "Contacto",
-          apellidos: nombreParts.slice(1).join(" ") || undefined,
-          telefono: values.telefono || undefined,
-          empresa_principal_id: nuevaEmpresa.id,
+      } catch (contactError: any) {
+        // El contacto falló pero el target se creó correctamente
+        console.warn('[NuevoTargetDrawer] Error al crear/asociar contacto:', contactError);
+        toast.warning("Empresa creada, pero hubo un problema con el contacto", {
+          description: contactError?.message || "Puedes asociar el contacto manualmente después.",
         });
       }
 
