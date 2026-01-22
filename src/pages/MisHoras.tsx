@@ -137,32 +137,32 @@ export default function MisHoras() {
     : 0;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
+    <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
+      {/* Header - responsive */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Mis Horas</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Tu inversión de tiempo</p>
+        <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Mis Horas</h1>
+        <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Tu inversión de tiempo</p>
       </div>
 
       {activeTimer && <ActiveTimerWidget activeTimer={activeTimer} onStop={handleStopTimer} />}
 
-      {/* Compact KPIs - Horizontal inline */}
-      <div className="flex flex-wrap items-center gap-6 py-4 px-1">
+      {/* Compact KPIs - Responsive */}
+      <div className="flex flex-wrap items-center gap-4 md:gap-6 py-3 md:py-4 px-1">
         <div>
-          <p className="text-3xl font-light tabular-nums tracking-tight">{todayHours.toFixed(1)}h</p>
-          <p className="text-xs text-muted-foreground">hoy</p>
+          <p className="text-2xl md:text-3xl font-light tabular-nums tracking-tight">{todayHours.toFixed(1)}h</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">hoy</p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="h-6 md:h-8 w-px bg-border" />
         <div>
-          <p className="text-3xl font-light tabular-nums tracking-tight">{thisWeekHours.toFixed(1)}h</p>
-          <p className="text-xs text-muted-foreground">esta semana</p>
+          <p className="text-2xl md:text-3xl font-light tabular-nums tracking-tight">{thisWeekHours.toFixed(1)}h</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">semana</p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="h-6 md:h-8 w-px bg-border" />
         <div>
-          <p className="text-3xl font-light tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
-          <p className="text-xs text-muted-foreground">este mes</p>
+          <p className="text-2xl md:text-3xl font-light tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">mes</p>
         </div>
-        <div className="h-8 w-px bg-border hidden sm:block" />
+        <div className="h-6 md:h-8 w-px bg-border hidden sm:block" />
         <div className="hidden sm:block">
           <div className="flex items-center gap-2">
             <p 

@@ -453,20 +453,20 @@ export default function Tareas() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
           <div>
-            <h1 className="text-3xl font-medium">Tareas</h1>
-            <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
+            <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
+            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-4">
-              <Skeleton className="h-6 w-32 mb-4" />
-              <div className="space-y-3">
+            <Card key={i} className="p-3 md:p-4">
+              <Skeleton className="h-5 md:h-6 w-24 md:w-32 mb-3 md:mb-4" />
+              <div className="space-y-2 md:space-y-3">
                 {[1, 2, 3].map((j) => (
-                  <Skeleton key={j} className="h-20 w-full" />
+                  <Skeleton key={j} className="h-16 md:h-20 w-full" />
                 ))}
               </div>
             </Card>
@@ -477,15 +477,16 @@ export default function Tareas() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-3xl font-medium">Tareas</h1>
-          <p className="text-muted-foreground mt-1">Gestiona las tareas del equipo</p>
+          <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
+          <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
         </div>
-        <Button onClick={() => setDrawerOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva Tarea
+        <Button onClick={() => setDrawerOpen(true)} size="sm" className="w-fit h-8 md:h-9">
+          <Plus className="mr-1.5 h-4 w-4" />
+          <span className="hidden xs:inline">Nueva Tarea</span>
+          <span className="xs:hidden">Nueva</span>
         </Button>
       </div>
 
@@ -513,26 +514,26 @@ export default function Tareas() {
       </Tabs>
 
       {/* Filtros y Vista Toggle */}
-      <Card className="p-4">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            {/* Filtro Responsable */}
+      <Card className="p-3 md:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+            {/* Filtro Responsable - hide label on mobile */}
             {responsablesUnicos.length > 0 && (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm text-muted-foreground">Responsable:</span>
+              <div className="flex gap-2 items-center overflow-x-auto">
+                <span className="text-xs md:text-sm text-muted-foreground shrink-0 hidden sm:inline">Responsable:</span>
                 <div className="flex gap-1">
                   <Badge
                     variant={filtroResponsable === "" ? "default" : "outline"}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-xs shrink-0"
                     onClick={() => setFiltroResponsable("")}
                   >
                     Todos
                   </Badge>
-                  {responsablesUnicos.map((responsable) => (
+                  {responsablesUnicos.slice(0, 3).map((responsable) => (
                     <Badge
                       key={responsable}
                       variant={filtroResponsable === responsable ? "default" : "outline"}
-                      className="cursor-pointer"
+                      className="cursor-pointer text-xs shrink-0"
                       onClick={() => setFiltroResponsable(responsable!)}
                     >
                       {responsable}
@@ -605,22 +606,24 @@ export default function Tareas() {
           </div>
 
           {/* Toggle Vista */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 md:gap-2 shrink-0">
             <Button
               variant={vistaActual === "tabla" ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaActual("tabla")}
+              className="h-7 md:h-8 px-2 md:px-3"
             >
-              <TableIcon className="h-4 w-4 mr-2" />
-              Tabla
+              <TableIcon className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Tabla</span>
             </Button>
             <Button
               variant={vistaActual === "kanban" ? "default" : "outline"}
               size="sm"
               onClick={() => setVistaActual("kanban")}
+              className="h-7 md:h-8 px-2 md:px-3"
             >
-              <Columns className="h-4 w-4 mr-2" />
-              Kanban
+              <Columns className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Kanban</span>
             </Button>
           </div>
         </div>
@@ -634,7 +637,7 @@ export default function Tareas() {
         />
       )}
 
-      {/* Vista Kanban */}
+      {/* Vista Kanban - horizontal scroll on mobile */}
       {vistaActual === "kanban" && (
         <DndContext 
           sensors={sensors} 
@@ -642,19 +645,22 @@ export default function Tareas() {
           onDragStart={handleDragStart} 
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {COLUMN_CONFIG.map((col) => (
-              <KanbanColumn
-                key={col.id}
-                id={col.id}
-                label={col.label}
-                tareas={tareasPorEstado[col.id]}
-                quickAddValue={nuevasTareas[col.id]}
-                onQuickAddChange={(value) => setNuevasTareas(prev => ({ ...prev, [col.id]: value }))}
-                onQuickAdd={() => handleQuickAdd(col.id)}
-                onTareaClick={handleTareaClick}
-              />
-            ))}
+          <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 pb-4">
+            <div className="grid grid-flow-col md:grid-flow-row md:grid-cols-3 gap-3 md:gap-4 min-w-max md:min-w-0">
+              {COLUMN_CONFIG.map((col) => (
+                <div key={col.id} className="w-72 md:w-auto shrink-0 md:shrink">
+                  <KanbanColumn
+                    id={col.id}
+                    label={col.label}
+                    tareas={tareasPorEstado[col.id]}
+                    quickAddValue={nuevasTareas[col.id]}
+                    onQuickAddChange={(value) => setNuevasTareas(prev => ({ ...prev, [col.id]: value }))}
+                    onQuickAdd={() => handleQuickAdd(col.id)}
+                    onTareaClick={handleTareaClick}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <DragOverlay>

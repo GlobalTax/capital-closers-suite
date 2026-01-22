@@ -60,9 +60,9 @@ export default function Reportes() {
   if (loading) {
     return (
       <div>
-        <PageHeader title="Reportes M&A" description="Dashboard ejecutivo y análisis avanzado" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[1,2,3,4,5,6,7,8].map(i => <Skeleton key={i} className="h-28" />)}
+        <PageHeader title="Reportes M&A" description="Dashboard ejecutivo y análisis" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+          {[1,2,3,4,5,6,7,8].map(i => <Skeleton key={i} className="h-24 md:h-28" />)}
         </div>
       </div>
     );
@@ -72,47 +72,49 @@ export default function Reportes() {
     <div>
       <PageHeader 
         title="Reportes M&A" 
-        description="Dashboard ejecutivo y análisis avanzado"
-        icon={<BarChart3 className="w-6 h-6" />}
+        description="Dashboard ejecutivo y análisis"
+        icon={<BarChart3 className="w-5 h-5 md:w-6 md:h-6" />}
       />
 
-      {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
+      {/* Filters - responsive */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-4 md:mb-6">
         <Select 
           value={filters.tipoMandato} 
           onValueChange={(v) => setFilters({ ...filters, tipoMandato: v as any })}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-28 md:w-40 h-8 md:h-9 text-sm">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-background">
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="compra">Compra</SelectItem>
             <SelectItem value="venta">Venta</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={refetch}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Actualizar
+        <Button variant="outline" size="sm" onClick={refetch} className="h-8 px-2 md:px-3">
+          <RefreshCw className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1.5">Actualizar</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={handleExportPDF}>
-          <Download className="w-4 h-4 mr-2" /> Exportar PDF
+        <Button variant="outline" size="sm" onClick={handleExportPDF} className="h-8 px-2 md:px-3">
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1.5">PDF</span>
         </Button>
       </div>
 
-      <div id="report-content" className="space-y-6">
+      <div id="report-content" className="space-y-4 md:space-y-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {kpis.map((kpi) => {
             const Icon = iconMap[kpi.icon] || FileText;
             return (
               <Card key={kpi.id}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
-                  <Icon className={`w-5 h-5 ${kpi.color}`} />
+                <CardHeader className="flex flex-row items-center justify-between p-3 md:p-4 pb-1 md:pb-2">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">{kpi.title}</CardTitle>
+                  <Icon className={`w-4 h-4 md:w-5 md:h-5 ${kpi.color}`} />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-medium">{kpi.value}</div>
-                  <p className="text-xs text-muted-foreground">{kpi.description}</p>
+                <CardContent className="p-3 md:p-4 pt-0">
+                  <div className="text-xl md:text-2xl font-medium">{kpi.value}</div>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">{kpi.description}</p>
                 </CardContent>
               </Card>
             );
@@ -121,13 +123,13 @@ export default function Reportes() {
 
         <AgingAlertsBanner variant="compact" showDismiss={false} />
 
-        {/* Tabs */}
+        {/* Tabs - scrollable on mobile */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-            <TabsTrigger value="winloss">Win/Loss</TabsTrigger>
-            <TabsTrigger value="tiempo">Tiempo</TabsTrigger>
-            <TabsTrigger value="comparacion">Compra vs Venta</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto flex-nowrap justify-start h-auto p-1 gap-1">
+            <TabsTrigger value="pipeline" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">Pipeline</TabsTrigger>
+            <TabsTrigger value="winloss" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">Win/Loss</TabsTrigger>
+            <TabsTrigger value="tiempo" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">Tiempo</TabsTrigger>
+            <TabsTrigger value="comparacion" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">Compra vs Venta</TabsTrigger>
             <TabsTrigger value="alertas">Alertas</TabsTrigger>
             <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
           </TabsList>

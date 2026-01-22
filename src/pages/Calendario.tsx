@@ -62,20 +62,20 @@ export default function Calendario() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6">
       <PageHeader
         title="Calendario"
-        subtitle="Visualiza fechas de cierre, hitos y tareas de tus mandatos"
+        subtitle="Visualiza fechas de cierre, hitos y tareas"
         icon={CalendarIcon}
       />
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Controls - responsive */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={navigatePrevious}>
+          <Button variant="outline" size="icon" onClick={navigatePrevious} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={goToToday}>
+          <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3">
             Hoy
           </Button>
           <Button variant="outline" size="icon" onClick={navigateNext}>
