@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
 import type { TimeEntry, MandatoChecklistTask, TimeFilterState, TimeEntryValueType } from "@/types";
-import { startOfWeek, startOfMonth, endOfDay, isToday, isThisWeek } from "date-fns";
+import { startOfMonth, endOfDay, isToday, isThisWeek } from "date-fns";
 import { VALUE_TYPE_CONFIG } from "@/types";
 
 export default function MisHoras() {
@@ -20,7 +20,7 @@ export default function MisHoras() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [mandatos, setMandatos] = useState<{ id: string; name: string }[]>([]);
   const [filters, setFilters] = useState<TimeFilterState>({
-    startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
+    startDate: startOfMonth(new Date()),
     endDate: endOfDay(new Date()),
     userId: 'all',
     mandatoId: 'all',

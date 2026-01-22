@@ -2472,6 +2472,71 @@ export type Database = {
           },
         ]
       }
+      campaign_cost_history: {
+        Row: {
+          amount: number | null
+          campaign_cost_id: string
+          campaign_name: string | null
+          change_type: string | null
+          changed_by: string | null
+          channel: string | null
+          cost_per_result: number | null
+          daily_budget: number | null
+          delivery_status: string | null
+          id: string
+          internal_status: string | null
+          monthly_budget: number | null
+          notes: string | null
+          recorded_at: string
+          results: number | null
+          target_cpl: number | null
+        }
+        Insert: {
+          amount?: number | null
+          campaign_cost_id: string
+          campaign_name?: string | null
+          change_type?: string | null
+          changed_by?: string | null
+          channel?: string | null
+          cost_per_result?: number | null
+          daily_budget?: number | null
+          delivery_status?: string | null
+          id?: string
+          internal_status?: string | null
+          monthly_budget?: number | null
+          notes?: string | null
+          recorded_at?: string
+          results?: number | null
+          target_cpl?: number | null
+        }
+        Update: {
+          amount?: number | null
+          campaign_cost_id?: string
+          campaign_name?: string | null
+          change_type?: string | null
+          changed_by?: string | null
+          channel?: string | null
+          cost_per_result?: number | null
+          daily_budget?: number | null
+          delivery_status?: string | null
+          id?: string
+          internal_status?: string | null
+          monthly_budget?: number | null
+          notes?: string | null
+          recorded_at?: string
+          results?: number | null
+          target_cpl?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_cost_history_campaign_cost_id_fkey"
+            columns: ["campaign_cost_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_costs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_costs: {
         Row: {
           amount: number
@@ -2482,11 +2547,17 @@ export type Database = {
           created_at: string
           created_by: string | null
           ctr: number | null
+          daily_budget: number | null
+          delivery_status: string | null
           id: string
           impressions: number | null
+          internal_status: string | null
+          monthly_budget: number | null
           notes: string | null
           period_end: string
           period_start: string
+          results: number | null
+          target_cpl: number | null
           updated_at: string
         }
         Insert: {
@@ -2498,11 +2569,17 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ctr?: number | null
+          daily_budget?: number | null
+          delivery_status?: string | null
           id?: string
           impressions?: number | null
+          internal_status?: string | null
+          monthly_budget?: number | null
           notes?: string | null
           period_end: string
           period_start: string
+          results?: number | null
+          target_cpl?: number | null
           updated_at?: string
         }
         Update: {
@@ -2514,11 +2591,17 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ctr?: number | null
+          daily_budget?: number | null
+          delivery_status?: string | null
           id?: string
           impressions?: number | null
+          internal_status?: string | null
+          monthly_budget?: number | null
           notes?: string | null
           period_end?: string
           period_start?: string
+          results?: number | null
+          target_cpl?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -15277,6 +15360,39 @@ export type Database = {
           time_to_sale?: string
           updated_at?: string | null
           valuation?: string
+        }
+        Relationships: []
+      }
+      video_slides: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          is_active: boolean
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url: string
+          is_active?: boolean
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
