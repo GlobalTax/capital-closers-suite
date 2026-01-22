@@ -33,13 +33,31 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+// Hook to get user names map
+function useUserNamesMap() {
+  return useQuery({
+    queryKey: ['admin-users-names-map'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('admin_users')
+        .select('user_id, full_name')
+        .eq('is_active', true);
+      return new Map<string, string>(
+        data?.map(u => [u.user_id, u.full_name || 'Sin nombre']) || []
+      );
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 interface TareaCardProps {
   tarea: Tarea;
   isDragging?: boolean;
   onClick?: () => void;
+  getUserName?: (userId: string | null | undefined) => string | null;
 }
 
-function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
+function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: tarea.id,
   });
@@ -64,9 +82,13 @@ function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
     new Date(tarea.fecha_vencimiento) < new Date() && 
     tarea.estado !== "completada";
 
-  const getInitials = (id?: string) => {
-    if (!id) return "?";
-    return id.slice(0, 2).toUpperCase();
+  const getInitials = (name?: string) => {
+    if (!name) return "?";
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -121,9 +143,9 @@ function TareaCard({ tarea, isDragging = false, onClick }: TareaCardProps) {
           </div>
         )}
         {tarea.asignado_a && (
-          <Avatar className="h-5 w-5">
+          <Avatar className="h-5 w-5" title={getUserName?.(tarea.asignado_a) || undefined}>
             <AvatarFallback className="text-[10px] bg-primary/10">
-              {getInitials(tarea.asignado_a)}
+              {getInitials(getUserName?.(tarea.asignado_a) || undefined)}
             </AvatarFallback>
           </Avatar>
         )}
@@ -140,6 +162,7 @@ interface KanbanColumnProps {
   onQuickAddChange: (value: string) => void;
   onQuickAdd: () => void;
   onTareaClick: (tarea: Tarea) => void;
+  getUserName?: (userId: string | null | undefined) => string | null;
 }
 
 function KanbanColumn({ 
@@ -149,7 +172,8 @@ function KanbanColumn({
   quickAddValue, 
   onQuickAddChange, 
   onQuickAdd,
-  onTareaClick 
+  onTareaClick,
+  getUserName
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -193,6 +217,7 @@ function KanbanColumn({
               key={tarea.id} 
               tarea={tarea} 
               onClick={() => onTareaClick(tarea)}
+              getUserName={getUserName}
             />
           ))}
           {tareas.length === 0 && (
@@ -217,6 +242,7 @@ export default function Tareas() {
   const { data: tareas = [], isLoading, refetch } = useTareas();
   const updateMutation = useUpdateTarea();
   const createMutation = useCreateTarea();
+  const { data: userNamesMap } = useUserNamesMap();
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -227,6 +253,11 @@ export default function Tareas() {
     },
   });
 
+  // Helper to get user name
+  const getUserName = (userId: string | null | undefined) => {
+    if (!userId) return null;
+    return userNamesMap?.get(userId) || null;
+  };
   const [filtroTipo, setFiltroTipo] = useState<"mis_tareas" | "equipo" | "compartidas">("mis_tareas");
   const [filtroResponsable, setFiltroResponsable] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<TareaEstado | "">("");
@@ -325,7 +356,7 @@ export default function Tareas() {
 
   const handleQuickAdd = async (estado: TareaEstado) => {
     const titulo = nuevasTareas[estado].trim();
-    if (!titulo) return;
+    if (!titulo || !currentUser) return;
 
     try {
       await createMutation.mutateAsync({
@@ -333,6 +364,8 @@ export default function Tareas() {
         estado,
         prioridad: "media",
         order_index: 0,
+        creado_por: currentUser.id,
+        tipo: 'individual',
       });
       setNuevasTareas((prev) => ({ ...prev, [estado]: "" }));
       refetch();
@@ -433,7 +466,7 @@ export default function Tareas() {
     {
       key: "asignado_a",
       label: "Responsable",
-      render: (value: string) => value || "Sin asignar",
+      render: (value: string) => getUserName(value) || "Sin asignar",
     },
     {
       key: "fecha_vencimiento",
@@ -536,7 +569,7 @@ export default function Tareas() {
                       className="cursor-pointer text-xs shrink-0"
                       onClick={() => setFiltroResponsable(responsable!)}
                     >
-                      {responsable}
+                      {getUserName(responsable) || responsable}
                     </Badge>
                   ))}
                 </div>
@@ -657,6 +690,7 @@ export default function Tareas() {
                     onQuickAddChange={(value) => setNuevasTareas(prev => ({ ...prev, [col.id]: value }))}
                     onQuickAdd={() => handleQuickAdd(col.id)}
                     onTareaClick={handleTareaClick}
+                    getUserName={getUserName}
                   />
                 </div>
               ))}
@@ -664,7 +698,7 @@ export default function Tareas() {
           </div>
 
           <DragOverlay>
-            {activeDragId ? <TareaCard tarea={tareas.find((t) => t.id === activeDragId)!} isDragging /> : null}
+            {activeDragId ? <TareaCard tarea={tareas.find((t) => t.id === activeDragId)!} isDragging getUserName={getUserName} /> : null}
           </DragOverlay>
         </DndContext>
       )}

@@ -376,6 +376,96 @@ export function EditarTareaDrawer({ open, onOpenChange, tarea, onSuccess }: Edit
                 />
               </div>
 
+              {/* Visibility Settings */}
+              <Separator />
+              
+              <FormField
+                control={form.control}
+                name="tipo"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base flex items-center gap-2">
+                        {field.value === 'grupal' ? (
+                          <Users className="h-4 w-4" />
+                        ) : (
+                          <Lock className="h-4 w-4" />
+                        )}
+                        {field.value === 'grupal' ? 'Tarea de equipo' : 'Tarea privada'}
+                      </FormLabel>
+                      <FormDescription>
+                        {field.value === 'grupal' 
+                          ? 'Visible para todos los miembros del equipo' 
+                          : 'Solo visible para ti, el asignado y usuarios compartidos'}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value === 'grupal'}
+                        onCheckedChange={(checked) => field.onChange(checked ? 'grupal' : 'individual')}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch('tipo') === 'grupal' && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
+                  <p className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    ⚠️ Todos los miembros del equipo podrán ver esta tarea
+                  </p>
+                </div>
+              )}
+
+              {form.watch('tipo') === 'individual' && (
+                <FormField
+                  control={form.control}
+                  name="compartido_con"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Share2 className="h-4 w-4" />
+                        Compartir con
+                      </FormLabel>
+                      <FormDescription className="text-xs">
+                        Selecciona usuarios que puedan ver esta tarea privada
+                      </FormDescription>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {loadingUsuarios ? (
+                          <div className="flex items-center p-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        ) : (
+                          usuarios.map((user) => (
+                            <div key={user.user_id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`share-${user.user_id}`}
+                                checked={field.value?.includes(user.user_id)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, user.user_id]);
+                                  } else {
+                                    field.onChange(current.filter(id => id !== user.user_id));
+                                  }
+                                }}
+                              />
+                              <label
+                                htmlFor={`share-${user.user_id}`}
+                                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {user.full_name || 'Sin nombre'}
+                              </label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* AI Event History - only for AI-generated tasks */}
               {tarea?.ai_generated && (
                 <>
