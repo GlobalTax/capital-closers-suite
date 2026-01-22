@@ -9,11 +9,11 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { CommandPalette } from "@/components/shared/CommandPalette";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 import { queryClient } from "@/lib/query-client";
-
 // Lazy load de páginas para mejorar performance inicial
 const Login = lazy(() => import("./pages/auth/Login"));
 const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
@@ -116,20 +116,22 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      <TooltipProvider>
-        <ThemeProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter 
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true
-            }}
-          >
-            <AppContent />
-          </BrowserRouter>
-        </ThemeProvider>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <ThemeProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter 
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <AppContent />
+            </BrowserRouter>
+          </ThemeProvider>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

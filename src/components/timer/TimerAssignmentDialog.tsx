@@ -22,19 +22,28 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { MandatoLeadSelect } from '@/components/shared/MandatoLeadSelect';
+import { MandatoSelect } from '@/components/shared/MandatoSelect';
+import { LeadByMandatoSelect } from '@/components/shared/LeadByMandatoSelect';
 import { useTimerStore, formatTime } from '@/stores/useTimerStore';
 import { useActiveWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { createTimeEntry } from '@/services/timeTracking';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
-import type { SearchItemType } from '@/hooks/useMandatoLeadSearch';
 
-// UUID for "Trabajo General" (matches MandatoLeadSelect)
+// UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
 
+// Internal project IDs that don't have leads
+const INTERNAL_PROJECT_IDS = [
+  GENERAL_WORK_ID,
+  '00000000-0000-0000-0000-000000000002', // Formación
+  '00000000-0000-0000-0000-000000000003', // Desarrollo de negocio
+  '00000000-0000-0000-0000-000000000004', // Administración
+  '00000000-0000-0000-0000-000000000005', // Marketing
+];
+
 interface FormData {
-  selectedId: string;
-  selectedType: SearchItemType | null;
+  mandatoId: string;
+  leadId: string | null;
   valueType: TimeEntryValueType;
   workTaskTypeId: string;
   description: string;
@@ -60,8 +69,8 @@ export function TimerAssignmentDialog() {
   
   const { register, handleSubmit, watch, setValue, reset } = useForm<FormData>({
     defaultValues: {
-      selectedId: '',
-      selectedType: null,
+      mandatoId: '',
+      leadId: null,
       valueType: 'soporte',
       workTaskTypeId: '',
       description: '',
@@ -73,8 +82,8 @@ export function TimerAssignmentDialog() {
   useEffect(() => {
     if (isAssignmentModalOpen) {
       reset({
-        selectedId: '',
-        selectedType: null,
+        mandatoId: '',
+        leadId: null,
         valueType: presetValueType || 'soporte',
         workTaskTypeId: presetWorkTaskTypeId || '',
         description: '',
@@ -83,31 +92,35 @@ export function TimerAssignmentDialog() {
     }
   }, [isAssignmentModalOpen, presetWorkTaskTypeId, presetValueType, reset]);
   
-  const selectedId = watch('selectedId');
-  const selectedType = watch('selectedType');
+  const mandatoId = watch('mandatoId');
+  const leadId = watch('leadId');
   const selectedValueType = watch('valueType');
   
-  // Smart defaults: Update valueType and isBillable based on selection type
+  // Check if mandato is an internal project
+  const isInternalProject = INTERNAL_PROJECT_IDS.includes(mandatoId);
+  
+  // Reset leadId when mandato changes
   useEffect(() => {
-    if (selectedType === 'contacto') {
-      // Lead selected → soporte, not billable
+    setValue('leadId', null);
+  }, [mandatoId, setValue]);
+  
+  // Smart defaults: Update valueType and isBillable based on mandato selection
+  useEffect(() => {
+    if (isInternalProject) {
+      // Internal project → SOPORTE by default, not billable
       setValue('valueType', 'soporte');
       setValue('isBillable', false);
-    } else if (selectedType === 'mandato' && selectedId !== GENERAL_WORK_ID && selectedId !== '') {
-      // Mandato selected → CORE M&A by default, billable
+    } else if (mandatoId && mandatoId !== '') {
+      // Real mandato selected → CORE M&A by default, billable
       setValue('valueType', 'core_ma');
       setValue('isBillable', true);
-    } else if (selectedType === 'internal' || selectedId === GENERAL_WORK_ID) {
-      // General work → SOPORTE by default, not billable
-      setValue('valueType', 'soporte');
-      setValue('isBillable', false);
     }
-  }, [selectedId, selectedType, setValue]);
+  }, [mandatoId, isInternalProject, setValue]);
   
   const onSubmit = async (data: FormData) => {
-    // Validate selection
-    if (!data.selectedId || !data.selectedType) {
-      toast.error('Selecciona un mandato o lead');
+    // Validate mandato selection (required)
+    if (!data.mandatoId) {
+      toast.error('Selecciona un mandato');
       return;
     }
     
@@ -124,7 +137,7 @@ export function TimerAssignmentDialog() {
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (pendingTimeSeconds * 1000));
       
-      // Prepare entry based on selection type
+      // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
       const entryData: Record<string, any> = {
         work_task_type_id: data.workTaskTypeId,
         value_type: data.valueType,
@@ -134,16 +147,9 @@ export function TimerAssignmentDialog() {
         description: data.description?.trim() || 'Trabajo registrado con timer',
         is_billable: data.isBillable,
         work_type: 'Otro',
-        mandato_id: null,
-        contacto_id: null,
+        mandato_id: data.mandatoId,
+        mandate_lead_id: data.leadId || null, // Optional: null means general hours for the mandato
       };
-
-      // Set the correct ID based on type
-      if (data.selectedType === 'mandato' || data.selectedType === 'internal') {
-        entryData.mandato_id = data.selectedId;
-      } else if (data.selectedType === 'contacto') {
-        entryData.contacto_id = data.selectedId;
-      }
       
       await createTimeEntry(entryData);
       
@@ -188,23 +194,29 @@ export function TimerAssignmentDialog() {
         </DialogHeader>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          {/* 1. Mandato/Lead Select */}
+          {/* 1. Mandato Select (Required) */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Mandato</Label>
-            <MandatoLeadSelect
-              value={selectedId}
-              valueType={selectedType}
-              onValueChange={(value, type) => {
-                setValue('selectedId', value);
-                setValue('selectedType', type);
-              }}
-              placeholder="Seleccionar mandato o lead..."
+            <Label className="text-xs font-medium text-muted-foreground">Mandato *</Label>
+            <MandatoSelect
+              value={mandatoId}
+              onValueChange={(value) => setValue('mandatoId', value)}
               includeGeneralWork
-              includeLeads
             />
           </div>
           
-          {/* 2. Tipo de Valor - Toggle Buttons */}
+          {/* 2. Lead Select (Optional, dependent on mandato) */}
+          {mandatoId && !isInternalProject && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Lead (opcional)</Label>
+              <LeadByMandatoSelect
+                mandatoId={mandatoId}
+                value={leadId}
+                onValueChange={(value) => setValue('leadId', value)}
+              />
+            </div>
+          )}
+          
+          {/* 3. Tipo de Valor - Toggle Buttons */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de Valor</Label>
             <ToggleGroup 
@@ -251,9 +263,9 @@ export function TimerAssignmentDialog() {
             </ToggleGroup>
           </div>
           
-          {/* 3. Tipo de Tarea */}
+          {/* 4. Tipo de Tarea */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Tipo de Tarea</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de Tarea *</Label>
             <Select
               value={watch('workTaskTypeId')}
               onValueChange={(value) => setValue('workTaskTypeId', value)}
