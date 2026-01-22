@@ -175,9 +175,14 @@ export function LeadByMandatoSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[350px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder={isProspeccionProject ? "Buscar prospecto..." : "Buscar lead..."} />
-          <CommandList className="max-h-[250px]">
+        <Command
+          filter={(value, search) => {
+            if (value.toLowerCase().includes(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
+          <CommandInput placeholder={isProspeccionProject ? `Buscar entre ${prospects.length} prospectos...` : "Buscar lead..."} />
+          <CommandList className="max-h-[400px]">
             <CommandEmpty>{isProspeccionProject ? 'No se encontraron prospectos' : 'No se encontraron leads'}</CommandEmpty>
             
             {/* Option for no lead/prospect (general hours) */}
@@ -205,7 +210,7 @@ export function LeadByMandatoSelect({
             
             {/* Prospects list (for Prospección project) */}
             {isProspeccionProject && prospects.length > 0 && (
-              <CommandGroup heading={`🏢 Prospectos (${prospects.length})`}>
+              <CommandGroup heading={`🏢 Prospectos (${prospects.length} disponibles)`}>
                 {prospects.map((prospect) => (
                   <CommandItem
                     key={prospect.id}
