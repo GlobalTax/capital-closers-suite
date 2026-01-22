@@ -44,6 +44,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import type { DocumentWithVersion, IdiomaTeaser } from "@/types/documents";
 import type { MandatoTipo } from "@/types";
+import { validateTeaserFile } from "@/lib/file-utils";
 
 interface DocumentosTabProps {
   mandatoId: string;
@@ -140,6 +141,13 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   };
 
   const handleTeaserUpload = async (file: File, idioma: IdiomaTeaser) => {
+    // Validación proactiva (defensa en profundidad)
+    const validation = validateTeaserFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
     const setUploading = idioma === 'ES' ? setUploadingTeaserES : setUploadingTeaserEN;
     setUploading(true);
     
@@ -389,16 +397,25 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           </AlertDescription>
         </Alert>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        Formatos: PDF, PPTX • Máx: 10MB
+      </p>
       
       <input
         type="file"
         id={`teaser-upload-${idioma}`}
         className="hidden"
-        accept=".pdf,.doc,.docx,.ppt,.pptx"
+        accept=".pdf,.pptx"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
-            handleTeaserUpload(file, idioma);
+            const validation = validateTeaserFile(file);
+            if (!validation.valid) {
+              toast.error(validation.error);
+            } else {
+              handleTeaserUpload(file, idioma);
+            }
           }
           e.target.value = '';
         }}
