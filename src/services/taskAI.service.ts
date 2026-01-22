@@ -59,17 +59,20 @@ export function mapParsedTaskToTarea(
 export async function createTasksFromAI(
   tasks: ParsedTask[], 
   sourceText: string,
+  userId: string,
   targetType: 'tarea' | 'checklist' = 'tarea'
 ): Promise<{ success: boolean; created: number; errors: string[] }> {
+  if (!userId) {
+    return { success: false, created: 0, errors: ['Usuario no autenticado'] };
+  }
+
   const errors: string[] = [];
   let created = 0;
-
-  const { data: { user } } = await supabase.auth.getUser();
 
   for (const task of tasks) {
     try {
       if (targetType === 'tarea') {
-        const payload = mapParsedTaskToTarea(task, sourceText, user?.id);
+        const payload = mapParsedTaskToTarea(task, sourceText, userId);
         
         const { data, error } = await supabase
           .from('tareas')
@@ -82,7 +85,7 @@ export async function createTasksFromAI(
           continue;
         }
 
-        // Log the AI event - cast payload to any to satisfy Json type
+        // Log the AI event
         const eventPayload = {
           original_input: sourceText,
           parsed_task: JSON.parse(JSON.stringify(task)),
@@ -94,7 +97,7 @@ export async function createTasksFromAI(
           task_type: 'tarea',
           event_type: 'AI_CREATED',
           payload: eventPayload as unknown as Record<string, never>,
-          created_by: user?.id,
+          created_by: userId,
         });
 
         created++;

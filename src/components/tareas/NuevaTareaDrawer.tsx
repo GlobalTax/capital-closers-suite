@@ -218,7 +218,12 @@ export function NuevaTareaDrawer({ open, onOpenChange, onSuccess }: NuevaTareaDr
   const handleCreateFromAI = async () => {
     if (localTasks.length === 0) return;
     
-    const success = await createTasks(localTasks, sourceText);
+    if (!currentUser?.id) {
+      toast.error('Sesión expirada. Por favor, recarga la página.');
+      return;
+    }
+    
+    const success = await createTasks(localTasks, sourceText, currentUser.id);
     if (success) {
       setAiInput("");
       setLocalTasks([]);

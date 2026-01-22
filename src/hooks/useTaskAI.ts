@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 interface UseTaskAIReturn {
   parseInput: (text: string) => Promise<TaskAIResponse | null>;
-  createTasks: (tasks: ParsedTask[], sourceText: string, targetType?: 'tarea' | 'checklist') => Promise<boolean>;
+  createTasks: (tasks: ParsedTask[], sourceText: string, userId: string, targetType?: 'tarea' | 'checklist') => Promise<boolean>;
   parsedTasks: ParsedTask[];
   reasoning: string;
   isLoading: boolean;
@@ -42,12 +42,13 @@ export function useTaskAI(): UseTaskAIReturn {
   });
 
   const createMutation = useMutation({
-    mutationFn: async ({ tasks, sourceText, targetType }: { 
+    mutationFn: async ({ tasks, sourceText, userId, targetType }: { 
       tasks: ParsedTask[]; 
-      sourceText: string; 
+      sourceText: string;
+      userId: string;
       targetType: 'tarea' | 'checklist';
     }) => {
-      return createTasksFromAI(tasks, sourceText, targetType);
+      return createTasksFromAI(tasks, sourceText, userId, targetType);
     },
     onSuccess: (result) => {
       if (result.success) {
@@ -81,6 +82,7 @@ export function useTaskAI(): UseTaskAIReturn {
   const createTasks = useCallback(async (
     tasks: ParsedTask[], 
     sourceText: string,
+    userId: string,
     targetType: 'tarea' | 'checklist' = 'tarea'
   ): Promise<boolean> => {
     if (tasks.length === 0) {
@@ -88,7 +90,12 @@ export function useTaskAI(): UseTaskAIReturn {
       return false;
     }
 
-    const result = await createMutation.mutateAsync({ tasks, sourceText, targetType });
+    if (!userId) {
+      toast.error('Sesión expirada. Por favor, recarga la página.');
+      return false;
+    }
+
+    const result = await createMutation.mutateAsync({ tasks, sourceText, userId, targetType });
     return result.success;
   }, [createMutation]);
 
