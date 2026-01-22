@@ -4,9 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Lock, Share2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Lock, Share2, Clock, CheckCircle2, TrendingUp } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
 import type { Tarea, TareaEstado, TareaTipo } from "@/types";
+import { startOfWeek, endOfWeek, isToday, isBefore, startOfDay } from "date-fns";
 import {
   DndContext,
   DragEndEvent,
@@ -79,7 +82,11 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
   };
 
   const isOverdue = tarea.fecha_vencimiento && 
-    new Date(tarea.fecha_vencimiento) < new Date() && 
+    isBefore(new Date(tarea.fecha_vencimiento), startOfDay(new Date())) && 
+    tarea.estado !== "completada";
+
+  const isDueToday = tarea.fecha_vencimiento && 
+    isToday(new Date(tarea.fecha_vencimiento)) && 
     tarea.estado !== "completada";
 
   const getInitials = (name?: string) => {
@@ -89,6 +96,20 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
+  };
+
+  const getAvatarColor = (name?: string) => {
+    if (!name) return "bg-muted";
+    const colors = [
+      "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+      "bg-green-500/20 text-green-700 dark:text-green-300",
+      "bg-purple-500/20 text-purple-700 dark:text-purple-300",
+      "bg-orange-500/20 text-orange-700 dark:text-orange-300",
+      "bg-pink-500/20 text-pink-700 dark:text-pink-300",
+      "bg-teal-500/20 text-teal-700 dark:text-teal-300",
+    ];
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
   return (
@@ -131,23 +152,36 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
           </Badge>
         )}
         {isOverdue && (
-          <Badge variant="destructive" className="text-xs">
+          <Badge variant="destructive" className="text-xs animate-pulse">
             <AlertCircle className="h-3 w-3 mr-1" />
             Vencida
           </Badge>
         )}
-        {tarea.fecha_vencimiento && !isOverdue && (
+        {isDueToday && (
+          <Badge variant="default" className="text-xs bg-amber-500 hover:bg-amber-600">
+            <Clock className="h-3 w-3 mr-1" />
+            Hoy
+          </Badge>
+        )}
+        {tarea.fecha_vencimiento && !isOverdue && !isDueToday && (
           <div className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             <span>{format(new Date(tarea.fecha_vencimiento), "dd MMM", { locale: es })}</span>
           </div>
         )}
         {tarea.asignado_a && (
-          <Avatar className="h-5 w-5" title={getUserName?.(tarea.asignado_a) || undefined}>
-            <AvatarFallback className="text-[10px] bg-primary/10">
-              {getInitials(getUserName?.(tarea.asignado_a) || undefined)}
-            </AvatarFallback>
-          </Avatar>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Avatar className={cn("h-6 w-6 border-2 border-background shadow-sm", getAvatarColor(getUserName?.(tarea.asignado_a)))}>
+                <AvatarFallback className="text-[10px] font-medium">
+                  {getInitials(getUserName?.(tarea.asignado_a) || undefined)}
+                </AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {getUserName?.(tarea.asignado_a) || "Sin asignar"}
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
     </div>
@@ -509,18 +543,123 @@ export default function Tareas() {
     );
   }
 
+  // Weekly stats calculation
+  const weeklyStats = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    
+    const weekTasks = tareasFiltradas.filter(t => {
+      if (!t.created_at) return false;
+      const created = new Date(t.created_at);
+      return created >= weekStart && created <= weekEnd;
+    });
+    
+    const completedThisWeek = tareasFiltradas.filter(t => {
+      if (t.estado !== 'completada' || !t.updated_at) return false;
+      const updated = new Date(t.updated_at);
+      return updated >= weekStart && updated <= weekEnd;
+    });
+
+    const pendingCount = tareasFiltradas.filter(t => t.estado === 'pendiente').length;
+    const inProgressCount = tareasFiltradas.filter(t => t.estado === 'en_progreso').length;
+    const completedCount = tareasFiltradas.filter(t => t.estado === 'completada').length;
+    const total = pendingCount + inProgressCount + completedCount;
+    const overdueCount = tareasFiltradas.filter(t => 
+      t.fecha_vencimiento && 
+      isBefore(new Date(t.fecha_vencimiento), startOfDay(new Date())) && 
+      t.estado !== 'completada'
+    ).length;
+    const dueTodayCount = tareasFiltradas.filter(t => 
+      t.fecha_vencimiento && 
+      isToday(new Date(t.fecha_vencimiento)) && 
+      t.estado !== 'completada'
+    ).length;
+
+    return {
+      weekTasks: weekTasks.length,
+      completedThisWeek: completedThisWeek.length,
+      pendingCount,
+      inProgressCount,
+      completedCount,
+      total,
+      overdueCount,
+      dueTodayCount,
+      progressPercent: total > 0 ? Math.round((completedCount / total) * 100) : 0,
+    };
+  }, [tareasFiltradas]);
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-        <div>
-          <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
+      {/* Header with Stats */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
+            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
+          </div>
+          <Button onClick={() => setDrawerOpen(true)} size="sm" className="w-fit h-8 md:h-9">
+            <Plus className="mr-1.5 h-4 w-4" />
+            <span className="hidden xs:inline">Nueva Tarea</span>
+            <span className="xs:hidden">Nueva</span>
+          </Button>
         </div>
-        <Button onClick={() => setDrawerOpen(true)} size="sm" className="w-fit h-8 md:h-9">
-          <Plus className="mr-1.5 h-4 w-4" />
-          <span className="hidden xs:inline">Nueva Tarea</span>
-          <span className="xs:hidden">Nueva</span>
-        </Button>
+
+        {/* Weekly Progress Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Progreso Semanal</p>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">{weeklyStats.progressPercent}%</span>
+                <Progress value={weeklyStats.progressPercent} className="h-1.5 w-12 hidden sm:block" />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Completadas</p>
+              <p className="text-lg font-semibold">{weeklyStats.completedThisWeek} <span className="text-xs font-normal text-muted-foreground">esta semana</span></p>
+            </div>
+          </Card>
+
+          <Card className="p-3 flex items-center gap-3">
+            <div className={cn(
+              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+              weeklyStats.overdueCount > 0 ? "bg-destructive/10" : "bg-amber-500/10"
+            )}>
+              <Clock className={cn("h-5 w-5", weeklyStats.overdueCount > 0 ? "text-destructive" : "text-amber-600")} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Vencen Hoy</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-semibold">{weeklyStats.dueTodayCount}</span>
+                {weeklyStats.overdueCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+                    +{weeklyStats.overdueCount} vencidas
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-3 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Pendientes</p>
+              <p className="text-lg font-semibold">{weeklyStats.pendingCount + weeklyStats.inProgressCount}</p>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* AI Command Bar */}
