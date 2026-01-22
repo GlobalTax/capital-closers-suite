@@ -7401,6 +7401,203 @@ export type Database = {
           },
         ]
       }
+      investor_document_access: {
+        Row: {
+          accessed_at: string
+          action: string
+          document_id: string
+          id: string
+          investor_user_id: string
+          ip_address: unknown
+          user_agent: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          action: string
+          document_id: string
+          id?: string
+          investor_user_id: string
+          ip_address?: unknown
+          user_agent?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          action?: string
+          document_id?: string
+          id?: string
+          investor_user_id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_document_access_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "investor_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_document_access_investor_user_id_fkey"
+            columns: ["investor_user_id"]
+            isOneToOne: false
+            referencedRelation: "investor_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_documents: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string
+          fund_id: string | null
+          id: string
+          is_confidential: boolean | null
+          lp_id: string | null
+          published_at: string | null
+          quarter: string | null
+          requires_signature: boolean | null
+          signature_status: string | null
+          title: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url: string
+          fund_id?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          lp_id?: string | null
+          published_at?: string | null
+          quarter?: string | null
+          requires_signature?: boolean | null
+          signature_status?: string | null
+          title: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string
+          fund_id?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          lp_id?: string | null
+          published_at?: string | null
+          quarter?: string | null
+          requires_signature?: boolean | null
+          signature_status?: string | null
+          title?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_documents_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_documents_lp_id_fkey"
+            columns: ["lp_id"]
+            isOneToOne: false
+            referencedRelation: "cr_lps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_fund_metrics: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dpi: number | null
+          fund_id: string
+          id: string
+          irr_gross: number | null
+          irr_net: number | null
+          moic: number | null
+          nav: number | null
+          notes: string | null
+          period_date: string
+          rvpi: number | null
+          total_called: number | null
+          total_committed: number | null
+          total_distributed: number | null
+          tvpi: number | null
+          unfunded_commitment: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dpi?: number | null
+          fund_id: string
+          id?: string
+          irr_gross?: number | null
+          irr_net?: number | null
+          moic?: number | null
+          nav?: number | null
+          notes?: string | null
+          period_date: string
+          rvpi?: number | null
+          total_called?: number | null
+          total_committed?: number | null
+          total_distributed?: number | null
+          tvpi?: number | null
+          unfunded_commitment?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dpi?: number | null
+          fund_id?: string
+          id?: string
+          irr_gross?: number | null
+          irr_net?: number | null
+          moic?: number | null
+          nav?: number | null
+          notes?: string | null
+          period_date?: string
+          rvpi?: number | null
+          total_called?: number | null
+          total_committed?: number | null
+          total_distributed?: number | null
+          tvpi?: number | null
+          unfunded_commitment?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_fund_metrics_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investor_leads: {
         Row: {
           assigned_at: string | null
@@ -7572,6 +7769,186 @@ export type Database = {
             columns: ["rod_document_id"]
             isOneToOne: false
             referencedRelation: "rod_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          investor_user_id: string
+          is_read: boolean
+          message: string | null
+          read_at: string | null
+          related_document_id: string | null
+          related_fund_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          investor_user_id: string
+          is_read?: boolean
+          message?: string | null
+          read_at?: string | null
+          related_document_id?: string | null
+          related_fund_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          investor_user_id?: string
+          is_read?: boolean
+          message?: string | null
+          read_at?: string | null
+          related_document_id?: string | null
+          related_fund_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_notifications_investor_user_id_fkey"
+            columns: ["investor_user_id"]
+            isOneToOne: false
+            referencedRelation: "investor_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_notifications_related_document_id_fkey"
+            columns: ["related_document_id"]
+            isOneToOne: false
+            referencedRelation: "investor_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_notifications_related_fund_id_fkey"
+            columns: ["related_fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_positions: {
+        Row: {
+          called_capital: number
+          committed_capital: number
+          created_at: string
+          current_nav: number
+          distributed_capital: number
+          fund_id: string
+          id: string
+          investment_date: string | null
+          investor_user_id: string
+          notes: string | null
+          ownership_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          called_capital?: number
+          committed_capital?: number
+          created_at?: string
+          current_nav?: number
+          distributed_capital?: number
+          fund_id: string
+          id?: string
+          investment_date?: string | null
+          investor_user_id: string
+          notes?: string | null
+          ownership_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          called_capital?: number
+          committed_capital?: number
+          created_at?: string
+          current_nav?: number
+          distributed_capital?: number
+          fund_id?: string
+          id?: string
+          investment_date?: string | null
+          investor_user_id?: string
+          notes?: string | null
+          ownership_percentage?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_positions_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_positions_investor_user_id_fkey"
+            columns: ["investor_user_id"]
+            isOneToOne: false
+            referencedRelation: "investor_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      investor_users: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          invitation_expires_at: string | null
+          invitation_token: string | null
+          invited_at: string | null
+          invited_by: string | null
+          last_login_at: string | null
+          lp_id: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_token?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          last_login_at?: string | null
+          lp_id?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          invitation_expires_at?: string | null
+          invitation_token?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          last_login_at?: string | null
+          lp_id?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investor_users_lp_id_fkey"
+            columns: ["lp_id"]
+            isOneToOne: false
+            referencedRelation: "cr_lps"
             referencedColumns: ["id"]
           },
         ]
@@ -16776,7 +17153,9 @@ export type Database = {
         }
         Returns: undefined
       }
-      is_admin_user: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_user:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_full_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_user_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { check_user_id: string }; Returns: boolean }

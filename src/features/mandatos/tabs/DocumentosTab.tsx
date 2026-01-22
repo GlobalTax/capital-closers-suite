@@ -38,6 +38,7 @@ import { useDocumentFolders } from "@/hooks/useDocumentFolders";
 import { useDocumentStorage } from "@/hooks/useDocumentStorage";
 import { useTeasersByLanguage, useTeaserFolder, useTeaserDownload } from "@/hooks/useTeaser";
 import { uploadDocumentToFolder, createDocumentVersion } from "@/services/documentFolders.service";
+import { upsertTeaser } from "@/services/teaser.service";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -234,27 +235,27 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       }
       console.log('[Teaser Upload] Archivo subido a storage OK');
 
-      // Paso 3: Registrar en base de datos
+      // Paso 3: Registrar en base de datos usando upsertTeaser (maneja reemplazo)
       console.log('[Teaser Upload] Registrando en base de datos...');
       try {
-        await uploadDocumentToFolder(
+        await upsertTeaser({
           mandatoId,
-          teaserFolder.id,
-          file.name,
-          file.size,
-          file.type,
+          folderId: teaserFolder.id,
+          fileName: file.name,
+          fileSizeBytes: file.size,
+          mimeType: file.type,
           storagePath,
-          'Teaser',
-          `Teaser del mandato (${idioma === 'ES' ? 'Español' : 'Inglés'})`,
-          user.id,
-          idioma
-        );
+          uploadedBy: user.id,
+          idioma,
+        });
         console.log('[Teaser Upload] Registro en DB OK');
       } catch (dbError: any) {
         console.error('[Teaser Upload] Error registrando en DB:', dbError);
         // Limpiar archivo huérfano del storage
         await supabase.storage.from('mandato-documentos').remove([storagePath]);
-        toast.error(`Error guardando registro: ${dbError.message}`);
+        
+        // Mostrar mensaje específico del error
+        toast.error(dbError.message || 'Error guardando en base de datos');
         return;
       }
 
