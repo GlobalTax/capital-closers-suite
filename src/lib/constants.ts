@@ -10,6 +10,7 @@ export const INTERNAL_PROJECTS = {
   BUSINESS_DEVELOPMENT: "00000000-0000-0000-0000-000000000001",
   REUNIONES_INTERNAS: "00000000-0000-0000-0000-000000000002",
   ADMINISTRATIVO: "00000000-0000-0000-0000-000000000003",
+  PROSPECCION: "00000000-0000-0000-0000-000000000004",
 } as const;
 
 export const INTERNAL_PROJECT_LABELS: Record<string, { label: string; description: string; icon: string }> = {
@@ -27,6 +28,11 @@ export const INTERNAL_PROJECT_LABELS: Record<string, { label: string; descriptio
     label: "Administrativo", 
     description: "Tareas administrativas, reporting", 
     icon: "FileText" 
+  },
+  [INTERNAL_PROJECTS.PROSPECCION]: { 
+    label: "Prospección Comercial", 
+    description: "Tiempo con prospectos pre-cliente", 
+    icon: "UserPlus" 
   },
 };
 

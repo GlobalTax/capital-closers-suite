@@ -22,14 +22,13 @@ interface TimeEntryInlineFormProps {
 }
 
 const GENERAL_WORK_ID = '00000000-0000-0000-0000-000000000001';
+const PROSPECCION_PROJECT_ID = '00000000-0000-0000-0000-000000000004';
 
-// Internal project IDs that don't have leads
-const INTERNAL_PROJECT_IDS = [
+// Internal project IDs that DON'T have leads (Prospección is an exception - it DOES have leads)
+const INTERNAL_PROJECT_IDS_NO_LEADS = [
   GENERAL_WORK_ID,
-  '00000000-0000-0000-0000-000000000002', // Formación
-  '00000000-0000-0000-0000-000000000003', // Desarrollo de negocio
-  '00000000-0000-0000-0000-000000000004', // Administración
-  '00000000-0000-0000-0000-000000000005', // Marketing
+  '00000000-0000-0000-0000-000000000002', // Reuniones Internas
+  '00000000-0000-0000-0000-000000000003', // Administrativo
 ];
 
 export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
@@ -56,8 +55,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   
   const hoursInputRef = useRef<HTMLInputElement>(null);
   
-  // Check if mandato is an internal project
-  const isInternalProject = INTERNAL_PROJECT_IDS.includes(mandatoId);
+  // Check if mandato is an internal project WITHOUT leads (Prospección has leads)
+  const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
   
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
 

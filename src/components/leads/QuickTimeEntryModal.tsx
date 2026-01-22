@@ -53,8 +53,8 @@ const DURATION_PRESETS = [
   { value: 90, label: '1.5h' },
 ];
 
-// Mandato de prospección por defecto
-const PROSPECCION_MANDATO_ID = 'c35e9d2c-4e4d-4e8f-b8f8-7e7b1c4e4e4e';
+// Mandato de prospección por defecto (proyecto interno)
+const PROSPECCION_MANDATO_ID = '00000000-0000-0000-0000-000000000004';
 
 export function QuickTimeEntryModal({ 
   open, 
