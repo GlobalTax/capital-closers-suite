@@ -137,7 +137,7 @@ export function MandatoSelect({
                     return (
                       <CommandItem
                         key={project.id}
-                        value={`interno-${info?.label || project.id}`}
+                        value={`interno-${info?.label || 'Proyecto'}-${project.id}`}
                         onSelect={() => {
                           onValueChange(project.id);
                           setOpen(false);
@@ -173,7 +173,7 @@ export function MandatoSelect({
                     return (
                       <CommandItem
                         key={mandato.id}
-                        value={`venta-${empresaNombre}-${desc}`}
+                        value={`venta-${empresaNombre}-${desc}-${mandato.id}`}
                         onSelect={() => {
                           onValueChange(mandato.id);
                           setOpen(false);
@@ -208,7 +208,7 @@ export function MandatoSelect({
                   return (
                     <CommandItem
                       key={mandato.id}
-                      value={`compra-${empresaNombre}-${desc}`}
+                      value={`compra-${empresaNombre}-${desc}-${mandato.id}`}
                       onSelect={() => {
                         onValueChange(mandato.id);
                         setOpen(false);
