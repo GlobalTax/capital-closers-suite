@@ -86,7 +86,7 @@ export default function MandatoDetalle() {
   const checklistLabel = mandato.tipo === "compra" ? "Checklist Buy-Side" : "Checklist Sell-Side";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <MandatoHeader
         mandato={mandato}
         onEdit={() => setEditarMandatoOpen(true)}
@@ -101,38 +101,39 @@ export default function MandatoDetalle() {
       />
 
       <Tabs defaultValue="resumen" className="w-full">
-        <TabsList>
-          <TabsTrigger value="resumen">
-            <FileText className="w-4 h-4 mr-2" />
-            Resumen
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start md:justify-center gap-1 h-auto p-1">
+          <TabsTrigger value="resumen" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+            <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden xs:inline">Resumen</span>
           </TabsTrigger>
           {esServicio ? (
-            <TabsTrigger value="propuestas">
-              <Receipt className="w-4 h-4 mr-2" />
-              Propuestas
+            <TabsTrigger value="propuestas" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+              <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden xs:inline">Propuestas</span>
             </TabsTrigger>
           ) : (
             <>
-              <TabsTrigger value="finanzas">
-                <Target className="w-4 h-4 mr-2" />
-                Finanzas
+              <TabsTrigger value="finanzas" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+                <Target className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Finanzas</span>
               </TabsTrigger>
-              <TabsTrigger value="targets">
+              <TabsTrigger value="targets" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
                 Targets ({targetsCount})
               </TabsTrigger>
-              <TabsTrigger value="checklist">
-                <ListTodo className="w-4 h-4 mr-2" />
-                {checklistLabel}
+              <TabsTrigger value="checklist" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+                <ListTodo className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+                <span className="hidden md:inline">{checklistLabel}</span>
+                <span className="md:hidden">Check</span>
               </TabsTrigger>
             </>
           )}
-          <TabsTrigger value="documentos">
-            <FileText className="w-4 h-4 mr-2" />
-            Documentos ({documentos.length})
+          <TabsTrigger value="documentos" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+            <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Docs</span> ({documentos.length})
           </TabsTrigger>
-          <TabsTrigger value="horas">
-            <Clock className="w-4 h-4 mr-2" />
-            Horas
+          <TabsTrigger value="horas" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+            <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Horas</span>
           </TabsTrigger>
         </TabsList>
 

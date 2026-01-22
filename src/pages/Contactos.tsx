@@ -432,21 +432,21 @@ export default function Contactos() {
         actionLabel="Nuevo Contacto"
         onAction={() => setDrawerOpen(true)}
         extraActions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setLinkImportOpen(true)}>
-              <Link className="h-4 w-4 mr-2" />
-              Importar desde Link
+          <div className="flex gap-1.5 md:gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLinkImportOpen(true)} className="h-8 px-2 md:px-3">
+              <Link className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Importar Link</span>
             </Button>
-            <Button variant="outline" onClick={() => setAiImportOpen(true)}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Importar con IA
+            <Button variant="outline" size="sm" onClick={() => setAiImportOpen(true)} className="h-8 px-2 md:px-3">
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">IA</span>
             </Button>
           </div>
         }
       />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* KPIs - responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">

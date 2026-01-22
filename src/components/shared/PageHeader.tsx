@@ -37,22 +37,27 @@ export function PageHeader({
   };
 
   return (
-    <div className="flex items-center justify-between mb-8">
-      <div className="flex items-center gap-4">
-        {renderIcon()}
-        <div>
-          <h1 className="text-2xl text-foreground tracking-tight">{title}</h1>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6 lg:mb-8">
+      <div className="flex items-center gap-3 md:gap-4 min-w-0">
+        {icon && (
+          <div className="hidden sm:block shrink-0">
+            {renderIcon()}
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl text-foreground tracking-tight truncate">{title}</h1>
           {(description || subtitle) && (
-            <p className="text-sm text-muted-foreground mt-1">{description || subtitle}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 truncate">{description || subtitle}</p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0 flex-wrap">
         {extraActions}
         {actions || (actionLabel && onAction && (
-          <Button onClick={onAction} className="gap-2">
+          <Button onClick={onAction} size="sm" className="gap-1.5 h-8 md:h-9 text-sm">
             <Plus className="w-4 h-4" />
-            {actionLabel}
+            <span className="hidden xs:inline">{actionLabel}</span>
+            <span className="xs:hidden">Nuevo</span>
           </Button>
         ))}
       </div>

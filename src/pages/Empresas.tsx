@@ -306,16 +306,16 @@ export default function Empresas() {
     return (
       <PageTransition>
         <PageHeader title="Empresas" description="Base de datos de empresas de interés" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           {[1, 2, 3, 4].map(i => (
             <Card key={i}>
-              <CardContent className="pt-6">
-                <Skeleton className="h-20 w-full" />
+              <CardContent className="pt-4 md:pt-6">
+                <Skeleton className="h-16 md:h-20 w-full" />
               </CardContent>
             </Card>
           ))}
         </div>
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-80 md:h-96 w-full" />
       </PageTransition>
     );
   }
@@ -328,15 +328,15 @@ export default function Empresas() {
         actionLabel="Nueva Empresa"
         onAction={() => setDrawerOpen(true)}
         extraActions={
-          <Button variant="outline" onClick={() => setAiImportOpen(true)}>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Importar con IA
+          <Button variant="outline" size="sm" onClick={() => setAiImportOpen(true)} className="h-8 px-2 md:px-3">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1.5">Importar IA</span>
           </Button>
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* KPI Cards - responsive grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
