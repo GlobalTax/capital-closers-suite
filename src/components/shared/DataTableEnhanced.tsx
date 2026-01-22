@@ -157,10 +157,10 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
     paginatedData.length > 0 && paginatedData.every((row) => externalSelectedRows.includes(row.id));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto -mx-px">
+          <Table className="min-w-[640px] md:min-w-0">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 {selectable && (

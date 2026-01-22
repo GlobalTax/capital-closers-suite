@@ -115,19 +115,19 @@ export function FilterPanel({
   if (!isOpen) {
     return (
       <div 
-        className="shrink-0 w-12 flex flex-col items-center py-4 border-r border-border bg-card/50 cursor-pointer hover:bg-accent/50 transition-colors"
+        className="shrink-0 w-10 md:w-12 flex flex-col items-center py-3 md:py-4 border-r border-border bg-card/50 cursor-pointer hover:bg-accent/50 transition-colors"
         onClick={onToggle}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === 'Enter' && onToggle()}
         title="Abrir filtros"
       >
-        <div className="h-10 w-10 relative flex items-center justify-center">
-          <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
+        <div className="h-8 w-8 md:h-10 md:w-10 relative flex items-center justify-center">
+          <SlidersHorizontal className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           {totalActiveFilters > 0 && (
             <Badge 
               variant="default" 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] font-medium"
+              className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-[9px] md:text-[10px] font-medium"
             >
               {totalActiveFilters}
             </Badge>
@@ -140,7 +140,9 @@ export function FilterPanel({
   return (
     <div
       className={cn(
-        "w-64 shrink-0 border-r border-border bg-card animate-fade-in",
+        "w-56 md:w-64 shrink-0 border-r border-border bg-card animate-fade-in",
+        "fixed md:relative inset-y-0 left-0 z-40 md:z-auto",
+        "shadow-lg md:shadow-none",
         className
       )}
     >
@@ -166,7 +168,7 @@ export function FilterPanel({
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-200px)]">
+      <ScrollArea className="h-[calc(100vh-180px)] md:h-[calc(100vh-200px)]">
         <div className="p-4 space-y-4">
           {/* Búsquedas guardadas */}
           {savedSearches.length > 0 && (

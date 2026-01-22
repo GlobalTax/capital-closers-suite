@@ -86,7 +86,7 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
       ref={setNodeRef}
       style={style}
       className={cn(
-        "p-3 cursor-pointer hover:shadow-md transition-all border-l-4",
+        "p-2.5 md:p-3 cursor-pointer hover:shadow-md transition-all border-l-4",
         tipoColor,
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
         isStagnant && "border-l-destructive",
@@ -94,7 +94,7 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
       )}
       onClick={() => navigate(`/mandatos/${mandato.id}`)}
     >
-      <div className="space-y-2">
+      <div className="space-y-1.5 md:space-y-2">
         {/* Header con drag handle */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">

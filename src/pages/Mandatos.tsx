@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -124,12 +125,12 @@ function KanbanColumn({
   const { setNodeRef } = useDroppable({ id });
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 md:space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-sm uppercase text-muted-foreground">
+        <h3 className="font-medium text-xs md:text-sm uppercase text-muted-foreground truncate">
           {label}
         </h3>
-        <Badge variant="outline">{mandatos.length}</Badge>
+        <Badge variant="outline" className="text-xs shrink-0">{mandatos.length}</Badge>
       </div>
       
       <SortableContext
@@ -140,7 +141,7 @@ function KanbanColumn({
         <div 
           ref={setNodeRef}
           className={cn(
-            "space-y-2 min-h-[500px] p-3 rounded-lg border-2 border-dashed transition-colors",
+            "space-y-2 min-h-[300px] md:min-h-[500px] p-2 md:p-3 rounded-lg border-2 border-dashed transition-colors",
             color
           )}
         >
@@ -296,7 +297,14 @@ export default function Mandatos() {
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [sendTeasersOpen, setSendTeasersOpen] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20);
-  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
+  const isMobile = useIsMobile();
+  const [filterPanelOpen, setFilterPanelOpen] = useState(() => {
+    // Default closed on mobile
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [downloadingTeaser, setDownloadingTeaser] = useState<string | null>(null);
 
@@ -995,33 +1003,34 @@ export default function Mandatos() {
 
   return (
     <PageTransition className="h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header - Mobile-first responsive */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-3xl font-medium text-foreground">Mandatos M&A</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl md:text-3xl font-medium text-foreground">Mandatos M&A</h1>
+          <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">
             {mandatosFiltrados.length} de {mandatos.length} mandatos
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex border rounded-lg p-1 bg-muted/30">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View toggle */}
+          <div className="flex border rounded-lg p-0.5 md:p-1 bg-muted/30">
             <Button
               variant={vistaActual === "tabla" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setVistaActual("tabla")}
-              className="gap-1.5"
+              className="gap-1 h-7 md:h-8 px-2 md:px-3 text-xs md:text-sm"
             >
-              <TableIcon className="w-4 h-4" />
-              Tabla
+              <TableIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden xs:inline">Tabla</span>
             </Button>
             <Button
               variant={vistaActual === "kanban" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setVistaActual("kanban")}
-              className="gap-1.5"
+              className="gap-1 h-7 md:h-8 px-2 md:px-3 text-xs md:text-sm"
             >
-              <Columns className="w-4 h-4" />
-              Kanban
+              <Columns className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden xs:inline">Kanban</span>
             </Button>
           </div>
           {vistaActual === "kanban" && (
@@ -1029,15 +1038,16 @@ export default function Mandatos() {
               variant="outline" 
               size="sm"
               onClick={() => setConfigDialogOpen(true)}
-              className="gap-2"
+              className="gap-1.5 h-7 md:h-8 px-2 md:px-3"
             >
-              <Settings className="w-4 h-4" />
-              Configurar
+              <Settings className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Configurar</span>
             </Button>
           )}
-          <Button onClick={() => setDrawerOpen(true)} className="gap-2">
+          <Button onClick={() => setDrawerOpen(true)} className="gap-1.5 h-8 md:h-9 px-3 md:px-4">
             <Plus className="w-4 h-4" />
-            Nuevo Mandato
+            <span className="hidden sm:inline">Nuevo Mandato</span>
+            <span className="sm:hidden">Nuevo</span>
           </Button>
         </div>
       </div>
@@ -1045,8 +1055,8 @@ export default function Mandatos() {
       <AgingAlertsBanner variant="expanded" maxItems={5} />
 
       {/* Layout principal con panel de filtros */}
-      <div className="flex gap-0">
-        {/* Panel de filtros lateral */}
+      <div className="flex gap-0 relative">
+        {/* Panel de filtros lateral - closed by default on mobile */}
         {vistaActual === "tabla" && (
           <FilterPanel
             sections={filterSections}
@@ -1057,62 +1067,87 @@ export default function Mandatos() {
             onToggle={() => setFilterPanelOpen(!filterPanelOpen)}
           />
         )}
+        
+        {/* Mobile overlay when filter panel is open */}
+        {filterPanelOpen && vistaActual === "tabla" && (
+          <div 
+            className="fixed inset-0 bg-black/20 z-30 md:hidden"
+            onClick={() => setFilterPanelOpen(false)}
+          />
+        )}
 
         {/* Contenido principal */}
-        <div className={cn("flex-1 min-w-0", filterPanelOpen && vistaActual === "tabla" && "pl-4")}>
-          {/* Barra de herramientas */}
-          <div className="flex items-center gap-3 mb-4">
-            {/* Búsqueda */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por cliente, código o ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9"
-              />
-            </div>
-
-            {/* Page size */}
-            <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-              <SelectTrigger className="w-[100px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                <SelectItem value="10">10 / pág</SelectItem>
-                <SelectItem value="20">20 / pág</SelectItem>
-                <SelectItem value="50">50 / pág</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Columnas Toggle - solo en vista tabla */}
-            {vistaActual === "tabla" && (
-              <ColumnToggle
-                columns={columnConfig}
-                onChange={handleColumnChange}
-                storageKey="mandatos-columns"
-              />
-            )}
-
-            {/* Densidad Toggle - solo en vista tabla */}
-            {vistaActual === "tabla" && (
-              <ViewDensityToggle
-                value={viewDensity}
-                onChange={setViewDensity}
-                storageKey="mandatos-density"
-              />
-            )}
-
-            {/* Acciones */}
+        <div className={cn("flex-1 min-w-0", filterPanelOpen && vistaActual === "tabla" && "md:pl-4")}>
+          {/* Barra de herramientas - responsive */}
+          <div className="flex flex-col gap-2 mb-3 md:mb-4">
+            {/* Row 1: Search + core actions */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/importar-datos")} className="h-9">
-                <Upload className="w-4 h-4 mr-2" />
-                Importar
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9">
-                <Download className="w-4 h-4 mr-2" />
-                Exportar
-              </Button>
+              {/* Búsqueda */}
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 md:pl-9 h-8 md:h-9 text-sm"
+                />
+              </div>
+
+              {/* Page size - hidden on mobile */}
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-[80px] md:w-[100px] h-8 md:h-9 hidden sm:flex text-xs md:text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="10">10 / pág</SelectItem>
+                  <SelectItem value="20">20 / pág</SelectItem>
+                  <SelectItem value="50">50 / pág</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Columnas Toggle - solo en vista tabla, hidden on mobile */}
+              {vistaActual === "tabla" && (
+                <div className="hidden md:block">
+                  <ColumnToggle
+                    columns={columnConfig}
+                    onChange={handleColumnChange}
+                    storageKey="mandatos-columns"
+                  />
+                </div>
+              )}
+
+              {/* Densidad Toggle - solo en vista tabla, hidden on mobile */}
+              {vistaActual === "tabla" && (
+                <div className="hidden lg:block">
+                  <ViewDensityToggle
+                    value={viewDensity}
+                    onChange={setViewDensity}
+                    storageKey="mandatos-density"
+                  />
+                </div>
+              )}
+
+              {/* Acciones - compact on mobile */}
+              <div className="flex items-center gap-1 md:gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate("/importar-datos")} 
+                  className="h-8 md:h-9 px-2 md:px-3"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Importar</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportCSV} 
+                  className="h-8 md:h-9 px-2 md:px-3"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Exportar</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -1160,20 +1195,24 @@ export default function Mandatos() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {fases.map((fase) => {
-                  const mandatosColumna = getMandatosPorStage(fase.fase_id);
-                  console.log(`[Kanban] Fase ${fase.fase_id} (${fase.label}): ${mandatosColumna.length} mandatos`);
-                  return (
-                    <KanbanColumn
-                      key={fase.id}
-                      id={fase.fase_id}
-                      label={fase.label}
-                      color={fase.color}
-                      mandatos={mandatosColumna}
-                    />
-                  );
-                })}
+              {/* Kanban grid - horizontal scroll on mobile */}
+              <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 pb-4">
+                <div className="grid grid-flow-col md:grid-flow-row md:grid-cols-5 gap-3 md:gap-4 min-w-max md:min-w-0">
+                  {fases.map((fase) => {
+                    const mandatosColumna = getMandatosPorStage(fase.fase_id);
+                    console.log(`[Kanban] Fase ${fase.fase_id} (${fase.label}): ${mandatosColumna.length} mandatos`);
+                    return (
+                      <div key={fase.id} className="w-64 md:w-auto shrink-0 md:shrink">
+                        <KanbanColumn
+                          id={fase.fase_id}
+                          label={fase.label}
+                          color={fase.color}
+                          mandatos={mandatosColumna}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               
               <DragOverlay>
