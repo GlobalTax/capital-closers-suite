@@ -7121,6 +7121,48 @@ export type Database = {
         }
         Relationships: []
       }
+      home_content: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          label: string | null
+          section: string
+          subtitle: string | null
+          title: string | null
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          section: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          section?: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       import_logs: {
         Row: {
           completed_at: string | null

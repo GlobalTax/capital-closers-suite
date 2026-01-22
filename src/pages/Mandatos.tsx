@@ -66,12 +66,14 @@ import {
   Loader2,
   Target,
   CircleOff,
+  Building2,
 } from "lucide-react";
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useKanbanConfig } from "@/hooks/useKanbanConfig";
 import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
 import { SendTeasersDialog } from "@/components/mandatos/SendTeasersDialog";
+import { AsignarEmpresaMasivaDialog } from "@/components/mandatos/AsignarEmpresaMasivaDialog";
 import { useUndoableAction } from "@/hooks/useUndoableAction";
 import { useTeasersForMandatos, useTeaserDownload } from "@/hooks/useTeaser";
 import { differenceInDays, format } from "date-fns";
@@ -296,6 +298,7 @@ export default function Mandatos() {
   const [mandatoArrastrado, setMandatoArrastrado] = useState<Mandato | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [sendTeasersOpen, setSendTeasersOpen] = useState(false);
+  const [asignarEmpresaOpen, setAsignarEmpresaOpen] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20);
   const isMobile = useIsMobile();
   const [filterPanelOpen, setFilterPanelOpen] = useState(() => {
@@ -1229,6 +1232,11 @@ export default function Mandatos() {
         onClearSelection={() => setSelectedRows([])}
         actions={[
           {
+            icon: Building2,
+            label: "Asignar empresa",
+            onClick: () => setAsignarEmpresaOpen(true),
+          },
+          {
             icon: Target,
             label: "Marcar SF",
             onClick: handleBulkMarkSF,
@@ -1263,6 +1271,16 @@ export default function Mandatos() {
         open={sendTeasersOpen}
         onOpenChange={setSendTeasersOpen}
         selectedMandatos={mandatos.filter(m => selectedRows.includes(m.id))}
+      />
+
+      <AsignarEmpresaMasivaDialog
+        open={asignarEmpresaOpen}
+        onOpenChange={setAsignarEmpresaOpen}
+        mandatoIds={selectedRows}
+        onSuccess={() => {
+          setSelectedRows([]);
+          cargarMandatos();
+        }}
       />
     </PageTransition>
   );
