@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, Users, CreditCard, Wallet, Calendar, ExternalLink } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Calendar, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Empresa } from "@/types";
 import { formatCurrency, formatPercentage } from "@/lib/mandato-utils";
@@ -21,7 +21,7 @@ export function InformacionFinancieraEditable({ empresa, loading, onUpdate }: In
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-20" />
             ))}
           </div>
@@ -90,22 +90,6 @@ export function InformacionFinancieraEditable({ empresa, loading, onUpdate }: In
       icon: Users,
       editable: true,
       format: (v: number | null) => v?.toString() || '-',
-    },
-    {
-      label: 'Deuda',
-      field: 'deuda',
-      value: empresa.deuda,
-      icon: CreditCard,
-      editable: true,
-      format: formatCurrency,
-    },
-    {
-      label: 'Capital Circulante',
-      field: 'capital_circulante',
-      value: empresa.capital_circulante,
-      icon: Wallet,
-      editable: true,
-      format: formatCurrency,
     },
   ];
 
