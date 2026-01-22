@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      about_content: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          label: string | null
+          section: string
+          subtitle: string | null
+          title: string | null
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          section: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          label?: string | null
+          section?: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       accountex_leads: {
         Row: {
           brevo_sent: boolean | null

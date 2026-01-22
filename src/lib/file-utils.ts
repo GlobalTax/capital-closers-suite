@@ -99,3 +99,42 @@ export function generateUniqueFileName(originalName: string): string {
   
   return `${sanitizedName}_${timestamp}_${randomString}.${extension}`;
 }
+
+/**
+ * Tipos permitidos para teasers (solo PDF y PPTX)
+ */
+const TEASER_ALLOWED_TYPES = [
+  'application/pdf',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+];
+
+const TEASER_MAX_SIZE_MB = 10;
+
+export interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+/**
+ * Valida un archivo de teaser (solo PDF y PPTX, máximo 10MB)
+ */
+export function validateTeaserFile(file: File): FileValidationResult {
+  // Validar tamaño
+  if (file.size > TEASER_MAX_SIZE_MB * 1024 * 1024) {
+    return {
+      valid: false,
+      error: `El archivo supera el tamaño máximo de ${TEASER_MAX_SIZE_MB}MB`
+    };
+  }
+  
+  // Validar tipo MIME
+  if (!TEASER_ALLOWED_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      error: 'Solo se permiten archivos PDF o PowerPoint (.pptx)'
+    };
+  }
+  
+  return { valid: true };
+}
