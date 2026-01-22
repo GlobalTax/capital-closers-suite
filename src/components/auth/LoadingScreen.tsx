@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
+// Supabase auth token key pattern
+const SUPABASE_AUTH_KEY_PREFIX = 'sb-';
+const SUPABASE_AUTH_KEY_SUFFIX = '-auth-token';
+
 export function LoadingScreen() {
   const [showRetry, setShowRetry] = useState(false);
 
@@ -15,8 +19,29 @@ export function LoadingScreen() {
   };
 
   const handleClearCache = () => {
+    // Preserve Supabase auth tokens when clearing cache
+    const authTokens: Record<string, string> = {};
+    
+    // Find and save all Supabase auth tokens
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(SUPABASE_AUTH_KEY_PREFIX) && key.endsWith(SUPABASE_AUTH_KEY_SUFFIX)) {
+        const value = localStorage.getItem(key);
+        if (value) {
+          authTokens[key] = value;
+        }
+      }
+    }
+
+    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
+
+    // Restore auth tokens
+    Object.entries(authTokens).forEach(([key, value]) => {
+      localStorage.setItem(key, value);
+    });
+
     window.location.reload();
   };
 
