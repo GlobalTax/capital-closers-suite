@@ -98,6 +98,16 @@ export function normalizePhone(phone: string): string {
 }
 
 /**
+ * Normaliza CIF/NIF para almacenamiento:
+ * - Trim, uppercase
+ * - Elimina espacios, guiones, puntos
+ */
+export function normalizeCIF(cif: string): string {
+  if (!cif) return '';
+  return cif.trim().toUpperCase().replace(/[\s\-\.]/g, '');
+}
+
+/**
  * Formatea teléfono para WhatsApp API
  * - Si ya tiene prefijo país (ej: +34), lo usa
  * - Si no tiene prefijo, devuelve los dígitos (WhatsApp intentará inferir)

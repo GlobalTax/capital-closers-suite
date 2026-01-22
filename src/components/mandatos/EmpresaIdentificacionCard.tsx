@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, FileText, Factory, MapPin, Globe, Hash, ExternalLink } from "lucide-react";
 import { InlineEditText } from "@/components/shared/InlineEdit";
+import { normalizeCIF } from "@/lib/validation/validators";
+import { isValidCIF, VALIDATION_MESSAGES } from "@/lib/validation/regex";
+import { toast } from "sonner";
 import type { Empresa } from "@/types";
 
 interface EmpresaIdentificacionCardProps {
@@ -32,9 +35,23 @@ function EditableInfoItem({
   placeholder = "Añadir..."
 }: EditableInfoItemProps) {
   const handleSave = async (newValue: string) => {
-    if (onUpdate) {
-      await onUpdate(empresaId, field, newValue || null);
+    if (!onUpdate) return;
+    
+    let valueToSave: string | null = newValue || null;
+    
+    // Tratamiento especial para CIF
+    if (field === 'cif' && newValue) {
+      const normalized = normalizeCIF(newValue);
+      
+      if (!isValidCIF(normalized)) {
+        toast.error(VALIDATION_MESSAGES.cif);
+        throw new Error('CIF inválido'); // Cancela el guardado
+      }
+      
+      valueToSave = normalized;
     }
+    
+    await onUpdate(empresaId, field, valueToSave);
   };
 
   return (
