@@ -7129,11 +7129,13 @@ export type Database = {
           image_url: string | null
           is_active: boolean | null
           label: string | null
+          poster_image_url: string | null
           section: string
           subtitle: string | null
           title: string | null
           updated_at: string | null
           value: string | null
+          video_url: string | null
         }
         Insert: {
           created_at?: string | null
@@ -7142,11 +7144,13 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           label?: string | null
+          poster_image_url?: string | null
           section: string
           subtitle?: string | null
           title?: string | null
           updated_at?: string | null
           value?: string | null
+          video_url?: string | null
         }
         Update: {
           created_at?: string | null
@@ -7155,11 +7159,13 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           label?: string | null
+          poster_image_url?: string | null
           section?: string
           subtitle?: string | null
           title?: string | null
           updated_at?: string | null
           value?: string | null
+          video_url?: string | null
         }
         Relationships: []
       }
