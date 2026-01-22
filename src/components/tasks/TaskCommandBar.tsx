@@ -10,6 +10,8 @@ import { TaskPreviewCard } from "./TaskPreviewCard";
 import type { ParsedTask } from "@/types/taskAI";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface TaskCommandBarProps {
   onSuccess?: () => void;
@@ -24,6 +26,7 @@ const EXAMPLE_PROMPTS = [
 ];
 
 export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [sourceText, setSourceText] = useState("");
@@ -82,7 +85,12 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
   const handleCreateTasks = async () => {
     if (localTasks.length === 0) return;
     
-    const success = await createTasks(localTasks, sourceText);
+    if (!user?.id) {
+      toast.error('Sesión expirada. Por favor, recarga la página.');
+      return;
+    }
+    
+    const success = await createTasks(localTasks, sourceText, user.id);
     if (success) {
       setInput("");
       setIsExpanded(false);
