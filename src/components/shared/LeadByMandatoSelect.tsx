@@ -27,6 +27,14 @@ interface LeadByMandatoSelectProps {
 }
 
 const GENERAL_WORK_ID = '00000000-0000-0000-0000-000000000001';
+const PROSPECCION_PROJECT_ID = '00000000-0000-0000-0000-000000000004';
+
+// Internal projects that DON'T have leads (Prospección is an exception - it DOES have leads)
+const INTERNAL_PROJECT_IDS_NO_LEADS = [
+  GENERAL_WORK_ID,
+  '00000000-0000-0000-0000-000000000002', // Reuniones Internas
+  '00000000-0000-0000-0000-000000000003', // Administrativo
+];
 
 export function LeadByMandatoSelect({
   mandatoId,
@@ -37,12 +45,12 @@ export function LeadByMandatoSelect({
 }: LeadByMandatoSelectProps) {
   const [open, setOpen] = useState(false);
   
-  // Check if it's an internal project (no leads available)
-  const isInternalProject = !mandatoId || mandatoId === GENERAL_WORK_ID;
+  // Check if it's an internal project WITHOUT leads (Prospección has leads)
+  const isInternalProjectWithoutLeads = !mandatoId || INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
   
-  // Fetch leads for the selected mandato
+  // Fetch leads for the selected mandato (including Prospección project)
   const { data: leads = [], isLoading } = useLeadsByMandato(
-    isInternalProject ? null : mandatoId
+    isInternalProjectWithoutLeads ? null : mandatoId
   );
   
   // Get selected lead for display
@@ -86,8 +94,8 @@ export function LeadByMandatoSelect({
     );
   };
   
-  // If internal project, show disabled state
-  if (isInternalProject) {
+  // If internal project without leads, show disabled state
+  if (isInternalProjectWithoutLeads) {
     return (
       <Button
         variant="outline"
