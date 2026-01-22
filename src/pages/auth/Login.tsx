@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,21 @@ import { toast } from 'sonner';
 import { Lock, Mail } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { loginSchema } from '@/lib/validation/auth-schemas';
+import { LoadingScreen } from '@/components/auth/LoadingScreen';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, adminUser, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && user && adminUser) {
+      navigate('/mandatos', { replace: true });
+    }
+  }, [user, adminUser, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +48,16 @@ export default function Login() {
       navigate('/mandatos');
     }
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Don't render form if already authenticated (will redirect)
+  if (user && adminUser) {
+    return <LoadingScreen />;
+  }
 
   return (
     <AuthLayout

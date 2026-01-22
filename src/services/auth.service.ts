@@ -31,6 +31,31 @@ export class AuthService {
   }
 
   /**
+   * Obtiene los datos del usuario admin con reintentos
+   */
+  static async fetchAdminUserWithRetry(
+    userId: string,
+    maxRetries = 3
+  ): Promise<AdminUser | null> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const adminData = await this.fetchAdminUser(userId);
+      
+      if (adminData) {
+        return adminData;
+      }
+
+      // If not found on first attempt, wait and retry
+      // This handles race conditions where the session exists but DB query fails
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+      }
+    }
+
+    console.warn(`[Auth] Failed to fetch admin user after ${maxRetries} attempts`);
+    return null;
+  }
+
+  /**
    * Actualiza el timestamp de último login
    */
   static async updateLastLogin(userId: string): Promise<void> {
@@ -52,7 +77,7 @@ export class AuthService {
     adminUser: AdminUser | null;
     error: string | null;
   }> {
-    const adminUser = await this.fetchAdminUser(userId);
+    const adminUser = await this.fetchAdminUserWithRetry(userId);
 
     if (!adminUser) {
       return {

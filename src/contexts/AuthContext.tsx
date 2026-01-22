@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthService } from '@/services/auth.service';
@@ -34,77 +34,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Track if we've already processed initial session to avoid race conditions
+  const initializedRef = useRef(false);
+  const processingRef = useRef(false);
 
-  const refreshAdminUser = async () => {
+  const refreshAdminUser = useCallback(async () => {
     if (user) {
-      const adminData = await AuthService.fetchAdminUser(user.id);
+      const adminData = await AuthService.fetchAdminUserWithRetry(user.id);
       setAdminUser(adminData);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
 
-        if (session?.user) {
-          setTimeout(() => {
-            AuthService.fetchAdminUser(session.user.id).then(adminData => {
-              setAdminUser(adminData);
-              
-              if (event === 'SIGNED_IN') {
-                AuthService.updateLastLogin(session.user.id);
-              }
-            });
-          }, 0);
-        } else {
-          setAdminUser(null);
-        }
-        
-        setLoading(false);
-      }
-    );
+    const handleAuthChange = async (
+      event: string,
+      currentSession: Session | null
+    ) => {
+      if (!mounted || processingRef.current) return;
+      
+      processingRef.current = true;
 
-    // THEN check for existing session
-    const initAuth = async () => {
       try {
-        // Set a 10-second timeout
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Auth timeout')), 10000);
-        });
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-        const sessionPromise = supabase.auth.getSession();
-        
-        const { data: { session } } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        if (currentSession?.user) {
+          // Use retry logic for fetching admin user
+          const adminData = await AuthService.fetchAdminUserWithRetry(
+            currentSession.user.id
+          );
+          
+          if (mounted) {
+            setAdminUser(adminData);
 
-        clearTimeout(timeoutId);
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const adminData = await AuthService.fetchAdminUser(session.user.id);
-          setAdminUser(adminData);
+            // Only update last login on actual sign in, not on token refresh
+            if (event === 'SIGNED_IN' && !initializedRef.current) {
+              AuthService.updateLastLogin(currentSession.user.id);
+            }
+          }
+        } else {
+          if (mounted) {
+            setAdminUser(null);
+          }
         }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        setLoading(false);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          initializedRef.current = true;
+          processingRef.current = false;
+        }
       }
     };
 
-    initAuth();
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Use setTimeout to avoid Supabase deadlock warning
+        setTimeout(() => {
+          handleAuthChange(event, currentSession);
+        }, 0);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      if (!mounted) return;
+      
+      if (existingSession) {
+        // Let onAuthStateChange handle the session
+        // This avoids race conditions
+      } else {
+        // No session, we can stop loading
+        setLoading(false);
+        initializedRef.current = true;
+      }
+    });
+
+    // Safety timeout - if nothing happens in 8 seconds, stop loading
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[Auth] Safety timeout triggered - stopping loading state');
+        setLoading(false);
+      }
+    }, 8000);
 
     return () => {
-      clearTimeout(timeoutId);
+      mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -122,6 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await AuthService.logout();
     setAdminUser(null);
+    setUser(null);
+    setSession(null);
   };
 
   const updatePassword = async (currentPassword: string, newPassword: string) => {
