@@ -5,6 +5,117 @@ const TEASER_FOLDER_NAME = "Teaser";
 const TEASER_FOLDER_TYPE = "teaser";
 
 /**
+ * Traduce errores de DB a mensajes user-friendly
+ */
+function translateDbError(error: any): string {
+  const code = error?.code;
+  const msg = error?.message?.toLowerCase() || '';
+  
+  if (code === '23514' || msg.includes('check constraint')) {
+    return 'Tipo de documento no válido';
+  }
+  if (code === '23505' || msg.includes('unique') || msg.includes('duplicate')) {
+    return 'Ya existe un teaser con ese idioma';
+  }
+  if (code === '42501' || msg.includes('policy') || msg.includes('permission') || msg.includes('row-level')) {
+    return 'No tienes permisos para esta operación';
+  }
+  if (code === '23503' || msg.includes('foreign key')) {
+    return 'Referencia inválida (mandato o carpeta no existe)';
+  }
+  return error?.message || 'Error guardando en base de datos';
+}
+
+export interface UpsertTeaserParams {
+  mandatoId: string;
+  folderId: string;
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  storagePath: string;
+  uploadedBy: string;
+  idioma: IdiomaTeaser;
+}
+
+/**
+ * Upsert teaser: si ya existe uno para ese idioma, lo reemplaza
+ */
+export async function upsertTeaser(params: UpsertTeaserParams): Promise<DocumentWithVersion> {
+  console.log('[Teaser Upsert] Iniciando upsert:', params.idioma, params.fileName);
+  
+  // 1. Buscar teaser existente para este idioma
+  const { data: existing, error: findError } = await supabase
+    .from('documentos')
+    .select('id, storage_path')
+    .eq('folder_id', params.folderId)
+    .eq('idioma', params.idioma)
+    .eq('is_latest_version', true)
+    .maybeSingle();
+
+  if (findError) {
+    console.error('[Teaser Upsert] Error buscando existente:', findError);
+    throw new Error(translateDbError(findError));
+  }
+
+  let version = 1;
+
+  if (existing) {
+    console.log('[Teaser Upsert] Teaser existente encontrado:', existing.id);
+    version = 2; // Será la versión 2+
+
+    // 2. Marcar anterior como no-latest
+    const { error: updateError } = await supabase
+      .from('documentos')
+      .update({ is_latest_version: false })
+      .eq('id', existing.id);
+
+    if (updateError) {
+      console.error('[Teaser Upsert] Error marcando anterior:', updateError);
+      throw new Error(translateDbError(updateError));
+    }
+
+    // 3. Eliminar archivo anterior del storage (best effort)
+    try {
+      await supabase.storage
+        .from('mandato-documentos')
+        .remove([existing.storage_path]);
+      console.log('[Teaser Upsert] Archivo anterior eliminado del storage');
+    } catch (storageErr) {
+      console.warn('[Teaser Upsert] No se pudo eliminar archivo anterior:', storageErr);
+    }
+  }
+
+  // 4. Insertar nuevo registro
+  const { data: newDoc, error: insertError } = await supabase
+    .from('documentos')
+    .insert({
+      mandato_id: params.mandatoId,
+      folder_id: params.folderId,
+      file_name: params.fileName,
+      file_size_bytes: params.fileSizeBytes,
+      mime_type: params.mimeType,
+      storage_path: params.storagePath,
+      tipo: 'Teaser',
+      descripcion: `Teaser (${params.idioma === 'ES' ? 'Español' : 'Inglés'})`,
+      uploaded_by: params.uploadedBy,
+      idioma: params.idioma,
+      version: version,
+      parent_document_id: existing?.id || null,
+      is_latest_version: true,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('[Teaser Upsert] Error insertando:', insertError);
+    throw new Error(translateDbError(insertError));
+  }
+
+  console.log('[Teaser Upsert] Nuevo teaser creado:', newDoc.id);
+  return newDoc as DocumentWithVersion;
+}
+
+/**
  * Obtener o crear la carpeta Teaser para un mandato
  */
 export async function getOrCreateTeaserFolder(mandatoId: string): Promise<DocumentFolder> {
