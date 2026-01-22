@@ -102,15 +102,16 @@ export function Topbar() {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-10">
-      <div className="flex items-center gap-4 flex-1">
+    <header className="h-14 md:h-16 border-b border-border bg-card flex items-center justify-between px-3 md:px-6 sticky top-0 z-10">
+      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
         <SidebarTrigger />
         
-        <div className="relative max-w-md w-full">
+        {/* Search - hidden on mobile, visible from sm */}
+        <div className="relative hidden sm:block max-w-md w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar mandatos, contactos, empresas..."
-            className="pl-10 bg-muted/50 border-0"
+            placeholder="Buscar mandatos, contactos..."
+            className="pl-10 bg-muted/50 border-0 h-9"
             value={globalSearchQuery}
             onChange={(e) => setGlobalSearchQuery(e.target.value)}
             onFocus={() => setShowResults(true)}
@@ -138,9 +139,11 @@ export function Topbar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Timer Global */}
-        <GlobalTimer />
+      <div className="flex items-center gap-1.5 md:gap-3">
+        {/* Timer Global - hidden on very small screens */}
+        <div className="hidden xs:block">
+          <GlobalTimer />
+        </div>
 
         {/* Botón + Nuevo */}
         <DropdownMenu>
