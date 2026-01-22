@@ -1,11 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type WorkTaskTypeContext = 'all' | 'mandate' | 'prospection';
+
 export interface WorkTaskType {
   id: string;
   name: string;
   description: string | null;
   is_active: boolean;
   sort_order: number;
+  context: WorkTaskTypeContext;
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +35,11 @@ export async function fetchActiveWorkTaskTypes(): Promise<WorkTaskType[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  // Cast context from string to WorkTaskTypeContext
+  return (data || []).map(item => ({
+    ...item,
+    context: (item.context as WorkTaskTypeContext) || 'all'
+  }));
 }
 
 export async function fetchAllWorkTaskTypes(): Promise<WorkTaskType[]> {
@@ -43,7 +50,11 @@ export async function fetchAllWorkTaskTypes(): Promise<WorkTaskType[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  // Cast context from string to WorkTaskTypeContext
+  return (data || []).map(item => ({
+    ...item,
+    context: (item.context as WorkTaskTypeContext) || 'all'
+  }));
 }
 
 export async function getWorkTaskTypeById(id: string): Promise<WorkTaskType | null> {
@@ -57,7 +68,7 @@ export async function getWorkTaskTypeById(id: string): Promise<WorkTaskType | nu
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-  return data;
+  return data ? { ...data, context: (data.context as WorkTaskTypeContext) || 'all' } : null;
 }
 
 export async function createWorkTaskType(data: CreateWorkTaskTypeData): Promise<WorkTaskType> {
@@ -80,7 +91,7 @@ export async function createWorkTaskType(data: CreateWorkTaskTypeData): Promise<
     .single();
 
   if (error) throw error;
-  return result;
+  return { ...result, context: (result.context as WorkTaskTypeContext) || 'all' };
 }
 
 export async function updateWorkTaskType(id: string, data: UpdateWorkTaskTypeData): Promise<WorkTaskType> {
@@ -92,7 +103,7 @@ export async function updateWorkTaskType(id: string, data: UpdateWorkTaskTypeDat
     .single();
 
   if (error) throw error;
-  return result;
+  return { ...result, context: (result.context as WorkTaskTypeContext) || 'all' };
 }
 
 export async function toggleWorkTaskTypeActive(id: string, isActive: boolean): Promise<WorkTaskType> {

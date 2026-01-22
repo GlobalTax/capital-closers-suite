@@ -15,7 +15,7 @@ import { createTimeEntry } from "@/services/timeTracking";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { LeadByMandatoSelect } from "@/components/shared/LeadByMandatoSelect";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
-import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
+import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 
 interface TimeEntryInlineFormProps {
   onSuccess?: () => void;
@@ -58,7 +58,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   // Check if mandato is an internal project WITHOUT leads (Prospección has leads)
   const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
   
-  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
+  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
 
   // Auto-focus on hours input on mount
   useEffect(() => {
@@ -78,10 +78,11 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     }
   }, [mandatoId, isInternalProject]);
 
-  // Reset leadId when mandato changes
+  // Reset leadId and workTaskTypeId when mandato changes (task types are context-dependent)
   useEffect(() => {
     setLeadId(null);
     setTaskId('');
+    setWorkTaskTypeId(''); // Reset to avoid incompatible task types
   }, [mandatoId]);
 
   // Load tasks when mandato changes (for real mandatos, not internal projects)

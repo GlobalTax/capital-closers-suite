@@ -15452,6 +15452,7 @@ export type Database = {
       }
       work_task_types: {
         Row: {
+          context: string | null
           created_at: string | null
           default_value_type:
             | Database["public"]["Enums"]["time_entry_value_type"]
@@ -15464,6 +15465,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          context?: string | null
           created_at?: string | null
           default_value_type?:
             | Database["public"]["Enums"]["time_entry_value_type"]
@@ -15476,6 +15478,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          context?: string | null
           created_at?: string | null
           default_value_type?:
             | Database["public"]["Enums"]["time_entry_value_type"]
