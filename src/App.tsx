@@ -52,6 +52,8 @@ const PresentacionEditor = lazy(() => import("./pages/PresentacionEditor"));
 const PresenterMode = lazy(() => import("./pages/PresenterMode"));
 const PublicViewer = lazy(() => import("./pages/PublicViewer"));
 const TeamWorkload = lazy(() => import("./pages/TeamWorkload"));
+const Outbound = lazy(() => import("./pages/Outbound"));
+const OutboundCampaignDetail = lazy(() => import("./pages/OutboundCampaignDetail"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -96,6 +98,8 @@ function AppContent() {
             <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
             <Route path="/sync-contacts-capittal" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncContactsCapittal /></AppLayout></ProtectedRoute>} />
             <Route path="/team-workload" element={<ProtectedRoute requiredRole="admin"><AppLayout><TeamWorkload /></AppLayout></ProtectedRoute>} />
+            <Route path="/outbound" element={<ProtectedRoute requiredRole="admin"><AppLayout><Outbound /></AppLayout></ProtectedRoute>} />
+            <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />

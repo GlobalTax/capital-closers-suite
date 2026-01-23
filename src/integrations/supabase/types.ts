@@ -2647,6 +2647,62 @@ export type Database = {
           },
         ]
       }
+      campaign_cost_snapshots: {
+        Row: {
+          amount_spent: number | null
+          campaign_id: string
+          created_at: string | null
+          created_by: string | null
+          daily_budget: number | null
+          id: string
+          internal_status: string | null
+          monthly_budget: number | null
+          notes: string | null
+          results: number | null
+          snapshot_date: string
+          target_cpl: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_spent?: number | null
+          campaign_id: string
+          created_at?: string | null
+          created_by?: string | null
+          daily_budget?: number | null
+          id?: string
+          internal_status?: string | null
+          monthly_budget?: number | null
+          notes?: string | null
+          results?: number | null
+          snapshot_date?: string
+          target_cpl?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_spent?: number | null
+          campaign_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          daily_budget?: number | null
+          id?: string
+          internal_status?: string | null
+          monthly_budget?: number | null
+          notes?: string | null
+          results?: number | null
+          snapshot_date?: string
+          target_cpl?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_cost_snapshots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_costs: {
         Row: {
           amount: number
@@ -2713,6 +2769,39 @@ export type Database = {
           results?: number | null
           target_cpl?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          archived: boolean | null
+          channel: string
+          created_at: string | null
+          created_by: string | null
+          delivery_status: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          archived?: boolean | null
+          channel?: string
+          created_at?: string | null
+          created_by?: string | null
+          delivery_status?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          archived?: boolean | null
+          channel?: string
+          created_at?: string | null
+          created_by?: string | null
+          delivery_status?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

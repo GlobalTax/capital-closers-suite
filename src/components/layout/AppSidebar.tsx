@@ -145,6 +145,7 @@ const superAdminGroup: MenuGroup = {
   items: [
     { title: "Usuarios", url: "/usuarios", icon: UserCog },
     { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
+    { title: "Outbound Apollo", url: "/outbound", icon: Search },
     { title: "Sync Valoraciones", url: "/sync-valuations", icon: RefreshCw },
     { title: "Integración Brevo", url: "/integraciones/brevo", icon: Link2 },
     { title: "Importar Datos", url: "/importar-datos", icon: Upload },
