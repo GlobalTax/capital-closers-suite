@@ -68,3 +68,12 @@ verify_jwt = true
 
 [functions.task-health-check]
 verify_jwt = true
+
+[functions.search-apollo-prospects]
+verify_jwt = true
+
+[functions.enrich-apollo-bulk]
+verify_jwt = true
+
+[functions.import-outbound-leads]
+verify_jwt = true
