@@ -1237,6 +1237,50 @@ export type Database = {
         }
         Relationships: []
       }
+      apollo_sector_mapping: {
+        Row: {
+          apollo_industries: string[] | null
+          apollo_keywords: string[]
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          sector_id: string | null
+          sector_name: string
+          sic_codes: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          apollo_industries?: string[] | null
+          apollo_keywords?: string[]
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sector_id?: string | null
+          sector_name: string
+          sic_codes?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          apollo_industries?: string[] | null
+          apollo_keywords?: string[]
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          sector_id?: string | null
+          sector_name?: string
+          sic_codes?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apollo_sector_mapping_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: true
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apollo_visitor_imports: {
         Row: {
           created_at: string
@@ -11973,6 +12017,178 @@ export type Database = {
             columns: ["operation_id"]
             isOneToOne: false
             referencedRelation: "company_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbound_campaigns: {
+        Row: {
+          apollo_keywords: string[] | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          credits_used: number | null
+          description: string | null
+          filters: Json
+          id: string
+          last_search_at: string | null
+          name: string
+          sector_id: string | null
+          sector_name: string | null
+          status: string
+          total_enriched: number | null
+          total_found: number | null
+          total_imported: number | null
+          updated_at: string
+        }
+        Insert: {
+          apollo_keywords?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          last_search_at?: string | null
+          name: string
+          sector_id?: string | null
+          sector_name?: string | null
+          status?: string
+          total_enriched?: number | null
+          total_found?: number | null
+          total_imported?: number | null
+          updated_at?: string
+        }
+        Update: {
+          apollo_keywords?: string[] | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          credits_used?: number | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          last_search_at?: string | null
+          name?: string
+          sector_id?: string | null
+          sector_name?: string | null
+          status?: string
+          total_enriched?: number | null
+          total_found?: number | null
+          total_imported?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_campaigns_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbound_prospects: {
+        Row: {
+          apellidos: string | null
+          apollo_id: string | null
+          apollo_org_id: string | null
+          campaign_id: string
+          cargo: string | null
+          company_industry: string | null
+          company_linkedin_url: string | null
+          company_location: string | null
+          company_revenue_range: string | null
+          company_size: string | null
+          created_at: string
+          email: string | null
+          email_status: string | null
+          empresa: string | null
+          enriched_at: string | null
+          enrichment_status: string
+          id: string
+          import_status: string | null
+          imported_at: string | null
+          imported_lead_id: string | null
+          is_selected: boolean | null
+          linkedin_url: string | null
+          nombre: string
+          notes: string | null
+          score: number | null
+          telefono: string | null
+          telefono_type: string | null
+          updated_at: string
+          website_domain: string | null
+        }
+        Insert: {
+          apellidos?: string | null
+          apollo_id?: string | null
+          apollo_org_id?: string | null
+          campaign_id: string
+          cargo?: string | null
+          company_industry?: string | null
+          company_linkedin_url?: string | null
+          company_location?: string | null
+          company_revenue_range?: string | null
+          company_size?: string | null
+          created_at?: string
+          email?: string | null
+          email_status?: string | null
+          empresa?: string | null
+          enriched_at?: string | null
+          enrichment_status?: string
+          id?: string
+          import_status?: string | null
+          imported_at?: string | null
+          imported_lead_id?: string | null
+          is_selected?: boolean | null
+          linkedin_url?: string | null
+          nombre: string
+          notes?: string | null
+          score?: number | null
+          telefono?: string | null
+          telefono_type?: string | null
+          updated_at?: string
+          website_domain?: string | null
+        }
+        Update: {
+          apellidos?: string | null
+          apollo_id?: string | null
+          apollo_org_id?: string | null
+          campaign_id?: string
+          cargo?: string | null
+          company_industry?: string | null
+          company_linkedin_url?: string | null
+          company_location?: string | null
+          company_revenue_range?: string | null
+          company_size?: string | null
+          created_at?: string
+          email?: string | null
+          email_status?: string | null
+          empresa?: string | null
+          enriched_at?: string | null
+          enrichment_status?: string
+          id?: string
+          import_status?: string | null
+          imported_at?: string | null
+          imported_lead_id?: string | null
+          is_selected?: boolean | null
+          linkedin_url?: string | null
+          nombre?: string
+          notes?: string | null
+          score?: number | null
+          telefono?: string | null
+          telefono_type?: string | null
+          updated_at?: string
+          website_domain?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_prospects_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_campaigns"
             referencedColumns: ["id"]
           },
         ]
