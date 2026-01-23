@@ -117,21 +117,22 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
 
 /**
  * Obtener o crear la carpeta Teaser para un mandato
+ * Con manejo robusto de errores y fallback a tipo 'custom' si 'teaser' falla
  */
 export async function getOrCreateTeaserFolder(mandatoId: string): Promise<DocumentFolder> {
   console.log('[Teaser] Buscando/creando carpeta teaser para mandato:', mandatoId);
   
-  // Buscar carpeta existente con maybeSingle - no lanza error si no existe
+  // 1. Buscar carpeta existente por tipo 'teaser' O por nombre 'Teaser' (fallback)
   const { data: existing, error: findError } = await supabase
     .from('document_folders')
     .select('*')
     .eq('mandato_id', mandatoId)
-    .eq('folder_type', TEASER_FOLDER_TYPE)
+    .or(`folder_type.eq.${TEASER_FOLDER_TYPE},name.eq.${TEASER_FOLDER_NAME}`)
+    .limit(1)
     .maybeSingle();
 
   if (findError) {
     console.error('[Teaser] Error buscando carpeta:', findError);
-    // Detectar errores de RLS
     if (findError.code === '42501' || findError.message?.includes('policy')) {
       throw new Error('No tienes permisos para acceder a las carpetas. Contacta al administrador.');
     }
@@ -139,34 +140,70 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
   }
 
   if (existing) {
-    console.log('[Teaser] Carpeta existente encontrada:', existing.id);
+    console.log('[Teaser] Carpeta existente encontrada:', existing.id, 'tipo:', existing.folder_type);
     return existing as DocumentFolder;
   }
 
-  // Crear carpeta si no existe
-  console.log('[Teaser] Creando nueva carpeta teaser...');
+  // 2. Crear carpeta - intentar primero con tipo 'teaser'
+  console.log('[Teaser] Creando nueva carpeta con folder_type:', TEASER_FOLDER_TYPE);
+  
+  const insertPayload = {
+    mandato_id: mandatoId,
+    name: TEASER_FOLDER_NAME,
+    folder_type: TEASER_FOLDER_TYPE,
+    orden: 0,
+    is_data_room: false,
+  };
+  
+  console.log('[Teaser] Payload de inserción:', JSON.stringify(insertPayload));
+  
   const { data: newFolder, error: createError } = await supabase
     .from('document_folders')
-    .insert({
-      mandato_id: mandatoId,
-      name: TEASER_FOLDER_NAME,
-      folder_type: TEASER_FOLDER_TYPE,
-      orden: 0,
-      is_data_room: false,
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
   if (createError) {
-    console.error('[Teaser] Error creando carpeta:', createError);
+    console.error('[Teaser] Error creando carpeta:', {
+      code: createError.code,
+      message: createError.message,
+      details: createError.details,
+      hint: createError.hint,
+    });
+    
+    // Si es error de check constraint, intentar con tipo 'custom' como fallback
+    if (createError.code === '23514' || createError.message?.includes('check constraint')) {
+      console.warn('[Teaser] folder_type "teaser" no aceptado, intentando con "custom"...');
+      
+      const fallbackPayload = {
+        ...insertPayload,
+        folder_type: 'custom',
+      };
+      
+      const { data: fallbackFolder, error: fallbackError } = await supabase
+        .from('document_folders')
+        .insert(fallbackPayload)
+        .select()
+        .single();
+        
+      if (fallbackError) {
+        console.error('[Teaser] Error en fallback:', fallbackError);
+        throw new Error(`Error creando carpeta Teaser: ${translateDbError(fallbackError)}`);
+      }
+      
+      console.log('[Teaser] Carpeta creada con fallback (custom):', fallbackFolder.id);
+      return fallbackFolder as DocumentFolder;
+    }
+    
     // Mensaje específico para error de RLS
     if (createError.code === '42501' || createError.message?.includes('policy') || createError.message?.includes('row-level')) {
       throw new Error('No tienes permisos para crear carpetas. Contacta al administrador.');
     }
-    throw new Error(`Error creando carpeta Teaser: ${createError.message}`);
+    
+    throw new Error(`Error creando carpeta Teaser: ${translateDbError(createError)}`);
   }
 
-  console.log('[Teaser] Carpeta creada exitosamente:', newFolder.id);
+  console.log('[Teaser] Carpeta creada exitosamente:', newFolder.id, 'tipo:', newFolder.folder_type);
   return newFolder as DocumentFolder;
 }
 
