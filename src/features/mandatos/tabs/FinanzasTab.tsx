@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { FinancialStatementsCard } from "@/components/financials/FinancialStatementsCard";
+import { PriceCalculatorCard } from "@/components/pricing/PriceCalculatorCard";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FinanzasTabProps {
@@ -50,10 +51,18 @@ export function FinanzasTab({ mandatoId }: FinanzasTabProps) {
     <div className="space-y-6">
       {/* Estados Financieros de la Empresa */}
       {empresaPrincipal && (
-        <FinancialStatementsCard 
-          empresaId={empresaPrincipal.id} 
-          empresaNombre={empresaPrincipal.nombre} 
-        />
+        <>
+          <FinancialStatementsCard 
+            empresaId={empresaPrincipal.id} 
+            empresaNombre={empresaPrincipal.nombre} 
+          />
+          
+          {/* Calculadora de Precio Definitivo */}
+          <PriceCalculatorCard
+            empresaId={empresaPrincipal.id}
+            mandatoId={mandatoId}
+          />
+        </>
       )}
 
       {/* Transacciones del Mandato */}

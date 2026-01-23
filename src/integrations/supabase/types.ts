@@ -2118,6 +2118,12 @@ export type Database = {
           revenue_min: number | null
           sector: string
           subsector: string | null
+          teaser_en_filename: string | null
+          teaser_en_uploaded_at: string | null
+          teaser_en_url: string | null
+          teaser_es_filename: string | null
+          teaser_es_uploaded_at: string | null
+          teaser_es_url: string | null
           title: string
           updated_at: string
         }
@@ -2136,6 +2142,12 @@ export type Database = {
           revenue_min?: number | null
           sector: string
           subsector?: string | null
+          teaser_en_filename?: string | null
+          teaser_en_uploaded_at?: string | null
+          teaser_en_url?: string | null
+          teaser_es_filename?: string | null
+          teaser_es_uploaded_at?: string | null
+          teaser_es_url?: string | null
           title: string
           updated_at?: string
         }
@@ -2154,6 +2166,12 @@ export type Database = {
           revenue_min?: number | null
           sector?: string
           subsector?: string | null
+          teaser_en_filename?: string | null
+          teaser_en_uploaded_at?: string | null
+          teaser_en_url?: string | null
+          teaser_es_filename?: string | null
+          teaser_es_uploaded_at?: string | null
+          teaser_es_url?: string | null
           title?: string
           updated_at?: string
         }
