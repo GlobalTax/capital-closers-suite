@@ -19,10 +19,17 @@ import { Badge } from '@/components/ui/badge';
 import { useLeadsByMandato, type MandateLead } from '@/hooks/useLeadsByMandato';
 import { useProspectsForTimeEntry, type ProspectForTimeEntry } from '@/hooks/useProspectsForTimeEntry';
 
+// Export types for external use
+export type { ProspectForTimeEntry, MandateLead };
+
+// Combined type for selected lead data
+export type SelectedLeadData = ProspectForTimeEntry | MandateLead | null;
+
 interface LeadByMandatoSelectProps {
   mandatoId: string | null;
   value: string | null;
-  onValueChange: (leadId: string | null) => void;
+  /** Called when selection changes. leadData contains full lead info for Prospección prospects */
+  onValueChange: (leadId: string | null, leadData?: SelectedLeadData) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -82,9 +89,17 @@ export function LeadByMandatoSelect({
     return placeholder;
   }, [value, selectedItem, placeholder]);
   
-  // Handle selection
+  // Handle selection - pass full lead data for transformation
   const handleSelect = (leadId: string | null) => {
-    onValueChange(leadId);
+    if (leadId === null) {
+      onValueChange(null, null);
+    } else if (isProspeccionProject) {
+      const prospect = prospects.find(p => p.id === leadId);
+      onValueChange(leadId, prospect || null);
+    } else {
+      const lead = mandateLeads.find(l => l.id === leadId);
+      onValueChange(leadId, lead || null);
+    }
     setOpen(false);
   };
   

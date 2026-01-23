@@ -23,23 +23,33 @@ import {
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { MandatoSelect } from '@/components/shared/MandatoSelect';
-import { LeadByMandatoSelect } from '@/components/shared/LeadByMandatoSelect';
+import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from '@/components/shared/LeadByMandatoSelect';
 import { useTimerStore, formatTime } from '@/stores/useTimerStore';
 import { useActiveWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { createTimeEntry } from '@/services/timeTracking';
+import { ensureLeadInMandateLeads } from '@/services/leadActivities';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
 
 // UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
+const PROSPECCION_PROJECT_ID = '00000000-0000-0000-0000-000000000004';
 
-// Internal project IDs that don't have leads
-const INTERNAL_PROJECT_IDS = [
+// Internal project IDs that don't have leads (except Prospección)
+const INTERNAL_PROJECT_IDS_NO_LEADS = [
   GENERAL_WORK_ID,
   '00000000-0000-0000-0000-000000000002', // Formación
   '00000000-0000-0000-0000-000000000003', // Desarrollo de negocio
-  '00000000-0000-0000-0000-000000000004', // Administración
-  '00000000-0000-0000-0000-000000000005', // Marketing
 ];
+
+// Map source_table from prospects to leadType for ensureLeadInMandateLeads
+function getLeadTypeFromSourceTable(sourceTable: string): 'contact' | 'valuation' | 'collaborator' {
+  switch (sourceTable) {
+    case 'sell_leads':
+      return 'valuation';
+    default:
+      return 'contact';
+  }
+}
 
 interface FormData {
   mandatoId: string;
@@ -63,6 +73,7 @@ export function TimerAssignmentDialog() {
   } = useTimerStore();
   const { data: workTaskTypes = [], isLoading: loadingTaskTypes } = useActiveWorkTaskTypes();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLeadData, setSelectedLeadData] = useState<SelectedLeadData>(null);
   
   // Format time for display
   const displayTime = useMemo(() => formatTime(pendingTimeSeconds), [pendingTimeSeconds]);
@@ -89,6 +100,7 @@ export function TimerAssignmentDialog() {
         description: '',
         isBillable: presetValueType === 'core_ma',
       });
+      setSelectedLeadData(null);
     }
   }, [isAssignmentModalOpen, presetWorkTaskTypeId, presetValueType, reset]);
   
@@ -96,12 +108,14 @@ export function TimerAssignmentDialog() {
   const leadId = watch('leadId');
   const selectedValueType = watch('valueType');
   
-  // Check if mandato is an internal project
-  const isInternalProject = INTERNAL_PROJECT_IDS.includes(mandatoId);
+  // Check if mandato is an internal project without leads
+  const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
+  const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
   
   // Reset leadId when mandato changes
   useEffect(() => {
     setValue('leadId', null);
+    setSelectedLeadData(null);
   }, [mandatoId, setValue]);
   
   // Smart defaults: Update valueType and isBillable based on mandato selection
@@ -116,6 +130,12 @@ export function TimerAssignmentDialog() {
       setValue('isBillable', true);
     }
   }, [mandatoId, isInternalProject, setValue]);
+
+  // Handle lead selection with data
+  const handleLeadChange = (newLeadId: string | null, leadData?: SelectedLeadData) => {
+    setValue('leadId', newLeadId);
+    setSelectedLeadData(leadData || null);
+  };
   
   const onSubmit = async (data: FormData) => {
     // Validate mandato selection (required)
@@ -137,6 +157,30 @@ export function TimerAssignmentDialog() {
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (pendingTimeSeconds * 1000));
       
+      // Transform lead ID for Prospección project
+      let finalMandateLeadId: string | null = null;
+      
+      if (data.leadId && isProspeccionProject && selectedLeadData) {
+        // The leadId is from admin_leads, need to create/get mandate_leads entry
+        const prospect = selectedLeadData as ProspectForTimeEntry;
+        const leadType = getLeadTypeFromSourceTable(prospect.source_table);
+        
+        finalMandateLeadId = await ensureLeadInMandateLeads(
+          data.leadId,
+          leadType,
+          data.mandatoId,
+          {
+            companyName: prospect.company_name || 'Sin nombre',
+            contactName: prospect.contact_name || undefined,
+            contactEmail: prospect.contact_email || undefined,
+            sector: prospect.sector || undefined,
+          }
+        );
+      } else if (data.leadId && !isProspeccionProject) {
+        // For regular mandatos, leadId is already from mandate_leads
+        finalMandateLeadId = data.leadId;
+      }
+      
       // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
       const entryData: Record<string, any> = {
         work_task_type_id: data.workTaskTypeId,
@@ -148,7 +192,7 @@ export function TimerAssignmentDialog() {
         is_billable: data.isBillable,
         work_type: 'Otro',
         mandato_id: data.mandatoId,
-        mandate_lead_id: data.leadId || null, // Optional: null means general hours for the mandato
+        mandate_lead_id: finalMandateLeadId,
       };
       
       await createTimeEntry(entryData);
@@ -172,6 +216,9 @@ export function TimerAssignmentDialog() {
     closeAssignmentModal();
     toast.info('Tiempo descartado');
   };
+
+  // Determine if lead selector should show
+  const showLeadSelector = mandatoId && !isInternalProject;
   
   return (
     <Dialog open={isAssignmentModalOpen} onOpenChange={(open) => !open && handleDiscard()}>
@@ -205,13 +252,13 @@ export function TimerAssignmentDialog() {
           </div>
           
           {/* 2. Lead Select (Optional, dependent on mandato) */}
-          {mandatoId && !isInternalProject && (
+          {showLeadSelector && (
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Lead (opcional)</Label>
               <LeadByMandatoSelect
                 mandatoId={mandatoId}
                 value={leadId}
-                onValueChange={(value) => setValue('leadId', value)}
+                onValueChange={handleLeadChange}
               />
             </div>
           )}

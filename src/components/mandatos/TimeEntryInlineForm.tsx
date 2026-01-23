@@ -12,8 +12,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { createTimeEntry } from "@/services/timeTracking";
+import { ensureLeadInMandateLeads } from "@/services/leadActivities";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
-import { LeadByMandatoSelect } from "@/components/shared/LeadByMandatoSelect";
+import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from "@/components/shared/LeadByMandatoSelect";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 
@@ -31,6 +32,16 @@ const INTERNAL_PROJECT_IDS_NO_LEADS = [
   '00000000-0000-0000-0000-000000000003', // Administrativo
 ];
 
+// Map source_table from prospects to leadType for ensureLeadInMandateLeads
+function getLeadTypeFromSourceTable(sourceTable: string): 'contact' | 'valuation' | 'collaborator' {
+  switch (sourceTable) {
+    case 'sell_leads':
+      return 'valuation';
+    default:
+      return 'contact';
+  }
+}
+
 export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<MandatoChecklistTask[]>([]);
@@ -42,6 +53,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const [minutes, setMinutes] = useState('30');
   const [mandatoId, setMandatoId] = useState('');
   const [leadId, setLeadId] = useState<string | null>(null);
+  const [selectedLeadData, setSelectedLeadData] = useState<SelectedLeadData>(null);
   const [valueType, setValueType] = useState<TimeEntryValueType>('core_ma');
   const [workTaskTypeId, setWorkTaskTypeId] = useState('');
   const [description, setDescription] = useState('');
@@ -57,6 +69,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   
   // Check if mandato is an internal project WITHOUT leads (Prospección has leads)
   const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
+  const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
   
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
 
@@ -81,6 +94,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   // Reset leadId and workTaskTypeId when mandato changes (task types are context-dependent)
   useEffect(() => {
     setLeadId(null);
+    setSelectedLeadData(null);
     setTaskId('');
     setWorkTaskTypeId(''); // Reset to avoid incompatible task types
   }, [mandatoId]);
@@ -123,6 +137,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     setMinutes('30');
     setMandatoId('');
     setLeadId(null);
+    setSelectedLeadData(null);
     setValueType('core_ma');
     setWorkTaskTypeId('');
     setDescription('');
@@ -133,6 +148,12 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     setNotes('');
     setShowAdvanced(false);
     setTimeout(() => hoursInputRef.current?.focus(), 100);
+  };
+
+  // Handle lead selection with data
+  const handleLeadChange = (newLeadId: string | null, leadData?: SelectedLeadData) => {
+    setLeadId(newLeadId);
+    setSelectedLeadData(leadData || null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +198,31 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
+      // Transform lead ID for Prospección project
+      // For Prospección, leadId comes from admin_leads but we need mandate_leads.id
+      let finalMandateLeadId: string | null = null;
+      
+      if (leadId && isProspeccionProject && selectedLeadData) {
+        // The leadId is from admin_leads, need to create/get mandate_leads entry
+        const prospect = selectedLeadData as ProspectForTimeEntry;
+        const leadType = getLeadTypeFromSourceTable(prospect.source_table);
+        
+        finalMandateLeadId = await ensureLeadInMandateLeads(
+          leadId,
+          leadType,
+          mandatoId,
+          {
+            companyName: prospect.company_name || 'Sin nombre',
+            contactName: prospect.contact_name || undefined,
+            contactEmail: prospect.contact_email || undefined,
+            sector: prospect.sector || undefined,
+          }
+        );
+      } else if (leadId && !isProspeccionProject) {
+        // For regular mandatos, leadId is already from mandate_leads
+        finalMandateLeadId = leadId;
+      }
+
       // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
       const entryData: Record<string, any> = {
         user_id: user.id,
@@ -191,7 +237,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         notes: notes.trim() || undefined,
         work_task_type_id: workTaskTypeId,
         mandato_id: mandatoId,
-        mandate_lead_id: leadId || null, // Optional: null means general hours for the mandato
+        mandate_lead_id: finalMandateLeadId,
         task_id: taskId && taskId !== '__none__' ? taskId : undefined,
       };
 
@@ -270,7 +316,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
             <LeadByMandatoSelect
               mandatoId={mandatoId}
               value={leadId}
-              onValueChange={setLeadId}
+              onValueChange={handleLeadChange}
             />
           </div>
         )}
