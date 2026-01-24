@@ -17669,6 +17669,7 @@ export type Database = {
         Returns: Json
       }
       monitor_security_violations: { Args: never; Returns: undefined }
+      normalize_company_name: { Args: { name: string }; Returns: string }
       refresh_banner_analytics: { Args: never; Returns: undefined }
       refresh_mandatos_days_in_stage: { Args: never; Returns: undefined }
       reject_user_registration: {
