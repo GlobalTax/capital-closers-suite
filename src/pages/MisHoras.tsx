@@ -148,7 +148,7 @@ export default function MisHoras() {
   const filteredTotalHours = timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-4 md:space-y-6">
       {/* Header - responsive */}
       <div>
         <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Mis Horas</h1>
