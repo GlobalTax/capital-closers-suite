@@ -24,13 +24,14 @@ import {
   Sun,
   Moon,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { KeyboardHint } from "./KeyboardHint";
 import { useTheme } from "next-themes";
 
 export function CommandPalette() {
   const navigate = useNavigate();
-  const { isCommandPaletteOpen, closeCommandPalette } = useUIStore();
+  const { isCommandPaletteOpen, closeCommandPalette, openAITaskDialog } = useUIStore();
   const { theme, setTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
@@ -174,6 +175,11 @@ export function CommandPalette() {
             <CommandSeparator />
 
             <CommandGroup heading="Acciones rápidas">
+              <CommandItem onSelect={() => handleSelect(() => openAITaskDialog(), "ai-task-dialog")}>
+                <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                <span className="flex-1">Crear tarea con IA</span>
+                <KeyboardHint shortcut="⌘⇧T" />
+              </CommandItem>
               <CommandItem onSelect={() => handleSelect(() => navigate("/mandatos?nuevo=true"), "/mandatos?nuevo=true")}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span className="flex-1">Nuevo Mandato</span>
@@ -305,6 +311,7 @@ function getActionConfig(path: string): { label: string; icon: any } | null {
     "/contactos?nuevo=true": { label: "Nuevo Contacto", icon: Plus },
     "/empresas?nuevo=true": { label: "Nueva Empresa", icon: Plus },
     "/perfil": { label: "Configuración", icon: Settings },
+    "ai-task-dialog": { label: "Crear tarea con IA", icon: Sparkles },
   };
   return configs[path] || null;
 }

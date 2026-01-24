@@ -1,5 +1,5 @@
 // Generate Tasks from Deal Dialog for Phase 5
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import type { Mandato } from "@/types";
 import { TaskPreviewCard } from "@/components/tasks/TaskPreviewCard";
 import type { ParsedTask } from "@/types/taskAI";
+import { useQuery } from "@tanstack/react-query";
 
 interface GenerateTasksDialogProps {
   open: boolean;
@@ -48,6 +49,28 @@ export function GenerateTasksDialog({ open, onOpenChange, mandato, onSuccess }: 
   const [loading, setLoading] = useState(false);
   const [generatedTasks, setGeneratedTasks] = useState<ParsedTask[]>([]);
   const [creating, setCreating] = useState(false);
+
+  // Fetch available users for inline assignment editing
+  const { data: availableUsers = [] } = useQuery({
+    queryKey: ['admin-users-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('user_id, full_name')
+        .eq('is_active', true)
+        .order('full_name');
+      
+      if (error) throw error;
+      return (data || []).map(u => ({ id: u.user_id, name: u.full_name || 'Sin nombre' }));
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: open, // Only fetch when dialog is open
+  });
+
+  // Handler for updating a task in preview
+  const handleUpdateTask = (index: number, updatedTask: ParsedTask) => {
+    setGeneratedTasks(prev => prev.map((t, i) => i === index ? updatedTask : t));
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -149,7 +172,7 @@ Genera 5-8 tareas concretas y accionables para ${phase === 'all' ? 'todas las fa
         if (error) throw error;
         toast.success(`${generatedTasks.length} tareas añadidas al checklist del mandato`);
       } else {
-        // Create as regular tareas
+        // Create as regular tareas - get inserted IDs for proper event logging
         const tareas = generatedTasks.map(task => ({
           titulo: task.title,
           descripcion: task.description,
@@ -163,22 +186,30 @@ Genera 5-8 tareas concretas y accionables para ${phase === 'all' ? 'todas las fa
           source_text: `Generado desde mandato: ${mandato.empresa_principal?.nombre || mandato.id}`,
         }));
 
-        const { error } = await supabase
+        const { data: insertedTareas, error } = await supabase
           .from('tareas')
-          .insert(tareas);
+          .insert(tareas)
+          .select('id, titulo');
 
         if (error) throw error;
 
-        // Log events
-        const events = generatedTasks.map(task => ({
-          task_id: mandato.id,
-          task_type: 'tarea' as const,
-          event_type: 'AI_CREATED' as const,
-          payload: { title: task.title, source: 'deal_generation' },
-          created_by: user.id,
-        }));
+        // Log events with CORRECT task IDs (not mandato.id)
+        if (insertedTareas && insertedTareas.length > 0) {
+          const events = insertedTareas.map((inserted) => ({
+            task_id: inserted.id, // ✅ Correct: Use the actual task ID
+            task_type: 'tarea' as const,
+            event_type: 'AI_CREATED' as const,
+            payload: { 
+              title: inserted.titulo, 
+              source: 'deal_generation',
+              mandato_id: mandato.id,
+              mandato_name: mandato.empresa_principal?.nombre || mandato.id,
+            },
+            created_by: user.id,
+          }));
 
-        await supabase.from('task_events').insert(events);
+          await supabase.from('task_events').insert(events);
+        }
         
         toast.success(`${generatedTasks.length} tareas creadas`);
       }
@@ -264,7 +295,10 @@ Genera 5-8 tareas concretas y accionables para ${phase === 'all' ? 'todas las fa
                   key={index} 
                   task={task} 
                   index={index}
+                  editable={true}
+                  availableUsers={availableUsers}
                   onRemove={() => removeTask(index)}
+                  onUpdate={(updatedTask) => handleUpdateTask(index, updatedTask)}
                 />
               ))}
             </div>
