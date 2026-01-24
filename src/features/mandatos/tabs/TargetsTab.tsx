@@ -10,6 +10,7 @@ import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer"
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
 import { AsociarContactoEmpresaDialog } from "@/components/contactos/AsociarContactoEmpresaDialog";
 import { TargetsTabBuySide } from "./TargetsTabBuySide";
+import { SearchFundsSection } from "@/components/targets/SearchFundsSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
@@ -410,6 +411,11 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
             onRefresh={onRefresh}
           />
         </div>
+      )}
+
+      {/* Search Funds Section - solo para mandatos con potencial_searchfund */}
+      {mandato.potencial_searchfund && (
+        <SearchFundsSection mandato={mandato} />
       )}
 
       {/* Drawers and Dialogs */}
