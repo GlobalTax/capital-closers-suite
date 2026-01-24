@@ -37,7 +37,7 @@ interface LeadByMandatoSelectProps {
 const GENERAL_WORK_ID = '00000000-0000-0000-0000-000000000001';
 const PROSPECCION_PROJECT_ID = '00000000-0000-0000-0000-000000000004';
 
-// Internal projects that DON'T have leads (Prospección is an exception - it DOES have leads from admin_leads)
+// Internal projects that DON'T have leads (Prospección is an exception - it has leads from form tables)
 const INTERNAL_PROJECT_IDS_NO_LEADS = [
   GENERAL_WORK_ID,
   '00000000-0000-0000-0000-000000000002', // Reuniones Internas

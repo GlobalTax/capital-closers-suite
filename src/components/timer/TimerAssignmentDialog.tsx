@@ -44,10 +44,14 @@ const INTERNAL_PROJECT_IDS_NO_LEADS = [
 ];
 
 // Map source_table from prospects to leadType for ensureLeadInMandateLeads
+// Now uses the 3 tables from /gestion-leads: contact_leads, advisor_valuations, collaborator_applications
 function getLeadTypeFromSourceTable(sourceTable: string): 'contact' | 'valuation' | 'collaborator' {
   switch (sourceTable) {
-    case 'sell_leads':
+    case 'advisor_valuations':
       return 'valuation';
+    case 'collaborator_applications':
+      return 'collaborator';
+    case 'contact_leads':
     default:
       return 'contact';
   }

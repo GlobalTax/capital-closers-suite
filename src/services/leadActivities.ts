@@ -30,10 +30,12 @@ export async function fetchLeadActivities(
   const activities: LeadActivity[] = [];
 
   // First, check if this lead exists in mandate_leads
+  // Now supports: contact_leads, advisor_valuations (valuation_id), collaborator_applications (admin_lead_id)
+  const fieldName = leadType === 'valuation' ? 'valuation_id' : 'admin_lead_id';
   const { data: mandateLead } = await supabase
     .from('mandate_leads')
     .select('id')
-    .or(`valuation_id.eq.${leadId},admin_lead_id.eq.${leadId}`)
+    .eq(fieldName, leadId)
     .maybeSingle();
 
   // Fetch time entries if the lead is in mandate_leads
@@ -90,10 +92,12 @@ export async function getLeadActivitySummary(
   let lastActivityType: string | null = null;
 
   // Check if this lead exists in mandate_leads
+  // Now supports: contact_leads, advisor_valuations (valuation_id), collaborator_applications (admin_lead_id)
+  const fieldName = leadType === 'valuation' ? 'valuation_id' : 'admin_lead_id';
   const { data: mandateLead } = await supabase
     .from('mandate_leads')
     .select('id, last_activity_at')
-    .or(`valuation_id.eq.${leadId},admin_lead_id.eq.${leadId}`)
+    .eq(fieldName, leadId)
     .maybeSingle();
 
   if (mandateLead) {
