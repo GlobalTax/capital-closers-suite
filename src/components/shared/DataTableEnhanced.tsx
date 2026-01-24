@@ -177,7 +177,8 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <span>{column.label}</span>
-                        {column.sortable && (
+                        {/* Solo mostrar sort si NO es server-side */}
+                        {column.sortable && !isServerPaginated && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -188,7 +189,8 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                           </Button>
                         )}
                       </div>
-                      {column.filterable && (
+                      {/* Solo mostrar filtro si NO es server-side */}
+                      {column.filterable && !isServerPaginated && (
                         <div className="relative">
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                           <Input

@@ -7,6 +7,15 @@ interface UseFiltersOptions {
   initialValues?: Record<string, string[]>;
 }
 
+// Función para parsear filtro de rango
+const parseRangeFilter = (value: string): [number, number] | null => {
+  const match = value.match(/^(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/);
+  if (match) {
+    return [parseFloat(match[1]), parseFloat(match[2])];
+  }
+  return null;
+};
+
 export function useFilters({ sections, initialValues = {} }: UseFiltersOptions) {
   const [values, setValues] = useState<Record<string, string[]>>(initialValues);
 
@@ -39,6 +48,21 @@ export function useFilters({ sections, initialValues = {} }: UseFiltersOptions) 
     sections.forEach((section) => {
       const sectionValues = values[section.id] || [];
       sectionValues.forEach((value) => {
+        // Si es un filtro de rango, formatear el label
+        if (section.type === "range") {
+          const range = parseRangeFilter(value);
+          if (range) {
+            const formatFn = section.formatValue || ((v: number) => String(v));
+            result.push({
+              sectionId: section.id,
+              sectionLabel: section.label,
+              value,
+              label: `${formatFn(range[0])} - ${formatFn(range[1])}`,
+            });
+            return;
+          }
+        }
+        
         const option = section.options?.find((opt) => opt.value === value);
         result.push({
           sectionId: section.id,
@@ -76,6 +100,18 @@ export function useFilters({ sections, initialValues = {} }: UseFiltersOptions) 
           
           if (filterFn) {
             return filterFn(item, sectionId, selectedValues);
+          }
+          
+          // Detectar si es un filtro de rango (formato "min-max")
+          if (selectedValues.length === 1) {
+            const range = parseRangeFilter(selectedValues[0]);
+            if (range) {
+              const itemValue = item[sectionId];
+              if (typeof itemValue === "number") {
+                return itemValue >= range[0] && itemValue <= range[1];
+              }
+              return true; // Si no es número, no filtrar
+            }
           }
           
           // Lógica de filtro por defecto: verificar si el campo coincide
