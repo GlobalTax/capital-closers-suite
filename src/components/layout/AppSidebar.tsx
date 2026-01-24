@@ -144,6 +144,7 @@ const superAdminGroup: MenuGroup = {
   icon: ShieldCheck,
   defaultOpen: false,
   items: [
+    { title: "Sync Center", url: "/sync-center", icon: RefreshCw },
     { title: "Usuarios", url: "/usuarios", icon: UserCog },
     { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
     { title: "Outbound Apollo", url: "/outbound", icon: Search },

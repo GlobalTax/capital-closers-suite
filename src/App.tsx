@@ -57,6 +57,7 @@ const Outbound = lazy(() => import("./pages/Outbound"));
 const OutboundCampaignDetail = lazy(() => import("./pages/OutboundCampaignDetail"));
 const SyncControl = lazy(() => import("./pages/admin/SyncControl"));
 const EmpresasMonitor = lazy(() => import("./pages/admin/EmpresasMonitor"));
+const SyncCenter = lazy(() => import("./pages/SyncCenter"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -106,6 +107,7 @@ function AppContent() {
             <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
+            <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />
