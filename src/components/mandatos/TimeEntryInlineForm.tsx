@@ -259,7 +259,7 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="bg-muted/30 rounded-lg border p-4 space-y-4">
-      {/* Row 1: Duration + Mandato/Lead + Task Type + Description + Button */}
+      {/* Row 1: Duration + Date + Mandato/Lead + Task Type + Description + Button */}
       <div className="flex flex-wrap items-end gap-3">
         {/* Duration */}
         <div className="flex items-end gap-1">
@@ -297,6 +297,17 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
               }}
             />
           </div>
+        </div>
+
+        {/* Date - Always visible */}
+        <div>
+          <Label className="text-xs text-muted-foreground">Fecha</Label>
+          <Input
+            type="date"
+            value={advancedDate}
+            onChange={(e) => setAdvancedDate(e.target.value)}
+            className="w-36 h-9"
+          />
         </div>
 
         {/* Mandato Select (Required) */}
@@ -443,16 +454,6 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
       <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
         <CollapsibleContent className="space-y-3 pt-3 border-t">
           <div className="flex flex-wrap items-end gap-3">
-            {/* Date */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Fecha</Label>
-              <Input
-                type="date"
-                value={advancedDate}
-                onChange={(e) => setAdvancedDate(e.target.value)}
-                className="w-36 h-9"
-              />
-            </div>
             
             {/* Start Time */}
             <div>

@@ -1237,6 +1237,42 @@ export type Database = {
         }
         Relationships: []
       }
+      api_usage_log: {
+        Row: {
+          cost_usd: number | null
+          created_at: string | null
+          credits_used: number | null
+          function_name: string | null
+          id: string
+          metadata: Json | null
+          operation: string
+          service: string
+          tokens_used: number | null
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string | null
+          credits_used?: number | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          operation: string
+          service: string
+          tokens_used?: number | null
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string | null
+          credits_used?: number | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          operation?: string
+          service?: string
+          tokens_used?: number | null
+        }
+        Relationships: []
+      }
       apollo_sector_mapping: {
         Row: {
           apollo_industries: string[] | null
@@ -4896,10 +4932,13 @@ export type Database = {
           id: string
           investment_stage: string[] | null
           is_deleted: boolean | null
+          last_diff_scan_at: string | null
           last_news_scan_at: string | null
           last_portfolio_diff_at: string | null
           last_portfolio_scraped_at: string | null
           last_scraped_at: string | null
+          last_web_etag: string | null
+          last_web_modified: string | null
           name: string
           notes_internal: string | null
           portfolio_diff_enabled: boolean | null
@@ -4936,10 +4975,13 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_diff_scan_at?: string | null
           last_news_scan_at?: string | null
           last_portfolio_diff_at?: string | null
           last_portfolio_scraped_at?: string | null
           last_scraped_at?: string | null
+          last_web_etag?: string | null
+          last_web_modified?: string | null
           name: string
           notes_internal?: string | null
           portfolio_diff_enabled?: boolean | null
@@ -4976,10 +5018,13 @@ export type Database = {
           id?: string
           investment_stage?: string[] | null
           is_deleted?: boolean | null
+          last_diff_scan_at?: string | null
           last_news_scan_at?: string | null
           last_portfolio_diff_at?: string | null
           last_portfolio_scraped_at?: string | null
           last_scraped_at?: string | null
+          last_web_etag?: string | null
+          last_web_modified?: string | null
           name?: string
           notes_internal?: string | null
           portfolio_diff_enabled?: boolean | null
@@ -5192,7 +5237,9 @@ export type Database = {
           news_alert_count: number | null
           notes: string | null
           ownership_type: string | null
+          scan_priority: string | null
           sector: string | null
+          skip_news_scan: boolean | null
           source_url: string | null
           status: string | null
           updated_at: string
@@ -5217,7 +5264,9 @@ export type Database = {
           news_alert_count?: number | null
           notes?: string | null
           ownership_type?: string | null
+          scan_priority?: string | null
           sector?: string | null
+          skip_news_scan?: boolean | null
           source_url?: string | null
           status?: string | null
           updated_at?: string
@@ -5242,7 +5291,9 @@ export type Database = {
           news_alert_count?: number | null
           notes?: string | null
           ownership_type?: string | null
+          scan_priority?: string | null
           sector?: string | null
+          skip_news_scan?: boolean | null
           source_url?: string | null
           status?: string | null
           updated_at?: string
@@ -13146,6 +13197,57 @@ export type Database = {
           },
         ]
       }
+      processed_urls: {
+        Row: {
+          created_at: string | null
+          fund_id: string | null
+          id: string
+          portfolio_company_id: string | null
+          processed_at: string | null
+          result_type: string | null
+          source: string
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          fund_id?: string | null
+          id?: string
+          portfolio_company_id?: string | null
+          processed_at?: string | null
+          result_type?: string | null
+          source: string
+          url: string
+          url_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          fund_id?: string | null
+          id?: string
+          portfolio_company_id?: string | null
+          processed_at?: string | null
+          result_type?: string | null
+          source?: string
+          url?: string
+          url_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_urls_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processed_urls_portfolio_company_id_fkey"
+            columns: ["portfolio_company_id"]
+            isOneToOne: false
+            referencedRelation: "cr_portfolio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_evaluations: {
         Row: {
           business_model: string
@@ -16964,6 +17066,18 @@ export type Database = {
           last_login?: string | null
           role?: Database["public"]["Enums"]["admin_role"] | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_api_usage_monthly: {
+        Row: {
+          call_count: number | null
+          month: string | null
+          operation: string | null
+          service: string | null
+          total_cost: number | null
+          total_credits: number | null
+          total_tokens: number | null
         }
         Relationships: []
       }
