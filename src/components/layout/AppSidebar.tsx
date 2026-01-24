@@ -80,6 +80,13 @@ interface MenuGroup {
   defaultOpen?: boolean;
 }
 
+// Items de nivel superior - siempre visibles
+const topLevelItems: MenuItem[] = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Tareas", url: "/tareas", icon: CheckSquare },
+  { title: "Mis Horas", url: "/mis-horas", icon: Clock },
+];
+
 const menuGroups: MenuGroup[] = [
   {
     label: "Mandatos M&A",
@@ -107,16 +114,14 @@ const menuGroups: MenuGroup[] = [
     icon: ClipboardList,
     defaultOpen: false,
     items: [
-      { title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
       { title: "Calendario", url: "/calendario", icon: CalendarDays },
-      { title: "Mis Horas", url: "/mis-horas", icon: Clock },
       { title: "Contactos", url: "/contactos", icon: Users },
       { title: "Empresas", url: "/empresas", icon: Building2 },
-      { title: "Tareas", url: "/tareas", icon: CheckSquare },
       { title: "Documentos", url: "/documentos", icon: FolderOpen },
       { title: "Generador Docs", url: "/gestor-documentos", icon: FileText },
       { title: "Presentaciones", url: "/presentaciones", icon: Presentation },
       { title: "Reportes", url: "/reportes", icon: BarChart3 },
+      { title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
     ],
   },
   {
@@ -321,6 +326,60 @@ export function AppSidebar() {
     );
   };
 
+  // Render top level items (Dashboard, Tareas, Mis Horas)
+  const renderTopLevelItems = () => {
+    if (isCollapsed) {
+      return (
+        <SidebarGroup className="p-0 px-2 pb-2 border-b border-sidebar-border mb-2">
+          <SidebarMenu>
+            {topLevelItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild tooltip={item.title}>
+                  <NavLink
+                    to={item.url}
+                    className={cn(
+                      "flex items-center justify-center p-2 rounded-md transition-colors",
+                      isItemActive(item)
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      );
+    }
+
+    return (
+      <SidebarGroup className="p-0 px-2 pb-2 border-b border-sidebar-border mb-2">
+        <SidebarMenu>
+          {topLevelItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to={item.url}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                    isItemActive(item)
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  };
+
   // Build the list of groups to render based on user role
   const groupsToRender = [...menuGroups];
   
@@ -349,6 +408,7 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="px-2">
+        {renderTopLevelItems()}
         {groupsToRender.map((group, index) => renderMenuGroup(group, `group-${index}`))}
       </SidebarContent>
 
