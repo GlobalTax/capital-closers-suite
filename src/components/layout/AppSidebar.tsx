@@ -85,6 +85,7 @@ const topLevelItems: MenuItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Tareas", url: "/tareas", icon: CheckSquare },
   { title: "Mis Horas", url: "/mis-horas", icon: Clock },
+  { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
 ];
 
 const menuGroups: MenuGroup[] = [
@@ -151,7 +152,6 @@ const superAdminGroup: MenuGroup = {
   items: [
     { title: "Sync Center", url: "/sync-center", icon: RefreshCw },
     { title: "Usuarios", url: "/usuarios", icon: UserCog },
-    { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
     { title: "Outbound Apollo", url: "/outbound", icon: Search },
     { title: "Monitor Empresas", url: "/admin/empresas-monitor", icon: Activity },
     { title: "Control Syncs", url: "/admin/sync-control", icon: RefreshCw },
