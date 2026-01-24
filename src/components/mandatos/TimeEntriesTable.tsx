@@ -19,8 +19,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { deleteTimeEntry, approveTimeEntry, rejectTimeEntry, submitTimeEntry } from "@/services/timeTracking";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { cn } from "@/lib/utils";
-import type { TimeEntry, TimeEntryValueType, VALUE_TYPE_CONFIG } from "@/types";
+import type { TimeEntry, TimeEntryValueType } from "@/types";
 
 interface TimeEntriesTableProps {
   entries: TimeEntry[];
@@ -229,6 +230,7 @@ export function TimeEntriesTable({
           <TableBody>
             {paginatedEntries.map((entry) => {
               const canEdit = entry.user_id === currentUserId && entry.status === 'draft';
+              const canDelete = entry.user_id === currentUserId || isAdmin;
               const showApprovalActions = isAdmin && entry.status === 'submitted';
               
               return (
@@ -280,8 +282,8 @@ export function TimeEntriesTable({
                         </Button>
                       )}
                       
-                      {/* Eliminar (solo borrador propio) */}
-                      {canEdit && (
+                      {/* Eliminar (owner o admin) */}
+                      {canDelete && (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -451,22 +453,15 @@ export function TimeEntriesTable({
         </div>
       )}
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El registro de tiempo será eliminado permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && handleDelete(deleteId)}>
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Eliminar registro de horas"
+        description="Este registro quedará marcado como eliminado y podrá consultarse en auditoría."
+        onConfirm={async () => {
+          if (deleteId) await handleDelete(deleteId);
+        }}
+      />
 
       <AlertDialog open={!!rejectId} onOpenChange={() => {
         setRejectId(null);

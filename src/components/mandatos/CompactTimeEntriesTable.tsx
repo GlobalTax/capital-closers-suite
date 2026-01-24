@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { es } from "date-fns/locale";
 import { MoreHorizontal, Pencil, Trash2, Send, Check, X, ExternalLink, Timer } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -25,8 +25,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { deleteTimeEntry, approveTimeEntry, rejectTimeEntry, submitTimeEntry } from "@/services/timeTracking";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { cn } from "@/lib/utils";
-import type { TimeEntry, TimeEntryValueType } from "@/types";
+import type { TimeEntry } from "@/types";
 import { VALUE_TYPE_CONFIG } from "@/types";
 
 interface CompactTimeEntriesTableProps {
@@ -200,6 +201,7 @@ export function CompactTimeEntriesTable({
             <div className="divide-y divide-border/30">
               {group.entries.map((entry) => {
                 const canEdit = entry.user_id === currentUserId && entry.status === 'draft';
+                const canDelete = entry.user_id === currentUserId || isAdmin;
                 const canApprove = isAdmin && entry.status === 'submitted';
                 const valueConfig = entry.value_type ? VALUE_TYPE_CONFIG[entry.value_type] : null;
 
@@ -308,11 +310,14 @@ export function CompactTimeEntriesTable({
                           )}
                           
                           {canEdit && (
+                            <DropdownMenuItem onClick={() => handleSubmit(entry.id)}>
+                              <Send className="mr-2 h-3.5 w-3.5" />
+                              Enviar
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {canDelete && (
                             <>
-                              <DropdownMenuItem onClick={() => handleSubmit(entry.id)}>
-                                <Send className="mr-2 h-3.5 w-3.5" />
-                                Enviar
-                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 onClick={() => setDeleteId(entry.id)}
@@ -364,22 +369,15 @@ export function CompactTimeEntriesTable({
       )}
 
       {/* Delete Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && handleDelete(deleteId)}>
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Eliminar registro de horas"
+        description="Este registro quedará marcado como eliminado y podrá consultarse en auditoría."
+        onConfirm={async () => {
+          if (deleteId) await handleDelete(deleteId);
+        }}
+      />
 
       {/* Reject Dialog */}
       <AlertDialog open={!!rejectId} onOpenChange={() => { setRejectId(null); setRejectionReason(""); }}>

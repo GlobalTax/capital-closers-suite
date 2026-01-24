@@ -10339,11 +10339,14 @@ export type Database = {
           approved_by: string | null
           contacto_id: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string
           duration_minutes: number | null
           end_time: string | null
           id: string
           is_billable: boolean | null
+          is_deleted: boolean | null
           mandate_lead_id: string | null
           mandato_id: string | null
           notes: string | null
@@ -10364,11 +10367,14 @@ export type Database = {
           approved_by?: string | null
           contacto_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description: string
           duration_minutes?: number | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null
+          is_deleted?: boolean | null
           mandate_lead_id?: string | null
           mandato_id?: string | null
           notes?: string | null
@@ -10389,11 +10395,14 @@ export type Database = {
           approved_by?: string | null
           contacto_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string
           duration_minutes?: number | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null
+          is_deleted?: boolean | null
           mandate_lead_id?: string | null
           mandato_id?: string | null
           notes?: string | null
