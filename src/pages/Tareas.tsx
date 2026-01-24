@@ -518,32 +518,7 @@ export default function Tareas() {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4 md:space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-          <div>
-            <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
-            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-3 md:p-4">
-              <Skeleton className="h-5 md:h-6 w-24 md:w-32 mb-3 md:mb-4" />
-              <div className="space-y-2 md:space-y-3">
-                {[1, 2, 3].map((j) => (
-                  <Skeleton key={j} className="h-16 md:h-20 w-full" />
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // Weekly stats calculation
+  // Weekly stats calculation - MUST be before any conditional returns to follow React hooks rules
   const weeklyStats = useMemo(() => {
     const now = new Date();
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -588,6 +563,31 @@ export default function Tareas() {
       progressPercent: total > 0 ? Math.round((completedCount / total) * 100) : 0,
     };
   }, [tareasFiltradas]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
+          <div>
+            <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
+            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-3 md:p-4">
+              <Skeleton className="h-5 md:h-6 w-24 md:w-32 mb-3 md:mb-4" />
+              <div className="space-y-2 md:space-y-3">
+                {[1, 2, 3].map((j) => (
+                  <Skeleton key={j} className="h-16 md:h-20 w-full" />
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
