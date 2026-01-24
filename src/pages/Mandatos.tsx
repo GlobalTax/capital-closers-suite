@@ -66,6 +66,7 @@ import {
   FileDown,
   Loader2,
   Target,
+  Star,
   CircleOff,
   Building2,
 } from "lucide-react";
@@ -88,6 +89,7 @@ import {
 
 // Configuración de columnas disponibles
 const DEFAULT_COLUMNS: ColumnConfig[] = [
+  { key: "is_favorite", label: "★", visible: true, locked: true },
   { key: "codigo", label: "ID", visible: true, locked: true },
   { key: "empresa_principal", label: "Cliente", visible: true, locked: true },
   { key: "nombre_proyecto", label: "Proyecto", visible: true },
@@ -475,6 +477,40 @@ export default function Mandatos() {
     }
   };
 
+  // Toggle favorito con optimistic update
+  const handleToggleFavorite = async (id: string, isFavorite: boolean) => {
+    // Optimistic update - reordenar inmediatamente
+    setMandatos(prev => {
+      const updated = prev.map(m => 
+        m.id === id ? { ...m, is_favorite: isFavorite } : m
+      );
+      // Reordenar: favoritos primero
+      return updated.sort((a, b) => {
+        if (a.is_favorite && !b.is_favorite) return -1;
+        if (!a.is_favorite && b.is_favorite) return 1;
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+    });
+    
+    try {
+      await updateMandato(id, { is_favorite: isFavorite } as any);
+      toast.success(isFavorite ? "Añadido a favoritos" : "Eliminado de favoritos");
+    } catch (error) {
+      // Rollback
+      setMandatos(prev => {
+        const reverted = prev.map(m => 
+          m.id === id ? { ...m, is_favorite: !isFavorite } : m
+        );
+        return reverted.sort((a, b) => {
+          if (a.is_favorite && !b.is_favorite) return -1;
+          if (!a.is_favorite && b.is_favorite) return 1;
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+      });
+      toast.error("Error al actualizar favorito");
+    }
+  };
+
   const handleExportCSV = () => {
     const exportData = mandatosFiltrados.map((m) => ({
       ID: m.codigo || m.id.substring(0, 8),
@@ -576,6 +612,31 @@ export default function Mandatos() {
 
   // Definiciones de todas las columnas con sus renders
   const allColumnDefinitions = useMemo(() => ({
+    is_favorite: {
+      key: "is_favorite",
+      label: "★",
+      sortable: true,
+      render: (value: boolean, row: Mandato) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggleFavorite(row.id, !value);
+          }}
+        >
+          <Star 
+            className={cn(
+              "h-4 w-4 transition-colors",
+              value 
+                ? "fill-yellow-400 text-yellow-400" 
+                : "text-muted-foreground hover:text-yellow-400"
+            )}
+          />
+        </Button>
+      ),
+    },
     codigo: { 
       key: "codigo", 
       label: "ID", 

@@ -14,6 +14,7 @@ export const fetchMandatos = async (): Promise<Mandato[]> => {
         empresas:mandato_empresas(*, empresa:empresas(*))
       `)
       .or('categoria.is.null,categoria.eq.operacion_ma')
+      .order('is_favorite', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -41,6 +42,7 @@ export const fetchServicios = async (): Promise<Mandato[]> => {
         empresas:mandato_empresas(*, empresa:empresas(*))
       `)
       .in('categoria', ['due_diligence', 'spa_legal', 'valoracion', 'asesoria'])
+      .order('is_favorite', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
     
     if (error) {
