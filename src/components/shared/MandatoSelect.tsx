@@ -54,11 +54,10 @@ export function MandatoSelect({
     );
   }, [mandatos]);
 
-  // Get internal projects from mandatos
+  // Get internal projects from mandatos (always visible, no status filter)
   const internalProjects = useMemo(() => {
     return mandatos.filter(m => 
-      INTERNAL_PROJECT_IDS.includes(m.id as typeof INTERNAL_PROJECT_IDS[number]) &&
-      m.estado === 'activo'
+      INTERNAL_PROJECT_IDS.includes(m.id as typeof INTERNAL_PROJECT_IDS[number])
     );
   }, [mandatos]);
 
