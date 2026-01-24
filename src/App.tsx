@@ -54,6 +54,8 @@ const PublicViewer = lazy(() => import("./pages/PublicViewer"));
 const TeamWorkload = lazy(() => import("./pages/TeamWorkload"));
 const Outbound = lazy(() => import("./pages/Outbound"));
 const OutboundCampaignDetail = lazy(() => import("./pages/OutboundCampaignDetail"));
+const SyncControl = lazy(() => import("./pages/admin/SyncControl"));
+const EmpresasMonitor = lazy(() => import("./pages/admin/EmpresasMonitor"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -100,6 +102,8 @@ function AppContent() {
             <Route path="/team-workload" element={<ProtectedRoute requiredRole="admin"><AppLayout><TeamWorkload /></AppLayout></ProtectedRoute>} />
             <Route path="/outbound" element={<ProtectedRoute requiredRole="admin"><AppLayout><Outbound /></AppLayout></ProtectedRoute>} />
             <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />

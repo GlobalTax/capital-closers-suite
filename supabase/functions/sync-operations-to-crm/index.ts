@@ -58,6 +58,23 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if sync is enabled
+    const { data: syncControl } = await supabase
+      .from('sync_control')
+      .select('is_enabled')
+      .eq('id', 'sync-operations-to-crm')
+      .single();
+
+    if (syncControl && !syncControl.is_enabled) {
+      console.log('[sync-operations] Sync is disabled, skipping...');
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: 'Sync disabled via control panel' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Parse request body
     let dryRun = false;
     let triggeredBy = 'manual';
@@ -166,7 +183,7 @@ Deno.serve(async (req) => {
             empresaId = existingEmpresa.id;
             console.log(`[sync-operations] Found existing empresa: ${empresaId}`);
           } else if (!dryRun) {
-            // Create new empresa
+            // Create new empresa with source tracking
             const { data: newEmpresa, error: empresaError } = await supabase
               .from('empresas')
               .insert({
@@ -176,7 +193,9 @@ Deno.serve(async (req) => {
                 facturacion: operation.revenue_amount,
                 ebitda: operation.ebitda_amount,
                 es_target: true,
-                estado_target: 'activo'
+                estado_target: 'activo',
+                source: 'sync-operations',
+                source_id: operation.id
               })
               .select('id')
               .single();
@@ -274,6 +293,17 @@ Deno.serve(async (req) => {
           duration_ms: Date.now() - startTime
         })
         .eq('id', logId);
+
+      // Update sync_control stats
+      await supabase
+        .from('sync_control')
+        .update({
+          last_run: new Date().toISOString(),
+          created_empresas_last_run: result.empresasCreated,
+          errors_last_run: result.errors.length,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'sync-operations-to-crm');
     }
 
     console.log(`[sync-operations] Sync completed:`, result);
