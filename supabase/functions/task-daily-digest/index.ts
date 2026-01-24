@@ -51,8 +51,8 @@ serve(async (req) => {
     // Get open tasks for user
     const { data: tasks, error: tasksError } = await supabase
       .from('tareas')
-      .select('id, titulo, descripcion, prioridad, fecha_vencimiento, estado, estimated_minutes, health_status')
-      .or(`asignado_a.eq.${user_id},created_by.eq.${user_id}`)
+      .select('id, titulo, descripcion, prioridad, fecha_vencimiento, estado, health_status')
+      .or(`asignado_a.eq.${user_id},creado_por.eq.${user_id}`)
       .neq('estado', 'completada')
       .order('fecha_vencimiento', { ascending: true, nullsFirst: false });
 
