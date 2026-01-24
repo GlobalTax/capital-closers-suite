@@ -16092,6 +16092,47 @@ export type Database = {
           },
         ]
       }
+      task_ai_feedback: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          feedback_text: string | null
+          id: string
+          is_useful: boolean | null
+          rating: number | null
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          feedback_text?: string | null
+          id?: string
+          is_useful?: boolean | null
+          rating?: number | null
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          feedback_text?: string | null
+          id?: string
+          is_useful?: boolean | null
+          rating?: number | null
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_ai_feedback_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "task_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_events: {
         Row: {
           created_at: string | null

@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   Presentation,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -152,6 +153,7 @@ const superAdminGroup: MenuGroup = {
   items: [
     { title: "Sync Center", url: "/sync-center", icon: RefreshCw },
     { title: "Usuarios", url: "/usuarios", icon: UserCog },
+    { title: "Auditoría IA", url: "/admin/task-ai-qa", icon: Sparkles },
     { title: "Outbound Apollo", url: "/outbound", icon: Search },
     { title: "Monitor Empresas", url: "/admin/empresas-monitor", icon: Activity },
     { title: "Control Syncs", url: "/admin/sync-control", icon: RefreshCw },
