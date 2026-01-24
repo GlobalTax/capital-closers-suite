@@ -69,17 +69,18 @@ export async function uploadTaskFile(
 }
 
 /**
- * Genera una URL firmada temporal para descargar un archivo
+ * Genera una URL de blob local para descargar/previsualizar un archivo.
+ * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
  */
 export async function downloadTaskFile(filePath: string): Promise<string> {
-  const { data, error } = await supabase.storage
+  const { data: blob, error } = await supabase.storage
     .from('mandato-documentos')
-    .createSignedUrl(filePath, 600); // URL válida por 10 minutos
+    .download(filePath);
   
   if (error) throw error;
-  if (!data?.signedUrl) throw new Error('No se pudo generar la URL de descarga');
+  if (!blob) throw new Error('No se pudo descargar el archivo');
   
-  return data.signedUrl;
+  return URL.createObjectURL(blob);
 }
 
 /**

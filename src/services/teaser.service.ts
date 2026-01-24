@@ -339,19 +339,25 @@ export async function getTeasersForMandatos(mandatoIds: string[]): Promise<Map<s
 }
 
 /**
- * Generar URL firmada para un documento
+ * Genera URL de blob local para un teaser.
+ * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
  */
-export async function getSignedUrlForTeaser(storagePath: string, expiresIn: number = 600): Promise<string | null> {
-  const { data, error } = await supabase.storage
-    .from('mandato-documentos')
-    .createSignedUrl(storagePath, expiresIn);
+export async function getSignedUrlForTeaser(storagePath: string, _expiresIn: number = 600): Promise<string | null> {
+  try {
+    const { data: blob, error } = await supabase.storage
+      .from('mandato-documentos')
+      .download(storagePath);
 
-  if (error || !data) {
-    console.error('[Teaser] Error generating signed URL:', error);
+    if (error || !blob) {
+      console.error('[Teaser] Error downloading file:', error);
+      return null;
+    }
+
+    return URL.createObjectURL(blob);
+  } catch (error) {
+    console.error('[Teaser] Error getting teaser URL:', error);
     return null;
   }
-
-  return data.signedUrl;
 }
 
 export interface TeaserInfo {
