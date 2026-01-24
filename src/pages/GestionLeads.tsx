@@ -45,6 +45,7 @@ import { Phone } from "lucide-react";
 import { LeadActivityCell } from "@/components/leads/LeadActivityCell";
 import { QuickTimeEntryModal } from "@/components/leads/QuickTimeEntryModal";
 import { LeadConversionModal } from "@/components/leads/LeadConversionModal";
+import { LeadQuickTimeButtons } from "@/components/leads/LeadQuickTimeButtons";
 
 type LeadRow = {
   id: string;
@@ -647,6 +648,7 @@ export default function GestionLeads() {
               <TableHead className="w-[100px]">Fin.</TableHead>
               <TableHead className="w-[70px]">Apollo</TableHead>
               <TableHead className="w-[90px]">Actividad</TableHead>
+              <TableHead className="w-[100px]">Registrar</TableHead>
               <TableHead className="w-[110px]">Estado</TableHead>
               <TableHead className="w-[70px]">Fecha</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -655,13 +657,13 @@ export default function GestionLeads() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={12} className="text-center py-8">
                   Cargando leads...
                 </TableCell>
               </TableRow>
             ) : filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
+                <TableCell colSpan={12} className="text-center py-8">
                   No se encontraron leads
                 </TableCell>
               </TableRow>
@@ -720,6 +722,22 @@ export default function GestionLeads() {
                         totalHours={lead.totalHours}
                         lastActivityDate={lead.lastActivityDate}
                         daysSinceActivity={lead.dias}
+                      />
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <LeadQuickTimeButtons
+                        onLogCall={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('llamada');
+                        }}
+                        onLogVideoCall={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('videollamada');
+                        }}
+                        onLogMeeting={() => {
+                          setTimeEntryLead(lead);
+                          setTimeEntryType('reunion');
+                        }}
                       />
                     </TableCell>
                     <TableCell className="py-2">

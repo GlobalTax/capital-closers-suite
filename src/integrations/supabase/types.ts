@@ -18161,7 +18161,7 @@ export type Database = {
         Returns: undefined
       }
       log_critical_security_violation: {
-        Args: { details?: Json; table_name: string; violation_type: string }
+        Args: { details?: Json; target_table: string; violation_type: string }
         Returns: undefined
       }
       log_document_access: {
