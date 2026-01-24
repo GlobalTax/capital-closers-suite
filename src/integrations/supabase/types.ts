@@ -9266,6 +9266,45 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_pipeline_columns: {
+        Row: {
+          color: string
+          created_at: string | null
+          icon: string
+          id: string
+          is_system: boolean | null
+          is_visible: boolean | null
+          label: string
+          position: number
+          stage_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          is_system?: boolean | null
+          is_visible?: boolean | null
+          label: string
+          position: number
+          stage_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          is_system?: boolean | null
+          is_visible?: boolean | null
+          label?: string
+          position?: number
+          stage_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       lead_security: {
         Row: {
           cif: string | null
