@@ -163,7 +163,12 @@ export default function MandatoDetalle() {
                 .eq('id', empresaId);
               
               if (error) {
-                toast.error('Error al actualizar');
+                // Detectar error de CIF duplicado (constraint unique)
+                if (error.code === '23505' && field === 'cif') {
+                  toast.error('Este CIF ya está registrado en otra empresa');
+                } else {
+                  toast.error('Error al actualizar');
+                }
                 throw error;
               }
               
