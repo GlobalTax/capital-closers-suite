@@ -1,10 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export function useSearchFundsRealtime() {
+interface UseSearchFundsRealtimeReturn {
+  isConnected: boolean;
+}
+
+export function useSearchFundsRealtime(): UseSearchFundsRealtimeReturn {
   const queryClient = useQueryClient();
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     // Canal para sf_funds (fondos)
@@ -59,7 +64,9 @@ export function useSearchFundsRealtime() {
           queryClient.invalidateQueries({ queryKey: ['search-fund-sectors'] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+      });
 
     // Canal para sf_matches (asociaciones con mandatos)
     const matchesChannel = supabase
@@ -85,9 +92,33 @@ export function useSearchFundsRealtime() {
       )
       .subscribe();
 
+    // Canal para sf_outreach
+    const outreachChannel = supabase
+      .channel('sf-outreach-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sf_outreach'
+        },
+        (payload) => {
+          const record = (payload.new || payload.old) as { fund_id?: string };
+          if (record?.fund_id) {
+            queryClient.invalidateQueries({ 
+              queryKey: ['search-fund-outreach', record.fund_id] 
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(fundsChannel);
       supabase.removeChannel(matchesChannel);
+      supabase.removeChannel(outreachChannel);
     };
   }, [queryClient]);
+
+  return { isConnected };
 }
