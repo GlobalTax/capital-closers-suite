@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ValuationCard, ValuationCardSkeleton } from "./ValuationCard";
 import { SectorComparables } from "./SectorComparables";
+import { PriceCalculatorCard } from "@/components/pricing/PriceCalculatorCard";
 import { 
   useEmpresaValuations, 
   useSectorMultiples, 
@@ -245,6 +246,9 @@ export function ValuationTab({ empresa }: ValuationTabProps) {
           isLoading={loadingMultiples}
         />
       )}
+
+      {/* Price Calculator - Simulation Tool */}
+      <PriceCalculatorCard empresaId={empresa.id} />
     </div>
   );
 }
