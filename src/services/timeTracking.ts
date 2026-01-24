@@ -52,6 +52,7 @@ export const fetchTimeEntries = async (
   let query = supabase
     .from('mandato_time_entries')
     .select(TIME_ENTRY_SELECT)
+    .eq('is_deleted', false)
     .order('start_time', { ascending: false });
 
   if (mandatoId) {
@@ -114,6 +115,7 @@ export const fetchMyTimeEntries = async (
     .from('mandato_time_entries')
     .select(TIME_ENTRY_SELECT)
     .eq('user_id', userId)
+    .eq('is_deleted', false)
     .order('start_time', { ascending: false });
 
   if (filters?.startDate) {
@@ -174,6 +176,7 @@ export const fetchAllTimeEntries = async (
   let query = supabase
     .from('mandato_time_entries')
     .select(TIME_ENTRY_SELECT)
+    .eq('is_deleted', false)
     .order('start_time', { ascending: false });
 
   if (filters?.startDate) {
@@ -510,12 +513,38 @@ export const updateTimeEntry = async (
 };
 
 export const deleteTimeEntry = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('mandato_time_entries')
-    .delete()
-    .eq('id', id);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
 
-  if (error) throw error;
+  console.log('[deleteTimeEntry] Soft delete:', id);
+
+  const { data, error } = await supabase
+    .from('mandato_time_entries')
+    .update({
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: user.id
+    })
+    .eq('id', id)
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('[deleteTimeEntry] Error:', error);
+    if (error.code === '42501') {
+      throw new Error('No tienes permisos para eliminar este registro');
+    }
+    if (error.code === 'PGRST116') {
+      throw new Error('El registro no existe o ya fue eliminado');
+    }
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('El registro no existe o ya fue eliminado');
+  }
+
+  console.log('[deleteTimeEntry] Eliminado correctamente');
 };
 
 export const submitTimeEntry = async (id: string): Promise<TimeEntry> => {
@@ -552,6 +581,7 @@ export const getMyActiveTimer = async (): Promise<TimeEntry | null> => {
       mandato:mandatos!inner(id, descripcion, tipo, estado)
     `)
     .eq('user_id', user.id)
+    .eq('is_deleted', false)
     .is('end_time', null)
     .order('start_time', { ascending: false })
     .limit(1)
