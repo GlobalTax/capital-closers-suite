@@ -6,6 +6,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -39,13 +47,6 @@ interface CompactTimeEntriesTableProps {
   initialDisplayCount?: number;
 }
 
-// Group entries by day
-interface DayGroup {
-  date: Date;
-  entries: TimeEntry[];
-  totalMinutes: number;
-}
-
 export function CompactTimeEntriesTable({
   entries,
   currentUserId,
@@ -61,31 +62,6 @@ export function CompactTimeEntriesTable({
   const [rejectionReason, setRejectionReason] = useState("");
   const [displayCount, setDisplayCount] = useState(initialDisplayCount);
 
-  // Group entries by day
-  const dayGroups = useMemo(() => {
-    const groups: Map<string, DayGroup> = new Map();
-    
-    entries.forEach(entry => {
-      const entryDate = new Date(entry.start_time);
-      const dateKey = format(entryDate, 'yyyy-MM-dd');
-      
-      if (!groups.has(dateKey)) {
-        groups.set(dateKey, {
-          date: entryDate,
-          entries: [],
-          totalMinutes: 0
-        });
-      }
-      
-      const group = groups.get(dateKey)!;
-      group.entries.push(entry);
-      group.totalMinutes += entry.duration_minutes || 0;
-    });
-    
-    // Sort groups by date descending
-    return Array.from(groups.values()).sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [entries]);
-
   // Flatten for display count
   const allEntries = useMemo(() => entries.slice(0, displayCount), [entries, displayCount]);
   const hasMore = entries.length > displayCount;
@@ -97,12 +73,6 @@ export function CompactTimeEntriesTable({
     if (hours === 0) return `${mins}m`;
     if (mins === 0) return `${hours}h`;
     return `${hours}h ${mins}m`;
-  };
-
-  const getDayLabel = (date: Date) => {
-    if (isToday(date)) return 'Hoy';
-    if (isYesterday(date)) return 'Ayer';
-    return format(date, "EEEE, d 'de' MMMM", { locale: es });
   };
 
   const getStatusIndicator = (status: string) => {
@@ -175,170 +145,178 @@ export function CompactTimeEntriesTable({
     );
   }
 
-  // Render entries grouped by visible days
-  const visibleDayGroups = dayGroups.map(group => ({
-    ...group,
-    entries: group.entries.filter(e => allEntries.some(ae => ae.id === e.id))
-  })).filter(g => g.entries.length > 0);
-
   return (
     <>
-      <div className="space-y-1">
-        {visibleDayGroups.map((group) => (
-          <div key={format(group.date, 'yyyy-MM-dd')}>
-            {/* Day Header */}
-            <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-2 px-1 flex items-center justify-between border-b border-border/50">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {getDayLabel(group.date)}
-              </span>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {formatDuration(group.entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0))}
-              </span>
-            </div>
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[100px]">Fecha</TableHead>
+              <TableHead className="w-[60px]">Hora</TableHead>
+              <TableHead className="min-w-[140px]">Cliente</TableHead>
+              <TableHead className="min-w-[180px]">Proyecto</TableHead>
+              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead className="min-w-[100px]">Tipo Tarea</TableHead>
+              <TableHead className="w-[80px] text-right">Duración</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {allEntries.map((entry) => {
+              const canEdit = entry.user_id === currentUserId && entry.status === 'draft';
+              const canDelete = entry.user_id === currentUserId || isAdmin;
+              const canApprove = isAdmin && entry.status === 'submitted';
+              
+              const entryDate = new Date(entry.start_time);
+              const fechaDisplay = format(entryDate, 'dd/MM/yyyy');
+              const horaDisplay = format(entryDate, 'HH:mm');
 
-            {/* Entries */}
-            <div className="divide-y divide-border/30">
-              {group.entries.map((entry) => {
-                const canEdit = entry.user_id === currentUserId && entry.status === 'draft';
-                const canDelete = entry.user_id === currentUserId || isAdmin;
-                const canApprove = isAdmin && entry.status === 'submitted';
-                const startTime = format(new Date(entry.start_time), 'HH:mm');
+              // Build client display from contacto or mandato empresa
+              const clienteDisplay = entry.contacto?.empresa_principal?.nombre 
+                || entry.mandato?.empresa_principal?.nombre 
+                || (entry.contacto ? `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim() : null)
+                || 'Sin cliente';
 
-                // Build lead/company display from contacto
-                const leadDisplay = entry.contacto ? (
-                  entry.contacto.empresa_principal?.nombre || 
-                  `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim()
-                ) : null;
+              const proyectoDisplay = entry.mandato?.descripcion || '-';
+              const idDisplay = entry.mandato?.codigo || '-';
+              const tipoTareaDisplay = entry.work_task_type?.name || '-';
 
-                return (
-                  <div
-                    key={entry.id}
-                    className={cn(
-                      "group hover:bg-muted/30 transition-colors rounded-md border-l-2 py-2 px-2",
-                      getStatusIndicator(entry.status),
-                      entry.status === 'rejected' && "opacity-60"
+              return (
+                <TableRow
+                  key={entry.id}
+                  className={cn(
+                    "border-l-2",
+                    getStatusIndicator(entry.status),
+                    entry.status === 'rejected' && "opacity-60"
+                  )}
+                >
+                  {/* Fecha */}
+                  <TableCell className="font-medium text-sm">
+                    {fechaDisplay}
+                  </TableCell>
+
+                  {/* Hora */}
+                  <TableCell className="font-mono text-sm text-muted-foreground tabular-nums">
+                    {horaDisplay}
+                  </TableCell>
+
+                  {/* Cliente */}
+                  <TableCell>
+                    <span className="text-sm font-medium truncate block max-w-[180px]">
+                      {clienteDisplay}
+                    </span>
+                  </TableCell>
+
+                  {/* Proyecto */}
+                  <TableCell>
+                    {entry.mandato ? (
+                      <Link 
+                        to={`/mandatos/${entry.mandato.id}`}
+                        className="hover:underline inline-flex items-center gap-1 group/link text-sm text-muted-foreground"
+                      >
+                        <span className="truncate max-w-[200px]">{proyectoDisplay}</span>
+                        <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
-                  >
-                    {/* Main row */}
-                    <div className="flex items-center gap-3">
-                      {/* Start Time */}
-                      <span className="font-mono text-xs text-muted-foreground tabular-nums shrink-0 w-10">
-                        {startTime}
-                      </span>
+                  </TableCell>
 
-                      {/* Empresa + Proyecto */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {entry.mandato ? (
-                            <Link 
-                              to={`/mandatos/${entry.mandato.id}`}
-                              className="hover:underline inline-flex items-center gap-1.5 group/link"
-                            >
-                              <span className="font-medium text-sm text-foreground truncate max-w-[160px]">
-                                {leadDisplay || entry.mandato.empresa_principal?.nombre || 'Sin empresa'}
-                              </span>
-                              <span className="text-muted-foreground">·</span>
-                              <span className="text-sm text-muted-foreground truncate max-w-[180px]">
-                                {entry.mandato.descripcion || entry.work_task_type?.name || 'Sin descripción'}
-                              </span>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
-                            </Link>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Sin asignar</span>
-                          )}
-                        </div>
-                      </div>
+                  {/* ID */}
+                  <TableCell>
+                    <span className="font-mono text-xs text-primary font-medium">
+                      {idDisplay}
+                    </span>
+                  </TableCell>
 
-                      {/* Duration */}
-                      <span className="font-mono text-sm font-medium tabular-nums shrink-0">
-                        {formatDuration(entry.duration_minutes)}
-                      </span>
-                    </div>
-
-                    {/* Description row */}
-                    {entry.description && entry.description !== 'Trabajo registrado manualmente' && (
-                      <div className="mt-1 ml-[52px] text-xs text-muted-foreground truncate max-w-[400px]">
-                        {entry.description}
-                      </div>
-                    )}
-
-                    {/* Status Badge for rejected */}
+                  {/* Tipo Tarea */}
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {tipoTareaDisplay}
+                    </Badge>
                     {entry.status === 'rejected' && (
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 ml-[52px] mt-1">
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 ml-2">
                         Rechazado
                       </Badge>
                     )}
+                  </TableCell>
 
-                    {/* Actions (hover) */}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          {entry.mandato && (
-                            <DropdownMenuItem onClick={() => navigate(`/mandatos/${entry.mandato!.id}`)}>
-                              <ExternalLink className="mr-2 h-3.5 w-3.5" />
-                              Ver mandato
+                  {/* Duración */}
+                  <TableCell className="text-right">
+                    <span className="font-mono text-sm font-medium tabular-nums">
+                      {formatDuration(entry.duration_minutes)}
+                    </span>
+                  </TableCell>
+
+                  {/* Acciones */}
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        {entry.mandato && (
+                          <DropdownMenuItem onClick={() => navigate(`/mandatos/${entry.mandato!.id}`)}>
+                            <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                            Ver mandato
+                          </DropdownMenuItem>
+                        )}
+                        
+                        {canEdit && onEditEntry && (
+                          <DropdownMenuItem onClick={() => onEditEntry(entry)}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        
+                        {canEdit && (
+                          <DropdownMenuItem onClick={() => handleSubmit(entry.id)}>
+                            <Send className="mr-2 h-3.5 w-3.5" />
+                            Enviar
+                          </DropdownMenuItem>
+                        )}
+                        
+                        {canDelete && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => setDeleteId(entry.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              Eliminar
                             </DropdownMenuItem>
-                          )}
-                          
-                          {canEdit && onEditEntry && (
-                            <DropdownMenuItem onClick={() => onEditEntry(entry)}>
-                              <Pencil className="mr-2 h-3.5 w-3.5" />
-                              Editar
+                          </>
+                        )}
+                        
+                        {canApprove && (
+                          <>
+                            <DropdownMenuItem 
+                              onClick={() => handleApprove(entry.id)}
+                              className="text-emerald-600"
+                            >
+                              <Check className="mr-2 h-3.5 w-3.5" />
+                              Aprobar
                             </DropdownMenuItem>
-                          )}
-                          
-                          {canEdit && (
-                            <DropdownMenuItem onClick={() => handleSubmit(entry.id)}>
-                              <Send className="mr-2 h-3.5 w-3.5" />
-                              Enviar
+                            <DropdownMenuItem 
+                              onClick={() => setRejectId(entry.id)}
+                              className="text-destructive"
+                            >
+                              <X className="mr-2 h-3.5 w-3.5" />
+                              Rechazar
                             </DropdownMenuItem>
-                          )}
-                          
-                          {canDelete && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => setDeleteId(entry.id)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          
-                          {canApprove && (
-                            <>
-                              <DropdownMenuItem 
-                                onClick={() => handleApprove(entry.id)}
-                                className="text-emerald-600"
-                              >
-                                <Check className="mr-2 h-3.5 w-3.5" />
-                                Aprobar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => setRejectId(entry.id)}
-                                className="text-destructive"
-                              >
-                                <X className="mr-2 h-3.5 w-3.5" />
-                                Rechazar
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Load More */}
