@@ -74,6 +74,21 @@ export const getSignedUrl = async (storagePath: string, expiresIn = 600) => {
   }
 };
 
+// Descarga directa usando .download() - evita problemas de RLS con signed URLs
+export const downloadBlob = async (storagePath: string): Promise<Blob | null> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('mandato-documentos')
+      .download(storagePath);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error downloading blob:", error);
+    return null;
+  }
+};
+
 export const deleteFile = async (documentId: string, storagePath: string) => {
   try {
     // Delete from storage
@@ -119,16 +134,14 @@ export const downloadFile = async (
   documentId?: string
 ) => {
   try {
-    const signedUrl = await getSignedUrl(storagePath);
-    if (!signedUrl) throw new Error("No se pudo generar URL de descarga");
+    // Usar download directo para evitar problemas de RLS con signed URLs
+    const blob = await downloadBlob(storagePath);
+    if (!blob) throw new Error("No se pudo descargar el archivo");
 
     // Registrar acceso de forma asíncrona
     if (documentId) {
       documentAccessLogService.logAccess(documentId, fileName, 'download').catch(console.error);
     }
-
-    const response = await fetch(signedUrl);
-    const blob = await response.blob();
     
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -141,5 +154,17 @@ export const downloadFile = async (
   } catch (error) {
     console.error("Error downloading file:", error);
     throw error;
+  }
+};
+
+// Obtener URL de objeto local para preview (evita signed URLs)
+export const getPreviewBlobUrl = async (storagePath: string): Promise<string | null> => {
+  try {
+    const blob = await downloadBlob(storagePath);
+    if (!blob) return null;
+    return window.URL.createObjectURL(blob);
+  } catch (error) {
+    console.error("Error getting preview blob URL:", error);
+    return null;
   }
 };
