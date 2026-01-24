@@ -30,6 +30,21 @@ interface Lead {
   empresa_id?: string;
 }
 
+/**
+ * Normaliza nombre de empresa para comparación consistente
+ * - Lowercase
+ * - Trim espacios
+ * - Colapsar múltiples espacios en uno
+ * - Eliminar puntuación final
+ */
+function normalizeCompanyName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')      // Múltiples espacios → uno
+    .replace(/[.,;:]+$/, '');  // Quitar puntuación final
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -94,6 +109,8 @@ serve(async (req) => {
         } catch (error) {
           console.error(`[sync-leads-to-crm] Error syncing valuation ${lead.id}:`, error);
           result.errors.push({ table: 'company_valuations', id: lead.id, error: String(error) });
+          // IMPORTANTE: Marcar como procesado incluso con error para evitar loops infinitos
+          await markLeadAsSynced(supabase, 'company_valuations', lead.id, lead.empresa_id);
         }
       }
     }
@@ -121,6 +138,8 @@ serve(async (req) => {
         } catch (error) {
           console.error(`[sync-leads-to-crm] Error syncing contact_lead ${lead.id}:`, error);
           result.errors.push({ table: 'contact_leads', id: lead.id, error: String(error) });
+          // IMPORTANTE: Marcar como procesado incluso con error
+          await markLeadAsSynced(supabase, 'contact_leads', lead.id);
         }
       }
     }
@@ -147,6 +166,8 @@ serve(async (req) => {
         } catch (error) {
           console.error(`[sync-leads-to-crm] Error syncing general_contact_lead ${lead.id}:`, error);
           result.errors.push({ table: 'general_contact_leads', id: lead.id, error: String(error) });
+          // IMPORTANTE: Marcar como procesado incluso con error
+          await markLeadAsSynced(supabase, 'general_contact_leads', lead.id);
         }
       }
     }
@@ -182,6 +203,34 @@ serve(async (req) => {
   }
 });
 
+/**
+ * Marca un lead como sincronizado para evitar reprocesamiento
+ */
+async function markLeadAsSynced(
+  supabase: any,
+  table: string,
+  leadId: string,
+  empresaId?: string | null
+): Promise<void> {
+  const updateData: any = {
+    crm_synced_at: new Date().toISOString()
+  };
+
+  // Para company_valuations, mantener empresa_id si existe
+  if (table === 'company_valuations' && empresaId) {
+    updateData.empresa_id = empresaId;
+  }
+
+  const { error } = await supabase
+    .from(table)
+    .update(updateData)
+    .eq('id', leadId);
+
+  if (error) {
+    console.error(`[sync-leads-to-crm] Error marking ${table} ${leadId} as synced:`, error);
+  }
+}
+
 async function syncLead(
   supabase: any, 
   lead: Lead, 
@@ -198,12 +247,15 @@ async function syncLead(
 
   // 1. Find or create empresa
   if (companyName && !empresaId) {
-    // First try to find by CIF
+    const normalizedName = normalizeCompanyName(companyName);
+    
+    // First try to find by CIF (exact match)
     if (lead.cif) {
+      const normalizedCif = lead.cif.toUpperCase().replace(/[^A-Z0-9]/g, '');
       const { data: existingByCif } = await supabase
         .from('empresas')
         .select('id')
-        .eq('cif', lead.cif)
+        .ilike('cif', normalizedCif)
         .maybeSingle();
       
       if (existingByCif) {
@@ -212,25 +264,32 @@ async function syncLead(
       }
     }
 
-    // Then try by name
+    // Then try by normalized name (case-insensitive, whitespace-normalized)
     if (!empresaId) {
+      // Usar ILIKE con el nombre normalizado para búsqueda flexible
       const { data: existingByName } = await supabase
         .from('empresas')
-        .select('id')
-        .ilike('nombre', companyName.trim())
-        .maybeSingle();
+        .select('id, nombre')
+        .limit(50); // Obtener candidatos para comparar manualmente
       
-      if (existingByName) {
-        empresaId = existingByName.id;
-        console.log(`[sync-leads-to-crm] Found empresa by name: ${empresaId}`);
+      if (existingByName?.length) {
+        // Buscar coincidencia con nombre normalizado
+        const match = existingByName.find((emp: { id: string; nombre: string }) => 
+          normalizeCompanyName(emp.nombre) === normalizedName
+        );
+        
+        if (match) {
+          empresaId = match.id;
+          console.log(`[sync-leads-to-crm] Found empresa by normalized name: ${empresaId} (${match.nombre})`);
+        }
       }
     }
 
     // Create new empresa if not found
     if (!empresaId) {
       const empresaData: any = {
-        nombre: companyName.trim(),
-        cif: lead.cif || null,
+        nombre: companyName.trim(), // Guardar con formato original pero trimmed
+        cif: lead.cif ? lead.cif.toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
         sector: lead.industry || null,
         facturacion: lead.revenue || null,
         ebitda: lead.ebitda || null,
@@ -244,7 +303,22 @@ async function syncLead(
         .single();
 
       if (empresaError) {
-        console.error(`[sync-leads-to-crm] Error creating empresa:`, empresaError);
+        // Si es error de duplicado por índice único, buscar la existente
+        if (empresaError.code === '23505') {
+          console.log(`[sync-leads-to-crm] Duplicate empresa detected, finding existing...`);
+          const { data: existing } = await supabase
+            .from('empresas')
+            .select('id')
+            .ilike('nombre', normalizedName)
+            .maybeSingle();
+          
+          if (existing) {
+            empresaId = existing.id;
+            console.log(`[sync-leads-to-crm] Found existing empresa after duplicate error: ${empresaId}`);
+          }
+        } else {
+          console.error(`[sync-leads-to-crm] Error creating empresa:`, empresaError);
+        }
       } else {
         empresaId = newEmpresa.id;
         empresaCreated = true;
@@ -294,7 +368,7 @@ async function syncLead(
     }
   }
 
-  // 3. Update the lead with sync info
+  // 3. Update the lead with sync info - SIEMPRE actualizar crm_synced_at
   const updateData: any = {
     crm_synced_at: new Date().toISOString(),
     crm_contacto_id: contactoId
@@ -317,6 +391,7 @@ async function syncLead(
 
   if (updateError) {
     console.error(`[sync-leads-to-crm] Error updating ${table} ${lead.id}:`, updateError);
+    // Aún así consideramos el lead como procesado para evitar loops
   }
 
   return { contactoCreated, empresaCreated };
