@@ -24,6 +24,12 @@ interface UIStore {
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
   toggleCommandPalette: () => void;
+
+  // AI Task Dialog (global)
+  isAITaskDialogOpen: boolean;
+  openAITaskDialog: () => void;
+  closeAITaskDialog: () => void;
+  toggleAITaskDialog: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -46,4 +52,10 @@ export const useUIStore = create<UIStore>((set) => ({
   openCommandPalette: () => set({ isCommandPaletteOpen: true }),
   closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
   toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
+
+  // AI Task Dialog
+  isAITaskDialogOpen: false,
+  openAITaskDialog: () => set({ isAITaskDialogOpen: true }),
+  closeAITaskDialog: () => set({ isAITaskDialogOpen: false }),
+  toggleAITaskDialog: () => set((state) => ({ isAITaskDialogOpen: !state.isAITaskDialogOpen })),
 }));

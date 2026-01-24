@@ -5,7 +5,14 @@ import { useUIStore } from "@/stores/useUIStore";
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toggleCommandPalette, closeDrawer, isDrawerOpen } = useUIStore();
+  const { 
+    toggleCommandPalette, 
+    closeDrawer, 
+    isDrawerOpen, 
+    openAITaskDialog,
+    isAITaskDialogOpen,
+    closeAITaskDialog
+  } = useUIStore();
   const gKeyPressed = useRef(false);
   const gKeyTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -18,6 +25,13 @@ export function useKeyboardShortcuts() {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         toggleCommandPalette();
+        return;
+      }
+
+      // ⌘/Ctrl+Shift+T - Abrir AI Task Dialog (funciona incluso mientras escribe)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        openAITaskDialog();
         return;
       }
 
@@ -103,6 +117,10 @@ export function useKeyboardShortcuts() {
 
       // Esc - Cerrar modales/drawer
       if (e.key === "Escape") {
+        if (isAITaskDialogOpen) {
+          closeAITaskDialog();
+          return;
+        }
         if (isDrawerOpen) {
           closeDrawer();
         }
@@ -115,5 +133,5 @@ export function useKeyboardShortcuts() {
       window.removeEventListener("keydown", handleKeyDown);
       clearTimeout(gKeyTimer.current);
     };
-  }, [toggleCommandPalette, closeDrawer, isDrawerOpen, location.pathname, navigate]);
+  }, [toggleCommandPalette, closeDrawer, isDrawerOpen, location.pathname, navigate, openAITaskDialog, isAITaskDialogOpen, closeAITaskDialog]);
 }

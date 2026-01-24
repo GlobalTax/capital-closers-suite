@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, X, Check, Lightbulb } from "lucide-react";
+import { Sparkles, Send, Loader2, X, Check, Lightbulb, History, AlertCircle } from "lucide-react";
 import { useTaskAI } from "@/hooks/useTaskAI";
 import { TaskPreviewCard } from "./TaskPreviewCard";
 import type { ParsedTask } from "@/types/taskAI";
@@ -25,12 +25,16 @@ const EXAMPLE_PROMPTS = [
   "Todo lo del due diligence de la operación TechCorp",
 ];
 
+const RECENT_PROMPTS_KEY = "recentAITaskPrompts";
+const MAX_RECENT_PROMPTS = 5;
+
 export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
   const { user } = useAuth();
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [sourceText, setSourceText] = useState("");
   const [localTasks, setLocalTasks] = useState<ParsedTask[]>([]);
+  const [recentPrompts, setRecentPrompts] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
@@ -60,6 +64,18 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Load recent prompts from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_PROMPTS_KEY);
+      if (stored) {
+        setRecentPrompts(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error loading recent prompts:", e);
+    }
+  }, []);
+
   // Sync parsed tasks to local state
   useEffect(() => {
     if (parsedTasks.length > 0) {
@@ -67,9 +83,16 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
     }
   }, [parsedTasks]);
 
+  const savePromptToHistory = (prompt: string) => {
+    const updated = [prompt, ...recentPrompts.filter(p => p !== prompt)].slice(0, MAX_RECENT_PROMPTS);
+    setRecentPrompts(updated);
+    localStorage.setItem(RECENT_PROMPTS_KEY, JSON.stringify(updated));
+  };
+
   const handleSubmit = async () => {
     if (!input.trim() || isParsing) return;
 
+    savePromptToHistory(input.trim());
     setSourceText(input);
     setIsExpanded(true);
     await parseInput(input);
@@ -162,8 +185,26 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
         </Button>
       </div>
 
-      {/* Example Prompts */}
-      {!isExpanded && !isParsing && (
+      {/* Recent Prompts */}
+      {!isExpanded && !isParsing && recentPrompts.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2 items-center">
+          <History className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">Recientes:</span>
+          {recentPrompts.slice(0, 3).map((prompt, i) => (
+            <Badge
+              key={i}
+              variant="outline"
+              className="cursor-pointer hover:bg-muted transition-colors text-xs"
+              onClick={() => handleExampleClick(prompt)}
+            >
+              {prompt.length > 35 ? prompt.slice(0, 35) + "..." : prompt}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Example Prompts - show when no recent prompts */}
+      {!isExpanded && !isParsing && recentPrompts.length === 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           {EXAMPLE_PROMPTS.slice(0, 2).map((example, i) => (
@@ -183,6 +224,18 @@ export function TaskCommandBar({ onSuccess, className }: TaskCommandBarProps) {
       {error && (
         <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* Empty State - No tasks generated */}
+      {isExpanded && !isParsing && localTasks.length === 0 && !error && (
+        <div className="mt-4 text-center py-6 text-muted-foreground">
+          <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="font-medium text-sm">La IA no identificó tareas en tu mensaje</p>
+          <p className="text-xs mt-1">Intenta ser más específico sobre lo que necesitas hacer</p>
+          <Button variant="ghost" size="sm" className="mt-3" onClick={handleCancel}>
+            Volver a intentar
+          </Button>
         </div>
       )}
 

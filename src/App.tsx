@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { CommandPalette } from "@/components/shared/CommandPalette";
+import { AITaskDialog } from "@/components/shared/AITaskDialog";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -62,6 +63,7 @@ function AppContent() {
   return (
     <>
       <CommandPalette />
+      <AITaskDialog />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           {/* Public routes */}
