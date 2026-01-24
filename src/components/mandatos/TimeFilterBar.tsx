@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { TimeFilterState, TimeEntryValueType, TimeEntryStatus } from "@/types";
-import { VALUE_TYPE_CONFIG } from "@/types";
+import type { TimeFilterState, TimeEntryStatus } from "@/types";
 
 interface TimeFilterBarProps {
   filters: TimeFilterState;
@@ -85,10 +84,6 @@ export function TimeFilterBar({
     setPeriodPopoverOpen(false);
   };
 
-  const handleValueTypeToggle = (valueType: TimeEntryValueType) => {
-    const newValue = filters.valueType === valueType ? 'all' : valueType;
-    onChange({ ...filters, valueType: newValue });
-  };
 
   const handleClearFilters = () => {
     onChange({
@@ -181,37 +176,6 @@ export function TimeFilterBar({
         </PopoverContent>
       </Popover>
 
-      {/* Separator */}
-      <div className="h-4 w-px bg-border" />
-
-      {/* Value Type Chips */}
-      {(Object.entries(VALUE_TYPE_CONFIG) as [TimeEntryValueType, typeof VALUE_TYPE_CONFIG[TimeEntryValueType]][]).map(
-        ([key, config]) => (
-          <Button
-            key={key}
-            variant={filters.valueType === key ? 'default' : 'outline'}
-            size="sm"
-            className={cn(
-              "h-8 px-3 font-normal transition-all",
-              filters.valueType === key && "text-white"
-            )}
-            style={filters.valueType === key ? { backgroundColor: config.color } : undefined}
-            onClick={() => handleValueTypeToggle(key)}
-          >
-            <div 
-              className={cn(
-                "w-2 h-2 rounded-full mr-2",
-                filters.valueType !== key && "opacity-70"
-              )}
-              style={{ backgroundColor: config.color }}
-            />
-            {config.label}
-          </Button>
-        )
-      )}
-
-      {/* Separator */}
-      <div className="h-4 w-px bg-border" />
 
       {/* Advanced Filters Popover */}
       <Popover open={advancedOpen} onOpenChange={setAdvancedOpen}>
@@ -325,7 +289,7 @@ export function TimeFilterBar({
       </Popover>
 
       {/* Clear Filters Button */}
-      {(hasActiveFilters || filters.valueType !== 'all' || currentPeriod !== 'week') && (
+      {(hasActiveFilters || currentPeriod !== 'week') && (
         <Button
           variant="ghost"
           size="sm"
