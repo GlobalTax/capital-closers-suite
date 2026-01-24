@@ -27,15 +27,15 @@ export function FinanzasTab({ mandatoId }: FinanzasTabProps) {
   // Obtener empresa principal asociada al mandato
   useEffect(() => {
     async function fetchEmpresaPrincipal() {
-      const { data } = await supabase
-        .from('mandato_empresas')
-        .select('empresa_id, empresas(id, nombre)')
-        .eq('mandato_id', mandatoId)
-        .limit(1)
+      // Obtener mandato con su empresa principal directamente
+      const { data: mandato } = await supabase
+        .from('mandatos')
+        .select('empresa_principal_id, empresas:empresa_principal_id(id, nombre)')
+        .eq('id', mandatoId)
         .single();
-
-      if (data?.empresas) {
-        const empresa = data.empresas as unknown as EmpresaInfo;
+      
+      if (mandato?.empresas) {
+        const empresa = mandato.empresas as unknown as EmpresaInfo;
         setEmpresaPrincipal({ id: empresa.id, nombre: empresa.nombre });
       }
     }
