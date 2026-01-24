@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle, Globe } from "lucide-react";
+import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle, Globe, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,8 @@ import { CreateFolderDialog, RenameFolderDialog } from "@/components/documentos/
 import { UploadToFolderDialog } from "@/components/documentos/UploadToFolderDialog";
 import { DocumentVersionHistory } from "@/components/documentos/DocumentVersionHistory";
 import { TemplateLibrary } from "@/components/documentos/TemplateLibrary";
+import { UnifiedDocumentViewer } from "@/components/shared/UnifiedDocumentViewer";
+import { useDocumentPreview } from "@/hooks/useDocumentPreview";
 import { useDocumentFolders } from "@/hooks/useDocumentFolders";
 import { useDocumentStorage } from "@/hooks/useDocumentStorage";
 import { useTeasersByLanguage, useTeaserFolder, useTeaserDownload } from "@/hooks/useTeaser";
@@ -45,7 +47,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import type { DocumentWithVersion, IdiomaTeaser } from "@/types/documents";
 import type { MandatoTipo } from "@/types";
-import { validateTeaserFile } from "@/lib/file-utils";
+import { validateTeaserFile, isPreviewable } from "@/lib/file-utils";
 
 interface DocumentosTabProps {
   mandatoId: string;
@@ -68,6 +70,17 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [uploadingTeaserES, setUploadingTeaserES] = useState(false);
   const [uploadingTeaserEN, setUploadingTeaserEN] = useState(false);
+
+  // Preview with unified hook
+  const {
+    previewDocument,
+    previewUrl,
+    isPreviewLoading,
+    isPreviewOpen,
+    openPreview,
+    setPreviewOpen,
+  } = useDocumentPreview();
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
 
   const { folders, documents, folderTree, unfiledDocuments, isLoading, createFolder, renameFolder, deleteFolder, refetch } = useDocumentFolders(mandatoId);
   const { getSignedUrl, deleteDocument } = useDocumentStorage();
@@ -279,6 +292,19 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     }
   };
 
+  const handlePreview = async (doc: DocumentWithVersion) => {
+    setLoadingPreviewId(doc.id);
+    await openPreview({
+      id: doc.id,
+      file_name: doc.file_name,
+      mime_type: doc.mime_type,
+      storage_path: doc.storage_path,
+      file_size_bytes: doc.file_size_bytes,
+      created_at: doc.created_at,
+    });
+    setLoadingPreviewId(null);
+  };
+
   const handleDownload = async (doc: DocumentWithVersion) => {
     setDownloadingId(doc.id);
     try {
@@ -296,14 +322,14 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       
       if (url) {
         // Forzar descarga usando un enlace temporal
-        const link = document.createElement('a');
+        const link = window.document.createElement('a');
         link.href = url;
         link.download = doc.file_name;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
+        window.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        window.document.body.removeChild(link);
         toast.success(`Descargando ${doc.file_name}`);
       } else {
         toast.error('No se pudo generar el enlace de descarga');
@@ -579,6 +605,12 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                {isPreviewable(doc.mime_type) && (
+                                  <DropdownMenuItem onClick={() => handlePreview(doc)} disabled={loadingPreviewId === doc.id}>
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    {loadingPreviewId === doc.id ? 'Cargando...' : 'Ver'}
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => handleDownload(doc)} disabled={downloadingId === doc.id}>
                                   <Download className="w-4 h-4 mr-2" />
                                   Descargar
@@ -655,6 +687,19 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           onOpenChange={(open) => !open && setVersionHistoryDoc(null)}
         />
       )}
+
+      {/* Unified Document Viewer */}
+      <UnifiedDocumentViewer
+        open={isPreviewOpen}
+        onOpenChange={setPreviewOpen}
+        document={previewDocument}
+        previewUrl={previewUrl}
+        isLoading={isPreviewLoading}
+        onDownload={previewDocument ? () => {
+          const doc = documents.find(d => d.id === previewDocument.id);
+          if (doc) handleDownload(doc);
+        } : undefined}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Trash2, FileText, Image as ImageIcon, File, Loader2 } from "lucide-react";
+import { Download, Trash2, FileText, Image as ImageIcon, File, Loader2, Eye, FileSpreadsheet, Presentation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -20,7 +20,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { UnifiedDocumentViewer } from "@/components/shared/UnifiedDocumentViewer";
+import { useDocumentPreview } from "@/hooks/useDocumentPreview";
 import { useDocumentStorage, MandatoDocumento } from "@/hooks/useDocumentStorage";
+import { isPreviewable, isPdf, isImage, isOfficeDocument } from "@/lib/file-utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -37,6 +40,17 @@ export function DocumentList({ mandatoId, onUpdate }: DocumentListProps) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { listDocuments, getSignedUrl, deleteDocument } = useDocumentStorage();
+  
+  // Preview with unified hook
+  const {
+    previewDocument,
+    previewUrl,
+    isPreviewLoading,
+    isPreviewOpen,
+    openPreview,
+    setPreviewOpen,
+  } = useDocumentPreview();
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -52,12 +66,31 @@ export function DocumentList({ mandatoId, onUpdate }: DocumentListProps) {
     loadDocuments();
   }, [mandatoId]);
 
+  const handlePreview = async (doc: MandatoDocumento) => {
+    setLoadingPreviewId(doc.id);
+    await openPreview({
+      id: doc.id,
+      file_name: doc.file_name,
+      mime_type: doc.mime_type,
+      storage_path: doc.storage_path,
+      file_size_bytes: doc.file_size_bytes,
+      created_at: doc.created_at,
+    });
+    setLoadingPreviewId(null);
+  };
+
   const handleDownload = async (doc: MandatoDocumento) => {
     setDownloadingId(doc.id);
     try {
       const signedUrl = await getSignedUrl(doc.storage_path);
       if (signedUrl) {
-        window.open(signedUrl, "_blank");
+        const link = document.createElement('a');
+        link.href = signedUrl;
+        link.download = doc.file_name;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     } finally {
       setDownloadingId(null);
@@ -83,8 +116,17 @@ export function DocumentList({ mandatoId, onUpdate }: DocumentListProps) {
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith("image/")) return <ImageIcon className="w-5 h-5 text-blue-500" />;
-    if (mimeType === "application/pdf") return <FileText className="w-5 h-5 text-red-500" />;
+    if (isImage(mimeType)) return <ImageIcon className="w-5 h-5 text-primary" />;
+    if (isPdf(mimeType)) return <FileText className="w-5 h-5 text-destructive" />;
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+      return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
+    }
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+      return <Presentation className="w-5 h-5 text-orange-500" />;
+    }
+    if (mimeType.includes('word') || mimeType.includes('document')) {
+      return <FileText className="w-5 h-5 text-blue-600" />;
+    }
     return <File className="w-5 h-5 text-muted-foreground" />;
   };
 
@@ -161,6 +203,23 @@ export function DocumentList({ mandatoId, onUpdate }: DocumentListProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {isPreviewable(doc.mime_type) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePreview(doc)}
+                        disabled={loadingPreviewId === doc.id}
+                      >
+                        {loadingPreviewId === doc.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -190,6 +249,19 @@ export function DocumentList({ mandatoId, onUpdate }: DocumentListProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Unified Document Viewer */}
+      <UnifiedDocumentViewer
+        open={isPreviewOpen}
+        onOpenChange={setPreviewOpen}
+        document={previewDocument}
+        previewUrl={previewUrl}
+        isLoading={isPreviewLoading}
+        onDownload={previewDocument ? () => {
+          const doc = documents.find(d => d.id === previewDocument.id);
+          if (doc) handleDownload(doc);
+        } : undefined}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
