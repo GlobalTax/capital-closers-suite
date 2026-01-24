@@ -9,7 +9,7 @@ export interface ProspectForTimeEntry {
   contact_name: string | null;
   contact_email: string | null;
   sector: string | null;
-  source_table: 'contact_leads' | 'advisor_valuations' | 'collaborator_applications';
+  source_table: 'contact_leads' | 'company_valuations' | 'collaborator_applications';
 }
 
 /**
@@ -27,17 +27,20 @@ export function useProspectsForTimeEntry(mandatoId: string | null) {
   return useQuery({
     queryKey: ['prospects-for-time-entry', mandatoId],
     queryFn: async (): Promise<ProspectForTimeEntry[]> => {
-      // Query the same 3 tables used in /gestion-leads
-      const [contactLeads, advisorValuations, collaboratorApps] = await Promise.all([
+      // Query the same 3 tables used in /gestion-leads (with is_deleted filter)
+      const [contactLeads, companyValuations, collaboratorApps] = await Promise.all([
         supabase
           .from('contact_leads')
-          .select('id, company, full_name, email, sectors_of_interest'),
+          .select('id, company, full_name, email, sectors_of_interest')
+          .eq('is_deleted', false),
         supabase
-          .from('advisor_valuations')
-          .select('id, company_name, contact_name, email, firm_type'),
+          .from('company_valuations')
+          .select('id, company_name, contact_name, email, industry')
+          .eq('is_deleted', false),
         supabase
           .from('collaborator_applications')
-          .select('id, company, full_name, email, profession'),
+          .select('id, company, full_name, email, profession')
+          .eq('is_deleted', false),
       ]);
 
       // Normalize and combine all results
@@ -51,14 +54,14 @@ export function useProspectsForTimeEntry(mandatoId: string | null) {
           sector: p.sectors_of_interest,
           source_table: 'contact_leads' as const
         })),
-        // Advisor valuations (company valuation requests)
-        ...(advisorValuations.data || []).map(p => ({
+        // Company valuations (valoración de empresas)
+        ...(companyValuations.data || []).map(p => ({
           id: p.id,
           company_name: p.company_name || 'Sin nombre',
           contact_name: p.contact_name,
           contact_email: p.email,
-          sector: p.firm_type,
-          source_table: 'advisor_valuations' as const
+          sector: p.industry,
+          source_table: 'company_valuations' as const
         })),
         // Collaborator applications
         ...(collaboratorApps.data || []).map(p => ({
