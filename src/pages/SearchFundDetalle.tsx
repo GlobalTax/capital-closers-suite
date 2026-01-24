@@ -22,6 +22,7 @@ import {
   Plus,
   Link2,
   Clock,
+  Send,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -43,9 +44,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchFundPeople } from '@/hooks/useSearchFundPeople';
 import { useSearchFundsRealtime } from '@/hooks/useSearchFundsRealtime';
+import { useUpdateMatchStatus, useUpdateMatchNotes } from '@/hooks/useSearchFundMatches';
+import { MatchNotesCell } from '@/components/searchfunds/MatchNotesCell';
+import { OutreachTimelineItem } from '@/components/searchfunds/OutreachTimelineItem';
 import type { SearchFund } from '@/types/searchFunds';
 import { MATCH_STATUS_LABELS, MATCH_STATUS_COLORS, type MatchStatus } from '@/types/searchFunds';
 
@@ -125,6 +136,10 @@ export default function SearchFundDetalle() {
     },
     enabled: !!id,
   });
+
+  // Match mutations
+  const updateStatusMutation = useUpdateMatchStatus();
+  const updateNotesMutation = useUpdateMatchNotes();
 
   // Stats
   const stats = {
@@ -337,6 +352,10 @@ export default function SearchFundDetalle() {
                 </TabsTrigger>
                 <TabsTrigger value="matches" className="gap-1">
                   Matches <Badge variant="secondary" className="ml-1 text-xs">{stats.matches}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="outreach" className="gap-1">
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                  Outreach
                 </TabsTrigger>
                 <TabsTrigger value="historial">Historial</TabsTrigger>
               </TabsList>
@@ -652,6 +671,7 @@ export default function SearchFundDetalle() {
                           <TableHead>Mandato</TableHead>
                           <TableHead>Empresa</TableHead>
                           <TableHead>Estado</TableHead>
+                          <TableHead>Notas</TableHead>
                           <TableHead>Contactado</TableHead>
                           <TableHead>Teaser</TableHead>
                           <TableHead>NDA</TableHead>
@@ -662,14 +682,14 @@ export default function SearchFundDetalle() {
                         {loadingMatches ? (
                           Array.from({ length: 3 }).map((_, i) => (
                             <TableRow key={i}>
-                              {Array.from({ length: 7 }).map((_, j) => (
+                              {Array.from({ length: 8 }).map((_, j) => (
                                 <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                               ))}
                             </TableRow>
                           ))
                         ) : matches.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                               <Target className="w-10 h-10 mx-auto mb-2 opacity-50" />
                               <p>No hay oportunidades asignadas</p>
                             </TableCell>
@@ -678,21 +698,56 @@ export default function SearchFundDetalle() {
                           matches.map((match: any) => (
                             <TableRow
                               key={match.id}
-                              className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => navigate(`/mandatos/${match.crm_entity_id}`)}
+                              className="hover:bg-muted/50"
                             >
-                              <TableCell>
-                                <span className="font-medium">
+                              <TableCell 
+                                className="cursor-pointer"
+                                onClick={() => navigate(`/mandatos/${match.crm_entity_id}`)}
+                              >
+                                <span className="font-medium text-primary hover:underline">
                                   {match.mandato?.codigo || 'Sin código'}
                                 </span>
                               </TableCell>
                               <TableCell>
                                 {match.mandato?.empresa?.nombre || '-'}
                               </TableCell>
-                              <TableCell>
-                                <Badge className={MATCH_STATUS_COLORS[match.status as MatchStatus] || 'bg-gray-100'}>
-                                  {MATCH_STATUS_LABELS[match.status as MatchStatus] || match.status}
-                                </Badge>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  value={match.status || 'nuevo'}
+                                  onValueChange={(value) => {
+                                    updateStatusMutation.mutate({
+                                      matchId: match.id,
+                                      status: value as MatchStatus,
+                                      mandatoId: match.crm_entity_id,
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(MATCH_STATUS_LABELS).map(([value, label]) => (
+                                      <SelectItem key={value} value={value}>
+                                        <Badge className={`${MATCH_STATUS_COLORS[value as MatchStatus]} text-xs`}>
+                                          {label}
+                                        </Badge>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <MatchNotesCell
+                                  notes={match.notes}
+                                  onSave={(notes) => {
+                                    updateNotesMutation.mutate({
+                                      matchId: match.id,
+                                      notes,
+                                      mandatoId: match.crm_entity_id,
+                                    });
+                                  }}
+                                  isLoading={updateNotesMutation.isPending}
+                                />
                               </TableCell>
                               <TableCell>
                                 {match.contacted_at ? (
@@ -719,7 +774,12 @@ export default function SearchFundDetalle() {
                                 ) : '-'}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={() => navigate(`/mandatos/${match.crm_entity_id}`)}
+                                >
                                   <ExternalLink className="w-4 h-4" />
                                 </Button>
                               </TableCell>
@@ -728,6 +788,44 @@ export default function SearchFundDetalle() {
                         )}
                       </TableBody>
                     </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Outreach Tab */}
+              <TabsContent value="outreach" className="mt-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between py-4">
+                    <CardTitle className="text-base font-medium">
+                      Historial de contactos
+                    </CardTitle>
+                    <Button variant="outline" size="sm" className="gap-1">
+                      <Plus className="w-4 h-4" />
+                      Registrar interacción
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {matches.filter((m: any) => m.contacted_at || m.teaser_sent_at || m.nda_sent_at).length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Send className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                        <p className="font-medium">Sin interacciones registradas</p>
+                        <p className="text-sm mt-1">Registra contactos con este Search Fund para ver el timeline aquí</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {matches
+                          .filter((m: any) => m.contacted_at || m.teaser_sent_at || m.nda_sent_at)
+                          .map((match: any) => (
+                            <OutreachTimelineItem
+                              key={match.id}
+                              match={match}
+                              mandatoCode={match.mandato?.codigo}
+                              empresaName={match.mandato?.empresa?.nombre}
+                              onClick={() => navigate(`/mandatos/${match.crm_entity_id}`)}
+                            />
+                          ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
