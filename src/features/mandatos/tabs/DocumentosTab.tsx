@@ -250,12 +250,21 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         });
         console.log('[Teaser Upload] Registro en DB OK');
       } catch (dbError: any) {
-        console.error('[Teaser Upload] Error registrando en DB:', dbError);
+        console.error('[Teaser Upload] Error registrando en DB:', {
+          code: dbError.code,
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint,
+        });
         // Limpiar archivo huérfano del storage
         await supabase.storage.from('mandato-documentos').remove([storagePath]);
         
-        // Mostrar mensaje específico del error
-        toast.error(dbError.message || 'Error guardando en base de datos');
+        // Mostrar mensaje específico basado en el código de error
+        let errorMessage = 'Error guardando en base de datos';
+        if (dbError.message) {
+          errorMessage = dbError.message;
+        }
+        toast.error(errorMessage);
         return;
       }
 
