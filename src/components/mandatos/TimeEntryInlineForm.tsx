@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { createTimeEntry } from "@/services/timeTracking";
 import { ensureLeadInMandateLeads } from "@/services/leadActivities";
@@ -455,37 +454,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         </Button>
       </div>
 
-      {/* Row 2: Value Type + Billable + Advanced toggle */}
+      {/* Row 2: Billable + Advanced toggle */}
       <div className="flex flex-wrap items-center gap-4 pt-1">
-        {/* Value Type Toggle */}
-        <ToggleGroup 
-          type="single" 
-          value={valueType} 
-          onValueChange={(value) => value && setValueType(value as TimeEntryValueType)}
-          className="justify-start"
-        >
-          <ToggleGroupItem 
-            value="core_ma" 
-            size="sm"
-            className="text-xs px-3 data-[state=on]:bg-emerald-500/20 data-[state=on]:text-emerald-700 dark:data-[state=on]:text-emerald-400"
-          >
-            Core M&A
-          </ToggleGroupItem>
-          <ToggleGroupItem 
-            value="soporte"
-            size="sm"
-            className="text-xs px-3 data-[state=on]:bg-amber-500/20 data-[state=on]:text-amber-700 dark:data-[state=on]:text-amber-400"
-          >
-            Soporte
-          </ToggleGroupItem>
-          <ToggleGroupItem 
-            value="bajo_valor"
-            size="sm"
-            className="text-xs px-3 data-[state=on]:bg-red-500/20 data-[state=on]:text-red-700 dark:data-[state=on]:text-red-400"
-          >
-            Bajo valor
-          </ToggleGroupItem>
-        </ToggleGroup>
 
         {/* Billable Checkbox */}
         <div className="flex items-center space-x-2">

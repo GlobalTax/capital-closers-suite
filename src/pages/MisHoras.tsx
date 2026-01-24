@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { CompactTimeEntriesTable } from "@/components/mandatos/CompactTimeEntriesTable";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
@@ -7,9 +7,8 @@ import { TimeEntryEditDialog } from "@/components/mandatos/TimeEntryEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
-import type { TimeEntry, MandatoChecklistTask, TimeFilterState, TimeEntryValueType } from "@/types";
+import type { TimeEntry, MandatoChecklistTask, TimeFilterState } from "@/types";
 import { startOfMonth, endOfDay, isToday, isThisWeek } from "date-fns";
-import { VALUE_TYPE_CONFIG } from "@/types";
 import { Filter } from "lucide-react";
 
 export default function MisHoras() {
@@ -122,23 +121,6 @@ export default function MisHoras() {
   const thisMonthStart = startOfMonth(new Date());
   const thisMonthHours = allEntries.filter(e => new Date(e.start_time) >= thisMonthStart).reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
 
-  // Value distribution for personal view
-  const valueDistribution = useMemo(() => {
-    const dist = { core_ma: 0, soporte: 0, bajo_valor: 0, total: 0 };
-    allEntries.forEach(entry => {
-      const hours = (entry.duration_minutes || 0) / 60;
-      dist.total += hours;
-      if (entry.value_type && entry.value_type in dist) {
-        dist[entry.value_type] += hours;
-      }
-    });
-    return dist;
-  }, [allEntries]);
-
-  const corePercentage = valueDistribution.total > 0 
-    ? (valueDistribution.core_ma / valueDistribution.total) * 100 
-    : 0;
-
   // Check if filters are active (beyond defaults)
   const hasActiveFilters = filters.mandatoId !== 'all' || 
                             filters.status !== 'all' || 
@@ -172,36 +154,6 @@ export default function MisHoras() {
         <div>
           <p className="text-2xl md:text-3xl font-light tabular-nums tracking-tight">{thisMonthHours.toFixed(1)}h</p>
           <p className="text-[10px] md:text-xs text-muted-foreground">mes</p>
-        </div>
-        <div className="h-6 md:h-8 w-px bg-border hidden sm:block" />
-        <div className="hidden sm:block">
-          <div className="flex items-center gap-2">
-            <p 
-              className="text-3xl font-light tabular-nums tracking-tight"
-              style={{ color: VALUE_TYPE_CONFIG.core_ma.color }}
-            >
-              {corePercentage.toFixed(0)}%
-            </p>
-            {/* Mini stacked bar */}
-            <div className="h-6 w-24 rounded-full overflow-hidden flex bg-muted/30">
-              {(['core_ma', 'soporte', 'bajo_valor'] as TimeEntryValueType[]).map(type => {
-                const pct = valueDistribution.total > 0 
-                  ? (valueDistribution[type] / valueDistribution.total) * 100 
-                  : 0;
-                return (
-                  <div 
-                    key={type}
-                    className="h-full"
-                    style={{ 
-                      width: `${pct}%`,
-                      backgroundColor: VALUE_TYPE_CONFIG[type].color 
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Core M&A</p>
         </div>
       </div>
 

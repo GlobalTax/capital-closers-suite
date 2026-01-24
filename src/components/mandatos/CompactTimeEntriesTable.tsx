@@ -28,7 +28,6 @@ import { deleteTimeEntry, approveTimeEntry, rejectTimeEntry, submitTimeEntry } f
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { cn } from "@/lib/utils";
 import type { TimeEntry } from "@/types";
-import { VALUE_TYPE_CONFIG } from "@/types";
 
 interface CompactTimeEntriesTableProps {
   entries: TimeEntry[];
@@ -203,91 +202,82 @@ export function CompactTimeEntriesTable({
                 const canEdit = entry.user_id === currentUserId && entry.status === 'draft';
                 const canDelete = entry.user_id === currentUserId || isAdmin;
                 const canApprove = isAdmin && entry.status === 'submitted';
-                const valueConfig = entry.value_type ? VALUE_TYPE_CONFIG[entry.value_type] : null;
+                const startTime = format(new Date(entry.start_time), 'HH:mm');
+
+                // Build lead/company display from contacto
+                const leadDisplay = entry.contacto ? (
+                  entry.contacto.empresa_principal?.nombre || 
+                  `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim()
+                ) : null;
 
                 return (
                   <div
                     key={entry.id}
                     className={cn(
-                      "flex items-center gap-3 py-2.5 px-2 group hover:bg-muted/30 transition-colors rounded-md border-l-2",
+                      "group hover:bg-muted/30 transition-colors rounded-md border-l-2 py-2 px-2",
                       getStatusIndicator(entry.status),
                       entry.status === 'rejected' && "opacity-60"
                     )}
                   >
-                    {/* Value Type Indicator */}
-                    <div 
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: valueConfig?.color || '#94a3b8' }}
-                      title={valueConfig?.label || 'Sin tipo'}
-                    />
+                    {/* Main row */}
+                    <div className="flex items-center gap-3">
+                      {/* Start Time */}
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums shrink-0 w-10">
+                        {startTime}
+                      </span>
 
-                    {/* Mandato or Lead */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {entry.mandato ? (
-                          <Link 
-                            to={`/mandatos/${entry.mandato.id}`}
-                            className="hover:underline inline-flex items-center gap-1 group/link"
-                          >
-                            <span className="font-mono text-sm font-medium text-primary">
-                              {entry.mandato.codigo || 'M'}
-                            </span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="text-sm truncate max-w-[160px]">
-                              {entry.mandato.descripcion || 'Sin descripción'}
-                            </span>
-                            <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                          </Link>
-                        ) : entry.contacto ? (
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 shrink-0">
-                              Lead
-                            </Badge>
-                            <span className="text-sm truncate max-w-[160px]">
-                              {entry.contacto.empresa_principal?.nombre || 
-                               `${entry.contacto.nombre} ${entry.contacto.apellidos || ''}`.trim()}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Sin asignar</span>
-                        )}
+                      {/* Mandato */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {entry.mandato ? (
+                            <Link 
+                              to={`/mandatos/${entry.mandato.id}`}
+                              className="hover:underline inline-flex items-center gap-1 group/link"
+                            >
+                              <span className="font-mono text-sm font-medium text-primary">
+                                {entry.mandato.codigo || 'M'}
+                              </span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-sm truncate max-w-[140px]">
+                                {entry.work_task_type?.name || entry.mandato.descripcion || 'Sin descripción'}
+                              </span>
+                              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Sin asignar</span>
+                          )}
+                        </div>
                       </div>
-                      {entry.work_task_type?.name && (
-                        <span className="text-xs text-muted-foreground">
-                          {entry.work_task_type.name}
+
+                      {/* Lead/Company */}
+                      {leadDisplay && (
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px] hidden md:inline">
+                          {leadDisplay}
                         </span>
                       )}
+
+                      {/* Duration */}
+                      <span className="font-mono text-sm font-medium tabular-nums shrink-0">
+                        {formatDuration(entry.duration_minutes)}
+                      </span>
                     </div>
 
-                    {/* Duration */}
-                    <span className="font-mono text-sm tabular-nums shrink-0">
-                      {formatDuration(entry.duration_minutes)}
-                    </span>
-
-                    {/* Value Badge (mini) */}
-                    {valueConfig && (
-                      <Badge 
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 h-5 shrink-0 hidden sm:inline-flex"
-                        style={{ 
-                          borderColor: valueConfig.color,
-                          color: valueConfig.color
-                        }}
-                      >
-                        {entry.value_type === 'core_ma' ? 'Core' : 
-                         entry.value_type === 'soporte' ? 'Sop' : 'Bajo'}
-                      </Badge>
+                    {/* Description row */}
+                    {entry.description && entry.description !== 'Trabajo registrado manualmente' && (
+                      <div className="mt-1 ml-[52px] text-xs text-muted-foreground truncate max-w-[400px]">
+                        {entry.description}
+                      </div>
                     )}
 
                     {/* Status Badge for rejected */}
                     {entry.status === 'rejected' && (
-                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5">
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 ml-[52px] mt-1">
                         Rechazado
                       </Badge>
                     )}
 
                     {/* Actions (hover) */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-7 w-7">
