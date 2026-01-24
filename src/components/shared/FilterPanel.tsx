@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import {
   Collapsible,
   CollapsibleContent,
@@ -34,6 +35,11 @@ export interface FilterSection {
   type: "checkbox" | "range" | "search";
   options?: FilterOption[];
   defaultOpen?: boolean;
+  // Propiedades para filtros de rango
+  min?: number;
+  max?: number;
+  step?: number;
+  formatValue?: (value: number) => string;
 }
 
 export interface FilterPanelProps {
@@ -68,6 +74,28 @@ export function FilterPanel({
     }, {} as Record<string, boolean>)
   );
   const [searchInputs, setSearchInputs] = useState<Record<string, string>>({});
+  const [rangeValues, setRangeValues] = useState<Record<string, [number, number]>>({});
+
+  // Inicializar valores de rango desde values prop
+  useEffect(() => {
+    sections.forEach((section) => {
+      if (section.type === "range") {
+        const currentValue = values[section.id]?.[0];
+        if (currentValue && currentValue.includes("-")) {
+          const [min, max] = currentValue.split("-").map(Number);
+          if (!isNaN(min) && !isNaN(max)) {
+            setRangeValues((prev) => ({ ...prev, [section.id]: [min, max] }));
+          }
+        } else if (!rangeValues[section.id]) {
+          // Inicializar con valores por defecto
+          setRangeValues((prev) => ({
+            ...prev,
+            [section.id]: [section.min ?? 0, section.max ?? 100],
+          }));
+        }
+      }
+    });
+  }, [sections, values]);
 
   const totalActiveFilters = Object.values(values).reduce(
     (sum, arr) => sum + arr.length,
@@ -102,6 +130,15 @@ export function FilterPanel({
     } else {
       onChange(sectionId, []);
     }
+  };
+
+  const handleRangeChange = (sectionId: string, newRange: [number, number]) => {
+    setRangeValues((prev) => ({ ...prev, [sectionId]: newRange }));
+  };
+
+  const handleRangeCommit = (sectionId: string, range: [number, number]) => {
+    // Notificar cambio como "min-max" string
+    onChange(sectionId, [`${range[0]}-${range[1]}`]);
   };
 
   const getFilteredOptions = (section: FilterSection) => {
@@ -282,6 +319,32 @@ export function FilterPanel({
                         className="h-8 text-sm pl-7"
                       />
                     </div>
+                  </div>
+                )}
+
+                {section.type === "range" && (
+                  <div className="pl-2 pr-4 space-y-3">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>
+                        {section.formatValue
+                          ? section.formatValue(rangeValues[section.id]?.[0] ?? section.min ?? 0)
+                          : rangeValues[section.id]?.[0] ?? section.min ?? 0}
+                      </span>
+                      <span>
+                        {section.formatValue
+                          ? section.formatValue(rangeValues[section.id]?.[1] ?? section.max ?? 100)
+                          : rangeValues[section.id]?.[1] ?? section.max ?? 100}
+                      </span>
+                    </div>
+                    <Slider
+                      min={section.min ?? 0}
+                      max={section.max ?? 100}
+                      step={section.step ?? 1}
+                      value={rangeValues[section.id] ?? [section.min ?? 0, section.max ?? 100]}
+                      onValueChange={(val) => handleRangeChange(section.id, val as [number, number])}
+                      onValueCommit={(val) => handleRangeCommit(section.id, val as [number, number])}
+                      className="w-full"
+                    />
                   </div>
                 )}
               </CollapsibleContent>

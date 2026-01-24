@@ -40,7 +40,8 @@ import { LeadFinanceCell } from "@/components/leads/LeadFinanceCell";
 import { ApolloStatusBadge } from "@/components/leads/ApolloStatusBadge";
 import { LeadQuickFilters, QuickFilterKey, applyQuickFilters } from "@/components/leads/LeadQuickFilters";
 import { LeadActionsMenu } from "@/components/leads/LeadActionsMenu";
-import { LeadBulkActions } from "@/components/leads/LeadBulkActions";
+import { BulkActionsBar, commonBulkActions } from "@/components/shared/BulkActionsBar";
+import { Phone } from "lucide-react";
 import { LeadActivityCell } from "@/components/leads/LeadActivityCell";
 import { QuickTimeEntryModal } from "@/components/leads/QuickTimeEntryModal";
 import { LeadConversionModal } from "@/components/leads/LeadConversionModal";
@@ -774,11 +775,13 @@ export default function GestionLeads() {
       </div>
 
       {/* Bulk actions bar */}
-      <LeadBulkActions
+      <BulkActionsBar
         selectedCount={selectedIds.size}
-        onClear={() => setSelectedIds(new Set())}
-        onMarkContacted={handleBulkMarkContacted}
-        onExport={handleExport}
+        onClearSelection={() => setSelectedIds(new Set())}
+        actions={[
+          { icon: Phone, label: "Contactado", onClick: handleBulkMarkContacted },
+          commonBulkActions.export(handleExport),
+        ]}
       />
 
       {/* Panel lateral de detalle */}
