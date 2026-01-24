@@ -39,6 +39,7 @@ import { exportToCSV, cn } from "@/lib/utils";
 import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
 import type { Mandato, MandatoEstado } from "@/types";
 import { toast } from "sonner";
+import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import {
   Search,
   Download,
@@ -310,6 +311,10 @@ export default function Mandatos() {
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [downloadingTeaser, setDownloadingTeaser] = useState<string | null>(null);
+  
+  // Estado para el dialog de confirmación de eliminación
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mandatoToDelete, setMandatoToDelete] = useState<Mandato | null>(null);
 
   // Columnas personalizables - cargar desde localStorage
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>(() => {
@@ -385,24 +390,35 @@ export default function Mandatos() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     const mandato = mandatos.find(m => m.id === id);
-    const nombreMandato = mandato?.codigo || mandato?.empresa_principal?.nombre || id.substring(0, 8);
+    setMandatoToDelete(mandato || null);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!mandatoToDelete) return;
     
-    executeWithUndo({
-      message: `Eliminando mandato ${nombreMandato}...`,
-      undoMessage: "Eliminación cancelada",
-      duration: 5000,
-      action: async () => {
-        try {
-          await deleteMandato(id);
-          toast.success("Mandato eliminado");
-          cargarMandatos();
-        } catch (error) {
-          toast.error("Error al eliminar el mandato");
-        }
-      },
-    });
+    try {
+      console.log('[Mandatos] Eliminando mandato:', mandatoToDelete.id);
+      await deleteMandato(mandatoToDelete.id);
+      toast.success("Mandato eliminado correctamente");
+      setDeleteDialogOpen(false);
+      setMandatoToDelete(null);
+      cargarMandatos();
+    } catch (error: any) {
+      console.error('[Mandatos] Error eliminando:', error);
+      
+      // Mensajes específicos según el código de error
+      if (error?.code === '42501') {
+        toast.error("No tienes permisos para eliminar este mandato");
+      } else if (error?.code === 'PGRST116') {
+        toast.error("El mandato ya no existe");
+      } else {
+        toast.error("Error al eliminar el mandato");
+      }
+      throw error; // Re-throw para que el dialog sepa que falló
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -1281,6 +1297,17 @@ export default function Mandatos() {
           setSelectedRows([]);
           cargarMandatos();
         }}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setMandatoToDelete(null);
+        }}
+        itemName={mandatoToDelete?.codigo || mandatoToDelete?.empresa_principal?.nombre || mandatoToDelete?.nombre_proyecto || "este mandato"}
+        description="Se eliminarán todos los documentos, tareas y registros asociados. Esta acción no se puede deshacer."
+        onConfirm={confirmDelete}
       />
     </PageTransition>
   );
