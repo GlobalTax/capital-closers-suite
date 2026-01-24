@@ -9,13 +9,17 @@ export interface ProspectForTimeEntry {
   contact_name: string | null;
   contact_email: string | null;
   sector: string | null;
-  source_table: string;
+  source_table: 'contact_leads' | 'advisor_valuations' | 'collaborator_applications';
 }
 
 /**
- * Hook to fetch prospects from ALL lead tables for time entry in Prospección project.
+ * Hook to fetch prospects for time entry in "Prospección Formulario" project.
  * Only enabled when the mandato is the Prospección internal project.
- * Combines admin_leads, contact_leads, sell_leads, investor_leads, and general_contact_leads.
+ * 
+ * Uses the same 3 tables as /gestion-leads (inbound leads from forms):
+ * - contact_leads: Contact form submissions
+ * - advisor_valuations: Company valuation requests
+ * - collaborator_applications: Collaborator applications
  */
 export function useProspectsForTimeEntry(mandatoId: string | null) {
   const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
@@ -23,72 +27,47 @@ export function useProspectsForTimeEntry(mandatoId: string | null) {
   return useQuery({
     queryKey: ['prospects-for-time-entry', mandatoId],
     queryFn: async (): Promise<ProspectForTimeEntry[]> => {
-      // Query all lead tables in parallel with their specific column names
-      const [adminLeads, contactLeads, sellLeads, investorLeads, generalContactLeads] = await Promise.all([
-        supabase
-          .from('admin_leads')
-          .select('id, company_name, contact_name, contact_email, sector')
-          .not('match_status', 'eq', 'converted'),
+      // Query the same 3 tables used in /gestion-leads
+      const [contactLeads, advisorValuations, collaboratorApps] = await Promise.all([
         supabase
           .from('contact_leads')
           .select('id, company, full_name, email, sectors_of_interest'),
         supabase
-          .from('sell_leads')
-          .select('id, company, full_name, email, sector'),
+          .from('advisor_valuations')
+          .select('id, company_name, contact_name, email, firm_type'),
         supabase
-          .from('investor_leads')
-          .select('id, company, full_name, email, investment_range'),
-        supabase
-          .from('general_contact_leads')
-          .select('id, company, full_name, email, page_origin'),
+          .from('collaborator_applications')
+          .select('id, company, full_name, email, profession'),
       ]);
 
       // Normalize and combine all results
       const allProspects: ProspectForTimeEntry[] = [
-        // Admin leads (already has correct column names)
-        ...(adminLeads.data || []).map(p => ({
-          id: p.id,
-          company_name: p.company_name || 'Sin nombre',
-          contact_name: p.contact_name,
-          contact_email: p.contact_email,
-          sector: p.sector,
-          source_table: 'admin_leads'
-        })),
-        // Contact leads (different column names)
+        // Contact leads
         ...(contactLeads.data || []).map(p => ({
           id: p.id,
           company_name: p.company || 'Sin nombre',
           contact_name: p.full_name,
           contact_email: p.email,
           sector: p.sectors_of_interest,
-          source_table: 'contact_leads'
+          source_table: 'contact_leads' as const
         })),
-        // Sell leads (uses company/full_name)
-        ...(sellLeads.data || []).map(p => ({
+        // Advisor valuations (company valuation requests)
+        ...(advisorValuations.data || []).map(p => ({
+          id: p.id,
+          company_name: p.company_name || 'Sin nombre',
+          contact_name: p.contact_name,
+          contact_email: p.email,
+          sector: p.firm_type,
+          source_table: 'advisor_valuations' as const
+        })),
+        // Collaborator applications
+        ...(collaboratorApps.data || []).map(p => ({
           id: p.id,
           company_name: p.company || 'Sin nombre',
           contact_name: p.full_name,
           contact_email: p.email,
-          sector: p.sector,
-          source_table: 'sell_leads'
-        })),
-        // Investor leads
-        ...(investorLeads.data || []).map(p => ({
-          id: p.id,
-          company_name: p.company || 'Sin nombre',
-          contact_name: p.full_name,
-          contact_email: p.email,
-          sector: p.investment_range,
-          source_table: 'investor_leads'
-        })),
-        // General contact leads
-        ...(generalContactLeads.data || []).map(p => ({
-          id: p.id,
-          company_name: p.company || 'Sin nombre',
-          contact_name: p.full_name,
-          contact_email: p.email,
-          sector: p.page_origin,
-          source_table: 'general_contact_leads'
+          sector: p.profession,
+          source_table: 'collaborator_applications' as const
         })),
       ];
 
