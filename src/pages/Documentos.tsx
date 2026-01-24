@@ -5,10 +5,11 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Trash2, FileText, File, Image as ImageIcon } from "lucide-react";
+import { Download, Trash2, FileText, File, Image as ImageIcon, Eye, Loader2 } from "lucide-react";
 import { UploadDialog } from "@/components/documentos/UploadDialog";
+import { DocumentPreviewDialog } from "@/components/documentos/DocumentPreviewDialog";
 import { useDocumentosPaginated, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
-import { downloadFile } from "@/services/uploads";
+import { downloadFile, getSignedUrl } from "@/services/uploads";
 import type { Documento } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
@@ -23,11 +24,33 @@ export default function Documentos() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; doc?: Documento }>({ open: false });
   const [downloading, setDownloading] = useState<string | null>(null);
+  
+  // Preview state
+  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
   const documentos = result?.data || [];
 
   const handlePageChange = (newPage: number) => {
     setSearchParams({ page: newPage.toString() });
+  };
+
+  const handlePreview = async (doc: Documento) => {
+    setLoadingPreview(doc.id);
+    try {
+      const url = await getSignedUrl(doc.storage_path, 3600); // 1 hour expiration
+      if (url) {
+        setPreviewUrl(url);
+        setPreviewDoc(doc);
+      } else {
+        handleError(new Error("No se pudo generar URL de preview"), "Error al previsualizar");
+      }
+    } catch (error) {
+      handleError(error, "Error al previsualizar");
+    } finally {
+      setLoadingPreview(null);
+    }
   };
 
   const handleDownload = async (doc: Documento) => {
@@ -60,6 +83,10 @@ export default function Documentos() {
     if (mimeType.startsWith('image/')) return <ImageIcon className="w-4 h-4 text-primary" />;
     if (mimeType === 'application/pdf') return <FileText className="w-4 h-4 text-destructive" />;
     return <File className="w-4 h-4 text-muted-foreground" />;
+  };
+
+  const canPreview = (mimeType: string) => {
+    return mimeType === 'application/pdf' || mimeType.startsWith('image/');
   };
 
   const columns = [
@@ -109,7 +136,25 @@ export default function Documentos() {
       key: "id",
       label: "Acciones",
       render: (_: any, row: Documento) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {canPreview(row.mime_type) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePreview(row);
+              }}
+              disabled={loadingPreview === row.id}
+            >
+              {loadingPreview === row.id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              <span className="ml-1 hidden sm:inline">Ver</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -119,8 +164,14 @@ export default function Documentos() {
             }}
             disabled={downloading === row.id}
           >
-            <Download className="w-4 h-4 mr-2" />
-            {downloading === row.id ? 'Descargando...' : 'Descargar'}
+            {downloading === row.id ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span className="ml-1 hidden sm:inline">
+              {downloading === row.id ? 'Descargando...' : 'Descargar'}
+            </span>
           </Button>
           <Button
             variant="ghost"
@@ -163,6 +214,20 @@ export default function Documentos() {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onSuccess={() => refetch()}
+      />
+
+      {/* Preview Dialog */}
+      <DocumentPreviewDialog
+        open={!!previewDoc}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewDoc(null);
+            setPreviewUrl(null);
+          }
+        }}
+        document={previewDoc}
+        previewUrl={previewUrl}
+        onDownload={handleDownload}
       />
 
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm({ open })}>
