@@ -214,12 +214,13 @@ export async function getTeaserByIdioma(
   mandatoId: string, 
   idioma: IdiomaTeaser
 ): Promise<DocumentWithVersion | null> {
-  // Buscar carpeta teaser con maybeSingle
+  // Buscar carpeta teaser por tipo O nombre (fallback para carpetas creadas como 'custom')
   const { data: folder } = await supabase
     .from('document_folders')
     .select('id')
     .eq('mandato_id', mandatoId)
-    .eq('folder_type', TEASER_FOLDER_TYPE)
+    .or(`folder_type.eq.${TEASER_FOLDER_TYPE},name.eq.${TEASER_FOLDER_NAME}`)
+    .limit(1)
     .maybeSingle();
 
   if (!folder) {
@@ -259,12 +260,13 @@ export async function getTeasersForMandatoByLanguage(mandatoId: string): Promise
  * @deprecated Usar getTeasersForMandatoByLanguage para soporte ES/EN
  */
 export async function getTeaserForMandato(mandatoId: string): Promise<DocumentWithVersion | null> {
-  // Buscar carpeta teaser con maybeSingle
+  // Buscar carpeta teaser por tipo O nombre (fallback para carpetas creadas como 'custom')
   const { data: folder } = await supabase
     .from('document_folders')
     .select('id')
     .eq('mandato_id', mandatoId)
-    .eq('folder_type', TEASER_FOLDER_TYPE)
+    .or(`folder_type.eq.${TEASER_FOLDER_TYPE},name.eq.${TEASER_FOLDER_NAME}`)
+    .limit(1)
     .maybeSingle();
 
   if (!folder) {
@@ -294,12 +296,12 @@ export async function getTeasersForMandatos(mandatoIds: string[]): Promise<Map<s
     return result;
   }
 
-  // Obtener todas las carpetas teaser de los mandatos
+  // Obtener todas las carpetas teaser de los mandatos (por tipo O nombre para soportar fallback)
   const { data: folders } = await supabase
     .from('document_folders')
     .select('id, mandato_id')
     .in('mandato_id', mandatoIds)
-    .eq('folder_type', TEASER_FOLDER_TYPE);
+    .or(`folder_type.eq.${TEASER_FOLDER_TYPE},name.eq.${TEASER_FOLDER_NAME}`);
 
   if (!folders || folders.length === 0) {
     mandatoIds.forEach(id => result.set(id, null));
