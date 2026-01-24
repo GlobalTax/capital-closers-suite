@@ -51,9 +51,13 @@ export function InlineEditText({
       await onSave(editValue);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 1500);
+      setIsEditing(false);
+    } catch (error) {
+      // Restaurar valor original si hay error
+      setEditValue(value);
+      setIsEditing(false);
     } finally {
       setIsSaving(false);
-      setIsEditing(false);
     }
   }, [editValue, value, onSave]);
 

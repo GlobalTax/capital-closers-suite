@@ -37,11 +37,13 @@ function EditableInfoItem({
   const handleSave = async (newValue: string) => {
     if (!onUpdate) return;
     
-    let valueToSave: string | null = newValue || null;
+    // Trim y convertir vacío a null
+    const trimmedValue = newValue.trim();
+    let valueToSave: string | null = trimmedValue || null;
     
     // Tratamiento especial para CIF
-    if (field === 'cif' && newValue) {
-      const normalized = normalizeCIF(newValue);
+    if (field === 'cif' && trimmedValue) {
+      const normalized = normalizeCIF(trimmedValue);
       
       if (!isValidCIF(normalized)) {
         toast.error(VALIDATION_MESSAGES.cif);

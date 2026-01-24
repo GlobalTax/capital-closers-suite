@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, Users, CreditCard, Wallet } from "lucide-react";
+import { TrendingUp, DollarSign, Users } from "lucide-react";
 import { Empresa } from "@/types";
 import { formatCurrency, formatPercentage } from "@/lib/mandato-utils";
 
@@ -18,7 +18,7 @@ export function InformacionFinancieraEmpresa({ empresa, loading }: InformacionFi
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-20" />
             ))}
           </div>
@@ -57,18 +57,6 @@ export function InformacionFinancieraEmpresa({ empresa, loading }: InformacionFi
       value: empresa.empleados?.toString() || '-',
       icon: Users,
       show: !!empresa.empleados,
-    },
-    {
-      label: 'Deuda',
-      value: formatCurrency(empresa.deuda),
-      icon: CreditCard,
-      show: !!empresa.deuda,
-    },
-    {
-      label: 'Capital Circulante',
-      value: formatCurrency(empresa.capital_circulante),
-      icon: Wallet,
-      show: !!empresa.capital_circulante,
     },
   ].filter(kpi => kpi.show);
 
