@@ -186,6 +186,9 @@ export const useTimerStore = create<TimerStore>()(
         presetWorkTaskTypeId: state.presetWorkTaskTypeId,
         presetWorkTaskTypeName: state.presetWorkTaskTypeName,
         presetValueType: state.presetValueType,
+        // Persist modal state to survive page refresh during assignment
+        isAssignmentModalOpen: state.isAssignmentModalOpen,
+        pendingTimeSeconds: state.pendingTimeSeconds,
       }),
     }
   )
