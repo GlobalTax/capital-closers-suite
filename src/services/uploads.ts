@@ -60,16 +60,24 @@ export const uploadFile = async (
   }
 };
 
-export const getSignedUrl = async (storagePath: string, expiresIn = 600) => {
+/**
+ * Obtiene URL de blob local para documentos.
+ * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
+ * @param storagePath - Ruta del archivo en storage
+ * @param _expiresIn - Ignorado (mantenido para compatibilidad)
+ */
+export const getSignedUrl = async (storagePath: string, _expiresIn = 600): Promise<string | null> => {
   try {
-    const { data, error } = await supabase.storage
+    const { data: blob, error } = await supabase.storage
       .from('mandato-documentos')
-      .createSignedUrl(storagePath, expiresIn);
+      .download(storagePath);
 
     if (error) throw error;
-    return data.signedUrl;
+    if (!blob) return null;
+    
+    return URL.createObjectURL(blob);
   } catch (error) {
-    console.error("Error getting signed URL:", error);
+    console.error("[uploads] Error downloading document:", error);
     return null;
   }
 };

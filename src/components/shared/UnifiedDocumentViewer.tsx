@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Download, X, FileText, Image as ImageIcon, FileSpreadsheet, Presentation, File, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,10 +47,26 @@ export function UnifiedDocumentViewer({
 }: UnifiedDocumentViewerProps) {
   const [internalUrl, setInternalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const blobUrlRef = useRef<string | null>(null);
 
-  // Generate signed URL if not provided externally
+  // Cleanup blob URLs when component unmounts or URL changes
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  // Generate blob URL if not provided externally
   useEffect(() => {
     if (!open || !document?.storage_path) {
+      // Cleanup when closing
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
       setInternalUrl(null);
       return;
     }
@@ -61,14 +77,26 @@ export function UnifiedDocumentViewer({
     }
 
     const fetchUrl = async () => {
+      // Cleanup previous blob URL
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      
       setLoading(true);
       try {
-        // Use longer expiration for Office docs (they need time to load)
+        // Expiration param is ignored now (using .download())
         const expiration = isOfficeDocument(document.mime_type) ? 7200 : 3600;
         const url = await getSignedUrl(document.storage_path, expiration);
+        
+        // Track blob URL for cleanup
+        if (url && url.startsWith('blob:')) {
+          blobUrlRef.current = url;
+        }
+        
         setInternalUrl(url);
       } catch (error) {
-        console.error("[UnifiedDocumentViewer] Error getting signed URL:", error);
+        console.error("[UnifiedDocumentViewer] Error getting document URL:", error);
       } finally {
         setLoading(false);
       }

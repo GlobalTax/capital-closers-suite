@@ -153,13 +153,15 @@ export default function GestorDocumentos() {
 
   const handleViewDocument = async (doc: GeneratedDocument) => {
     try {
-      const { data, error } = await supabase.storage
+      // Usar .download() para evitar errores RLS con createSignedUrl
+      const { data: blob, error } = await supabase.storage
         .from("mandato-documentos")
-        .createSignedUrl(doc.storage_path, 3600);
+        .download(doc.storage_path);
 
       if (error) throw error;
 
-      window.open(data.signedUrl, "_blank");
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
     } catch (error) {
       console.error("Error viewing document:", error);
       toast({
