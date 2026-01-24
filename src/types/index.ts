@@ -209,6 +209,9 @@ export interface Mandato {
   // Nombre del proyecto (fallback para cliente)
   nombre_proyecto?: string;
   
+  // Favoritos
+  is_favorite?: boolean;
+  
 }
 
 // ============================================

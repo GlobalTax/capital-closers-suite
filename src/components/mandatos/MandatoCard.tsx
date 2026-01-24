@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Calendar, TrendingUp, GripVertical, Clock, AlertTriangle, Euro, Search, FileText, Calculator, Users, Briefcase, Target } from "lucide-react";
+import { Building2, Calendar, TrendingUp, GripVertical, Clock, AlertTriangle, Euro, Search, FileText, Calculator, Users, Briefcase, Target, Star } from "lucide-react";
 import { Mandato } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -99,6 +99,10 @@ export function MandatoCard({ mandato, checklistProgress = 0, hasOverdueTasks = 
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {/* Indicador de favorito */}
+              {mandato.is_favorite && (
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0" />
+              )}
               {/* Badge de categoría/tipo */}
               {isServicio ? (
                 <Badge className={cn("text-xs gap-1", getCategoriaColor(categoria))}>
