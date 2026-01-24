@@ -17342,6 +17342,11 @@ export type Database = {
         }[]
       }
       bootstrap_first_admin: { Args: { user_email: string }; Returns: boolean }
+      check_is_admin: { Args: { check_user_id: string }; Returns: boolean }
+      check_is_super_admin: {
+        Args: { check_user_id: string }
+        Returns: boolean
+      }
       check_login_rate_limit: {
         Args: {
           p_email: string
