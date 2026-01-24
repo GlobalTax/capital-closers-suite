@@ -119,6 +119,18 @@ export async function deleteCampaign(id: string): Promise<void> {
   }
 }
 
+export async function archiveCampaign(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('outbound_campaigns')
+    .update({ status: 'archived', updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[Outbound] Error archiving campaign:', error);
+    throw new Error('Error al archivar campaña');
+  }
+}
+
 // ============================================
 // PROSPECTOS
 // ============================================
@@ -136,6 +148,60 @@ export async function getProspects(campaignId: string): Promise<OutboundProspect
   }
 
   return (data || []) as unknown as OutboundProspect[];
+}
+
+export interface PaginatedProspectsResult {
+  prospects: OutboundProspect[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export async function getProspectsPaginated(
+  campaignId: string,
+  page: number = 1,
+  pageSize: number = 50,
+  search?: string,
+  statusFilter?: string
+): Promise<PaginatedProspectsResult> {
+  let query = supabase
+    .from('outbound_prospects')
+    .select('*', { count: 'exact' })
+    .eq('campaign_id', campaignId)
+    .order('score', { ascending: false, nullsFirst: false });
+
+  // Search filter (server-side)
+  if (search && search.trim()) {
+    query = query.or(`nombre.ilike.%${search}%,empresa.ilike.%${search}%,cargo.ilike.%${search}%`);
+  }
+
+  // Status filter
+  if (statusFilter && statusFilter !== 'all') {
+    if (statusFilter === 'selected') {
+      query = query.eq('is_selected', true);
+    } else {
+      query = query.eq('enrichment_status', statusFilter);
+    }
+  }
+
+  // Pagination
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('[Outbound] Error fetching paginated prospects:', error);
+    throw new Error('Error al cargar prospectos');
+  }
+
+  return {
+    prospects: (data || []) as unknown as OutboundProspect[],
+    total: count || 0,
+    page,
+    totalPages: Math.ceil((count || 0) / pageSize),
+  };
 }
 
 export async function updateProspect(
@@ -282,6 +348,32 @@ export async function importProspectsToLeads(
   }
 
   return response.json();
+}
+
+export async function importAllProspects(campaignId: string): Promise<{
+  imported: number;
+  duplicates: number;
+  failed: number;
+}> {
+  // Get all enriched, non-imported prospect IDs
+  const { data: prospects, error } = await supabase
+    .from('outbound_prospects')
+    .select('id')
+    .eq('campaign_id', campaignId)
+    .eq('enrichment_status', 'enriched')
+    .eq('import_status', 'not_imported');
+
+  if (error) {
+    console.error('[Outbound] Error fetching prospects for import all:', error);
+    throw new Error('Error al obtener prospectos');
+  }
+
+  if (!prospects || prospects.length === 0) {
+    return { imported: 0, duplicates: 0, failed: 0 };
+  }
+
+  // Use existing import function
+  return importProspectsToLeads(prospects.map(p => p.id));
 }
 
 // ============================================

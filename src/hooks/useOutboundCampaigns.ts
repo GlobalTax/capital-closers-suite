@@ -79,6 +79,21 @@ export function useDeleteCampaign() {
   });
 }
 
+export function useArchiveCampaign() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: outboundService.archiveCampaign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outbound-campaigns'] });
+      toast.success('Campaña archivada');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
 // ============================================
 // PROSPECTOS
 // ============================================
@@ -91,6 +106,27 @@ export function useProspects(campaignId: string | undefined) {
   });
 }
 
+export function useProspectsPaginated(
+  campaignId: string | undefined,
+  page: number,
+  pageSize: number = 50,
+  search?: string,
+  statusFilter?: string
+) {
+  return useQuery({
+    queryKey: ['outbound-prospects-paginated', campaignId, page, pageSize, search, statusFilter],
+    queryFn: () => outboundService.getProspectsPaginated(
+      campaignId!,
+      page,
+      pageSize,
+      search,
+      statusFilter
+    ),
+    enabled: !!campaignId,
+    placeholderData: (prev) => prev, // Keep previous data while loading
+  });
+}
+
 export function useUpdateProspect() {
   const queryClient = useQueryClient();
 
@@ -99,6 +135,7 @@ export function useUpdateProspect() {
       outboundService.updateProspect(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outbound-prospects'] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-prospects-paginated'] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -114,6 +151,7 @@ export function useUpdateProspectsSelection() {
       outboundService.updateProspectsSelection(ids, isSelected),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outbound-prospects'] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-prospects-paginated'] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -128,6 +166,7 @@ export function useDeleteProspects() {
     mutationFn: outboundService.deleteProspects,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outbound-prospects'] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-prospects-paginated'] });
       toast.success('Prospectos eliminados');
     },
     onError: (error: Error) => {
@@ -194,9 +233,32 @@ export function useImportProspectsToLeads() {
     mutationFn: outboundService.importProspectsToLeads,
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['outbound-prospects'] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-prospects-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['outbound-campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['gestion-leads'] });
       toast.success(`${result.imported} prospectos importados al CRM`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useImportAllProspects() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: outboundService.importAllProspects,
+    onSuccess: (result, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ['outbound-prospects-paginated', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-campaign', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['outbound-campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['gestion-leads'] });
+      if (result.imported === 0 && result.duplicates === 0) {
+        toast.info('No hay prospectos enriquecidos pendientes de importar');
+      } else {
+        toast.success(`${result.imported} importados, ${result.duplicates} duplicados`);
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message);
