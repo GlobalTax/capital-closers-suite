@@ -3,12 +3,14 @@ import { CompactTimeEntriesTable } from "@/components/mandatos/CompactTimeEntrie
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
 import { TimeEntryInlineForm } from "@/components/mandatos/TimeEntryInlineForm";
+import { TimeEntryEditDialog } from "@/components/mandatos/TimeEntryEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
 import type { TimeEntry, MandatoChecklistTask, TimeFilterState, TimeEntryValueType } from "@/types";
 import { startOfMonth, endOfDay, isToday, isThisWeek } from "date-fns";
 import { VALUE_TYPE_CONFIG } from "@/types";
+import { Filter } from "lucide-react";
 
 export default function MisHoras() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
@@ -19,6 +21,7 @@ export default function MisHoras() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [mandatos, setMandatos] = useState<{ id: string; name: string }[]>([]);
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [filters, setFilters] = useState<TimeFilterState>({
     startDate: startOfMonth(new Date()),
     endDate: endOfDay(new Date()),
@@ -136,6 +139,14 @@ export default function MisHoras() {
     ? (valueDistribution.core_ma / valueDistribution.total) * 100 
     : 0;
 
+  // Check if filters are active (beyond defaults)
+  const hasActiveFilters = filters.mandatoId !== 'all' || 
+                            filters.status !== 'all' || 
+                            filters.valueType !== 'all';
+
+  // Filtered total hours
+  const filteredTotalHours = timeEntries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0) / 60;
+
   return (
     <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
       {/* Header - responsive */}
@@ -194,6 +205,17 @@ export default function MisHoras() {
         </div>
       </div>
 
+      {/* Filtered indicator - only show when filters are active */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+          <Filter className="h-4 w-4" />
+          <span>
+            Filtrado: <span className="font-medium text-foreground">{filteredTotalHours.toFixed(1)}h</span>
+            {' '}({timeEntries.length} {timeEntries.length === 1 ? 'entrada' : 'entradas'})
+          </span>
+        </div>
+      )}
+
       {/* Inline Time Entry Form */}
       <TimeEntryInlineForm onSuccess={loadMyTimeData} />
 
@@ -219,9 +241,21 @@ export default function MisHoras() {
             currentUserId={currentUserId} 
             isAdmin={isAdmin} 
             onRefresh={loadMyTimeData}
+            onEditEntry={(entry) => setEditingEntry(entry)}
           />
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <TimeEntryEditDialog
+        entry={editingEntry}
+        open={!!editingEntry}
+        onOpenChange={(open) => !open && setEditingEntry(null)}
+        onSuccess={() => {
+          setEditingEntry(null);
+          loadMyTimeData();
+        }}
+      />
     </div>
   );
 }
