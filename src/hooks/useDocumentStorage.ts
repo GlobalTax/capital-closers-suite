@@ -144,12 +144,14 @@ export function useDocumentStorage() {
     }
   };
 
+  // Usar .download() directamente para evitar problemas de RLS con signed URLs
   const getSignedUrl = async (
     storagePath: string,
-    documentInfo?: { id: string; nombre: string }
+    documentInfo?: { id: string; nombre: string },
+    expirationSeconds: number = 600
   ): Promise<string | null> => {
     try {
-      // Verificar auth antes de intentar generar URL
+      // Verificar auth antes de intentar descargar
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         console.error('[Storage] Usuario no autenticado:', authError);
@@ -157,7 +159,7 @@ export function useDocumentStorage() {
         return null;
       }
 
-      console.log('[Storage] Generando signed URL para:', storagePath, 'Usuario:', user.id);
+      console.log('[Storage] Descargando blob para:', storagePath, 'Usuario:', user.id);
       
       if (!storagePath) {
         console.error('[Storage] Error: storage_path vacío o nulo');
@@ -165,12 +167,13 @@ export function useDocumentStorage() {
         return null;
       }
 
-      const { data, error } = await supabase.storage
+      // Usar download() directamente en lugar de createSignedUrl
+      const { data: blob, error } = await supabase.storage
         .from("mandato-documentos")
-        .createSignedUrl(storagePath, 600); // 10 minutes
+        .download(storagePath);
 
       if (error) {
-        console.error('[Storage] Error createSignedUrl:', {
+        console.error('[Storage] Error download:', {
           message: error.message,
           name: error.name,
           cause: (error as any).cause,
@@ -188,7 +191,10 @@ export function useDocumentStorage() {
         return null;
       }
 
-      console.log('[Storage] Signed URL generada correctamente');
+      console.log('[Storage] Blob descargado correctamente');
+
+      // Crear URL local desde el blob
+      const blobUrl = URL.createObjectURL(blob);
 
       // Registrar acceso de forma asíncrona (no bloquea la descarga)
       if (documentInfo?.id) {
@@ -199,9 +205,9 @@ export function useDocumentStorage() {
         ).catch(console.error);
       }
 
-      return data.signedUrl;
+      return blobUrl;
     } catch (error) {
-      console.error("[Storage] Error inesperado generating signed URL:", error);
+      console.error("[Storage] Error inesperado downloading file:", error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast.error(`Error al generar enlace de descarga: ${errorMessage}`);
       return null;
