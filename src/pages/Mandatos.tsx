@@ -325,9 +325,13 @@ export default function Mandatos() {
       try {
         const parsed = JSON.parse(saved);
         // Merge con DEFAULT_COLUMNS para incluir nuevas columnas
+        // Las columnas con locked: true SIEMPRE son visibles
         return DEFAULT_COLUMNS.map(defaultCol => {
           const savedCol = parsed.find((c: ColumnConfig) => c.key === defaultCol.key);
-          return savedCol ? { ...defaultCol, visible: savedCol.visible } : defaultCol;
+          return {
+            ...defaultCol,
+            visible: defaultCol.locked ? true : (savedCol?.visible ?? defaultCol.visible)
+          };
         });
       } catch {
         return DEFAULT_COLUMNS;
