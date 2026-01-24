@@ -54,6 +54,7 @@ export function AIImportDrawer({
     createEmpresa,
     createContacto,
     createBoth,
+    logImport,
     reset,
   } = useAIImport();
 
@@ -103,7 +104,14 @@ export function AIImportDrawer({
         }
       }
 
+      // Log the AI import for audit trail
       if (result.empresaId || result.contactoId) {
+        await logImport({
+          imageUrl: imagePreview || 'ai_image_import',
+          empresaId: result.empresaId,
+          contactoId: result.contactoId,
+        });
+
         onSuccess?.({ 
           empresaId: result.empresaId || undefined, 
           contactoId: result.contactoId || undefined 
