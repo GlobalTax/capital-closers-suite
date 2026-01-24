@@ -226,35 +226,28 @@ export function CompactTimeEntriesTable({
                         {startTime}
                       </span>
 
-                      {/* Mandato */}
+                      {/* Empresa + Proyecto */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {entry.mandato ? (
                             <Link 
                               to={`/mandatos/${entry.mandato.id}`}
-                              className="hover:underline inline-flex items-center gap-1 group/link"
+                              className="hover:underline inline-flex items-center gap-1.5 group/link"
                             >
-                              <span className="font-mono text-sm font-medium text-primary">
-                                {entry.mandato.codigo || 'M'}
+                              <span className="font-medium text-sm text-foreground truncate max-w-[160px]">
+                                {leadDisplay || entry.mandato.empresa_principal?.nombre || 'Sin empresa'}
                               </span>
                               <span className="text-muted-foreground">·</span>
-                              <span className="text-sm truncate max-w-[140px]">
-                                {entry.work_task_type?.name || entry.mandato.descripcion || 'Sin descripción'}
+                              <span className="text-sm text-muted-foreground truncate max-w-[180px]">
+                                {entry.mandato.descripcion || entry.work_task_type?.name || 'Sin descripción'}
                               </span>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover/link:opacity-100 transition-opacity shrink-0" />
                             </Link>
                           ) : (
                             <span className="text-sm text-muted-foreground">Sin asignar</span>
                           )}
                         </div>
                       </div>
-
-                      {/* Lead/Company */}
-                      {leadDisplay && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[120px] hidden md:inline">
-                          {leadDisplay}
-                        </span>
-                      )}
 
                       {/* Duration */}
                       <span className="font-mono text-sm font-medium tabular-nums shrink-0">

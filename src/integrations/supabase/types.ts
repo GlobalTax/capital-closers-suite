@@ -6780,6 +6780,45 @@ export type Database = {
           },
         ]
       }
+      empresas_table_columns: {
+        Row: {
+          column_key: string
+          created_at: string
+          icon: string | null
+          id: string
+          is_sortable: boolean | null
+          is_visible: boolean | null
+          label: string
+          position: number
+          updated_at: string
+          width: string | null
+        }
+        Insert: {
+          column_key: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_sortable?: boolean | null
+          is_visible?: boolean | null
+          label: string
+          position: number
+          updated_at?: string
+          width?: string | null
+        }
+        Update: {
+          column_key?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_sortable?: boolean | null
+          is_visible?: boolean | null
+          label?: string
+          position?: number
+          updated_at?: string
+          width?: string | null
+        }
+        Relationships: []
+      }
       enrichment_queue: {
         Row: {
           attempts: number | null
