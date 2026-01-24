@@ -21,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useOutboundCampaigns, useOutboundStats, useDeleteCampaign } from '@/hooks/useOutboundCampaigns';
+import { useOutboundCampaigns, useOutboundStats, useDeleteCampaign, useArchiveCampaign } from '@/hooks/useOutboundCampaigns';
 import NuevaCampanaDrawer from '@/components/outbound/NuevaCampanaDrawer';
 import type { OutboundCampaign } from '@/types/outbound';
 
@@ -40,6 +40,7 @@ export default function Outbound() {
   const { data: campaigns, isLoading: loadingCampaigns } = useOutboundCampaigns();
   const { data: stats, isLoading: loadingStats } = useOutboundStats();
   const deleteCampaign = useDeleteCampaign();
+  const archiveCampaign = useArchiveCampaign();
 
   const handleCampaignClick = (campaign: OutboundCampaign) => {
     navigate(`/outbound/${campaign.id}`);
@@ -49,6 +50,13 @@ export default function Outbound() {
     e.stopPropagation();
     if (confirm('¿Eliminar esta campaña y todos sus prospectos?')) {
       deleteCampaign.mutate(id);
+    }
+  };
+
+  const handleArchive = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('¿Archivar esta campaña?')) {
+      archiveCampaign.mutate(id);
     }
   };
 
@@ -259,12 +267,12 @@ export default function Outbound() {
                             <Search className="mr-2 h-4 w-4" />
                             Ver prospectos
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Archive
-                          }}>
+                          <DropdownMenuItem 
+                            onClick={(e) => handleArchive(campaign.id, e)}
+                            disabled={campaign.status === 'archived'}
+                          >
                             <Archive className="mr-2 h-4 w-4" />
-                            Archivar
+                            {campaign.status === 'archived' ? 'Archivada' : 'Archivar'}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"

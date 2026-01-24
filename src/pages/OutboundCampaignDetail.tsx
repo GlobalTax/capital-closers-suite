@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -6,12 +6,10 @@ import {
   Mail, 
   Import, 
   Loader2, 
-  CheckSquare,
-  Square,
-  RefreshCw,
   Download,
   Trash2,
   ExternalLink,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,14 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -37,14 +27,18 @@ import {
 import { toast } from 'sonner';
 import { 
   useOutboundCampaign, 
-  useProspects,
+  useProspectsPaginated,
   useSearchApolloProspects,
   useEnrichProspects,
   useImportProspectsToLeads,
-  useUpdateProspectsSelection,
+  useImportAllProspects,
   useDeleteProspects,
 } from '@/hooks/useOutboundCampaigns';
 import { estimateApolloCredits } from '@/lib/apollo-sector-mapping';
+import { DataTableEnhanced, Column } from '@/components/shared/DataTableEnhanced';
+import type { OutboundProspect } from '@/types/outbound';
+
+const PAGE_SIZE = 50;
 
 const ENRICHMENT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendiente', color: 'bg-muted text-muted-foreground' },
@@ -65,69 +59,49 @@ export default function OutboundCampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
+  // Pagination and filter state
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset to first page on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
   const { data: campaign, isLoading: loadingCampaign } = useOutboundCampaign(id);
-  const { data: prospects, isLoading: loadingProspects } = useProspects(id);
+  const { data: prospectsData, isLoading: loadingProspects } = useProspectsPaginated(
+    id,
+    currentPage,
+    PAGE_SIZE,
+    debouncedSearch,
+    statusFilter
+  );
   
   const searchApollo = useSearchApolloProspects();
   const enrichProspects = useEnrichProspects();
   const importToLeads = useImportProspectsToLeads();
-  const updateSelection = useUpdateProspectsSelection();
+  const importAll = useImportAllProspects();
   const deleteProspects = useDeleteProspects();
 
-  // Filter prospects
-  const filteredProspects = useMemo(() => {
-    if (!prospects) return [];
-    
-    return prospects.filter(p => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch = 
-          p.nombre?.toLowerCase().includes(query) ||
-          p.apellidos?.toLowerCase().includes(query) ||
-          p.empresa?.toLowerCase().includes(query) ||
-          p.cargo?.toLowerCase().includes(query) ||
-          p.email?.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
-      
-      // Status filter
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'selected' && !p.is_selected) return false;
-        if (statusFilter !== 'selected' && p.enrichment_status !== statusFilter) return false;
-      }
-      
-      return true;
-    });
-  }, [prospects, searchQuery, statusFilter]);
-
-  // Selection helpers
-  const allSelected = filteredProspects.length > 0 && 
-    filteredProspects.every(p => selectedIds.has(p.id));
-  
+  const prospects = prospectsData?.prospects || [];
   const someSelected = selectedIds.size > 0;
 
-  const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredProspects.map(p => p.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
+  // Selection helpers
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
 
   // Actions
   const handleSearch = async () => {
@@ -156,7 +130,7 @@ export default function OutboundCampaignDetail() {
     }
 
     const pendingIds = ids.filter(id => {
-      const p = prospects?.find(pr => pr.id === id);
+      const p = prospects.find(pr => pr.id === id);
       return p?.enrichment_status === 'pending' || p?.enrichment_status === 'failed';
     });
 
@@ -186,7 +160,7 @@ export default function OutboundCampaignDetail() {
     }
 
     const enrichedIds = ids.filter(id => {
-      const p = prospects?.find(pr => pr.id === id);
+      const p = prospects.find(pr => pr.id === id);
       return p?.enrichment_status === 'enriched' && p?.import_status === 'not_imported';
     });
 
@@ -198,6 +172,26 @@ export default function OutboundCampaignDetail() {
     try {
       await importToLeads.mutateAsync(enrichedIds);
       setSelectedIds(new Set());
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const handleImportAll = async () => {
+    if (!campaign) return;
+    
+    const enrichedNotImported = campaign.total_enriched - campaign.total_imported;
+    if (enrichedNotImported <= 0) {
+      toast.info('No hay prospectos enriquecidos pendientes de importar');
+      return;
+    }
+
+    if (!confirm(`¿Importar todos los prospectos enriquecidos (~${enrichedNotImported}) al CRM?`)) {
+      return;
+    }
+
+    try {
+      await importAll.mutateAsync(campaign.id);
     } catch (error) {
       // Error handled by hook
     }
@@ -218,14 +212,17 @@ export default function OutboundCampaignDetail() {
   };
 
   const handleExportCSV = () => {
-    if (!filteredProspects.length) return;
+    if (!prospects.length) return;
 
-    const headers = ['Nombre', 'Apellidos', 'Cargo', 'Empresa', 'Email', 'Teléfono', 'LinkedIn', 'Estado'];
-    const rows = filteredProspects.map(p => [
+    const headers = ['Nombre', 'Apellidos', 'Cargo', 'Empresa', 'Industria', 'País', 'Score', 'Email', 'Teléfono', 'LinkedIn', 'Estado'];
+    const rows = prospects.map(p => [
       p.nombre,
       p.apellidos || '',
       p.cargo || '',
       p.empresa || '',
+      p.company_industry || '',
+      p.company_location || '',
+      p.score?.toString() || '',
       p.email || '',
       p.telefono || '',
       p.linkedin_url || '',
@@ -240,6 +237,97 @@ export default function OutboundCampaignDetail() {
     a.download = `${campaign?.name || 'prospectos'}.csv`;
     a.click();
   };
+
+  // Column definitions for DataTableEnhanced
+  const columns: Column<OutboundProspect>[] = [
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium">
+            {row.nombre} {row.apellidos}
+          </span>
+          {row.linkedin_url && (
+            <a 
+              href={row.linkedin_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={e => e.stopPropagation()}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'cargo',
+      label: 'Cargo',
+      render: (val) => <span className="text-muted-foreground">{val || '-'}</span>,
+    },
+    {
+      key: 'empresa',
+      label: 'Empresa',
+      render: (val, row) => (
+        <div>
+          {val || '-'}
+          {row.company_size && (
+            <span className="text-xs text-muted-foreground ml-1">
+              ({row.company_size})
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'company_industry',
+      label: 'Industria',
+      render: (val) => <span className="text-muted-foreground text-sm">{val || '-'}</span>,
+    },
+    {
+      key: 'company_location',
+      label: 'País',
+      render: (val) => <span className="text-muted-foreground text-sm">{val || '-'}</span>,
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      render: (val) => val ? (
+        <Badge variant="outline" className="font-mono">{val}</Badge>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      render: (val) => <span className="font-mono text-sm">{val || '-'}</span>,
+    },
+    {
+      key: 'enrichment_status',
+      label: 'Estado',
+      render: (val) => (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+          ENRICHMENT_STATUS_CONFIG[val]?.color || ''
+        }`}>
+          {ENRICHMENT_STATUS_CONFIG[val]?.label || val}
+        </span>
+      ),
+    },
+    {
+      key: 'import_status',
+      label: 'Import',
+      render: (val) => val !== 'not_imported' ? (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+          IMPORT_STATUS_CONFIG[val]?.color || ''
+        }`}>
+          {IMPORT_STATUS_CONFIG[val]?.label}
+        </span>
+      ) : null,
+    },
+  ];
 
   if (loadingCampaign) {
     return (
@@ -336,7 +424,9 @@ export default function OutboundCampaignDetail() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Prospectos ({filteredProspects.length})</CardTitle>
+            <CardTitle>
+              Prospectos ({prospectsData?.total.toLocaleString() || 0})
+            </CardTitle>
             <div className="flex items-center gap-2">
               {someSelected && (
                 <>
@@ -378,6 +468,23 @@ export default function OutboundCampaignDetail() {
                   </Button>
                 </>
               )}
+              
+              {/* Import All Button */}
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleImportAll}
+                disabled={importAll.isPending || campaign.total_enriched === 0}
+                title="Importar todos los prospectos enriquecidos"
+              >
+                {importAll.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Users className="mr-2 h-4 w-4" />
+                )}
+                Importar todo
+              </Button>
+
               <Button size="sm" variant="ghost" onClick={handleExportCSV}>
                 <Download className="h-4 w-4" />
               </Button>
@@ -407,107 +514,33 @@ export default function OutboundCampaignDetail() {
             </Select>
           </div>
 
-          {loadingProspects ? (
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map(i => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : filteredProspects.length === 0 ? (
+          {/* Empty state */}
+          {!loadingProspects && prospects.length === 0 && prospectsData?.total === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              {prospects?.length === 0 ? (
-                <>
-                  <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p>No hay prospectos todavía</p>
-                  <p className="text-sm">Haz clic en "Buscar en Apollo" para descubrir contactos</p>
-                </>
-              ) : (
-                <p>No se encontraron prospectos con los filtros actuales</p>
-              )}
+              <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p>No hay prospectos todavía</p>
+              <p className="text-sm">Haz clic en "Buscar en Apollo" para descubrir contactos</p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Cargo</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Teléfono</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Import</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProspects.map((prospect) => (
-                  <TableRow key={prospect.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(prospect.id)}
-                        onCheckedChange={() => toggleSelect(prospect.id)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {prospect.nombre} {prospect.apellidos}
-                        </span>
-                        {prospect.linkedin_url && (
-                          <a 
-                            href={prospect.linkedin_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-foreground"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {prospect.cargo || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {prospect.empresa || '-'}
-                      {prospect.company_size && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({prospect.company_size})
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {prospect.email || '-'}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {prospect.telefono || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        ENRICHMENT_STATUS_CONFIG[prospect.enrichment_status]?.color || ''
-                      }`}>
-                        {ENRICHMENT_STATUS_CONFIG[prospect.enrichment_status]?.label || prospect.enrichment_status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {prospect.import_status !== 'not_imported' && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          IMPORT_STATUS_CONFIG[prospect.import_status]?.color || ''
-                        }`}>
-                          {IMPORT_STATUS_CONFIG[prospect.import_status]?.label}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          )}
+
+          {/* Data Table with Server Pagination */}
+          {(loadingProspects || prospects.length > 0) && (
+            <DataTableEnhanced
+              columns={columns}
+              data={prospects}
+              loading={loadingProspects}
+              selectable
+              selectedRows={Array.from(selectedIds)}
+              onSelectionChange={handleSelectionChange}
+              density="compact"
+              pageSize={PAGE_SIZE}
+              serverPagination={{
+                currentPage,
+                totalPages: prospectsData?.totalPages || 1,
+                totalCount: prospectsData?.total || 0,
+                onPageChange: setCurrentPage,
+              }}
+            />
           )}
         </CardContent>
       </Card>
