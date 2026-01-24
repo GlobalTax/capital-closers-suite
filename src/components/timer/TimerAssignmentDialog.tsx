@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { Clock, Trash2, Check } from 'lucide-react';
+import { Clock, Trash2, Check, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -25,10 +26,11 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { MandatoSelect } from '@/components/shared/MandatoSelect';
 import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from '@/components/shared/LeadByMandatoSelect';
 import { useTimerStore, formatTime } from '@/stores/useTimerStore';
-import { useActiveWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
+import { useFilteredWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { createTimeEntry } from '@/services/timeTracking';
 import { ensureLeadInMandateLeads } from '@/services/leadActivities';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
+import { cn } from '@/lib/utils';
 
 // UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
@@ -71,12 +73,8 @@ export function TimerAssignmentDialog() {
     presetValueType,
     clearPresets,
   } = useTimerStore();
-  const { data: workTaskTypes = [], isLoading: loadingTaskTypes } = useActiveWorkTaskTypes();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLeadData, setSelectedLeadData] = useState<SelectedLeadData>(null);
-  
-  // Format time for display
-  const displayTime = useMemo(() => formatTime(pendingTimeSeconds), [pendingTimeSeconds]);
   
   const { register, handleSubmit, watch, setValue, reset } = useForm<FormData>({
     defaultValues: {
@@ -88,6 +86,16 @@ export function TimerAssignmentDialog() {
       isBillable: false,
     },
   });
+  
+  const mandatoId = watch('mandatoId');
+  const description = watch('description') || '';
+  const descriptionLength = description.trim().length;
+  
+  // Context-aware filtering: show different task types based on mandate
+  const { data: workTaskTypes = [], isLoading: loadingTaskTypes } = useFilteredWorkTaskTypes(mandatoId || null);
+  
+  // Format time for display
+  const displayTime = useMemo(() => formatTime(pendingTimeSeconds), [pendingTimeSeconds]);
   
   // Reset form when modal opens, using presets if available
   useEffect(() => {
@@ -104,7 +112,6 @@ export function TimerAssignmentDialog() {
     }
   }, [isAssignmentModalOpen, presetWorkTaskTypeId, presetValueType, reset]);
   
-  const mandatoId = watch('mandatoId');
   const leadId = watch('leadId');
   const selectedValueType = watch('valueType');
   
@@ -147,6 +154,13 @@ export function TimerAssignmentDialog() {
     // Validate work task type
     if (!data.workTaskTypeId || data.workTaskTypeId === '__none__') {
       toast.error('Selecciona un tipo de tarea');
+      return;
+    }
+    
+    // Validate description length if provided
+    const trimmedDescription = data.description?.trim() || '';
+    if (trimmedDescription.length > 0 && trimmedDescription.length < 10) {
+      toast.error('La descripción debe tener al menos 10 caracteres');
       return;
     }
     
@@ -233,10 +247,11 @@ export function TimerAssignmentDialog() {
           <DialogTitle className="text-3xl font-mono font-bold tabular-nums">
             {displayTime}
           </DialogTitle>
-          {presetWorkTaskTypeName && (
-            <p className="text-sm text-muted-foreground mt-1">
-              📌 {presetWorkTaskTypeName}
-            </p>
+          {presetWorkTaskTypeId && presetWorkTaskTypeName && (
+            <Badge variant="secondary" className="mt-2 gap-1.5">
+              <Zap className="h-3 w-3" />
+              Preset: {presetWorkTaskTypeName}
+            </Badge>
           )}
         </DialogHeader>
         
@@ -333,12 +348,25 @@ export function TimerAssignmentDialog() {
           
           {/* 4. Descripción (opcional, 1 línea) */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">
-              Descripción <span className="opacity-50">(opcional)</span>
-            </Label>
+            <div className="flex justify-between items-center">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Descripción <span className="opacity-50">(opcional)</span>
+              </Label>
+              <span className={cn(
+                "text-[10px] tabular-nums",
+                descriptionLength > 0 && descriptionLength < 10 
+                  ? "text-destructive" 
+                  : "text-muted-foreground"
+              )}>
+                {descriptionLength}/10 mín
+              </span>
+            </div>
             <Input
               placeholder="Breve descripción del trabajo..."
-              className="h-9"
+              className={cn(
+                "h-9",
+                descriptionLength > 0 && descriptionLength < 10 && "border-destructive focus-visible:ring-destructive"
+              )}
               maxLength={100}
               {...register('description')}
             />

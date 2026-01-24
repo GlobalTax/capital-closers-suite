@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Square, ChevronDown, Users, FileText, Handshake, Building2 } from 'lucide-react';
+import { Play, Pause, Square, ChevronDown, Users, FileText, Handshake, Building2, PhoneOutgoing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,15 +11,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTimerStore, formatTime, TimeEntryValueType } from '@/stores/useTimerStore';
-import { useAllWorkTaskTypes } from '@/hooks/useWorkTaskTypes';
 import { cn } from '@/lib/utils';
 
-// Quick actions configuration
+// Quick actions configuration with hardcoded UUIDs from work_task_types table
 const QUICK_ACTIONS = [
   {
     id: 'compradores',
     label: 'Compradores/Vendedores',
     icon: Users,
+    workTaskTypeId: '4b4983da-e13b-4098-afec-1e718d556ce3',
     workTaskTypeName: 'Potenciales Compradores / Vendedores',
     valueType: 'core_ma' as TimeEntryValueType,
   },
@@ -27,6 +27,7 @@ const QUICK_ACTIONS = [
     id: 'datapack',
     label: 'Datapack',
     icon: FileText,
+    workTaskTypeId: 'cccf3ca0-2ce8-45e5-b024-e3f1c26730c2',
     workTaskTypeName: 'Datapack',
     valueType: 'core_ma' as TimeEntryValueType,
   },
@@ -34,6 +35,7 @@ const QUICK_ACTIONS = [
     id: 'reunion',
     label: 'Reunión',
     icon: Handshake,
+    workTaskTypeId: '53cf7aeb-f45d-428a-bfae-a0d8c3076be0',
     workTaskTypeName: 'Reunión / Puesta en Contacto',
     valueType: 'core_ma' as TimeEntryValueType,
   },
@@ -41,8 +43,42 @@ const QUICK_ACTIONS = [
     id: 'interno',
     label: 'Trabajo interno',
     icon: Building2,
+    workTaskTypeId: 'a6521ff4-1deb-4ef4-9da3-5c85f29bbadf',
     workTaskTypeName: 'Material Interno',
     valueType: 'soporte' as TimeEntryValueType,
+  },
+  // New quick actions
+  {
+    id: 'teaser',
+    label: 'Teaser',
+    icon: FileText,
+    workTaskTypeId: '73db1429-a593-4e33-a82a-2df8f0fbdfec',
+    workTaskTypeName: 'Teaser',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'im',
+    label: 'IM',
+    icon: FileText,
+    workTaskTypeId: '690007fc-040a-48df-ac0e-36b085707b0a',
+    workTaskTypeName: 'IM',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'leads',
+    label: 'Leads',
+    icon: Users,
+    workTaskTypeId: 'ec01e50e-ad89-43e2-8057-e206261cef69',
+    workTaskTypeName: 'Leads',
+    valueType: 'core_ma' as TimeEntryValueType,
+  },
+  {
+    id: 'outbound',
+    label: 'Outbound',
+    icon: PhoneOutgoing,
+    workTaskTypeId: '231c3251-1091-4394-a1ff-c024a6fe9532',
+    workTaskTypeName: 'Outbound',
+    valueType: 'core_ma' as TimeEntryValueType,
   },
 ];
 
@@ -57,7 +93,6 @@ export function GlobalTimer() {
     getElapsedSeconds,
     presetWorkTaskTypeName 
   } = useTimerStore();
-  const { data: workTaskTypes } = useAllWorkTaskTypes();
   const [displayTime, setDisplayTime] = useState('00:00:00');
   
   // Update display every second when running
@@ -77,12 +112,10 @@ export function GlobalTimer() {
     return () => clearInterval(interval);
   }, [timerState, getElapsedSeconds]);
   
+  // Simplified handler - uses hardcoded IDs directly
   const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
-    // Find the work task type ID by name
-    const workTaskType = workTaskTypes?.find(t => t.name === action.workTaskTypeName);
-    
     startTimerWithPreset({
-      workTaskTypeId: workTaskType?.id || '',
+      workTaskTypeId: action.workTaskTypeId,
       workTaskTypeName: action.workTaskTypeName,
       valueType: action.valueType,
     });
