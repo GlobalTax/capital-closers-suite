@@ -138,3 +138,58 @@ export function validateTeaserFile(file: File): FileValidationResult {
   
   return { valid: true };
 }
+
+// =============================================================================
+// Preview Type Detection Helpers
+// =============================================================================
+
+const OFFICE_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+  'application/msword', // .doc
+  'application/vnd.ms-excel', // .xls
+  'application/vnd.ms-powerpoint', // .ppt
+];
+
+/**
+ * Check if MIME type is a PDF
+ */
+export function isPdf(mimeType: string): boolean {
+  return mimeType === 'application/pdf';
+}
+
+/**
+ * Check if MIME type is an image
+ */
+export function isImage(mimeType: string): boolean {
+  return mimeType.startsWith('image/');
+}
+
+/**
+ * Check if MIME type is a Microsoft Office document
+ */
+export function isOfficeDocument(mimeType: string): boolean {
+  return OFFICE_MIME_TYPES.includes(mimeType) || 
+    mimeType.includes('officedocument') ||
+    mimeType.includes('msword') ||
+    mimeType.includes('ms-excel') ||
+    mimeType.includes('ms-powerpoint');
+}
+
+/**
+ * Check if a file type can be previewed
+ */
+export function isPreviewable(mimeType: string): boolean {
+  return isPdf(mimeType) || isImage(mimeType) || isOfficeDocument(mimeType);
+}
+
+/**
+ * Get the preview type for a given MIME type
+ */
+export function getPreviewType(mimeType: string): 'pdf' | 'image' | 'office' | 'unsupported' {
+  if (isPdf(mimeType)) return 'pdf';
+  if (isImage(mimeType)) return 'image';
+  if (isOfficeDocument(mimeType)) return 'office';
+  return 'unsupported';
+}

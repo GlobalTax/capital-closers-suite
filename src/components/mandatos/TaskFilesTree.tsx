@@ -1,16 +1,19 @@
 import { useState } from "react";
-import { Download, Trash2, Plus } from "lucide-react";
+import { Download, Trash2, Plus, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { UnifiedDocumentViewer } from "@/components/shared/UnifiedDocumentViewer";
+import { useDocumentPreview } from "@/hooks/useDocumentPreview";
 import { FileUploadDialog } from "./FileUploadDialog";
 import type { MandatoChecklistTaskFile } from "@/types";
-import { getFileIcon, formatFileSize } from "@/lib/file-utils";
+import { getFileIcon, formatFileSize, isPreviewable } from "@/lib/file-utils";
 import { downloadTaskFile } from "@/services/checklistFiles";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TaskFilesTreeProps {
   taskId: string;
@@ -37,10 +40,40 @@ export function TaskFilesTree({
     fileName?: string;
   }>({ open: false });
 
+  // Preview with unified hook
+  const {
+    previewDocument,
+    previewUrl,
+    isPreviewLoading,
+    isPreviewOpen,
+    openPreview,
+    setPreviewOpen,
+  } = useDocumentPreview();
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+  const handlePreview = async (file: MandatoChecklistTaskFile) => {
+    setLoadingPreviewId(file.id);
+    await openPreview({
+      id: file.id,
+      file_name: file.file_name,
+      mime_type: file.mime_type,
+      storage_path: file.file_path,
+      file_size_bytes: file.file_size_bytes,
+      created_at: file.created_at,
+    });
+    setLoadingPreviewId(null);
+  };
+
   const handleDownload = async (file: MandatoChecklistTaskFile) => {
     try {
       const url = await downloadTaskFile(file.file_path);
-      window.open(url, '_blank');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.file_name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
       toast({
         title: "Descargando archivo",
@@ -125,6 +158,21 @@ export function TaskFilesTree({
                   </div>
 
                   <div className="flex gap-1 flex-shrink-0">
+                    {isPreviewable(file.mime_type) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handlePreview(file)}
+                        disabled={loadingPreviewId === file.id}
+                        title="Ver"
+                      >
+                        {loadingPreviewId === file.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -161,6 +209,19 @@ export function TaskFilesTree({
         onOpenChange={setUploadDialogOpen}
         onUpload={onFileUpload}
         uploading={uploading}
+      />
+
+      {/* Unified Document Viewer */}
+      <UnifiedDocumentViewer
+        open={isPreviewOpen}
+        onOpenChange={setPreviewOpen}
+        document={previewDocument}
+        previewUrl={previewUrl}
+        isLoading={isPreviewLoading}
+        onDownload={previewDocument ? () => {
+          const file = files.find(f => f.id === previewDocument.id);
+          if (file) handleDownload(file);
+        } : undefined}
       />
 
       <ConfirmDialog

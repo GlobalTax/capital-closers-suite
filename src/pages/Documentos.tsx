@@ -5,11 +5,13 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Trash2, FileText, File, Image as ImageIcon, Eye, Loader2 } from "lucide-react";
+import { Download, Trash2, FileText, File, Image as ImageIcon, Eye, Loader2, FileSpreadsheet, Presentation } from "lucide-react";
 import { UploadDialog } from "@/components/documentos/UploadDialog";
-import { DocumentPreviewDialog } from "@/components/documentos/DocumentPreviewDialog";
+import { UnifiedDocumentViewer } from "@/components/shared/UnifiedDocumentViewer";
+import { useDocumentPreview } from "@/hooks/useDocumentPreview";
 import { useDocumentosPaginated, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
-import { downloadFile, getSignedUrl } from "@/services/uploads";
+import { downloadFile } from "@/services/uploads";
+import { isPreviewable, isPdf, isImage, isOfficeDocument } from "@/lib/file-utils";
 import type { Documento } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
@@ -25,10 +27,16 @@ export default function Documentos() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; doc?: Documento }>({ open: false });
   const [downloading, setDownloading] = useState<string | null>(null);
   
-  // Preview state
-  const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
+  // Preview with unified hook
+  const {
+    previewDocument,
+    previewUrl,
+    isPreviewLoading,
+    isPreviewOpen,
+    openPreview,
+    setPreviewOpen,
+  } = useDocumentPreview();
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
 
   const documentos = result?.data || [];
 
@@ -37,20 +45,16 @@ export default function Documentos() {
   };
 
   const handlePreview = async (doc: Documento) => {
-    setLoadingPreview(doc.id);
-    try {
-      const url = await getSignedUrl(doc.storage_path, 3600); // 1 hour expiration
-      if (url) {
-        setPreviewUrl(url);
-        setPreviewDoc(doc);
-      } else {
-        handleError(new Error("No se pudo generar URL de preview"), "Error al previsualizar");
-      }
-    } catch (error) {
-      handleError(error, "Error al previsualizar");
-    } finally {
-      setLoadingPreview(null);
-    }
+    setLoadingPreviewId(doc.id);
+    await openPreview({
+      id: doc.id,
+      file_name: doc.file_name,
+      mime_type: doc.mime_type,
+      storage_path: doc.storage_path,
+      file_size_bytes: doc.file_size_bytes,
+      created_at: doc.created_at,
+    });
+    setLoadingPreviewId(null);
   };
 
   const handleDownload = async (doc: Documento) => {
@@ -80,13 +84,18 @@ export default function Documentos() {
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <ImageIcon className="w-4 h-4 text-primary" />;
-    if (mimeType === 'application/pdf') return <FileText className="w-4 h-4 text-destructive" />;
+    if (isImage(mimeType)) return <ImageIcon className="w-4 h-4 text-primary" />;
+    if (isPdf(mimeType)) return <FileText className="w-4 h-4 text-destructive" />;
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+      return <FileSpreadsheet className="w-4 h-4 text-green-600" />;
+    }
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+      return <Presentation className="w-4 h-4 text-orange-500" />;
+    }
+    if (mimeType.includes('word') || mimeType.includes('document')) {
+      return <FileText className="w-4 h-4 text-blue-600" />;
+    }
     return <File className="w-4 h-4 text-muted-foreground" />;
-  };
-
-  const canPreview = (mimeType: string) => {
-    return mimeType === 'application/pdf' || mimeType.startsWith('image/');
   };
 
   const columns = [
@@ -137,7 +146,7 @@ export default function Documentos() {
       label: "Acciones",
       render: (_: any, row: Documento) => (
         <div className="flex items-center gap-1">
-          {canPreview(row.mime_type) && (
+          {isPreviewable(row.mime_type) && (
             <Button
               variant="ghost"
               size="sm"
@@ -145,9 +154,9 @@ export default function Documentos() {
                 e.stopPropagation();
                 handlePreview(row);
               }}
-              disabled={loadingPreview === row.id}
+              disabled={loadingPreviewId === row.id}
             >
-              {loadingPreview === row.id ? (
+              {loadingPreviewId === row.id ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Eye className="w-4 h-4" />
@@ -216,18 +225,14 @@ export default function Documentos() {
         onSuccess={() => refetch()}
       />
 
-      {/* Preview Dialog */}
-      <DocumentPreviewDialog
-        open={!!previewDoc}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewDoc(null);
-            setPreviewUrl(null);
-          }
-        }}
-        document={previewDoc}
+      {/* Unified Document Viewer */}
+      <UnifiedDocumentViewer
+        open={isPreviewOpen}
+        onOpenChange={setPreviewOpen}
+        document={previewDocument}
         previewUrl={previewUrl}
-        onDownload={handleDownload}
+        isLoading={isPreviewLoading}
+        onDownload={previewDocument ? () => handleDownload(previewDocument as Documento) : undefined}
       />
 
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm({ open })}>
