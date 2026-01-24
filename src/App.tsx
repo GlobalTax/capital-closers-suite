@@ -59,6 +59,7 @@ const SyncControl = lazy(() => import("./pages/admin/SyncControl"));
 const EmpresasMonitor = lazy(() => import("./pages/admin/EmpresasMonitor"));
 const SyncCenter = lazy(() => import("./pages/SyncCenter"));
 const Index = lazy(() => import("./pages/Index"));
+const TaskAIQA = lazy(() => import("./pages/admin/TaskAIQA"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -109,6 +110,7 @@ function AppContent() {
             <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
           
           {/* Presentation routes */}
