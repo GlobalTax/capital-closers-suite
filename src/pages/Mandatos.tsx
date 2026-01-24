@@ -10,7 +10,12 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
 import { MandatoCard } from "@/components/mandatos/MandatoCard";
 import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
-import { FilterPanel, type FilterSection } from "@/components/shared/FilterPanel";
+import { type FilterSection } from "@/components/shared/FilterPanel";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { SlidersHorizontal } from "lucide-react";
 import { FilterChips } from "@/components/shared/FilterChips";
 import { ActionCell, type ActionItem } from "@/components/shared/ActionCell";
 import { BulkActionsBar, commonBulkActions } from "@/components/shared/BulkActionsBar";
@@ -304,13 +309,7 @@ export default function Mandatos() {
   const [asignarEmpresaOpen, setAsignarEmpresaOpen] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20);
   const isMobile = useIsMobile();
-  const [filterPanelOpen, setFilterPanelOpen] = useState(() => {
-    // Default closed on mobile
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return true;
-  });
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [downloadingTeaser, setDownloadingTeaser] = useState<string | null>(null);
   
@@ -1138,30 +1137,10 @@ export default function Mandatos() {
 
       <AgingAlertsBanner variant="expanded" maxItems={5} />
 
-      {/* Layout principal con panel de filtros */}
-      <div className="flex gap-0 relative">
-        {/* Panel de filtros lateral - closed by default on mobile */}
-        {vistaActual === "tabla" && (
-          <FilterPanel
-            sections={filterSections}
-            values={filterValues}
-            onChange={handleFilterChange}
-            onClearAll={clearAllFilters}
-            isOpen={filterPanelOpen}
-            onToggle={() => setFilterPanelOpen(!filterPanelOpen)}
-          />
-        )}
-        
-        {/* Mobile overlay when filter panel is open */}
-        {filterPanelOpen && vistaActual === "tabla" && (
-          <div 
-            className="fixed inset-0 bg-black/20 z-30 md:hidden"
-            onClick={() => setFilterPanelOpen(false)}
-          />
-        )}
-
+      {/* Layout principal */}
+      <div className="space-y-4">
         {/* Contenido principal */}
-        <div className={cn("flex-1 min-w-0", filterPanelOpen && vistaActual === "tabla" && "md:pl-4")}>
+        <div className="flex-1 min-w-0">
           {/* Barra de herramientas - responsive */}
           <div className="flex flex-col gap-2 mb-3 md:mb-4">
             {/* Row 1: Search + core actions */}
@@ -1176,6 +1155,69 @@ export default function Mandatos() {
                   className="pl-8 md:pl-9 h-8 md:h-9 text-sm"
                 />
               </div>
+
+              {/* Filtros Popover */}
+              <Popover open={filterPanelOpen} onOpenChange={setFilterPanelOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 h-8 md:h-9">
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span className="hidden sm:inline">Filtros</span>
+                    {hasActiveFilters && (
+                      <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                        {filterChips.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0 bg-background" align="start">
+                  <ScrollArea className="max-h-80">
+                    <div className="p-4 space-y-4">
+                      {filterSections.map((section) => (
+                        <div key={section.id} className="space-y-2">
+                          <Label className="text-sm font-medium">{section.label}</Label>
+                          <div className="space-y-2">
+                            {section.options?.map((option) => (
+                              <div key={option.value} className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`${section.id}-${option.value}`}
+                                  checked={filterValues[section.id]?.includes(option.value) ?? false}
+                                  onCheckedChange={(checked) => {
+                                    const current = filterValues[section.id] || [];
+                                    if (checked) {
+                                      handleFilterChange(section.id, [...current, option.value]);
+                                    } else {
+                                      handleFilterChange(section.id, current.filter((v) => v !== option.value));
+                                    }
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={`${section.id}-${option.value}`}
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {option.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {hasActiveFilters && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            clearAllFilters();
+                            setFilterPanelOpen(false);
+                          }}
+                          className="w-full text-muted-foreground"
+                        >
+                          Limpiar filtros
+                        </Button>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
 
               {/* Page size - hidden on mobile */}
               <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
