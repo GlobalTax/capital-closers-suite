@@ -189,6 +189,11 @@ export type Database = {
           brevo_lists: number[] | null
           brevo_unsubscribed_lists: number[] | null
           company: string
+          company_description: string | null
+          company_enriched_at: string | null
+          company_enriched_data: Json | null
+          company_sector: string | null
+          company_size: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -241,6 +246,11 @@ export type Database = {
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
           company: string
+          company_description?: string | null
+          company_enriched_at?: string | null
+          company_enriched_data?: Json | null
+          company_sector?: string | null
+          company_size?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -293,6 +303,11 @@ export type Database = {
           brevo_lists?: number[] | null
           brevo_unsubscribed_lists?: number[] | null
           company?: string
+          company_description?: string | null
+          company_enriched_at?: string | null
+          company_enriched_data?: Json | null
+          company_sector?: string | null
+          company_size?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -1016,6 +1031,8 @@ export type Database = {
           apollo_people_data: Json | null
           apollo_status: string | null
           cif: string
+          company_enriched_at: string | null
+          company_enriched_data: Json | null
           company_name: string
           contact_name: string
           created_at: string
@@ -1057,6 +1074,8 @@ export type Database = {
           apollo_people_data?: Json | null
           apollo_status?: string | null
           cif: string
+          company_enriched_at?: string | null
+          company_enriched_data?: Json | null
           company_name: string
           contact_name: string
           created_at?: string
@@ -1098,6 +1117,8 @@ export type Database = {
           apollo_people_data?: Json | null
           apollo_status?: string | null
           cif?: string
+          company_enriched_at?: string | null
+          company_enriched_data?: Json | null
           company_name?: string
           contact_name?: string
           created_at?: string
@@ -4926,11 +4947,15 @@ export type Database = {
           description: string | null
           ebitda_max: number | null
           ebitda_min: number | null
+          enriched_at: string | null
+          enriched_data: Json | null
+          enrichment_source: string | null
           founded_year: number | null
           fund_type: string | null
           geography_focus: string[] | null
           id: string
           investment_stage: string[] | null
+          investment_thesis: string | null
           is_deleted: boolean | null
           last_diff_scan_at: string | null
           last_news_scan_at: string | null
@@ -4940,6 +4965,7 @@ export type Database = {
           last_web_etag: string | null
           last_web_modified: string | null
           name: string
+          notable_exits: string[] | null
           notes_internal: string | null
           portfolio_diff_enabled: boolean | null
           portfolio_url: string | null
@@ -4952,6 +4978,7 @@ export type Database = {
           source_last_verified_at: string | null
           source_url: string | null
           status: string | null
+          team_size_estimate: number | null
           ticket_max: number | null
           ticket_min: number | null
           updated_at: string
@@ -4969,11 +4996,15 @@ export type Database = {
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           founded_year?: number | null
           fund_type?: string | null
           geography_focus?: string[] | null
           id?: string
           investment_stage?: string[] | null
+          investment_thesis?: string | null
           is_deleted?: boolean | null
           last_diff_scan_at?: string | null
           last_news_scan_at?: string | null
@@ -4983,6 +5014,7 @@ export type Database = {
           last_web_etag?: string | null
           last_web_modified?: string | null
           name: string
+          notable_exits?: string[] | null
           notes_internal?: string | null
           portfolio_diff_enabled?: boolean | null
           portfolio_url?: string | null
@@ -4995,6 +5027,7 @@ export type Database = {
           source_last_verified_at?: string | null
           source_url?: string | null
           status?: string | null
+          team_size_estimate?: number | null
           ticket_max?: number | null
           ticket_min?: number | null
           updated_at?: string
@@ -5012,11 +5045,15 @@ export type Database = {
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           founded_year?: number | null
           fund_type?: string | null
           geography_focus?: string[] | null
           id?: string
           investment_stage?: string[] | null
+          investment_thesis?: string | null
           is_deleted?: boolean | null
           last_diff_scan_at?: string | null
           last_news_scan_at?: string | null
@@ -5026,6 +5063,7 @@ export type Database = {
           last_web_etag?: string | null
           last_web_modified?: string | null
           name?: string
+          notable_exits?: string[] | null
           notes_internal?: string | null
           portfolio_diff_enabled?: boolean | null
           portfolio_url?: string | null
@@ -5038,6 +5076,7 @@ export type Database = {
           source_last_verified_at?: string | null
           source_url?: string | null
           status?: string | null
+          team_size_estimate?: number | null
           ticket_max?: number | null
           ticket_min?: number | null
           updated_at?: string
@@ -5151,9 +5190,14 @@ export type Database = {
       }
       cr_people: {
         Row: {
+          bio: string | null
           created_at: string
           deleted_at: string | null
           email: string | null
+          enriched_at: string | null
+          enriched_data: Json | null
+          enrichment_source: string | null
+          expertise_areas: string[] | null
           full_name: string
           fund_id: string
           id: string
@@ -5162,6 +5206,7 @@ export type Database = {
           is_primary_contact: boolean | null
           linkedin_url: string | null
           location: string | null
+          media_mentions: string[] | null
           notes: string | null
           phone: string | null
           role: string | null
@@ -5170,9 +5215,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bio?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
+          expertise_areas?: string[] | null
           full_name: string
           fund_id: string
           id?: string
@@ -5181,6 +5231,7 @@ export type Database = {
           is_primary_contact?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          media_mentions?: string[] | null
           notes?: string | null
           phone?: string | null
           role?: string | null
@@ -5189,9 +5240,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bio?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
+          expertise_areas?: string[] | null
           full_name?: string
           fund_id?: string
           id?: string
@@ -5200,6 +5256,7 @@ export type Database = {
           is_primary_contact?: boolean | null
           linkedin_url?: string | null
           location?: string | null
+          media_mentions?: string[] | null
           notes?: string | null
           phone?: string | null
           role?: string | null
@@ -5224,6 +5281,10 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          employee_count_estimate: number | null
+          enriched_at: string | null
+          enriched_data: Json | null
+          enrichment_source: string | null
           exit_type: string | null
           exit_year: number | null
           fund_id: string
@@ -5232,16 +5293,20 @@ export type Database = {
           investment_type: string | null
           investment_year: number | null
           is_deleted: boolean | null
+          key_people: Json | null
           last_news_scan_at: string | null
           last_web_check_at: string | null
           news_alert_count: number | null
           notes: string | null
           ownership_type: string | null
+          revenue_estimate: string | null
           scan_priority: string | null
           sector: string | null
           skip_news_scan: boolean | null
+          social_links: Json | null
           source_url: string | null
           status: string | null
+          technologies: string[] | null
           updated_at: string
           website: string | null
         }
@@ -5251,6 +5316,10 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          employee_count_estimate?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           exit_type?: string | null
           exit_year?: number | null
           fund_id: string
@@ -5259,16 +5328,20 @@ export type Database = {
           investment_type?: string | null
           investment_year?: number | null
           is_deleted?: boolean | null
+          key_people?: Json | null
           last_news_scan_at?: string | null
           last_web_check_at?: string | null
           news_alert_count?: number | null
           notes?: string | null
           ownership_type?: string | null
+          revenue_estimate?: string | null
           scan_priority?: string | null
           sector?: string | null
           skip_news_scan?: boolean | null
+          social_links?: Json | null
           source_url?: string | null
           status?: string | null
+          technologies?: string[] | null
           updated_at?: string
           website?: string | null
         }
@@ -5278,6 +5351,10 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          employee_count_estimate?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           exit_type?: string | null
           exit_year?: number | null
           fund_id?: string
@@ -5286,16 +5363,20 @@ export type Database = {
           investment_type?: string | null
           investment_year?: number | null
           is_deleted?: boolean | null
+          key_people?: Json | null
           last_news_scan_at?: string | null
           last_web_check_at?: string | null
           news_alert_count?: number | null
           notes?: string | null
           ownership_type?: string | null
+          revenue_estimate?: string | null
           scan_priority?: string | null
           sector?: string | null
           skip_news_scan?: boolean | null
+          social_links?: Json | null
           source_url?: string | null
           status?: string | null
+          technologies?: string[] | null
           updated_at?: string
           website?: string | null
         }
@@ -6626,6 +6707,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      enrichment_queue: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          priority: number | null
+          result_data: Json | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          priority?: number | null
+          result_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          priority?: number | null
+          result_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
       }
       exit_readiness_questions: {
         Row: {
@@ -17247,6 +17373,16 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
         ]
+      }
+      v_enrichment_stats: {
+        Row: {
+          enriched: number | null
+          entity_type: string | null
+          pending_no_website: number | null
+          pending_with_website: number | null
+          total: number | null
+        }
+        Relationships: []
       }
       v_mandato_costs: {
         Row: {
