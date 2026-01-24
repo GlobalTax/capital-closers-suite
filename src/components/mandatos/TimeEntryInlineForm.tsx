@@ -15,6 +15,8 @@ import { createTimeEntry } from "@/services/timeTracking";
 import { ensureLeadInMandateLeads } from "@/services/leadActivities";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from "@/components/shared/LeadByMandatoSelect";
+import { GlobalLeadSearch } from "@/components/shared/GlobalLeadSearch";
+import { type GlobalLead } from "@/hooks/useGlobalLeadSearch";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 
@@ -48,10 +50,12 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Form state - tiered selection: Mandato (required) → Lead (optional)
+  // Form state - tiered selection: Lead (optional) → Mandato (required)
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
+  const [globalLead, setGlobalLead] = useState<GlobalLead | null>(null);
   const [mandatoId, setMandatoId] = useState('');
+  const [mandatoAutoAssigned, setMandatoAutoAssigned] = useState(false);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [selectedLeadData, setSelectedLeadData] = useState<SelectedLeadData>(null);
   const [valueType, setValueType] = useState<TimeEntryValueType>('core_ma');
@@ -135,7 +139,9 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const resetForm = () => {
     setHours('0');
     setMinutes('30');
+    setGlobalLead(null);
     setMandatoId('');
+    setMandatoAutoAssigned(false);
     setLeadId(null);
     setSelectedLeadData(null);
     setValueType('core_ma');
@@ -148,6 +154,42 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
     setNotes('');
     setShowAdvanced(false);
     setTimeout(() => hoursInputRef.current?.focus(), 100);
+  };
+
+  // Handle global lead selection - auto-assigns mandato
+  const handleGlobalLeadSelect = (lead: GlobalLead | null) => {
+    setGlobalLead(lead);
+    
+    if (lead) {
+      // Auto-assign mandato from lead
+      if (lead.mandatoId) {
+        setMandatoId(lead.mandatoId);
+        setMandatoAutoAssigned(true);
+      }
+      
+      // Set lead data for later processing
+      setLeadId(lead.id);
+      setSelectedLeadData({
+        id: lead.id,
+        company_name: lead.companyName,
+        contact_name: lead.contactName,
+        contact_email: lead.contactEmail,
+        sector: lead.sector,
+        source_table: lead.sourceTable,
+      } as ProspectForTimeEntry);
+      
+      // Smart defaults for lead-based entries
+      setValueType('core_ma');
+      setIsBillable(true);
+    } else {
+      // Clear lead-related state
+      setLeadId(null);
+      setSelectedLeadData(null);
+      if (mandatoAutoAssigned) {
+        setMandatoId('');
+        setMandatoAutoAssigned(false);
+      }
+    }
   };
 
   // Handle lead selection with data
@@ -310,20 +352,41 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
           />
         </div>
 
-        {/* Mandato Select (Required) */}
+        {/* Global Lead Search (Primary - auto-assigns mandato) */}
+        <div className="flex-1 min-w-[200px]">
+          <Label className="text-xs text-muted-foreground">Buscar Lead (opcional)</Label>
+          <GlobalLeadSearch
+            value={globalLead}
+            onSelect={handleGlobalLeadSelect}
+            placeholder="Buscar lead o prospecto..."
+          />
+        </div>
+
+        {/* Mandato Select (Required - auto-filled if lead selected) */}
         <div className="flex-1 min-w-[180px]">
-          <Label className="text-xs text-muted-foreground">Mandato *</Label>
+          <Label className="text-xs text-muted-foreground">
+            Mandato * {mandatoAutoAssigned && <span className="text-xs text-green-600">(auto)</span>}
+          </Label>
           <MandatoSelect
             value={mandatoId}
-            onValueChange={(value) => setMandatoId(value)}
+            onValueChange={(value) => {
+              setMandatoId(value);
+              // If user manually changes mandato, clear auto-assignment
+              if (mandatoAutoAssigned) {
+                setMandatoAutoAssigned(false);
+                setGlobalLead(null);
+                setLeadId(null);
+                setSelectedLeadData(null);
+              }
+            }}
             includeGeneralWork={true}
           />
         </div>
 
-        {/* Lead Select (Optional, dependent on mandato) */}
-        {mandatoId && !isInternalProject && (
+        {/* Lead Select (Only show if no global lead and mandato supports leads) */}
+        {mandatoId && !isInternalProject && !globalLead && (
           <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs text-muted-foreground">Lead (opcional)</Label>
+            <Label className="text-xs text-muted-foreground">Lead del mandato</Label>
             <LeadByMandatoSelect
               mandatoId={mandatoId}
               value={leadId}
