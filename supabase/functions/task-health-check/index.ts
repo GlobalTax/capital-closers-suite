@@ -47,11 +47,11 @@ serve(async (req) => {
     // Build query based on scope
     let query = supabase
       .from('tareas')
-      .select('id, titulo, descripcion, prioridad, fecha_vencimiento, estado, asignado_a, created_by, created_at, updated_at, last_activity_at, health_status')
+      .select('id, titulo, descripcion, prioridad, fecha_vencimiento, estado, asignado_a, creado_por, created_at, updated_at, last_activity_at, health_status')
       .neq('estado', 'completada');
 
     if (scope === 'user' && user_id) {
-      query = query.or(`asignado_a.eq.${user_id},created_by.eq.${user_id}`);
+      query = query.or(`asignado_a.eq.${user_id},creado_por.eq.${user_id}`);
     }
 
     const { data: tasks, error: tasksError } = await query;
