@@ -270,6 +270,7 @@ export default function SearchFunds() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-medium">Nombre</TableHead>
+                  <TableHead className="font-medium">Contacto Principal</TableHead>
                   <TableHead className="font-medium">Estado</TableHead>
                   <TableHead className="font-medium">Sectores</TableHead>
                   <TableHead className="font-medium">EBITDA</TableHead>
@@ -286,6 +287,7 @@ export default function SearchFunds() {
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -298,7 +300,7 @@ export default function SearchFunds() {
                   ))
                 ) : funds.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={10} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Target className="w-10 h-10 opacity-50" />
                         <p>No se encontraron Search Funds</p>
@@ -335,6 +337,18 @@ export default function SearchFunds() {
                               </a>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {fund.primary_contact ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{fund.primary_contact.full_name}</span>
+                              {fund.primary_contact.role && (
+                                <span className="text-xs text-muted-foreground">{fund.primary_contact.role}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={statusBadge.className}>{statusBadge.label}</Badge>

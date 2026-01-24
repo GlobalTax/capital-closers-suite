@@ -2,9 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { SearchFund } from '@/types/searchFunds';
 
+export interface PrimaryContact {
+  full_name: string;
+  role: string | null;
+  email: string | null;
+}
+
 export interface SearchFundWithStats extends SearchFund {
   mandato_count: number;
   last_activity: string | null;
+  primary_contact: PrimaryContact | null;
 }
 
 export interface SearchFundsStats {
@@ -66,6 +73,31 @@ async function fetchSearchFundsWithStats(filters?: {
     throw matchesError;
   }
 
+  // Fetch primary contacts for all funds
+  const { data: contactsData, error: contactsError } = await supabase
+    .from('sf_people')
+    .select('fund_id, full_name, role, email')
+    .eq('is_primary_contact', true);
+
+  if (contactsError) {
+    console.error('[SearchFundsWithStats] Error fetching contacts:', contactsError);
+    // Non-fatal, continue without contacts
+  }
+
+  // Create map of primary contacts by fund_id
+  const contactsByFund = new Map<string, PrimaryContact>();
+  if (contactsData) {
+    for (const contact of contactsData) {
+      if (contact.fund_id) {
+        contactsByFund.set(contact.fund_id, {
+          full_name: contact.full_name,
+          role: contact.role,
+          email: contact.email,
+        });
+      }
+    }
+  }
+
   const matches = matchesData || [];
 
   // Group matches by fund_id
@@ -92,13 +124,14 @@ async function fetchSearchFundsWithStats(filters?: {
     }
   }
 
-  // Combine funds with stats
+  // Combine funds with stats and contacts
   const fundsWithStats: SearchFundWithStats[] = funds.map(fund => {
     const matchData = matchesByFund.get(fund.id);
     return {
       ...fund,
       mandato_count: matchData?.count || 0,
       last_activity: matchData?.lastActivity || null,
+      primary_contact: contactsByFund.get(fund.id) || null,
     };
   });
 
