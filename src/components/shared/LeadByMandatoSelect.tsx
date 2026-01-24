@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, ChevronsUpDown, User, Users, Building2 } from 'lucide-react';
+import { Check, ChevronsUpDown, User, Users, Building2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,6 +9,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from '@/components/ui/command';
 import {
   Popover,
@@ -18,6 +19,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useLeadsByMandato, type MandateLead } from '@/hooks/useLeadsByMandato';
 import { useProspectsForTimeEntry, type ProspectForTimeEntry } from '@/hooks/useProspectsForTimeEntry';
+import { CreateLeadQuickDialog } from './CreateLeadQuickDialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Export types for external use
 export type { ProspectForTimeEntry, MandateLead };
@@ -52,7 +55,8 @@ export function LeadByMandatoSelect({
   disabled = false,
 }: LeadByMandatoSelectProps) {
   const [open, setOpen] = useState(false);
-  
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const queryClient = useQueryClient();
   // Check project type
   const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
   const isInternalProjectWithoutLeads = !mandatoId || INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
@@ -143,8 +147,43 @@ export function LeadByMandatoSelect({
   // Get current items list based on project type
   const items = isProspeccionProject ? prospects : mandateLeads;
   
-  // If no items available
-  if (!isLoading && items.length === 0) {
+  // Handle lead creation callback
+  const handleLeadCreated = (leadId: string, leadData: { id: string; company_name: string; contact_name: string | null; contact_email: string | null }) => {
+    // Invalidate query to refresh leads list
+    queryClient.invalidateQueries({ queryKey: ['mandate-leads', mandatoId] });
+    // Auto-select the new lead
+    onValueChange(leadId, leadData as MandateLead);
+  };
+  
+  // If no items available for regular mandatos (not Prospección), show button to create
+  if (!isLoading && items.length === 0 && !isProspeccionProject) {
+    return (
+      <>
+        <Button
+          variant="outline"
+          onClick={() => setShowCreateDialog(true)}
+          className="w-full justify-between h-9 font-normal"
+        >
+          <span className="flex items-center gap-2">
+            <Plus className="h-3.5 w-3.5 text-primary" />
+            <span className="text-primary font-medium">Crear primer lead</span>
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+        {mandatoId && (
+          <CreateLeadQuickDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            mandatoId={mandatoId}
+            onLeadCreated={handleLeadCreated}
+          />
+        )}
+      </>
+    );
+  }
+  
+  // If Prospección has no prospects
+  if (!isLoading && items.length === 0 && isProspeccionProject) {
     return (
       <Button
         variant="outline"
@@ -153,7 +192,7 @@ export function LeadByMandatoSelect({
       >
         <span className="flex items-center gap-2">
           <Users className="h-3.5 w-3.5 opacity-50" />
-          {isProspeccionProject ? 'Sin prospectos disponibles' : 'Sin leads asignados'}
+          Sin prospectos disponibles
         </span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
@@ -298,9 +337,39 @@ export function LeadByMandatoSelect({
                 ))}
               </CommandGroup>
             )}
+            
+            {/* Add new lead button (for regular mandatos only) */}
+            {!isProspeccionProject && mandatoId && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Acciones">
+                  <CommandItem
+                    value="__nuevo_lead__"
+                    onSelect={() => {
+                      setShowCreateDialog(true);
+                      setOpen(false);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-primary">+ Nuevo lead</span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
+      
+      {/* Create Lead Dialog */}
+      {mandatoId && !isProspeccionProject && (
+        <CreateLeadQuickDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          mandatoId={mandatoId}
+          onLeadCreated={handleLeadCreated}
+        />
+      )}
     </Popover>
   );
 }
