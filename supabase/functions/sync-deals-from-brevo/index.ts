@@ -148,6 +148,23 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if sync is enabled
+    const { data: syncControl } = await supabase
+      .from('sync_control')
+      .select('is_enabled')
+      .eq('id', 'sync-deals-from-brevo')
+      .single();
+
+    if (syncControl && !syncControl.is_enabled) {
+      console.log('[sync-deals-from-brevo] Sync is disabled, skipping...');
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: 'Sync disabled via control panel' 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     const result: SyncResult = {
       totalDeals: 0,
       mandatosCreated: 0,
@@ -250,12 +267,14 @@ Deno.serve(async (req) => {
           if (existingEmpresa) {
             empresaId = existingEmpresa.id;
           } else {
-            // Create new empresa
+            // Create new empresa with source tracking
             const { data: newEmpresa, error: empresaError } = await supabase
               .from('empresas')
               .insert({
                 nombre: companyName,
                 sector: 'Por clasificar',
+                source: 'sync-brevo',
+                source_id: dealId
               })
               .select('id')
               .single();
@@ -303,6 +322,17 @@ Deno.serve(async (req) => {
     }
 
     console.log('Sync completed:', result);
+
+    // Update sync_control stats
+    await supabase
+      .from('sync_control')
+      .update({
+        last_run: new Date().toISOString(),
+        created_empresas_last_run: result.empresasCreated,
+        errors_last_run: result.errors.length,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 'sync-deals-from-brevo');
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

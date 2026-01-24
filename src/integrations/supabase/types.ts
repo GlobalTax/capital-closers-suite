@@ -6404,6 +6404,8 @@ export type Database = {
           sector: string | null
           sector_id: string | null
           sitio_web: string | null
+          source: string | null
+          source_id: string | null
           source_pro_valuation_id: string | null
           source_valuation_id: string | null
           subsector: string | null
@@ -6457,6 +6459,8 @@ export type Database = {
           sector?: string | null
           sector_id?: string | null
           sitio_web?: string | null
+          source?: string | null
+          source_id?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
@@ -6510,6 +6514,8 @@ export type Database = {
           sector?: string | null
           sector_id?: string | null
           sitio_web?: string | null
+          source?: string | null
+          source_id?: string | null
           source_pro_valuation_id?: string | null
           source_valuation_id?: string | null
           subsector?: string | null
@@ -15326,6 +15332,48 @@ export type Database = {
           priority?: number | null
           query?: string
           results_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sync_control: {
+        Row: {
+          created_at: string | null
+          created_empresas_last_run: number | null
+          description: string | null
+          errors_last_run: number | null
+          id: string
+          is_enabled: boolean | null
+          last_run: string | null
+          name: string
+          next_run: string | null
+          total_empresas_created: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_empresas_last_run?: number | null
+          description?: string | null
+          errors_last_run?: number | null
+          id: string
+          is_enabled?: boolean | null
+          last_run?: string | null
+          name: string
+          next_run?: string | null
+          total_empresas_created?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_empresas_last_run?: number | null
+          description?: string | null
+          errors_last_run?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run?: string | null
+          name?: string
+          next_run?: string | null
+          total_empresas_created?: number | null
           updated_at?: string | null
         }
         Relationships: []

@@ -57,6 +57,24 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if sync is enabled
+    const { data: syncControl } = await supabase
+      .from('sync_control')
+      .select('is_enabled')
+      .eq('id', 'sync-leads-to-crm')
+      .single();
+
+    if (syncControl && !syncControl.is_enabled) {
+      console.log('[sync-leads-to-crm] Sync is disabled, skipping...');
+      return new Response(JSON.stringify({ 
+        skipped: true, 
+        reason: 'Sync disabled via control panel' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
+
     // Parse request body for options
     let triggeredBy = 'cron';
     try {
@@ -187,6 +205,21 @@ serve(async (req) => {
         .eq('id', syncLog.id);
     }
 
+    // Update sync_control stats
+    await supabase
+      .from('sync_control')
+      .update({
+        last_run: new Date().toISOString(),
+        created_empresas_last_run: result.empresasCreated,
+        total_empresas_created: supabase.rpc('increment_sync_empresas', { 
+          sync_id: 'sync-leads-to-crm', 
+          count: result.empresasCreated 
+        }),
+        errors_last_run: result.errors.length,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 'sync-leads-to-crm');
+
     console.log('[sync-leads-to-crm] Sync completed:', result);
 
     return new Response(JSON.stringify(result), {
@@ -293,7 +326,9 @@ async function syncLead(
         sector: lead.industry || null,
         facturacion: lead.revenue || null,
         ebitda: lead.ebitda || null,
-        ubicacion: lead.country || lead.location || null
+        ubicacion: lead.country || lead.location || null,
+        source: 'sync-leads',
+        source_id: lead.id
       };
 
       const { data: newEmpresa, error: empresaError } = await supabase
