@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ExecutiveTimeKPIs } from "@/components/mandatos/ExecutiveTimeKPIs";
-import { TimeFilters } from "@/components/mandatos/TimeFilters";
+import { OperationalTimeKPIs } from "@/components/mandatos/OperationalTimeKPIs";
+import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
 import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { ValueVsInvestmentChart } from "@/components/mandatos/ValueVsInvestmentChart";
 import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMandatoChart";
@@ -116,11 +117,14 @@ export default function HorasEquipo() {
         description="¿Estamos invirtiendo bien el tiempo?"
       />
 
-      {/* Executive KPIs - The 3-second answer */}
+      {/* Executive KPIs - Strategic metrics */}
       <ExecutiveTimeKPIs entries={timeEntries} loading={loading} />
 
-      {/* Compact Filters */}
-      <TimeFilters
+      {/* Operational KPIs - Quick numbers */}
+      <OperationalTimeKPIs entries={timeEntries} loading={loading} />
+
+      {/* Compact Filter Bar */}
+      <TimeFilterBar
         filters={filters}
         onChange={setFilters}
         users={users}
