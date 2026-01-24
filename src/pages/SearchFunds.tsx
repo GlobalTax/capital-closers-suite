@@ -8,10 +8,10 @@ import {
   Building2,
   TrendingUp,
   Users,
-  Filter,
   X,
-  ExternalLink,
   ChevronRight,
+  List,
+  LayoutGrid,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -35,7 +35,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
+import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
+import { SearchFundGridCard } from '@/components/searchfunds/SearchFundGridCard';
 import {
   useSearchFundsWithStats,
   useSearchFundCountries,
@@ -74,16 +77,19 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   paused: { label: 'Pausado', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
 
+type ViewMode = 'table' | 'grid';
+
 export default function SearchFunds() {
   const navigate = useNavigate();
   
   // Activar sincronización en tiempo real
-  useSearchFundsRealtime();
+  const { isConnected } = useSearchFundsRealtime();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // Build filters object
   const filters = useMemo(() => {
@@ -125,11 +131,14 @@ export default function SearchFunds() {
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
-        <PageHeader
-          title="Search Funds"
-          description="Gestiona la base de datos de Search Funds y sus criterios de inversión"
-          icon={Target}
-        />
+        <div className="flex items-center justify-between">
+          <PageHeader
+            title="Search Funds"
+            description="Gestiona la base de datos de Search Funds y sus criterios de inversión"
+            icon={Target}
+          />
+          <RealtimeIndicator isConnected={isConnected} />
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -259,148 +268,208 @@ export default function SearchFunds() {
                   Limpiar
                 </Button>
               )}
+
+              <div className="ml-auto">
+                <ToggleGroup
+                  type="single"
+                  value={viewMode}
+                  onValueChange={(value) => value && setViewMode(value as ViewMode)}
+                >
+                  <ToggleGroupItem value="table" aria-label="Vista tabla" className="h-9 w-9 p-0">
+                    <List className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="grid" aria-label="Vista grid" className="h-9 w-9 p-0">
+                    <LayoutGrid className="w-4 h-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-medium">Nombre</TableHead>
-                  <TableHead className="font-medium">Contacto Principal</TableHead>
-                  <TableHead className="font-medium">Estado</TableHead>
-                  <TableHead className="font-medium">Sectores</TableHead>
-                  <TableHead className="font-medium">EBITDA</TableHead>
-                  <TableHead className="font-medium">Deal Size</TableHead>
-                  <TableHead className="font-medium">País</TableHead>
-                  <TableHead className="font-medium text-center">Mandatos</TableHead>
-                  <TableHead className="font-medium">Última Actividad</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  // Loading skeleton
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-5" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : funds.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Target className="w-10 h-10 opacity-50" />
-                        <p>No se encontraron Search Funds</p>
-                        {hasActiveFilters && (
-                          <Button variant="link" size="sm" onClick={clearFilters}>
-                            Limpiar filtros
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+        {/* Content: Table or Grid */}
+        {viewMode === 'table' ? (
+          <Card>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-medium">Nombre</TableHead>
+                    <TableHead className="font-medium">Contacto Principal</TableHead>
+                    <TableHead className="font-medium">Estado</TableHead>
+                    <TableHead className="font-medium">Sectores</TableHead>
+                    <TableHead className="font-medium">EBITDA</TableHead>
+                    <TableHead className="font-medium">Deal Size</TableHead>
+                    <TableHead className="font-medium">País</TableHead>
+                    <TableHead className="font-medium text-center">Mandatos</TableHead>
+                    <TableHead className="font-medium">Última Actividad</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ) : (
-                  funds.map((fund) => {
-                    const statusBadge = STATUS_BADGES[fund.status || 'inactive'] || STATUS_BADGES.inactive;
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 8 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-10 mx-auto" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-5" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : funds.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Target className="w-10 h-10 opacity-50" />
+                          <p>No se encontraron Search Funds</p>
+                          {hasActiveFilters && (
+                            <Button variant="link" size="sm" onClick={clearFilters}>
+                              Limpiar filtros
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    funds.map((fund) => {
+                      const statusBadge = STATUS_BADGES[fund.status || 'inactive'] || STATUS_BADGES.inactive;
 
-                    return (
-                      <TableRow
-                        key={fund.id}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => handleRowClick(fund)}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{fund.name}</span>
-                            {fund.website && (
-                              <a
-                                href={fund.website}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-muted-foreground hover:text-primary"
-                              >
-                                <Globe className="w-3.5 h-3.5" />
-                              </a>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {fund.primary_contact ? (
-                            <div className="flex flex-col">
-                              <span className="font-medium text-sm">{fund.primary_contact.full_name}</span>
-                              {fund.primary_contact.role && (
-                                <span className="text-xs text-muted-foreground">{fund.primary_contact.role}</span>
+                      return (
+                        <TableRow
+                          key={fund.id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleRowClick(fund)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{fund.name}</span>
+                              {fund.website && (
+                                <a
+                                  href={fund.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-muted-foreground hover:text-primary"
+                                >
+                                  <Globe className="w-3.5 h-3.5" />
+                                </a>
                               )}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={statusBadge.className}>{statusBadge.label}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {fund.sector_focus?.slice(0, 2).map((sector, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {sector}
-                              </Badge>
-                            ))}
-                            {fund.sector_focus && fund.sector_focus.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{fund.sector_focus.length - 2}
-                              </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {fund.primary_contact ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-sm">{fund.primary_contact.full_name}</span>
+                                {fund.primary_contact.role && (
+                                  <span className="text-xs text-muted-foreground">{fund.primary_contact.role}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {formatRange(fund.ebitda_min, fund.ebitda_max)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {formatRange(fund.deal_size_min, fund.deal_size_max)}
-                        </TableCell>
-                        <TableCell>
-                          {fund.country_base || '-'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {fund.mandato_count > 0 ? (
-                            <Badge variant="outline" className="font-medium">
-                              {fund.mandato_count}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {fund.last_activity
-                            ? format(new Date(fund.last_activity), 'dd MMM yyyy', { locale: es })
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={statusBadge.className}>{statusBadge.label}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {fund.sector_focus?.slice(0, 2).map((sector, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {sector}
+                                </Badge>
+                              ))}
+                              {fund.sector_focus && fund.sector_focus.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{fund.sector_focus.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatRange(fund.ebitda_min, fund.ebitda_max)}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatRange(fund.deal_size_min, fund.deal_size_max)}
+                          </TableCell>
+                          <TableCell>
+                            {fund.country_base || '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {fund.mandato_count > 0 ? (
+                              <Badge variant="outline" className="font-medium">
+                                {fund.mandato_count}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {fund.last_activity
+                              ? format(new Date(fund.last_activity), 'dd MMM yyyy', { locale: es })
+                              : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        ) : (
+          // Grid View
+          isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 space-y-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-16" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : funds.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Target className="w-10 h-10 opacity-50" />
+                  <p>No se encontraron Search Funds</p>
+                  {hasActiveFilters && (
+                    <Button variant="link" size="sm" onClick={clearFilters}>
+                      Limpiar filtros
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {funds.map((fund) => (
+                <SearchFundGridCard
+                  key={fund.id}
+                  fund={fund}
+                  onNavigate={(fundId) => navigate(`/search-funds/${fundId}`)}
+                />
+              ))}
+            </div>
+          )
+        )}
       </div>
     </AppLayout>
   );
