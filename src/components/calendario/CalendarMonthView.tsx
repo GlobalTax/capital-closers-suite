@@ -14,7 +14,8 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Calendar } from "lucide-react";
 
 interface CalendarMonthViewProps {
   currentDate: Date;
@@ -50,6 +51,19 @@ export function CalendarMonthView({
     return result;
   }, [calendarDays]);
 
+  // Empty state cuando no hay eventos en el mes
+  if (events.length === 0) {
+    return (
+      <div className="bg-card rounded-lg border p-12">
+        <EmptyState
+          icon={Calendar}
+          titulo="Sin eventos este mes"
+          descripcion="No hay eventos programados para este período. Ajusta los filtros o navega a otro mes."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card rounded-lg border overflow-hidden">
       {/* Header */}
@@ -57,9 +71,10 @@ export function CalendarMonthView({
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="px-2 py-3 text-center text-sm font-medium text-muted-foreground"
+            className="px-2 py-2 md:py-3 text-center text-xs md:text-sm font-medium text-muted-foreground"
           >
-            {day}
+            <span className="hidden sm:inline">{day}</span>
+            <span className="sm:hidden">{day.charAt(0)}</span>
           </div>
         ))}
       </div>
@@ -67,7 +82,7 @@ export function CalendarMonthView({
       {/* Calendar Grid */}
       <div className="divide-y">
         {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-7 divide-x min-h-[120px]">
+          <div key={weekIndex} className="grid grid-cols-7 divide-x min-h-[80px] md:min-h-[120px]">
             {week.map((day) => {
               const dayEvents = getEventsForDate(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
@@ -79,29 +94,30 @@ export function CalendarMonthView({
                   key={day.toISOString()}
                   onClick={() => onDateClick?.(day)}
                   className={cn(
-                    "min-h-[120px] p-1 cursor-pointer transition-colors hover:bg-accent/50",
+                    "min-h-[80px] md:min-h-[120px] p-0.5 md:p-1 cursor-pointer transition-colors hover:bg-accent/50",
                     !isCurrentMonth && "bg-muted/30",
                     isSelected && "bg-accent"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-1 px-1">
+                  <div className="flex items-center justify-between mb-0.5 md:mb-1 px-0.5 md:px-1">
                     <span
                       className={cn(
-                        "text-sm font-medium",
+                        "text-xs md:text-sm font-medium",
                         !isCurrentMonth && "text-muted-foreground",
-                        dayIsToday && "bg-primary text-primary-foreground w-7 h-7 rounded-full flex items-center justify-center"
+                        dayIsToday && "bg-primary text-primary-foreground w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] md:text-sm"
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     {dayEvents.length > 3 && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] md:text-xs text-muted-foreground hidden md:inline">
                         +{dayEvents.length - 3}
                       </span>
                     )}
                   </div>
                   
-                  <div className="space-y-0.5">
+                  {/* Desktop: Event cards */}
+                  <div className="hidden md:block space-y-0.5">
                     {dayEvents.slice(0, 3).map((event) => (
                       <CalendarEventCard
                         key={event.id}
@@ -111,9 +127,19 @@ export function CalendarMonthView({
                     ))}
                   </div>
 
-                  {/* Event dots for overflow */}
+                  {/* Mobile: Solo dots */}
+                  <div className="flex md:hidden gap-0.5 flex-wrap px-0.5">
+                    {dayEvents.slice(0, 4).map((event) => (
+                      <CalendarEventDot key={event.id} event={event} />
+                    ))}
+                    {dayEvents.length > 4 && (
+                      <span className="text-[8px] text-muted-foreground">+{dayEvents.length - 4}</span>
+                    )}
+                  </div>
+
+                  {/* Desktop: Event dots for overflow */}
                   {dayEvents.length > 3 && (
-                    <div className="flex gap-0.5 mt-1 px-1">
+                    <div className="hidden md:flex gap-0.5 mt-1 px-1">
                       {dayEvents.slice(3, 8).map((event) => (
                         <CalendarEventDot key={event.id} event={event} />
                       ))}
