@@ -35,7 +35,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface PriceCalculatorCardProps {
   empresaId: string;
-  mandatoId: string;
+  mandatoId?: string;
 }
 
 export function PriceCalculatorCard({ empresaId, mandatoId }: PriceCalculatorCardProps) {
