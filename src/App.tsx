@@ -58,6 +58,7 @@ const OutboundCampaignDetail = lazy(() => import("./pages/OutboundCampaignDetail
 const SyncControl = lazy(() => import("./pages/admin/SyncControl"));
 const EmpresasMonitor = lazy(() => import("./pages/admin/EmpresasMonitor"));
 const SyncCenter = lazy(() => import("./pages/SyncCenter"));
+const Index = lazy(() => import("./pages/Index"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -72,7 +73,8 @@ function AppContent() {
           <Route path="/auth/accept-invitation" element={<AcceptInvitation />} />
 
           {/* Protected routes */}
-          <Route path="/" element={<Navigate to="/mandatos" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Index /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos" element={<ProtectedRoute><AppLayout><Mandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/mandatos/:id" element={<ProtectedRoute><AppLayout><MandatoDetalle /></AppLayout></ProtectedRoute>} />
           <Route path="/servicios" element={<ProtectedRoute><AppLayout><Servicios /></AppLayout></ProtectedRoute>} />
