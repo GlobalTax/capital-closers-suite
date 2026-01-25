@@ -5,6 +5,7 @@ export interface SidebarConfig {
   topLevelOrder: string[];
   groupOrder: string[];
   groupItemsOrder: Record<string, string[]>;
+  quickAccess: string[]; // IDs of items marked as quick access favorites
 }
 
 interface AppState {
@@ -32,6 +33,7 @@ const defaultSidebarConfig: SidebarConfig = {
   topLevelOrder: ['dashboard', 'tareas', 'mis-horas', 'gestion-leads'],
   groupOrder: ['mandatos', 'servicios', 'gestion', 'plataformas', 'admin-dashboard', 'super-admin'],
   groupItemsOrder: {},
+  quickAccess: [],
 };
 
 export const useAppStore = create<AppState>()(
