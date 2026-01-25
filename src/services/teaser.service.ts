@@ -85,7 +85,7 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
     }
   }
 
-  // 4. Insertar nuevo registro
+  // 4. Insertar nuevo registro como borrador
   const { data: newDoc, error: insertError } = await supabase
     .from('documentos')
     .insert({
@@ -101,7 +101,8 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
       idioma: params.idioma,
       version: version,
       parent_document_id: existing?.id || null,
-      is_latest_version: true,
+      is_latest_version: false, // No es latest hasta que se publique
+      status: 'draft', // Nuevo teaser siempre empieza como borrador
     })
     .select()
     .single();

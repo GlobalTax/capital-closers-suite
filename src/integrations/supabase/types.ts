@@ -5933,6 +5933,8 @@ export type Database = {
       }
       documentos: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
           descripcion: string | null
           file_name: string
@@ -5944,6 +5946,8 @@ export type Database = {
           mandato_id: string | null
           mime_type: string
           parent_document_id: string | null
+          published_at: string | null
+          status: string | null
           storage_path: string
           tags: string[] | null
           tipo: string | null
@@ -5952,6 +5956,8 @@ export type Database = {
           version: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           descripcion?: string | null
           file_name: string
@@ -5963,6 +5969,8 @@ export type Database = {
           mandato_id?: string | null
           mime_type: string
           parent_document_id?: string | null
+          published_at?: string | null
+          status?: string | null
           storage_path: string
           tags?: string[] | null
           tipo?: string | null
@@ -5971,6 +5979,8 @@ export type Database = {
           version?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           descripcion?: string | null
           file_name?: string
@@ -5982,6 +5992,8 @@ export type Database = {
           mandato_id?: string | null
           mime_type?: string
           parent_document_id?: string | null
+          published_at?: string | null
+          status?: string | null
           storage_path?: string
           tags?: string[] | null
           tipo?: string | null
