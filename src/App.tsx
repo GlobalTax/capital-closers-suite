@@ -61,6 +61,7 @@ const SyncCenter = lazy(() => import("./pages/SyncCenter"));
 const Index = lazy(() => import("./pages/Index"));
 const TaskAIQA = lazy(() => import("./pages/admin/TaskAIQA"));
 const PlantillasEmail = lazy(() => import("./pages/PlantillasEmail"));
+const EmailQueueMonitor = lazy(() => import("./pages/EmailQueueMonitor"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -95,6 +96,7 @@ function AppContent() {
           <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
           <Route path="/horas-equipo" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><HorasEquipo /></AppLayout></ProtectedRoute>} />
           <Route path="/audit-logs" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><AuditLogs /></AppLayout></ProtectedRoute>} />
+          <Route path="/email-queue" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmailQueueMonitor /></AppLayout></ProtectedRoute>} />
           <Route path="/usuarios" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><Usuarios /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-mandatos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarMandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-datos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarDatos /></AppLayout></ProtectedRoute>} />

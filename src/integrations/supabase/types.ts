@@ -19323,6 +19323,7 @@ export type Database = {
           vencidas: number
         }[]
       }
+      get_email_metrics: { Args: { p_period?: string }; Returns: Json }
       get_lead_ai_stats: { Args: never; Returns: Json }
       get_marketplace_analytics: { Args: { days_back?: number }; Returns: Json }
       get_news_filter_options: {
