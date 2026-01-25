@@ -5585,6 +5585,48 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_highlights: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          position: number
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          position?: number
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          position?: number
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       document_access_logs: {
         Row: {
           access_type: string
