@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Search, Loader2, BookOpen, Menu } from 'lucide-react';
+import { Search, Loader2, BookOpen, Menu, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -8,15 +8,20 @@ import {
   HelpSidebar, 
   HelpSearchDialog, 
   HelpNavigation, 
-  MarkdownRenderer 
+  MarkdownRenderer,
+  HelpSectionEditor
 } from '@/components/help';
 import { useHelpCenter, useHelpSection } from '@/hooks/useHelpCenter';
-
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 export default function Ayuda() {
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const { isAdmin, isSuperAdmin } = useSimpleAuth();
+  const canEdit = isAdmin || isSuperAdmin;
   
   const { sections, flatSections, isLoading: sectionsLoading } = useHelpCenter();
   
@@ -77,6 +82,19 @@ export default function Ayuda() {
             <div className="flex items-center gap-2">
               <BookOpen className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-semibold">Centro de Ayuda</h1>
+              
+              {/* Edit button for admins */}
+              {canEdit && !isEditing && currentSection && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="ml-4"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
             </div>
             
             <div className="flex-1 max-w-md ml-auto">
@@ -111,13 +129,20 @@ export default function Ayuda() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : currentSection ? (
-              <div className="max-w-3xl">
-                <MarkdownRenderer content={currentSection.content_md} />
-                <HelpNavigation 
-                  currentSlug={currentSlug || ''} 
-                  sections={flatSections} 
+              isEditing ? (
+                <HelpSectionEditor 
+                  section={currentSection}
+                  onClose={() => setIsEditing(false)}
                 />
-              </div>
+              ) : (
+                <div className="max-w-3xl">
+                  <MarkdownRenderer content={currentSection.content_md} />
+                  <HelpNavigation 
+                    currentSlug={currentSlug || ''} 
+                    sections={flatSections} 
+                  />
+                </div>
+              )
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
