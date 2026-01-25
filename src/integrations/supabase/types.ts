@@ -6342,6 +6342,117 @@ export type Database = {
         }
         Relationships: []
       }
+      email_queue: {
+        Row: {
+          attachments: Json | null
+          attempts: number | null
+          created_at: string | null
+          created_by: string | null
+          error_details: Json | null
+          failed_at: string | null
+          first_attempt_at: string | null
+          from_email: string | null
+          from_name: string | null
+          html_content: string
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          max_attempts: number | null
+          metadata: Json | null
+          next_retry_at: string | null
+          priority: number | null
+          provider: string | null
+          provider_message_id: string | null
+          provider_response: Json | null
+          provider_status: string | null
+          queue_type: string
+          queued_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          reply_to: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          text_content: string | null
+          to_email: string
+          to_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          attempts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error_details?: Json | null
+          failed_at?: string | null
+          first_attempt_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_content: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          priority?: number | null
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          provider_status?: string | null
+          queue_type: string
+          queued_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          reply_to?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          text_content?: string | null
+          to_email: string
+          to_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          attempts?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error_details?: Json | null
+          failed_at?: string | null
+          first_attempt_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_content?: string
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          max_attempts?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          priority?: number | null
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          provider_status?: string | null
+          queue_type?: string
+          queued_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          reply_to?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          text_content?: string | null
+          to_email?: string
+          to_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       email_recipients_config: {
         Row: {
           created_at: string | null
@@ -18392,6 +18503,17 @@ export type Database = {
           },
         ]
       }
+      v_email_queue_stats: {
+        Row: {
+          avg_attempts: number | null
+          count: number | null
+          newest: string | null
+          oldest: string | null
+          queue_type: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
       v_empleados_completo: {
         Row: {
           codigo_empleado: string | null
@@ -18963,6 +19085,7 @@ export type Database = {
         }[]
       }
       bootstrap_first_admin: { Args: { user_email: string }; Returns: boolean }
+      calculate_email_retry_at: { Args: { attempts: number }; Returns: string }
       check_is_admin: { Args: { check_user_id: string }; Returns: boolean }
       check_is_super_admin: {
         Args: { check_user_id: string }
@@ -19113,6 +19236,25 @@ export type Database = {
           window_minutes?: number
         }
         Returns: boolean
+      }
+      enqueue_email: {
+        Args: {
+          p_attachments?: Json
+          p_from_email?: string
+          p_from_name?: string
+          p_html_content: string
+          p_metadata?: Json
+          p_priority?: number
+          p_queue_type?: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_scheduled_at?: string
+          p_subject: string
+          p_text_content?: string
+          p_to_email: string
+          p_to_name?: string
+        }
+        Returns: string
       }
       generate_fase0_reference_number: {
         Args: { doc_type: string }
