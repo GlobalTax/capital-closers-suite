@@ -5,16 +5,18 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Download, Trash2, FileText, File, Image as ImageIcon, Eye, Loader2, FileSpreadsheet, Presentation } from "lucide-react";
+import { Download, Trash2, FileText, File, Image as ImageIcon, Eye, Loader2, FileSpreadsheet, Presentation, ExternalLink } from "lucide-react";
 import { UploadDialog } from "@/components/documentos/UploadDialog";
 import { UnifiedDocumentViewer } from "@/components/shared/UnifiedDocumentViewer";
 import { useDocumentPreview } from "@/hooks/useDocumentPreview";
 import { useDocumentosPaginated, useDeleteDocumento } from "@/hooks/queries/useDocumentos";
-import { downloadFile } from "@/services/uploads";
+import { downloadFile, getSignedUrl } from "@/services/uploads";
+import { documentAccessLogService } from "@/services/documentAccessLog.service";
 import { isPreviewable, isPdf, isImage, isOfficeDocument } from "@/lib/file-utils";
 import type { Documento } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
+import { toast } from "sonner";
 
 export default function Documentos() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +28,7 @@ export default function Documentos() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; doc?: Documento }>({ open: false });
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [openingPreviewId, setOpeningPreviewId] = useState<string | null>(null);
   
   // Preview with unified hook
   const {
@@ -60,11 +63,29 @@ export default function Documentos() {
   const handleDownload = async (doc: Documento) => {
     setDownloading(doc.id);
     try {
-      await downloadFile(doc.storage_path, doc.file_name);
+      await downloadFile(doc.storage_path, doc.file_name, doc.id);
     } catch (error) {
       handleError(error, "Error al descargar el archivo");
     } finally {
       setDownloading(null);
+    }
+  };
+
+  const handleOpenInNewTab = async (doc: Documento) => {
+    setOpeningPreviewId(doc.id);
+    try {
+      const url = await getSignedUrl(doc.storage_path);
+      if (url) {
+        // Registrar acceso como preview (async, no bloquea)
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(console.error);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("No se pudo generar el enlace de vista previa");
+      }
+    } catch (error) {
+      handleError(error, "Error al abrir vista previa");
+    } finally {
+      setOpeningPreviewId(null);
     }
   };
 
@@ -146,6 +167,7 @@ export default function Documentos() {
       label: "Acciones",
       render: (_: any, row: Documento) => (
         <div className="flex items-center gap-1">
+          {/* Ver en modal interno */}
           {isPreviewable(row.mime_type) && (
             <Button
               variant="ghost"
@@ -155,13 +177,32 @@ export default function Documentos() {
                 handlePreview(row);
               }}
               disabled={loadingPreviewId === row.id}
+              title="Ver documento"
             >
               {loadingPreviewId === row.id ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Eye className="w-4 h-4" />
               )}
-              <span className="ml-1 hidden sm:inline">Ver</span>
+            </Button>
+          )}
+          {/* Vista previa en nueva pestaña */}
+          {isPreviewable(row.mime_type) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenInNewTab(row);
+              }}
+              disabled={openingPreviewId === row.id}
+              title="Abrir en nueva pestaña"
+            >
+              {openingPreviewId === row.id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
             </Button>
           )}
           <Button
@@ -172,15 +213,13 @@ export default function Documentos() {
               handleDownload(row);
             }}
             disabled={downloading === row.id}
+            title="Descargar"
           >
             {downloading === row.id ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Download className="w-4 h-4" />
             )}
-            <span className="ml-1 hidden sm:inline">
-              {downloading === row.id ? 'Descargando...' : 'Descargar'}
-            </span>
           </Button>
           <Button
             variant="ghost"
@@ -189,6 +228,7 @@ export default function Documentos() {
               e.stopPropagation();
               handleDeleteClick(row);
             }}
+            title="Eliminar"
           >
             <Trash2 className="w-4 h-4 text-destructive" />
           </Button>

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle, Globe, Eye } from "lucide-react";
+import { Upload, FolderTree as FolderTreeIcon, FileText, History, Download, Trash2, MoreVertical, Loader2, Sparkles, AlertCircle, Globe, Eye, ExternalLink } from "lucide-react";
+import { documentAccessLogService } from "@/services/documentAccessLog.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,7 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const [documentToDelete, setDocumentToDelete] = useState<DocumentWithVersion | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [openingPreviewId, setOpeningPreviewId] = useState<string | null>(null);
   const [uploadingTeaserES, setUploadingTeaserES] = useState(false);
   const [uploadingTeaserEN, setUploadingTeaserEN] = useState(false);
 
@@ -342,6 +344,30 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     }
   };
 
+  const handleOpenInNewTab = async (doc: DocumentWithVersion) => {
+    setOpeningPreviewId(doc.id);
+    try {
+      if (!doc.storage_path) {
+        toast.error('El documento no tiene ruta de almacenamiento');
+        return;
+      }
+      
+      const url = await getSignedUrl(doc.storage_path);
+      if (url) {
+        // Registrar acceso como preview (async, no bloquea)
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(console.error);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("No se pudo generar el enlace de vista previa");
+      }
+    } catch (error) {
+      console.error('[Documentos] Error vista previa:', error);
+      toast.error('Error al abrir vista previa');
+    } finally {
+      setOpeningPreviewId(null);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!documentToDelete) return;
     const success = await deleteDocument(documentToDelete.id, documentToDelete.storage_path);
@@ -609,6 +635,12 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
                                   <DropdownMenuItem onClick={() => handlePreview(doc)} disabled={loadingPreviewId === doc.id}>
                                     <Eye className="w-4 h-4 mr-2" />
                                     {loadingPreviewId === doc.id ? 'Cargando...' : 'Ver'}
+                                  </DropdownMenuItem>
+                                )}
+                                {isPreviewable(doc.mime_type) && (
+                                  <DropdownMenuItem onClick={() => handleOpenInNewTab(doc)} disabled={openingPreviewId === doc.id}>
+                                    <ExternalLink className="w-4 h-4 mr-2" />
+                                    {openingPreviewId === doc.id ? 'Abriendo...' : 'Vista previa'}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem onClick={() => handleDownload(doc)} disabled={downloadingId === doc.id}>
