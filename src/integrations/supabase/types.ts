@@ -12012,6 +12012,41 @@ export type Database = {
         }
         Relationships: []
       }
+      nda_tracking_events: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          recipient_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          recipient_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nda_tracking_events_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "teaser_recipients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_articles: {
         Row: {
           ai_metadata: Json | null
@@ -16911,6 +16946,9 @@ export type Database = {
           bounce_type: string | null
           bounced_at: string | null
           campaign_id: string
+          cim_access_granted: boolean | null
+          cim_access_granted_at: string | null
+          cim_access_granted_by: string | null
           click_count: number | null
           clicked_at: string | null
           contacto_id: string | null
@@ -16923,6 +16961,12 @@ export type Database = {
           failed_at: string | null
           id: string
           mandato_empresa_id: string | null
+          nda_document_id: string | null
+          nda_language: string | null
+          nda_sent_at: string | null
+          nda_sent_by: string | null
+          nda_signed_at: string | null
+          nda_status: string | null
           nombre: string | null
           open_count: number | null
           opened_at: string | null
@@ -16943,6 +16987,9 @@ export type Database = {
           bounce_type?: string | null
           bounced_at?: string | null
           campaign_id: string
+          cim_access_granted?: boolean | null
+          cim_access_granted_at?: string | null
+          cim_access_granted_by?: string | null
           click_count?: number | null
           clicked_at?: string | null
           contacto_id?: string | null
@@ -16955,6 +17002,12 @@ export type Database = {
           failed_at?: string | null
           id?: string
           mandato_empresa_id?: string | null
+          nda_document_id?: string | null
+          nda_language?: string | null
+          nda_sent_at?: string | null
+          nda_sent_by?: string | null
+          nda_signed_at?: string | null
+          nda_status?: string | null
           nombre?: string | null
           open_count?: number | null
           opened_at?: string | null
@@ -16975,6 +17028,9 @@ export type Database = {
           bounce_type?: string | null
           bounced_at?: string | null
           campaign_id?: string
+          cim_access_granted?: boolean | null
+          cim_access_granted_at?: string | null
+          cim_access_granted_by?: string | null
           click_count?: number | null
           clicked_at?: string | null
           contacto_id?: string | null
@@ -16987,6 +17043,12 @@ export type Database = {
           failed_at?: string | null
           id?: string
           mandato_empresa_id?: string | null
+          nda_document_id?: string | null
+          nda_language?: string | null
+          nda_sent_at?: string | null
+          nda_sent_by?: string | null
+          nda_signed_at?: string | null
+          nda_status?: string | null
           nombre?: string | null
           open_count?: number | null
           opened_at?: string | null
@@ -17044,6 +17106,20 @@ export type Database = {
             columns: ["mandato_empresa_id"]
             isOneToOne: false
             referencedRelation: "mandato_empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaser_recipients_nda_document_id_fkey"
+            columns: ["nda_document_id"]
+            isOneToOne: false
+            referencedRelation: "documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaser_recipients_nda_document_id_fkey"
+            columns: ["nda_document_id"]
+            isOneToOne: false
+            referencedRelation: "v_documentos_con_versiones"
             referencedColumns: ["id"]
           },
           {
@@ -19101,6 +19177,7 @@ export type Database = {
       }
       bootstrap_first_admin: { Args: { user_email: string }; Returns: boolean }
       calculate_email_retry_at: { Args: { attempts: number }; Returns: string }
+      can_access_cim: { Args: { p_recipient_id: string }; Returns: boolean }
       check_is_admin: { Args: { check_user_id: string }; Returns: boolean }
       check_is_super_admin: {
         Args: { check_user_id: string }
@@ -19423,6 +19500,7 @@ export type Database = {
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
       is_full_admin: { Args: { check_user_id: string }; Returns: boolean }
+      is_nda_eligible: { Args: { p_recipient_id: string }; Returns: boolean }
       is_user_admin: { Args: { check_user_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { check_user_id: string }; Returns: boolean }
       link_valuation_to_empresa: {
