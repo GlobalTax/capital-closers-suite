@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -25,9 +25,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/stores/useAppStore";
-import { GripVertical, RotateCcw, Settings, ChevronDown, ChevronRight } from "lucide-react";
+import { GripVertical, RotateCcw, Settings, ChevronDown, ChevronRight, Star, X, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Collapsible,
   CollapsibleContent,
@@ -38,9 +39,11 @@ interface SortableItemProps {
   id: string;
   label: string;
   icon?: React.ReactNode;
+  isQuickAccess?: boolean;
+  onToggleQuickAccess?: (id: string) => void;
 }
 
-function SortableItem({ id, label, icon }: SortableItemProps) {
+function SortableItem({ id, label, icon, isQuickAccess, onToggleQuickAccess }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -72,7 +75,22 @@ function SortableItem({ id, label, icon }: SortableItemProps) {
         <GripVertical className="h-4 w-4" />
       </button>
       {icon && <span className="text-muted-foreground">{icon}</span>}
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-medium flex-1">{label}</span>
+      {onToggleQuickAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleQuickAccess(id);
+          }}
+          className={cn(
+            "p-1 rounded hover:bg-muted transition-colors",
+            isQuickAccess ? "text-amber-500" : "text-muted-foreground hover:text-foreground"
+          )}
+          title={isQuickAccess ? "Quitar de Acceso Rápido" : "Añadir a Acceso Rápido"}
+        >
+          <Star className={cn("h-4 w-4", isQuickAccess && "fill-current")} />
+        </button>
+      )}
     </div>
   );
 }
@@ -81,9 +99,11 @@ interface SortableSubItemProps {
   id: string;
   label: string;
   icon?: React.ReactNode;
+  isQuickAccess?: boolean;
+  onToggleQuickAccess?: (id: string) => void;
 }
 
-function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
+function SortableSubItem({ id, label, icon, isQuickAccess, onToggleQuickAccess }: SortableSubItemProps) {
   const {
     attributes,
     listeners,
@@ -123,7 +143,22 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
         <GripVertical className="h-3 w-3" />
       </button>
       {icon && <span className="text-muted-foreground">{icon}</span>}
-      <span className="text-xs font-medium">{label}</span>
+      <span className="text-xs font-medium flex-1">{label}</span>
+      {onToggleQuickAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleQuickAccess(id);
+          }}
+          className={cn(
+            "p-0.5 rounded hover:bg-background transition-colors",
+            isQuickAccess ? "text-amber-500" : "text-muted-foreground hover:text-foreground"
+          )}
+          title={isQuickAccess ? "Quitar de Acceso Rápido" : "Añadir a Acceso Rápido"}
+        >
+          <Star className={cn("h-3 w-3", isQuickAccess && "fill-current")} />
+        </button>
+      )}
     </div>
   );
 }
@@ -140,6 +175,8 @@ interface SortableGroupWithItemsProps {
   orderedItems: Array<{ id: string; title: string; icon: React.ReactNode }>;
   onItemDragEnd: (event: DragEndEvent) => void;
   subItemSensors: ReturnType<typeof useSensors>;
+  quickAccessIds: string[];
+  onToggleQuickAccess: (id: string) => void;
 }
 
 function SortableGroupWithItems({
@@ -147,6 +184,8 @@ function SortableGroupWithItems({
   orderedItems,
   onItemDragEnd,
   subItemSensors,
+  quickAccessIds,
+  onToggleQuickAccess,
 }: SortableGroupWithItemsProps) {
   const {
     attributes,
@@ -212,6 +251,8 @@ function SortableGroupWithItems({
                       id={item.id}
                       label={item.title}
                       icon={item.icon}
+                      isQuickAccess={quickAccessIds.includes(item.id)}
+                      onToggleQuickAccess={onToggleQuickAccess}
                     />
                   ))}
                 </div>
@@ -220,6 +261,58 @@ function SortableGroupWithItems({
           </div>
         </CollapsibleContent>
       </Collapsible>
+    </div>
+  );
+}
+
+// Quick Access Item component for the favorites section
+interface QuickAccessItemProps {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  onRemove: (id: string) => void;
+}
+
+function QuickAccessItem({ id, label, icon, onRemove }: QuickAccessItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg",
+        isDragging && "opacity-50 shadow-lg ring-2 ring-amber-500"
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-amber-600 hover:text-amber-700"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      {icon && <span className="text-amber-600">{icon}</span>}
+      <span className="text-sm font-medium flex-1">{label}</span>
+      <button
+        onClick={() => onRemove(id)}
+        className="p-1 rounded hover:bg-amber-500/20 text-amber-600 hover:text-amber-700 transition-colors"
+        title="Quitar de Acceso Rápido"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -366,77 +459,173 @@ export function SidebarConfigDialog({
     toast.success("Configuración restablecida");
   };
 
+  // Quick Access functionality
+  const quickAccessIds = sidebarConfig.quickAccess || [];
+  
+  // Get all items (top level + group items) as a flat map for quick access lookup
+  const allItemsMap = useMemo(() => {
+    const map: Record<string, { id: string; title: string; icon: React.ReactNode }> = {};
+    topLevelItems.forEach((item) => {
+      map[item.id] = item;
+    });
+    menuGroups.forEach((group) => {
+      group.items.forEach((item) => {
+        map[item.id] = item;
+      });
+    });
+    return map;
+  }, [topLevelItems, menuGroups]);
+
+  // Get ordered quick access items
+  const quickAccessItems = quickAccessIds
+    .map((id) => allItemsMap[id])
+    .filter(Boolean);
+
+  const toggleQuickAccess = (itemId: string) => {
+    const currentQuickAccess = sidebarConfig.quickAccess || [];
+    const isInQuickAccess = currentQuickAccess.includes(itemId);
+    
+    if (isInQuickAccess) {
+      setSidebarConfig({
+        quickAccess: currentQuickAccess.filter((id) => id !== itemId),
+      });
+      toast.success("Quitado de Acceso Rápido");
+    } else {
+      setSidebarConfig({
+        quickAccess: [...currentQuickAccess, itemId],
+      });
+      toast.success("Añadido a Acceso Rápido");
+    }
+  };
+
+  const handleQuickAccessDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = quickAccessIds.indexOf(active.id as string);
+    const newIndex = quickAccessIds.indexOf(over.id as string);
+    const newOrder = arrayMove(quickAccessIds, oldIndex, newIndex);
+    
+    setSidebarConfig({ quickAccess: newOrder });
+    toast.success("Orden actualizado");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Configurar Sidebar
           </DialogTitle>
           <DialogDescription>
-            Arrastra los elementos para reordenar el menú lateral. Expande los grupos para ordenar sus items.
+            Arrastra los elementos para reordenar. Haz clic en ★ para añadir a Acceso Rápido.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Top Level Items */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Accesos directos
-            </h3>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleTopLevelDragEnd}
-            >
-              <SortableContext
-                items={orderedTopLevel.map((item) => item.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-2">
-                  {orderedTopLevel.map((item) => (
-                    <SortableItem
-                      key={item.id}
-                      id={item.id}
-                      label={item.title}
-                      icon={item.icon}
-                    />
-                  ))}
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <div className="space-y-6 py-4">
+            {/* Quick Access Section */}
+            <div>
+              <h3 className="text-sm font-medium text-amber-600 mb-3 flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Acceso Rápido
+              </h3>
+              {quickAccessItems.length === 0 ? (
+                <div className="p-4 border border-dashed border-amber-500/30 rounded-lg bg-amber-500/5 text-center">
+                  <Star className="h-6 w-6 mx-auto text-amber-500/50 mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    Haz clic en la estrella de cualquier elemento para añadirlo aquí
+                  </p>
                 </div>
-              </SortableContext>
-            </DndContext>
-          </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleQuickAccessDragEnd}
+                >
+                  <SortableContext
+                    items={quickAccessIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {quickAccessItems.map((item) => (
+                        <QuickAccessItem
+                          key={item.id}
+                          id={item.id}
+                          label={item.title}
+                          icon={item.icon}
+                          onRemove={toggleQuickAccess}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
 
-          {/* Menu Groups with Items */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Grupos del menú
-            </h3>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleGroupsDragEnd}
-            >
-              <SortableContext
-                items={orderedGroups.map((group) => group.id)}
-                strategy={verticalListSortingStrategy}
+            {/* Top Level Items */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Accesos directos
+              </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleTopLevelDragEnd}
               >
-                <div className="space-y-2">
-                  {orderedGroups.map((group) => (
-                    <SortableGroupWithItems
-                      key={group.id}
-                      group={group}
-                      orderedItems={orderedGroupItems[group.id] || group.items}
-                      onItemDragEnd={handleGroupItemDragEnd(group.id)}
-                      subItemSensors={subItemSensors}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+                <SortableContext
+                  items={orderedTopLevel.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {orderedTopLevel.map((item) => (
+                      <SortableItem
+                        key={item.id}
+                        id={item.id}
+                        label={item.title}
+                        icon={item.icon}
+                        isQuickAccess={quickAccessIds.includes(item.id)}
+                        onToggleQuickAccess={toggleQuickAccess}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+
+            {/* Menu Groups with Items */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Grupos del menú
+              </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleGroupsDragEnd}
+              >
+                <SortableContext
+                  items={orderedGroups.map((group) => group.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {orderedGroups.map((group) => (
+                      <SortableGroupWithItems
+                        key={group.id}
+                        group={group}
+                        orderedItems={orderedGroupItems[group.id] || group.items}
+                        onItemDragEnd={handleGroupItemDragEnd(group.id)}
+                        subItemSensors={subItemSensors}
+                        quickAccessIds={quickAccessIds}
+                        onToggleQuickAccess={toggleQuickAccess}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
 
         <div className="flex justify-between pt-4 border-t">
           <Button variant="outline" size="sm" onClick={handleReset}>

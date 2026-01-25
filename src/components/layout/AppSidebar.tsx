@@ -36,6 +36,8 @@ import {
   Presentation,
   Activity,
   Sparkles,
+  Zap,
+  Star,
 } from "lucide-react";
 import {
   Sidebar,
@@ -417,6 +419,114 @@ export function AppSidebar() {
     return groups;
   }, [adminUser?.role]);
 
+  // Quick Access items from store
+  const quickAccessItems = useMemo(() => {
+    const quickAccessIds = sidebarConfig.quickAccess || [];
+    if (quickAccessIds.length === 0) return [];
+
+    // Create a map of all items (top level + all group items)
+    const allItemsMap: Record<string, MenuItem> = {};
+    topLevelItems.forEach((item) => {
+      allItemsMap[item.id] = item;
+    });
+    allGroups.forEach((group) => {
+      group.items.forEach((item) => {
+        allItemsMap[item.id] = item;
+      });
+    });
+
+    // Return ordered quick access items
+    return quickAccessIds
+      .map((id) => allItemsMap[id])
+      .filter(Boolean);
+  }, [sidebarConfig.quickAccess, allGroups]);
+
+  // Render Quick Access section
+  const renderQuickAccessItems = () => {
+    if (quickAccessItems.length === 0) return null;
+
+    if (isCollapsed) {
+      return (
+        <SidebarGroup className="p-0 px-2 pb-2 border-b border-amber-500/20 mb-2">
+          <SidebarMenu>
+            {quickAccessItems.map((item) => (
+              <SidebarMenuItem key={`qa-${item.id}`}>
+                <SidebarMenuButton asChild tooltip={`⚡ ${item.title}`}>
+                  {item.external ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center p-2 rounded-md transition-colors text-amber-600 hover:bg-amber-500/10 relative"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <Star className="w-2 h-2 absolute -top-0.5 -right-0.5 fill-amber-500 text-amber-500" />
+                    </a>
+                  ) : (
+                    <NavLink
+                      to={item.url}
+                      className={cn(
+                        "flex items-center justify-center p-2 rounded-md transition-colors relative",
+                        isItemActive(item)
+                          ? "bg-amber-500/20 text-amber-600"
+                          : "text-amber-600 hover:bg-amber-500/10"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <Star className="w-2 h-2 absolute -top-0.5 -right-0.5 fill-amber-500 text-amber-500" />
+                    </NavLink>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      );
+    }
+
+    return (
+      <SidebarGroup className="p-0 px-2 pb-2 border-b border-amber-500/20 mb-2">
+        <SidebarGroupLabel className="px-3 py-1 text-amber-600 uppercase text-xs font-medium flex items-center gap-2">
+          <Zap className="w-3 h-3" />
+          Acceso Rápido
+        </SidebarGroupLabel>
+        <SidebarMenu>
+          {quickAccessItems.map((item) => (
+            <SidebarMenuItem key={`qa-${item.id}`}>
+              <SidebarMenuButton asChild>
+                {item.external ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-amber-600 hover:bg-amber-500/10"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.title}</span>
+                    <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                  </a>
+                ) : (
+                  <NavLink
+                    to={item.url}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                      isItemActive(item)
+                        ? "bg-amber-500/20 text-amber-600 font-medium"
+                        : "text-amber-600 hover:bg-amber-500/10"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.title}</span>
+                  </NavLink>
+                )}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  };
+
   // Apply custom ordering from store
   const orderedTopLevelItems = useMemo(() => {
     const order = sidebarConfig.topLevelOrder;
@@ -494,6 +604,7 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="px-2">
+        {renderQuickAccessItems()}
         {renderTopLevelItems(orderedTopLevelItems)}
         {orderedGroups.map((group) => renderMenuGroup(group, `group-${group.id}`))}
       </SidebarContent>
