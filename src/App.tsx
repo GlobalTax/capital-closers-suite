@@ -62,6 +62,7 @@ const Index = lazy(() => import("./pages/Index"));
 const TaskAIQA = lazy(() => import("./pages/admin/TaskAIQA"));
 const PlantillasEmail = lazy(() => import("./pages/PlantillasEmail"));
 const EmailQueueMonitor = lazy(() => import("./pages/EmailQueueMonitor"));
+const DataRoomAccess = lazy(() => import("./pages/DataRoomAccess"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -124,6 +125,9 @@ function AppContent() {
           
           {/* Public share link viewer */}
           <Route path="/p/:token" element={<PublicViewer />} />
+          
+          {/* Public Data Room access */}
+          <Route path="/data-room/:trackingId" element={<DataRoomAccess />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

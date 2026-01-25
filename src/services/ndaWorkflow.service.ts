@@ -20,12 +20,17 @@ export interface NDARecipient {
   nda_status: NDAStatus;
   nda_sent_at: string | null;
   nda_signed_at: string | null;
+  nda_signed_by: string | null;
   nda_language: "ES" | "EN" | null;
   nda_document_id: string | null;
   nda_sent_by: string | null;
   cim_access_granted: boolean;
   cim_access_granted_at: string | null;
   cim_access_granted_by: string | null;
+  cim_access_revoked_at: string | null;
+  cim_access_revoked_by: string | null;
+  cim_access_revoke_reason: string | null;
+  tracking_id: string | null;
 }
 
 export interface NDATrackingEvent {
@@ -217,10 +222,11 @@ export async function grantCIMAccess(
 }
 
 /**
- * Revoke CIM access
+ * Revoke CIM access with reason
  */
 export async function revokeCIMAccess(
-  recipientId: string
+  recipientId: string,
+  reason?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -231,6 +237,9 @@ export async function revokeCIMAccess(
         cim_access_granted: false,
         cim_access_granted_at: null,
         cim_access_granted_by: null,
+        cim_access_revoked_at: new Date().toISOString(),
+        cim_access_revoked_by: user?.id,
+        cim_access_revoke_reason: reason || null,
       })
       .eq("id", recipientId);
 
@@ -248,6 +257,8 @@ export async function revokeCIMAccess(
         performed_by: user?.id,
         metadata: {
           action: "revoke_cim_access",
+          reason: reason || null,
+          revoked_at: new Date().toISOString(),
         },
       });
 
@@ -302,5 +313,30 @@ export function calculateNDAStats(recipients: NDARecipient[]): NDAStats {
  * Check if recipient can access CIM
  */
 export function canAccessCIM(recipient: NDARecipient): boolean {
+  // Check if revoked
+  if (recipient.cim_access_revoked_at) return false;
+  // Check if signed or manually granted
   return recipient.nda_status === "signed" || recipient.cim_access_granted === true;
+}
+
+/**
+ * Generate Data Room URL for a recipient
+ */
+export function getDataRoomUrl(trackingId: string): string {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/data-room/${trackingId}`;
+}
+
+/**
+ * Copy Data Room link to clipboard
+ */
+export async function copyDataRoomLink(trackingId: string): Promise<boolean> {
+  try {
+    const url = getDataRoomUrl(trackingId);
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch (error) {
+    console.error("[NDAWorkflow] Failed to copy link:", error);
+    return false;
+  }
 }

@@ -102,3 +102,6 @@ verify_jwt = true
 
 [functions.send-nda-email]
 verify_jwt = true
+
+[functions.access-cim-document]
+verify_jwt = false

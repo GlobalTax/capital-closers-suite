@@ -31,10 +31,13 @@ import {
   Lock,
   FileText,
   History,
-  RefreshCw
+  RefreshCw,
+  Link,
+  ExternalLink
 } from "lucide-react";
 import type { NDARecipient } from "@/services/ndaWorkflow.service";
-import { isEligibleForNDA, canAccessCIM } from "@/services/ndaWorkflow.service";
+import { isEligibleForNDA, canAccessCIM, copyDataRoomLink, getDataRoomUrl } from "@/services/ndaWorkflow.service";
+import { toast } from "sonner";
 
 interface NDAActionsDropdownProps {
   recipient: NDARecipient;
@@ -164,6 +167,30 @@ export function NDAActionsDropdown({
           )}
 
           <DropdownMenuSeparator />
+
+          {/* Data Room link actions */}
+          {hasCIMAccess && recipient.tracking_id && (
+            <>
+              <DropdownMenuItem onClick={async () => {
+                const success = await copyDataRoomLink(recipient.tracking_id!);
+                if (success) {
+                  toast.success("Link copiado al portapapeles");
+                } else {
+                  toast.error("Error al copiar el link");
+                }
+              }}>
+                <Link className="mr-2 h-4 w-4" />
+                Copiar link Data Room
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                window.open(getDataRoomUrl(recipient.tracking_id!), "_blank");
+              }}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Abrir Data Room
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
 
           {/* View history */}
           <DropdownMenuItem onClick={onViewHistory}>
