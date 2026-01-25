@@ -1,4 +1,4 @@
-import type { ElementType } from "react";
+import { useState, type ElementType, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -66,8 +66,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAppStore } from "@/stores/useAppStore";
+import { SidebarConfigDialog } from "./SidebarConfigDialog";
 
 interface MenuItem {
+  id: string;
   title: string;
   url: string;
   icon: ElementType;
@@ -75,6 +78,7 @@ interface MenuItem {
 }
 
 interface MenuGroup {
+  id: string;
   label: string;
   icon: ElementType;
   items: MenuItem[];
@@ -83,85 +87,91 @@ interface MenuGroup {
 
 // Items de nivel superior - siempre visibles
 const topLevelItems: MenuItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Tareas", url: "/tareas", icon: CheckSquare },
-  { title: "Mis Horas", url: "/mis-horas", icon: Clock },
-  { title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
+  { id: "dashboard", title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { id: "tareas", title: "Tareas", url: "/tareas", icon: CheckSquare },
+  { id: "mis-horas", title: "Mis Horas", url: "/mis-horas", icon: Clock },
+  { id: "gestion-leads", title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
 ];
 
 const menuGroups: MenuGroup[] = [
   {
+    id: "mandatos",
     label: "Mandatos M&A",
     icon: Handshake,
     defaultOpen: true,
     items: [
-      { title: "Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
-      { title: "Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
-      { title: "Search Funds", url: "/search-funds", icon: Target },
+      { id: "compra", title: "Compra", url: "/mandatos?tipo=compra", icon: ShoppingCart },
+      { id: "venta", title: "Venta", url: "/mandatos?tipo=venta", icon: TrendingUp },
+      { id: "search-funds", title: "Search Funds", url: "/search-funds", icon: Target },
     ],
   },
   {
+    id: "servicios",
     label: "Servicios",
     icon: Briefcase,
     defaultOpen: true,
     items: [
-      { title: "Due Diligence", url: "/servicios?tipo=due_diligence", icon: Search },
-      { title: "SPA / Legal", url: "/servicios?tipo=spa_legal", icon: Scale },
-      { title: "Valoraciones", url: "/servicios?tipo=valoracion", icon: Calculator },
-      { title: "Asesoría", url: "/servicios?tipo=asesoria", icon: Briefcase },
+      { id: "due-diligence", title: "Due Diligence", url: "/servicios?tipo=due_diligence", icon: Search },
+      { id: "spa-legal", title: "SPA / Legal", url: "/servicios?tipo=spa_legal", icon: Scale },
+      { id: "valoraciones", title: "Valoraciones", url: "/servicios?tipo=valoracion", icon: Calculator },
+      { id: "asesoria", title: "Asesoría", url: "/servicios?tipo=asesoria", icon: Briefcase },
     ],
   },
   {
+    id: "gestion",
     label: "Gestión",
     icon: ClipboardList,
     defaultOpen: false,
     items: [
-      { title: "Calendario", url: "/calendario", icon: CalendarDays },
-      { title: "Contactos", url: "/contactos", icon: Users },
-      { title: "Empresas", url: "/empresas", icon: Building2 },
-      { title: "Documentos", url: "/documentos", icon: FolderOpen },
-      { title: "Generador Docs", url: "/gestor-documentos", icon: FileText },
-      { title: "Presentaciones", url: "/presentaciones", icon: Presentation },
-      { title: "Reportes", url: "/reportes", icon: BarChart3 },
-      { title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
+      { id: "calendario", title: "Calendario", url: "/calendario", icon: CalendarDays },
+      { id: "contactos", title: "Contactos", url: "/contactos", icon: Users },
+      { id: "empresas", title: "Empresas", url: "/empresas", icon: Building2 },
+      { id: "documentos", title: "Documentos", url: "/documentos", icon: FolderOpen },
+      { id: "generador-docs", title: "Generador Docs", url: "/gestor-documentos", icon: FileText },
+      { id: "presentaciones", title: "Presentaciones", url: "/presentaciones", icon: Presentation },
+      { id: "reportes", title: "Reportes", url: "/reportes", icon: BarChart3 },
+      { id: "dashboard-tv", title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
     ],
   },
   {
+    id: "plataformas",
     label: "Plataformas",
     icon: ExternalLink,
     defaultOpen: false,
     items: [
-      { title: "AdminWeb", url: "https://capittal.es/admin/login", icon: ExternalLink, external: true },
+      { id: "adminweb", title: "AdminWeb", url: "https://capittal.es/admin/login", icon: ExternalLink, external: true },
     ],
   },
 ];
 
 const adminDashboardGroup: MenuGroup = {
+  id: "admin-dashboard",
   label: "Dashboard",
   icon: LayoutDashboard,
   defaultOpen: false,
   items: [
-    { title: "Configurar TV", url: "/dashboard-tv/configurar", icon: Settings },
-    { title: "Carga Equipo", url: "/team-workload", icon: Users },
+    { id: "configurar-tv", title: "Configurar TV", url: "/dashboard-tv/configurar", icon: Settings },
+    { id: "carga-equipo", title: "Carga Equipo", url: "/team-workload", icon: Users },
   ],
 };
 
 const superAdminGroup: MenuGroup = {
+  id: "super-admin",
   label: "Super Admin",
   icon: ShieldCheck,
   defaultOpen: false,
   items: [
-    { title: "Sync Center", url: "/sync-center", icon: RefreshCw },
-    { title: "Usuarios", url: "/usuarios", icon: UserCog },
-    { title: "Auditoría IA", url: "/admin/task-ai-qa", icon: Sparkles },
-    { title: "Outbound Apollo", url: "/outbound", icon: Search },
-    { title: "Monitor Empresas", url: "/admin/empresas-monitor", icon: Activity },
-    { title: "Control Syncs", url: "/admin/sync-control", icon: RefreshCw },
-    { title: "Sync Valoraciones", url: "/sync-valuations", icon: RefreshCw },
-    { title: "Integración Brevo", url: "/integraciones/brevo", icon: Link2 },
-    { title: "Importar Datos", url: "/importar-datos", icon: Upload },
-    { title: "Horas Equipo", url: "/horas-equipo", icon: Users },
-    { title: "Audit Logs", url: "/audit-logs", icon: Shield },
+    { id: "sync-center", title: "Sync Center", url: "/sync-center", icon: RefreshCw },
+    { id: "usuarios", title: "Usuarios", url: "/usuarios", icon: UserCog },
+    { id: "auditoria-ia", title: "Auditoría IA", url: "/admin/task-ai-qa", icon: Sparkles },
+    { id: "outbound-apollo", title: "Outbound Apollo", url: "/outbound", icon: Search },
+    { id: "monitor-empresas", title: "Monitor Empresas", url: "/admin/empresas-monitor", icon: Activity },
+    { id: "control-syncs", title: "Control Syncs", url: "/admin/sync-control", icon: RefreshCw },
+    { id: "sync-valoraciones", title: "Sync Valoraciones", url: "/sync-valuations", icon: RefreshCw },
+    { id: "integracion-brevo", title: "Integración Brevo", url: "/integraciones/brevo", icon: Link2 },
+    { id: "importar-datos", title: "Importar Datos", url: "/importar-datos", icon: Upload },
+    { id: "horas-equipo", title: "Horas Equipo", url: "/horas-equipo", icon: Users },
+    { id: "audit-logs", title: "Audit Logs", url: "/audit-logs", icon: Shield },
   ],
 };
 
@@ -171,6 +181,8 @@ export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { sidebarConfig } = useAppStore();
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
   const getInitials = (name: string | null) => {
     if (!name) return 'U';
@@ -329,13 +341,13 @@ export function AppSidebar() {
   };
 
   // Render top level items (Dashboard, Tareas, Mis Horas)
-  const renderTopLevelItems = () => {
+  const renderTopLevelItems = (items: MenuItem[]) => {
     if (isCollapsed) {
       return (
         <SidebarGroup className="p-0 px-2 pb-2 border-b border-sidebar-border mb-2">
           <SidebarMenu>
-            {topLevelItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
+            {items.map((item) => (
+              <SidebarMenuItem key={item.id}>
                 <SidebarMenuButton asChild tooltip={item.title}>
                   <NavLink
                     to={item.url}
@@ -359,8 +371,8 @@ export function AppSidebar() {
     return (
       <SidebarGroup className="p-0 px-2 pb-2 border-b border-sidebar-border mb-2">
         <SidebarMenu>
-          {topLevelItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.id}>
               <SidebarMenuButton asChild>
                 <NavLink
                   to={item.url}
@@ -383,36 +395,99 @@ export function AppSidebar() {
   };
 
   // Build the list of groups to render based on user role
-  const groupsToRender = [...menuGroups];
-  
-  if (adminUser?.role === 'super_admin' || adminUser?.role === 'admin') {
-    groupsToRender.push(adminDashboardGroup);
-  }
-  
-  if (adminUser?.role === 'super_admin') {
-    groupsToRender.push(superAdminGroup);
-  }
+  const allGroups = useMemo(() => {
+    const groups = [...menuGroups];
+    if (adminUser?.role === 'super_admin' || adminUser?.role === 'admin') {
+      groups.push(adminDashboardGroup);
+    }
+    if (adminUser?.role === 'super_admin') {
+      groups.push(superAdminGroup);
+    }
+    return groups;
+  }, [adminUser?.role]);
+
+  // Apply custom ordering from store
+  const orderedTopLevelItems = useMemo(() => {
+    const order = sidebarConfig.topLevelOrder;
+    return [...topLevelItems].sort((a, b) => {
+      const indexA = order.indexOf(a.id);
+      const indexB = order.indexOf(b.id);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [sidebarConfig.topLevelOrder]);
+
+  const orderedGroups = useMemo(() => {
+    const order = sidebarConfig.groupOrder;
+    return [...allGroups].sort((a, b) => {
+      const indexA = order.indexOf(a.id);
+      const indexB = order.indexOf(b.id);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+  }, [sidebarConfig.groupOrder, allGroups]);
+
+  // Prepare items for config dialog
+  const topLevelForConfig = topLevelItems.map(item => ({
+    id: item.id,
+    title: item.title,
+    icon: <item.icon className="h-4 w-4" />,
+  }));
+
+  const groupsForConfig = allGroups.map(group => ({
+    id: group.id,
+    label: group.label,
+    icon: <group.icon className="h-4 w-4" />,
+  }));
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className={cn("p-4", isCollapsed && "p-2")}>
-        <div className={cn("flex items-center gap-2", isCollapsed && "justify-center")}>
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-medium text-lg">C</span>
+        <div className={cn("flex items-center justify-between", isCollapsed && "justify-center")}>
+          <div className={cn("flex items-center gap-2")}>
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <span className="text-primary-foreground font-medium text-lg">C</span>
+            </div>
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-sidebar-foreground font-medium text-lg">Capittal CRM</h1>
+                <p className="text-sidebar-foreground/60 text-xs">Cierre</p>
+              </div>
+            )}
           </div>
           {!isCollapsed && (
-            <div>
-              <h1 className="text-sidebar-foreground font-medium text-lg">Capittal CRM</h1>
-              <p className="text-sidebar-foreground/60 text-xs">Cierre</p>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  onClick={() => setConfigDialogOpen(true)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Configurar menú</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </SidebarHeader>
       
       <SidebarContent className="px-2">
-        {renderTopLevelItems()}
-        {groupsToRender.map((group, index) => renderMenuGroup(group, `group-${index}`))}
+        {renderTopLevelItems(orderedTopLevelItems)}
+        {orderedGroups.map((group) => renderMenuGroup(group, `group-${group.id}`))}
       </SidebarContent>
+
+      <SidebarConfigDialog
+        open={configDialogOpen}
+        onOpenChange={setConfigDialogOpen}
+        topLevelItems={topLevelForConfig}
+        menuGroups={groupsForConfig}
+      />
 
       <SidebarFooter className={cn("p-4 border-t border-sidebar-border", isCollapsed && "p-2")}>
         {isCollapsed ? (
