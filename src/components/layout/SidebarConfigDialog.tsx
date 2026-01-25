@@ -98,6 +98,11 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
     transition,
   };
 
+  // Stop propagation to prevent parent group context from capturing the drag
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -106,11 +111,13 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
         "flex items-center gap-2 p-2 bg-muted/50 border rounded-md ml-4",
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary"
       )}
+      onPointerDown={handlePointerDown}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+        onPointerDown={handlePointerDown}
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
       >
         <GripVertical className="h-3 w-3" />
       </button>
@@ -131,14 +138,14 @@ interface SortableGroupWithItemsProps {
   group: MenuGroupWithItems;
   orderedItems: Array<{ id: string; title: string; icon: React.ReactNode }>;
   onItemDragEnd: (event: DragEndEvent) => void;
-  sensors: ReturnType<typeof useSensors>;
+  subItemSensors: ReturnType<typeof useSensors>;
 }
 
 function SortableGroupWithItems({
   group,
   orderedItems,
   onItemDragEnd,
-  sensors,
+  subItemSensors,
 }: SortableGroupWithItemsProps) {
   const {
     attributes,
@@ -169,7 +176,7 @@ function SortableGroupWithItems({
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
           >
             <GripVertical className="h-4 w-4" />
           </button>
@@ -188,7 +195,8 @@ function SortableGroupWithItems({
         <CollapsibleContent>
           <div className="px-3 pb-3">
             <DndContext
-              sensors={sensors}
+              id={`group-items-${group.id}`}
+              sensors={subItemSensors}
               collisionDetection={closestCenter}
               onDragEnd={onItemDragEnd}
             >
@@ -279,6 +287,18 @@ export function SidebarConfigDialog({
 
   const sensors = useSensors(
     useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Separate sensors for sub-items with activation constraint to prevent conflicts
+  const subItemSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Requires 5px movement to activate
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -404,7 +424,7 @@ export function SidebarConfigDialog({
                       group={group}
                       orderedItems={orderedGroupItems[group.id] || group.items}
                       onItemDragEnd={handleGroupItemDragEnd(group.id)}
-                      sensors={sensors}
+                      subItemSensors={subItemSensors}
                     />
                   ))}
                 </div>
