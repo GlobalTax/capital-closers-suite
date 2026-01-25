@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Download, X, FileText, Image as ImageIcon, FileSpreadsheet, Presentation, File, Loader2, ExternalLink } from "lucide-react";
+import { Download, FileText, Image as ImageIcon, FileSpreadsheet, Presentation, File, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +12,8 @@ import { formatFileSize, isPdf, isImage, isOfficeDocument, getPreviewType } from
 import { getSignedUrl } from "@/services/uploads";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { documentAccessLogService } from "@/services/documentAccessLog.service";
+import { handleSignedUrlError, parseEdgeFunctionError } from "@/lib/signedUrlErrors";
 
 export interface DocumentInfo {
   id?: string;
@@ -95,8 +97,16 @@ export function UnifiedDocumentViewer({
         }
         
         setInternalUrl(url);
-      } catch (error) {
+        
+        // Log preview access when URL loads successfully
+        if (url && document.id) {
+          documentAccessLogService.logAccess(document.id, document.file_name, 'preview')
+            .catch(err => console.error('[UnifiedDocumentViewer] Error logging access:', err));
+        }
+      } catch (error: any) {
         console.error("[UnifiedDocumentViewer] Error getting document URL:", error);
+        handleSignedUrlError(parseEdgeFunctionError(error), 'UnifiedDocumentViewer');
+        setInternalUrl(null);
       } finally {
         setLoading(false);
       }
@@ -235,9 +245,15 @@ export function UnifiedDocumentViewer({
     }
   };
 
+  const handleOpenInNewTab = () => {
+    if (previewUrl) {
+      window.open(previewUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 pr-8">
             {getDocumentIcon()}
@@ -264,6 +280,12 @@ export function UnifiedDocumentViewer({
             )}
           </div>
           <div className="flex gap-2">
+            {previewUrl && (
+              <Button variant="outline" onClick={handleOpenInNewTab}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Abrir en pestaña
+              </Button>
+            )}
             {onDownload && (
               <Button variant="outline" onClick={onDownload}>
                 <Download className="w-4 h-4 mr-2" />
