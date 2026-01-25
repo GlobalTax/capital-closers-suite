@@ -69,13 +69,13 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
 
     // Aplicar filtros avanzados
     if (filters.buyerTypes.length > 0) {
-      result = result.filter(t => t.buyer_type && filters.buyerTypes.includes(t.buyer_type));
+      result = result.filter(t => t.buyer_type && (filters.buyerTypes as string[]).includes(t.buyer_type));
     }
     if (filters.funnelStages.length > 0) {
-      result = result.filter(t => filters.funnelStages.includes(t.funnel_stage || 'long_list'));
+      result = result.filter(t => (filters.funnelStages as string[]).includes(t.funnel_stage || 'long_list'));
     }
     if (filters.pipelineStages.length > 0) {
-      result = result.filter(t => filters.pipelineStages.includes(t.pipeline_stage_target || 'identificada'));
+      result = result.filter(t => (filters.pipelineStages as string[]).includes(t.pipeline_stage_target || 'identificada'));
     }
     if (filters.tags.length > 0) {
       result = result.filter(t => filters.tags.some(tag => (t.tags || []).includes(tag)));
