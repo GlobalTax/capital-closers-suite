@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, Target, ListTodo, Clock, Receipt, FilePlus } from "lucide-react";
+import { FileText, Target, ListTodo, Clock, Receipt, FilePlus, Megaphone } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
@@ -22,6 +22,7 @@ import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
 import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGeneratorDrawer";
+import { TeaserManager } from "@/features/mandatos/components/TeaserManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -131,6 +132,12 @@ export default function MandatoDetalle() {
             <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
             <span className="hidden sm:inline">Docs</span> ({documentos.length})
           </TabsTrigger>
+          {!esServicio && (
+            <TabsTrigger value="marketing" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+              <Megaphone className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Marketing</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="horas" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
             <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
             <span className="hidden sm:inline">Horas</span>
@@ -206,6 +213,16 @@ export default function MandatoDetalle() {
             onRefresh={refetchDocumentos}
           />
         </TabsContent>
+
+        {!esServicio && (
+          <TabsContent value="marketing">
+            <TeaserManager 
+              mandatoId={id!} 
+              mandatoNombre={mandato.empresa_principal?.nombre || mandato.codigo}
+              onRefresh={refetchDocumentos}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="horas" className="space-y-6">
           <div className="flex justify-between items-center">

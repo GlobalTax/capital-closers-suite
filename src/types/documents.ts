@@ -56,6 +56,20 @@ export interface DocumentTemplate {
 
 export type IdiomaTeaser = 'ES' | 'EN';
 
+export type TeaserStatus = 'draft' | 'approved' | 'published';
+
+export const TEASER_STATUS_LABELS: Record<TeaserStatus, string> = {
+  draft: 'Borrador',
+  approved: 'Aprobado',
+  published: 'Publicado',
+};
+
+export const TEASER_STATUS_COLORS: Record<TeaserStatus, { bg: string; text: string; border: string }> = {
+  draft: { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-muted' },
+  approved: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
+  published: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' },
+};
+
 export interface DocumentWithVersion {
   id: string;
   mandato_id?: string;
@@ -73,6 +87,11 @@ export interface DocumentWithVersion {
   idioma?: IdiomaTeaser | null;
   created_at: string;
   updated_at: string;
+  // Workflow fields
+  status?: TeaserStatus;
+  approved_by?: string;
+  approved_at?: string;
+  published_at?: string;
   // Joined
   folder_name?: string;
   folder_type?: FolderType;
