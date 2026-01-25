@@ -934,12 +934,100 @@ export default function Mandatos() {
       key: "empresas",
       label: "Targets",
       sortable: false,
-      render: (value: any[]) => (
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>{value?.length || 0}</span>
-        </div>
-      ),
+      render: (value: any[], row: Mandato) => {
+        // Para mandatos de compra, mostrar detalle de targets
+        if (row.tipo === 'compra') {
+          const targets = value?.filter((e: any) => e.rol === 'target') || [];
+          
+          if (targets.length === 0) {
+            return <span className="text-muted-foreground text-sm italic">Sin targets</span>;
+          }
+
+          const visibleTargets = targets.slice(0, 3);
+          const remaining = targets.length - 3;
+
+          const getPipelineColor = (stage: string | null) => {
+            switch (stage) {
+              case 'oferta':
+              case 'cierre':
+                return 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400';
+              case 'due_diligence':
+              case 'info_recibida':
+                return 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400';
+              case 'nda_firmado':
+              case 'contactada':
+                return 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400';
+              default:
+                return 'border-muted-foreground/30 bg-muted/30 text-muted-foreground';
+            }
+          };
+
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-wrap gap-1 max-w-[220px] cursor-default">
+                    {visibleTargets.map((t: any) => (
+                      <Badge 
+                        key={t.id} 
+                        variant="outline" 
+                        className={cn(
+                          "text-[10px] px-1.5 py-0 h-5 truncate max-w-[70px] font-normal",
+                          getPipelineColor(t.pipeline_stage_target)
+                        )}
+                      >
+                        {t.empresa?.nombre?.substring(0, 10) || "—"}
+                      </Badge>
+                    ))}
+                    {remaining > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                        +{remaining}
+                      </Badge>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[320px] p-3">
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <Target className="w-4 h-4 text-orange-500" />
+                      {targets.length} targets en cartera
+                    </p>
+                    <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                      {targets.map((t: any) => (
+                        <div key={t.id} className="flex items-center gap-2 text-xs py-0.5">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-[9px] px-1 py-0 h-4 w-[52px] justify-center font-normal",
+                              getPipelineColor(t.pipeline_stage_target)
+                            )}
+                          >
+                            {t.pipeline_stage_target?.replace('_', ' ').substring(0, 8) || 'IDENT'}
+                          </Badge>
+                          <span className="truncate">{t.empresa?.nombre}</span>
+                          {t.empresa?.sector && (
+                            <span className="text-muted-foreground text-[10px] ml-auto">
+                              {t.empresa.sector.substring(0, 12)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+
+        // Para venta, mantener comportamiento actual
+        return (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>{value?.length || 0}</span>
+          </div>
+        );
+      },
     },
     contactos: {
       key: "contactos",
