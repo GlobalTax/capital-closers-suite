@@ -3,6 +3,13 @@ project_id = "fwhqtzkkvnjkazhaficj"
 [functions.get-signed-valuation-url]
 verify_jwt = true
 
+[functions.track-email-open]
+verify_jwt = false
+
+[functions.track-email-click]
+verify_jwt = false
+verify_jwt = true
+
 [functions.sync-from-brevo]
 verify_jwt = true
 
