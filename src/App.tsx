@@ -19,6 +19,7 @@ import { queryClient } from "@/lib/query-client";
 const Login = lazy(() => import("./pages/auth/Login"));
 const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
 const Mandatos = lazy(() => import("./pages/Mandatos"));
+const Ayuda = lazy(() => import("./pages/Ayuda"));
 const Servicios = lazy(() => import("./pages/Servicios"));
 const MandatoDetalle = lazy(() => import("./pages/MandatoDetalle"));
 const Contactos = lazy(() => import("./pages/Contactos"));
@@ -117,6 +118,10 @@ function AppContent() {
             <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
             <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
+            
+            {/* Help Center */}
+            <Route path="/ayuda" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
+            <Route path="/ayuda/:slug" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />

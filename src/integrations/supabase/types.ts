@@ -4803,6 +4803,167 @@ export type Database = {
           },
         ]
       }
+      corporate_buyers: {
+        Row: {
+          buyer_type: string | null
+          cities: string[] | null
+          country_base: string | null
+          created_at: string | null
+          deal_size_max: number | null
+          deal_size_min: number | null
+          description: string | null
+          ebitda_max: number | null
+          ebitda_min: number | null
+          geography_focus: string[] | null
+          id: string
+          investment_thesis: string | null
+          is_active: boolean | null
+          is_deleted: boolean | null
+          name: string
+          notes_internal: string | null
+          revenue_max: number | null
+          revenue_min: number | null
+          search_keywords: string[] | null
+          sector_exclusions: string[] | null
+          sector_focus: string[] | null
+          source_url: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          buyer_type?: string | null
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string | null
+          deal_size_max?: number | null
+          deal_size_min?: number | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_thesis?: string | null
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          name: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          search_keywords?: string[] | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_url?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          buyer_type?: string | null
+          cities?: string[] | null
+          country_base?: string | null
+          created_at?: string | null
+          deal_size_max?: number | null
+          deal_size_min?: number | null
+          description?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          geography_focus?: string[] | null
+          id?: string
+          investment_thesis?: string | null
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          name?: string
+          notes_internal?: string | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          search_keywords?: string[] | null
+          sector_exclusions?: string[] | null
+          sector_focus?: string[] | null
+          source_url?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      corporate_contacts: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_deleted: boolean | null
+          is_primary_contact: boolean | null
+          linkedin_url: string | null
+          notes: string | null
+          phone: string | null
+          role: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_deleted?: boolean | null
+          is_primary_contact?: boolean | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_deleted?: boolean | null
+          is_primary_contact?: boolean | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_contacts_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corporate_favorites: {
+        Row: {
+          added_by: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
       cr_apollo_imports: {
         Row: {
           completed_at: string | null
@@ -7921,6 +8082,56 @@ export type Database = {
             columns: ["lead_form"]
             isOneToOne: false
             referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      help_sections: {
+        Row: {
+          content_md: string
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_published: boolean | null
+          order_index: number
+          parent_id: string | null
+          slug: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_md: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean | null
+          order_index?: number
+          parent_id?: string | null
+          slug: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_md?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean | null
+          order_index?: number
+          parent_id?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_sections_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "help_sections"
             referencedColumns: ["id"]
           },
         ]
