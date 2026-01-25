@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,11 +6,14 @@ import { Building2, Plus, Kanban, List } from "lucide-react";
 import { CriteriosInversionCard } from "@/components/mandatos/buyside/CriteriosInversionCard";
 import { TargetFunnel } from "@/components/mandatos/buyside/TargetFunnel";
 import { TargetPipelineKanban } from "@/components/mandatos/buyside/TargetPipelineKanban";
+import { TargetListView } from "@/components/mandatos/buyside/TargetListView";
+import { TargetFiltersPanel, defaultFilters, type TargetFilters } from "@/components/mandatos/buyside/TargetFiltersPanel";
 import { TargetDetailDrawer } from "@/components/mandatos/buyside/TargetDetailDrawer";
 import { useTargetPipeline } from "@/hooks/useTargetPipeline";
+import { useTargetTags } from "@/hooks/useTargetTags";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { AsociarEmpresaDialog } from "@/components/empresas/AsociarEmpresaDialog";
-import type { Mandato, TargetFunnelStage, MandatoEmpresaBuySide } from "@/types";
+import type { Mandato, TargetFunnelStage, MandatoEmpresaBuySide, BuyerType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface TargetsTabBuySideProps {
@@ -25,6 +28,9 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedTarget, setSelectedTarget] = useState<MandatoEmpresaBuySide | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [filters, setFilters] = useState<TargetFilters>(defaultFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const {
     targets,
@@ -40,6 +46,8 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
     refetch,
   } = useTargetPipeline(mandato.id);
 
+  const { distinctTags, addTag, removeTag, updateBuyerType } = useTargetTags(mandato.id);
+
   const handleRefresh = () => {
     refetch();
     onRefresh();
@@ -50,10 +58,52 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
     setDetailDrawerOpen(true);
   };
 
-  // Filtrar por funnel stage si está seleccionado
-  const filteredTargets = selectedFunnelStage
-    ? targets.filter(t => (t.funnel_stage || 'long_list') === selectedFunnelStage)
-    : targets;
+  // Filtrar targets
+  const filteredTargets = useMemo(() => {
+    let result = targets;
+
+    // Filtrar por funnel stage seleccionado
+    if (selectedFunnelStage) {
+      result = result.filter(t => (t.funnel_stage || 'long_list') === selectedFunnelStage);
+    }
+
+    // Aplicar filtros avanzados
+    if (filters.buyerTypes.length > 0) {
+      result = result.filter(t => t.buyer_type && filters.buyerTypes.includes(t.buyer_type));
+    }
+    if (filters.funnelStages.length > 0) {
+      result = result.filter(t => filters.funnelStages.includes(t.funnel_stage || 'long_list'));
+    }
+    if (filters.pipelineStages.length > 0) {
+      result = result.filter(t => filters.pipelineStages.includes(t.pipeline_stage_target || 'identificada'));
+    }
+    if (filters.tags.length > 0) {
+      result = result.filter(t => filters.tags.some(tag => (t.tags || []).includes(tag)));
+    }
+    if (filters.scoreRange[0] > 0 || filters.scoreRange[1] < 100) {
+      result = result.filter(t => {
+        const score = t.scoring?.score_total || 0;
+        return score >= filters.scoreRange[0] && score <= filters.scoreRange[1];
+      });
+    }
+    if (filters.matchScoreRange[0] > 0 || filters.matchScoreRange[1] < 100) {
+      result = result.filter(t => {
+        const score = t.match_score || 0;
+        return score >= filters.matchScoreRange[0] && score <= filters.matchScoreRange[1];
+      });
+    }
+    if (filters.hideNoContactar) {
+      result = result.filter(t => !t.no_contactar);
+    }
+    if (filters.hideConflictos) {
+      result = result.filter(t => !t.tiene_conflicto);
+    }
+    if (filters.onlyConflictos) {
+      result = result.filter(t => t.tiene_conflicto);
+    }
+
+    return result;
+  }, [targets, selectedFunnelStage, filters]);
 
   if (isLoading) {
     return (
@@ -110,6 +160,13 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
         </div>
 
         <div className="flex items-center gap-2">
+          <TargetFiltersPanel
+            filters={filters}
+            onChange={setFilters}
+            distinctTags={distinctTags}
+            isOpen={filtersOpen}
+            onToggle={() => setFiltersOpen(!filtersOpen)}
+          />
           <Button variant="outline" size="sm" onClick={() => setAsociarOpen(true)}>
             <Building2 className="h-4 w-4 mr-1" />
             Buscar
@@ -130,11 +187,16 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
           isMoving={isMoving}
         />
       ) : (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Vista de lista - Próximamente
-          </CardContent>
-        </Card>
+        <TargetListView
+          targets={filteredTargets as MandatoEmpresaBuySide[]}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onTargetClick={handleTargetClick}
+          distinctTags={distinctTags}
+          onAddTag={(targetId, tag) => addTag.mutate({ targetId, tag })}
+          onRemoveTag={(targetId, tag) => removeTag.mutate({ targetId, tag })}
+          onBuyerTypeChange={(targetId, type) => updateBuyerType.mutate({ targetId, buyerType: type })}
+        />
       )}
 
       {/* Empty state */}

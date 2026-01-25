@@ -24,11 +24,14 @@ import {
   Target,
   ArrowRight,
   Trash2,
+  Ban,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TargetScoringPanel } from "./TargetScoringPanel";
 import { TargetContactosList } from "./TargetContactosList";
 import { TargetOfertasList } from "./TargetOfertasList";
+import { TargetClassificationSection } from "./TargetClassificationSection";
 import { InteraccionTimeline } from "@/components/targets/InteraccionTimeline";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
@@ -36,14 +39,16 @@ import { AsociarContactoEmpresaDialog } from "@/components/contactos/AsociarCont
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { useQuery } from "@tanstack/react-query";
 import { getContactosByEmpresa, fetchInteraccionesByEmpresa } from "@/services/interacciones";
+import { useTargetTags } from "@/hooks/useTargetTags";
 import type {
   MandatoEmpresaBuySide,
   TargetFunnelStage,
   TargetPipelineStage,
   TargetScoring,
   OfertaTipo,
+  BuyerType,
 } from "@/types";
-import { TARGET_FUNNEL_CONFIG, TARGET_PIPELINE_CONFIG } from "@/types";
+import { TARGET_FUNNEL_CONFIG, TARGET_PIPELINE_CONFIG, BUYER_TYPE_CONFIG } from "@/types";
 
 interface TargetDetailDrawerProps {
   open: boolean;
@@ -85,6 +90,18 @@ export function TargetDetailDrawer({
 
   const empresa = target?.empresa;
   const empresaId = empresa?.id;
+
+  // Target tags management
+  const {
+    distinctTags,
+    updateBuyerType,
+    updateGeografia,
+    addTag,
+    removeTag,
+    setNoContactar,
+    setConflicto,
+    updateNotasInternas,
+  } = useTargetTags(mandatoId);
 
   // Fetch contactos de la empresa
   const { data: contactos = [], refetch: refetchContactos } = useQuery({
@@ -201,6 +218,30 @@ export function TargetDetailDrawer({
                   Match: {matchScore}%
                 </Badge>
               )}
+              {target.buyer_type && (
+                <Badge
+                  variant="outline"
+                  className="text-xs"
+                  style={{
+                    borderColor: BUYER_TYPE_CONFIG[target.buyer_type].color,
+                    color: BUYER_TYPE_CONFIG[target.buyer_type].color,
+                  }}
+                >
+                  {BUYER_TYPE_CONFIG[target.buyer_type].label}
+                </Badge>
+              )}
+              {target.no_contactar && (
+                <Badge variant="destructive" className="text-xs gap-0.5">
+                  <Ban className="h-2.5 w-2.5" />
+                  No contactar
+                </Badge>
+              )}
+              {target.tiene_conflicto && (
+                <Badge variant="outline" className="text-xs gap-0.5 border-amber-500 text-amber-600">
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                  Conflicto
+                </Badge>
+              )}
             </div>
           </SheetHeader>
 
@@ -303,6 +344,21 @@ export function TargetDetailDrawer({
                     </Select>
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Clasificación y alertas */}
+                <TargetClassificationSection
+                  target={target}
+                  distinctTags={distinctTags}
+                  onBuyerTypeChange={(type) => updateBuyerType.mutate({ targetId: target.id, buyerType: type })}
+                  onGeografiaChange={(geo) => updateGeografia.mutate({ targetId: target.id, geografia: geo })}
+                  onAddTag={(tag) => addTag.mutate({ targetId: target.id, tag })}
+                  onRemoveTag={(tag) => removeTag.mutate({ targetId: target.id, tag })}
+                  onNoContactarChange={(value, motivo) => setNoContactar.mutate({ targetId: target.id, value, motivo })}
+                  onConflictoChange={(value, descripcion) => setConflicto.mutate({ targetId: target.id, value, descripcion })}
+                  onNotasInternasChange={(notas) => updateNotasInternas.mutate({ targetId: target.id, notas })}
+                />
 
                 <Separator />
 
