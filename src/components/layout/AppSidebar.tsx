@@ -40,6 +40,7 @@ import {
   Zap,
   Star,
   Mail,
+  HelpCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -639,6 +640,21 @@ export function AppSidebar() {
             
             <Tooltip>
               <TooltipTrigger asChild>
+                <NavLink to="/ayuda">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right">Ayuda</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <NavLink to="/perfil">
                   <Button
                     variant="ghost"
@@ -700,6 +716,17 @@ export function AppSidebar() {
                 </Badge>
               </div>
             </div>
+            
+            <NavLink to="/ayuda">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Ayuda
+              </Button>
+            </NavLink>
             
             <NavLink to="/perfil">
               <Button
