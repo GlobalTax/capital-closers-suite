@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import type { Interaccion } from "@/services/interacciones";
 import { AlertsSummaryWidget } from "@/components/dashboard/AlertsSummaryWidget";
+import { OnboardingWidget } from "@/components/dashboard/OnboardingWidget";
 import { useAlertsRealtime } from "@/hooks/useAlertsRealtime";
 import { DailyDigestCard } from "@/components/tasks/DailyDigestCard";
 import { TaskHealthAlerts } from "@/components/tasks/TaskHealthAlerts";
@@ -165,6 +166,9 @@ export default function Index() {
           Vista general de tu actividad y próximas acciones
         </p>
       </div>
+
+      {/* Onboarding Widget */}
+      <OnboardingWidget />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

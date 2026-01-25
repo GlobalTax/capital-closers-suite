@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,6 +41,12 @@ export default function Reportes() {
   const { data: topMandatosByCost, isLoading: costLoading } = useTopMandatosByCost(10);
   const { data: costMetrics } = useTotalCostMetrics();
   const [activeTab, setActiveTab] = useState("pipeline");
+  const { completeStep } = useOnboarding();
+
+  // Mark report view step as completed
+  useEffect(() => {
+    completeStep('view_reporte');
+  }, []);
 
   const handleExportPDF = async () => {
     const { default: html2canvas } = await import('html2canvas');
