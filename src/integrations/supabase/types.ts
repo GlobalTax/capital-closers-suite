@@ -15882,6 +15882,116 @@ export type Database = {
         }
         Relationships: []
       }
+      sidebar_config: {
+        Row: {
+          collapsed_by_default: boolean | null
+          id: string
+          show_search: boolean | null
+          show_version_switcher: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          collapsed_by_default?: boolean | null
+          id?: string
+          show_search?: boolean | null
+          show_version_switcher?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          collapsed_by_default?: boolean | null
+          id?: string
+          show_search?: boolean | null
+          show_version_switcher?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sidebar_items: {
+        Row: {
+          badge: string | null
+          created_at: string | null
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean | null
+          position: number
+          section_id: string | null
+          title: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          badge?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          position?: number
+          section_id?: string | null
+          title: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          badge?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          position?: number
+          section_id?: string | null
+          title?: string
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sidebar_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sidebar_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sidebar_sections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          emoji: string | null
+          id: string
+          is_active: boolean | null
+          is_collapsed_default: boolean | null
+          position: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_collapsed_default?: boolean | null
+          position?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_collapsed_default?: boolean | null
+          position?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sync_control: {
         Row: {
           created_at: string | null
