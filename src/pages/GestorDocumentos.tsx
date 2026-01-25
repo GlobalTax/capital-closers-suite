@@ -129,13 +129,34 @@ export default function GestorDocumentos() {
 
   const handleDownloadDocument = async (doc: GeneratedDocument) => {
     try {
-      const { data, error } = await supabase.storage
-        .from("mandato-documentos")
-        .download(doc.storage_path);
+      // Usar Edge Function con service_role para bypass RLS
+      const { data, error } = await supabase.functions.invoke('download-document', {
+        body: { filePath: doc.storage_path, bucket: 'mandato-documentos', expiresIn: 600 }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[GestorDocumentos] Edge function error:', error);
+        if (error.message?.includes('403') || error.message?.includes('Acceso denegado')) {
+          toast({
+            title: "Sin permisos",
+            description: "No tienes permisos para descargar este documento",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
-      const url = URL.createObjectURL(data);
+      if (!data?.signedUrl) {
+        throw new Error('No se pudo obtener URL firmada');
+      }
+
+      // Descargar usando la signed URL
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error('Error al descargar archivo');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = doc.file_name;
@@ -153,15 +174,30 @@ export default function GestorDocumentos() {
 
   const handleViewDocument = async (doc: GeneratedDocument) => {
     try {
-      // Usar .download() para evitar errores RLS con createSignedUrl
-      const { data: blob, error } = await supabase.storage
-        .from("mandato-documentos")
-        .download(doc.storage_path);
+      // Usar Edge Function con service_role para bypass RLS
+      const { data, error } = await supabase.functions.invoke('download-document', {
+        body: { filePath: doc.storage_path, bucket: 'mandato-documentos', expiresIn: 600 }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[GestorDocumentos] Edge function error:', error);
+        if (error.message?.includes('403') || error.message?.includes('Acceso denegado')) {
+          toast({
+            title: "Sin permisos",
+            description: "No tienes permisos para ver este documento",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
+      if (!data?.signedUrl) {
+        throw new Error('No se pudo obtener URL firmada');
+      }
+
+      // Abrir en nueva pestaña
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
       console.error("Error viewing document:", error);
       toast({
