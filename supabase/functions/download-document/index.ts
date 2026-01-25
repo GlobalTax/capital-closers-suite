@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     // Clamp expiresIn between 60 seconds and 7 days (604800s)
     const validExpiresIn = Math.min(Math.max(60, expiresIn), 604800)
 
-    console.log(`Generating signed URL for ${bucket}/${filePath} (expires in ${validExpiresIn}s)`)
+    console.log(`[SignedUrl] Generating signed URL for ${bucket}/${filePath} (expires in ${validExpiresIn}s)`)
 
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
       .storage
@@ -88,14 +88,24 @@ Deno.serve(async (req) => {
       .createSignedUrl(filePath, validExpiresIn)
 
     if (signedUrlError) {
-      console.error('Error generating signed URL:', signedUrlError)
+      console.error('[SignedUrl] Error generating signed URL:', signedUrlError)
+      
+      // Detectar 404 - archivo no existe
+      const errorMessage = signedUrlError.message?.toLowerCase() || ''
+      if (errorMessage.includes('not found') || errorMessage.includes('object not found') || errorMessage.includes('no existe')) {
+        return new Response(
+          JSON.stringify({ error: 'El archivo no existe', code: 'NOT_FOUND' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Error al generar URL firmada', details: signedUrlError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Signed URL generated successfully')
+    console.log('[SignedUrl] Signed URL generated successfully')
 
     return new Response(
       JSON.stringify({

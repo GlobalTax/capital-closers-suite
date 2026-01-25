@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { documentAccessLogService } from "@/services/documentAccessLog.service";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { DocumentGeneratorPanel } from "@/components/documentos/DocumentGeneratorPanel";
@@ -135,20 +136,27 @@ export default function GestorDocumentos() {
       });
 
       if (error) {
-        console.error('[GestorDocumentos] Edge function error:', error);
-        if (error.message?.includes('403') || error.message?.includes('Acceso denegado')) {
-          toast({
-            title: "Sin permisos",
-            description: "No tienes permisos para descargar este documento",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
+        console.error('[SignedUrl] Edge function error:', error);
+        const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+        handleSignedUrlError(parseEdgeFunctionError(error), 'GestorDocumentos');
+        return;
       }
 
       if (!data?.signedUrl) {
-        throw new Error('No se pudo obtener URL firmada');
+        console.error('[SignedUrl] No signedUrl in response');
+        toast({
+          title: "Error",
+          description: "Error al generar enlace de descarga",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Registrar acceso como download (async, no bloquea)
+      if (doc.id) {
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'download').catch(
+          err => console.error('[SignedUrl] Error logging download:', err)
+        );
       }
 
       // Descargar usando la signed URL
@@ -162,13 +170,18 @@ export default function GestorDocumentos() {
       a.download = doc.file_name;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading document:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo descargar el documento",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error?.status || error?.code) {
+        const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+        handleSignedUrlError(parseEdgeFunctionError(error), 'GestorDocumentos');
+      } else {
+        console.error('[SignedUrl] Download error:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo descargar el documento",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -180,31 +193,43 @@ export default function GestorDocumentos() {
       });
 
       if (error) {
-        console.error('[GestorDocumentos] Edge function error:', error);
-        if (error.message?.includes('403') || error.message?.includes('Acceso denegado')) {
-          toast({
-            title: "Sin permisos",
-            description: "No tienes permisos para ver este documento",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
+        console.error('[SignedUrl] Edge function error:', error);
+        const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+        handleSignedUrlError(parseEdgeFunctionError(error), 'GestorDocumentos');
+        return;
       }
 
       if (!data?.signedUrl) {
-        throw new Error('No se pudo obtener URL firmada');
+        console.error('[SignedUrl] No signedUrl in response');
+        toast({
+          title: "Error",
+          description: "Error al generar enlace de vista previa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Registrar acceso como preview (async, no bloquea)
+      if (doc.id) {
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(
+          err => console.error('[SignedUrl] Error logging access:', err)
+        );
       }
 
       // Abrir en nueva pestaña
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      console.error("Error viewing document:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo abrir el documento",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error?.status || error?.code) {
+        const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+        handleSignedUrlError(parseEdgeFunctionError(error), 'GestorDocumentos');
+      } else {
+        console.error('[SignedUrl] View error:', error);
+        toast({
+          title: "Error",
+          description: "Error al generar enlace de vista previa",
+          variant: "destructive",
+        });
+      }
     }
   };
 

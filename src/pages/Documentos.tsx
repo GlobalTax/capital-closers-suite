@@ -77,13 +77,16 @@ export default function Documentos() {
       const url = await getSignedUrl(doc.storage_path);
       if (url) {
         // Registrar acceso como preview (async, no bloquea)
-        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(console.error);
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(
+          err => console.error('[SignedUrl] Error logging access:', err)
+        );
         window.open(url, "_blank", "noopener,noreferrer");
       } else {
-        toast.error("No se pudo generar el enlace de vista previa");
+        toast.error("Error al generar enlace de vista previa");
       }
-    } catch (error) {
-      handleError(error, "Error al abrir vista previa");
+    } catch (error: any) {
+      const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+      handleSignedUrlError(parseEdgeFunctionError(error), 'Documentos');
     } finally {
       setOpeningPreviewId(null);
     }
