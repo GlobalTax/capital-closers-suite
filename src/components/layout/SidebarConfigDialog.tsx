@@ -110,7 +110,14 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
       <button
         {...attributes}
         {...listeners}
-        onPointerDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          e.nativeEvent.stopImmediatePropagation();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.nativeEvent.stopImmediatePropagation();
+        }}
         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
       >
         <GripVertical className="h-3 w-3" />
@@ -280,17 +287,21 @@ export function SidebarConfigDialog({
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 10, // Higher threshold for groups to let sub-items activate first
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
-  // Separate sensors for sub-items with activation constraint to prevent conflicts
+  // Sub-items have lower threshold so they activate before the parent group sensor
   const subItemSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Requires 5px movement to activate
+        distance: 3, // Lower threshold than groups (10px) so sub-items activate first
       },
     }),
     useSensor(KeyboardSensor, {
