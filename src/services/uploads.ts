@@ -61,36 +61,54 @@ export const uploadFile = async (
 };
 
 /**
- * Obtiene URL de blob local para documentos.
- * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
+ * Obtiene signed URL via Edge Function con Service Role (bypasea RLS).
  * @param storagePath - Ruta del archivo en storage
- * @param _expiresIn - Ignorado (mantenido para compatibilidad)
+ * @param bucket - Bucket de storage (default: mandato-documentos)
+ * @param expiresIn - Tiempo de expiración en segundos
  */
-export const getSignedUrl = async (storagePath: string, _expiresIn = 600): Promise<string | null> => {
+const getSignedUrlViaEdge = async (
+  storagePath: string, 
+  bucket = 'mandato-documentos',
+  expiresIn = 600
+): Promise<string | null> => {
   try {
-    const { data: blob, error } = await supabase.storage
-      .from('mandato-documentos')
-      .download(storagePath);
-
-    if (error) throw error;
-    if (!blob) return null;
+    const { data, error } = await supabase.functions.invoke('download-document', {
+      body: { filePath: storagePath, bucket, expiresIn }
+    });
     
-    return URL.createObjectURL(blob);
+    if (error) {
+      console.error('[uploads] Edge function error:', error);
+      throw error;
+    }
+    
+    return data?.signedUrl || null;
   } catch (error) {
-    console.error("[uploads] Error downloading document:", error);
+    console.error('[uploads] Error getting signed URL via edge:', error);
     return null;
   }
 };
 
-// Descarga directa usando .download() - evita problemas de RLS con signed URLs
-export const downloadBlob = async (storagePath: string): Promise<Blob | null> => {
-  try {
-    const { data, error } = await supabase.storage
-      .from('mandato-documentos')
-      .download(storagePath);
+/**
+ * Obtiene URL firmada para documentos usando Edge Function (bypasea RLS).
+ * @param storagePath - Ruta del archivo en storage
+ * @param expiresIn - Tiempo de expiración en segundos
+ */
+export const getSignedUrl = async (storagePath: string, expiresIn = 600): Promise<string | null> => {
+  return getSignedUrlViaEdge(storagePath, 'mandato-documentos', expiresIn);
+};
 
-    if (error) throw error;
-    return data;
+/**
+ * Descarga blob usando signed URL de Edge Function (bypasea RLS).
+ */
+export const downloadBlob = async (storagePath: string, bucket = 'mandato-documentos'): Promise<Blob | null> => {
+  try {
+    const signedUrl = await getSignedUrlViaEdge(storagePath, bucket);
+    if (!signedUrl) throw new Error('No se pudo obtener URL firmada');
+    
+    const response = await fetch(signedUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    return await response.blob();
   } catch (error) {
     console.error("Error downloading blob:", error);
     return null;

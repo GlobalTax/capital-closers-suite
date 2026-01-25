@@ -144,57 +144,39 @@ export function useDocumentStorage() {
     }
   };
 
-  // Usar .download() directamente para evitar problemas de RLS con signed URLs
+  // Usar Edge Function con Service Role para bypasear RLS
   const getSignedUrl = async (
     storagePath: string,
     documentInfo?: { id: string; nombre: string },
     expirationSeconds: number = 600
   ): Promise<string | null> => {
     try {
-      // Verificar auth antes de intentar descargar
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('[Storage] Usuario no autenticado:', authError);
-        toast.error('Debes iniciar sesión para descargar archivos');
-        return null;
-      }
-
-      console.log('[Storage] Descargando blob para:', storagePath, 'Usuario:', user.id);
-      
       if (!storagePath) {
         console.error('[Storage] Error: storage_path vacío o nulo');
         toast.error('El documento no tiene ruta de almacenamiento válida');
         return null;
       }
 
-      // Usar download() directamente en lugar de createSignedUrl
-      const { data: blob, error } = await supabase.storage
-        .from("mandato-documentos")
-        .download(storagePath);
+      console.log('[Storage] Obteniendo signed URL via Edge Function para:', storagePath);
+
+      // Usar Edge Function con Service Role para bypasear RLS
+      const { data, error } = await supabase.functions.invoke('download-document', {
+        body: { filePath: storagePath, bucket: 'mandato-documentos', expiresIn: expirationSeconds }
+      });
 
       if (error) {
-        console.error('[Storage] Error download:', {
-          message: error.message,
-          name: error.name,
-          cause: (error as any).cause,
-        });
-        
-        // Mensajes específicos según el tipo de error
-        const errorMsg = error.message?.toLowerCase() || '';
-        if (errorMsg.includes('not found') || errorMsg.includes('object not found')) {
-          toast.error('El archivo no existe en el almacenamiento');
-        } else if (errorMsg.includes('permission') || errorMsg.includes('policy') || errorMsg.includes('row-level')) {
-          toast.error('No tienes permisos para descargar este archivo');
-        } else {
-          toast.error(`Error de descarga: ${error.message}`);
-        }
+        console.error('[Storage] Edge function error:', error);
+        toast.error('Error al obtener URL de descarga');
         return null;
       }
 
-      console.log('[Storage] Blob descargado correctamente');
+      if (!data?.signedUrl) {
+        console.error('[Storage] No signedUrl in response');
+        toast.error('Error: No se recibió URL firmada');
+        return null;
+      }
 
-      // Crear URL local desde el blob
-      const blobUrl = URL.createObjectURL(blob);
+      console.log('[Storage] Signed URL obtenida correctamente');
 
       // Registrar acceso de forma asíncrona (no bloquea la descarga)
       if (documentInfo?.id) {
@@ -205,9 +187,9 @@ export function useDocumentStorage() {
         ).catch(console.error);
       }
 
-      return blobUrl;
+      return data.signedUrl;
     } catch (error) {
-      console.error("[Storage] Error inesperado downloading file:", error);
+      console.error("[Storage] Error inesperado getting signed URL:", error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast.error(`Error al generar enlace de descarga: ${errorMessage}`);
       return null;

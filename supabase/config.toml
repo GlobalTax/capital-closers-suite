@@ -77,3 +77,6 @@ verify_jwt = true
 
 [functions.import-outbound-leads]
 verify_jwt = true
+
+[functions.download-document]
+verify_jwt = false
