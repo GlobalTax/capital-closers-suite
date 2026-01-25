@@ -146,10 +146,47 @@ serve(async (req) => {
       try {
         const doc = campaign.teaser_document;
         
-        // Download file from storage
+        // Determine which PDF to use based on watermark settings
+        let storagePath = doc.storage_path;
+        let fileName = doc.file_name;
+        
+        // Check if watermark is enabled and if we need to generate/use watermarked PDF
+        if (campaign.enable_watermark && doc.mime_type?.includes("pdf")) {
+          // Check if watermarked PDF already exists
+          if (recipient.watermarked_path) {
+            storagePath = recipient.watermarked_path;
+            console.log(`Using existing watermarked PDF: ${storagePath}`);
+          } else {
+            // Generate watermarked PDF on-the-fly
+            console.log(`Generating watermarked PDF for recipient ${recipient.email}`);
+            
+            const watermarkTemplate = campaign.watermark_template || 
+              "Confidencial — {nombre} — {email} — ID:{id}";
+            
+            const watermarkText = watermarkTemplate
+              .replace("{nombre}", recipient.nombre || recipient.empresa_nombre || "Destinatario")
+              .replace("{email}", recipient.email)
+              .replace("{id}", campaign.id.substring(0, 8).toUpperCase());
+
+            // Call generate-watermarked-pdf function
+            const { data: watermarkResult, error: watermarkError } = await supabase.functions.invoke(
+              "generate-watermarked-pdf",
+              { body: { recipientId } }
+            );
+
+            if (watermarkError) {
+              console.error("Failed to generate watermark, using original:", watermarkError);
+            } else if (watermarkResult?.success && watermarkResult?.watermarkedPath) {
+              storagePath = watermarkResult.watermarkedPath;
+              console.log(`Generated watermarked PDF: ${storagePath}`);
+            }
+          }
+        }
+        
+        // Download file from storage (either original or watermarked)
         const { data: fileData, error: downloadError } = await supabase.storage
           .from("mandato-documentos")
-          .download(doc.storage_path);
+          .download(storagePath);
 
         if (!downloadError && fileData) {
           // Convert to base64
@@ -162,7 +199,7 @@ serve(async (req) => {
           );
 
           attachments.push({
-            filename: doc.file_name,
+            filename: fileName,
             content: base64,
             type: doc.file_type || "application/pdf",
           });

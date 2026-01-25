@@ -16774,6 +16774,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           custom_message: string | null
+          enable_watermark: boolean | null
           from_email: string | null
           from_name: string | null
           id: string
@@ -16792,12 +16793,14 @@ export type Database = {
           total_recipients: number | null
           total_sent: number | null
           updated_at: string | null
+          watermark_template: string | null
         }
         Insert: {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           custom_message?: string | null
+          enable_watermark?: boolean | null
           from_email?: string | null
           from_name?: string | null
           id?: string
@@ -16816,12 +16819,14 @@ export type Database = {
           total_recipients?: number | null
           total_sent?: number | null
           updated_at?: string | null
+          watermark_template?: string | null
         }
         Update: {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
           custom_message?: string | null
+          enable_watermark?: boolean | null
           from_email?: string | null
           from_name?: string | null
           id?: string
@@ -16840,6 +16845,7 @@ export type Database = {
           total_recipients?: number | null
           total_sent?: number | null
           updated_at?: string | null
+          watermark_template?: string | null
         }
         Relationships: [
           {
@@ -16928,6 +16934,9 @@ export type Database = {
           status: string | null
           tracking_id: string | null
           updated_at: string | null
+          watermark_text: string | null
+          watermarked_at: string | null
+          watermarked_path: string | null
           wave_id: string | null
         }
         Insert: {
@@ -16957,6 +16966,9 @@ export type Database = {
           status?: string | null
           tracking_id?: string | null
           updated_at?: string | null
+          watermark_text?: string | null
+          watermarked_at?: string | null
+          watermarked_path?: string | null
           wave_id?: string | null
         }
         Update: {
@@ -16986,6 +16998,9 @@ export type Database = {
           status?: string | null
           tracking_id?: string | null
           updated_at?: string | null
+          watermark_text?: string | null
+          watermarked_at?: string | null
+          watermarked_path?: string | null
           wave_id?: string | null
         }
         Relationships: [

@@ -32,9 +32,12 @@ export interface TeaserCampaign {
   updated_at: string;
   started_at: string | null;
   completed_at: string | null;
+  // Watermark configuration
+  enable_watermark: boolean;
+  watermark_template: string | null;
   // Relations
   mandato?: { id: string; nombre: string };
-  teaser_document?: { id: string; file_name: string; storage_path: string } | null;
+  teaser_document?: { id: string; file_name: string; storage_path: string; mime_type?: string } | null;
 }
 
 export interface TeaserWave {
@@ -86,6 +89,10 @@ export interface TeaserRecipient {
   tracking_id: string;
   created_at: string;
   updated_at: string;
+  // Watermark fields
+  watermarked_path: string | null;
+  watermarked_at: string | null;
+  watermark_text: string | null;
 }
 
 export interface CreateCampaignData {
@@ -98,6 +105,8 @@ export interface CreateCampaignData {
   custom_message?: string | null;
   from_email?: string;
   from_name?: string;
+  enable_watermark?: boolean;
+  watermark_template?: string;
 }
 
 export interface CreateWaveData {
@@ -138,6 +147,8 @@ export async function createCampaign(data: CreateCampaignData): Promise<TeaserCa
       from_email: data.from_email || "teaser@capittal.es",
       from_name: data.from_name || "Capittal M&A",
       status: "draft",
+      enable_watermark: data.enable_watermark !== false, // Default true
+      watermark_template: data.watermark_template || "Confidencial — {nombre} — {email} — ID:{id}",
     })
     .select()
     .single();
