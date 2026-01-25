@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, ArrowUpDown, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ArrowUpDown, Search } from "lucide-react";
 import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { cn } from "@/lib/utils";
 import type { TableRecord } from "@/types/database";
@@ -40,6 +40,12 @@ interface DataTableEnhancedProps<T extends TableRecord = TableRecord> {
   serverPagination?: ServerPaginationProps;
   /** Densidad de la tabla - compact o comfortable */
   density?: ViewDensity;
+  /** Habilitar filas expandibles */
+  expandable?: boolean;
+  /** Determina si una fila puede expandirse */
+  isRowExpandable?: (row: T) => boolean;
+  /** Renderiza el contenido expandido de una fila */
+  renderExpandedRow?: (row: T) => React.ReactNode;
 }
 
 export function DataTableEnhanced<T extends TableRecord = TableRecord>({
@@ -54,11 +60,28 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
   rowClassName,
   serverPagination,
   density = "comfortable",
+  expandable = false,
+  isRowExpandable,
+  renderExpandedRow,
 }: DataTableEnhancedProps<T>) {
   const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (rowId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
 
   // Determinar si usamos paginación server-side
   const isServerPaginated = !!serverPagination;
@@ -163,6 +186,9 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
           <Table className="min-w-[640px] md:min-w-0">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                {expandable && (
+                  <TableHead className="w-10 p-0" />
+                )}
                 {selectable && (
                   <TableHead className="w-12">
                     <Checkbox
@@ -216,7 +242,7 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
               ) : paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length + (selectable ? 1 : 0)}
+                    colSpan={columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0)}
                     className="text-center text-muted-foreground py-12"
                   >
                     No hay datos disponibles
@@ -227,41 +253,75 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
                   const rowId = row.id;
                   const isSelected = externalSelectedRows.includes(rowId);
                   const customClass = rowClassName ? rowClassName(row) : "";
+                  const canExpand = expandable && isRowExpandable?.(row);
+                  const isExpanded = expandedRows.has(rowId);
+                  
                   return (
-                    <TableRow
-                      key={rowId}
-                      data-state={isSelected ? "selected" : undefined}
-                      className={cn(
-                        "transition-all duration-150",
-                        onRowClick && "cursor-pointer",
-                        isSelected 
-                          ? "bg-primary/5 border-l-2 border-l-primary" 
-                          : "hover:bg-muted/50",
-                        customClass
+                    <Fragment key={rowId}>
+                      <TableRow
+                        data-state={isSelected ? "selected" : undefined}
+                        className={cn(
+                          "transition-all duration-150",
+                          onRowClick && "cursor-pointer",
+                          isSelected 
+                            ? "bg-primary/5 border-l-2 border-l-primary" 
+                            : "hover:bg-muted/50",
+                          isExpanded && "bg-muted/30",
+                          customClass
+                        )}
+                        onClick={() => onRowClick?.(row)}
+                      >
+                        {expandable && (
+                          <TableCell className="w-10 p-0 pl-2">
+                            {canExpand && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={(e) => toggleExpand(rowId, e)}
+                              >
+                                <ChevronRight 
+                                  className={cn(
+                                    "w-4 h-4 transition-transform duration-200",
+                                    isExpanded && "rotate-90"
+                                  )} 
+                                />
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
+                        {selectable && (
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectRow(rowId, checked as boolean)}
+                              aria-label={`Seleccionar ${(row as any).nombre || rowId}`}
+                              className="transition-transform duration-150 data-[state=checked]:scale-110"
+                            />
+                          </TableCell>
+                        )}
+                        {columns.map((column) => (
+                          <TableCell 
+                            key={column.key}
+                            className={cn(
+                              density === "compact" ? "py-2" : "py-3"
+                            )}
+                          >
+                            {column.render ? column.render((row as any)[column.key], row) : String((row as any)[column.key] ?? '')}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                      {isExpanded && renderExpandedRow && (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell 
+                            colSpan={columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0)}
+                            className="p-0 border-b border-border"
+                          >
+                            {renderExpandedRow(row)}
+                          </TableCell>
+                        </TableRow>
                       )}
-                      onClick={() => onRowClick?.(row)}
-                    >
-                      {selectable && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) => handleSelectRow(rowId, checked as boolean)}
-                            aria-label={`Seleccionar ${(row as any).nombre || rowId}`}
-                            className="transition-transform duration-150 data-[state=checked]:scale-110"
-                          />
-                        </TableCell>
-                      )}
-                      {columns.map((column) => (
-                        <TableCell 
-                          key={column.key}
-                          className={cn(
-                            density === "compact" ? "py-2" : "py-3"
-                          )}
-                        >
-                          {column.render ? column.render((row as any)[column.key], row) : String((row as any)[column.key] ?? '')}
-                        </TableCell>
-                      ))}
-                    </TableRow>
+                    </Fragment>
                   );
                 })
               )}
