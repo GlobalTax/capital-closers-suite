@@ -69,18 +69,18 @@ export async function uploadTaskFile(
 }
 
 /**
- * Genera una URL de blob local para descargar/previsualizar un archivo.
- * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
+ * Genera una URL firmada para descargar/previsualizar un archivo.
+ * Usa Edge Function con Service Role para bypasear RLS.
  */
 export async function downloadTaskFile(filePath: string): Promise<string> {
-  const { data: blob, error } = await supabase.storage
-    .from('mandato-documentos')
-    .download(filePath);
+  const { data, error } = await supabase.functions.invoke('download-document', {
+    body: { filePath, bucket: 'mandato-documentos', expiresIn: 600 }
+  });
   
   if (error) throw error;
-  if (!blob) throw new Error('No se pudo descargar el archivo');
+  if (!data?.signedUrl) throw new Error('No se pudo obtener URL firmada');
   
-  return URL.createObjectURL(blob);
+  return data.signedUrl;
 }
 
 /**

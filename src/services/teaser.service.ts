@@ -339,21 +339,20 @@ export async function getTeasersForMandatos(mandatoIds: string[]): Promise<Map<s
 }
 
 /**
- * Genera URL de blob local para un teaser.
- * Usa .download() en lugar de createSignedUrl para evitar errores RLS.
+ * Genera URL firmada para un teaser usando Edge Function (bypasea RLS).
  */
-export async function getSignedUrlForTeaser(storagePath: string, _expiresIn: number = 600): Promise<string | null> {
+export async function getSignedUrlForTeaser(storagePath: string, expiresIn: number = 600): Promise<string | null> {
   try {
-    const { data: blob, error } = await supabase.storage
-      .from('mandato-documentos')
-      .download(storagePath);
+    const { data, error } = await supabase.functions.invoke('download-document', {
+      body: { filePath: storagePath, bucket: 'mandato-documentos', expiresIn }
+    });
 
-    if (error || !blob) {
-      console.error('[Teaser] Error downloading file:', error);
+    if (error || !data?.signedUrl) {
+      console.error('[Teaser] Error getting signed URL via edge:', error);
       return null;
     }
 
-    return URL.createObjectURL(blob);
+    return data.signedUrl;
   } catch (error) {
     console.error('[Teaser] Error getting teaser URL:', error);
     return null;
