@@ -310,7 +310,7 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
   const handleDownload = async (doc: DocumentWithVersion) => {
     setDownloadingId(doc.id);
     try {
-      console.log('[Documentos] Descargando:', doc.file_name, 'Path:', doc.storage_path);
+      console.log('[SignedUrl] Descargando:', doc.file_name, 'Path:', doc.storage_path);
       
       if (!doc.storage_path) {
         toast.error('El documento no tiene ruta de almacenamiento');
@@ -323,6 +323,11 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       });
       
       if (url) {
+        // Registrar acceso como download (async, no bloquea)
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'download').catch(
+          err => console.error('[SignedUrl] Error logging download:', err)
+        );
+        
         // Forzar descarga usando un enlace temporal
         const link = window.document.createElement('a');
         link.href = url;
@@ -336,9 +341,9 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       } else {
         toast.error('No se pudo generar el enlace de descarga');
       }
-    } catch (error) {
-      console.error('[Documentos] Error descarga:', error);
-      toast.error('Error al descargar el documento');
+    } catch (error: any) {
+      const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+      handleSignedUrlError(parseEdgeFunctionError(error), 'DocumentosTab');
     } finally {
       setDownloadingId(null);
     }
@@ -355,14 +360,16 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       const url = await getSignedUrl(doc.storage_path);
       if (url) {
         // Registrar acceso como preview (async, no bloquea)
-        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(console.error);
+        documentAccessLogService.logAccess(doc.id, doc.file_name, 'preview').catch(
+          err => console.error('[SignedUrl] Error logging access:', err)
+        );
         window.open(url, "_blank", "noopener,noreferrer");
       } else {
-        toast.error("No se pudo generar el enlace de vista previa");
+        toast.error("Error al generar enlace de vista previa");
       }
-    } catch (error) {
-      console.error('[Documentos] Error vista previa:', error);
-      toast.error('Error al abrir vista previa');
+    } catch (error: any) {
+      const { handleSignedUrlError, parseEdgeFunctionError } = await import("@/lib/signedUrlErrors");
+      handleSignedUrlError(parseEdgeFunctionError(error), 'DocumentosTab');
     } finally {
       setOpeningPreviewId(null);
     }
