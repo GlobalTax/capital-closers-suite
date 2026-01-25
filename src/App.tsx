@@ -15,6 +15,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
 import { queryClient } from "@/lib/query-client";
+import { HelpSearchProvider } from "@/components/help/GlobalHelpSearch";
 // Lazy load de páginas para mejorar performance inicial
 const Login = lazy(() => import("./pages/auth/Login"));
 const AcceptInvitation = lazy(() => import("./pages/auth/AcceptInvitation"));
@@ -156,7 +157,9 @@ const App = () => (
                 v7_relativeSplatPath: true
               }}
             >
-              <AppContent />
+              <HelpSearchProvider>
+                <AppContent />
+              </HelpSearchProvider>
             </BrowserRouter>
           </ThemeProvider>
         </TooltipProvider>

@@ -305,7 +305,7 @@ export default function Empresas() {
   if (isLoading && !result) {
     return (
       <PageTransition>
-        <PageHeader title="Empresas" description="Base de datos de empresas de interés" />
+        <PageHeader title="Empresas" description="Base de datos de empresas de interés" showHelp />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           {[1, 2, 3, 4].map(i => (
             <Card key={i}>
@@ -327,6 +327,7 @@ export default function Empresas() {
         description="Base de datos de empresas de interés"
         actionLabel="Nueva Empresa"
         onAction={() => setDrawerOpen(true)}
+        showHelp
         extraActions={
           <Button variant="outline" size="sm" onClick={() => setAiImportOpen(true)} className="h-8 px-2 md:px-3">
             <Sparkles className="h-4 w-4" />

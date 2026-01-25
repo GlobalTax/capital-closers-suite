@@ -10,6 +10,7 @@ import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Spar
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
 import type { Tarea, TareaEstado, TareaTipo } from "@/types";
 import { startOfWeek, endOfWeek, isToday, isBefore, startOfDay } from "date-fns";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
 import {
   DndContext,
   DragEndEvent,
@@ -594,9 +595,12 @@ export default function Tareas() {
       {/* Header with Stats */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
-            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-xl md:text-3xl font-medium">Tareas</h1>
+              <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">Gestiona las tareas del equipo</p>
+            </div>
+            <ContextualHelpButton slug="tareas-calendario" />
           </div>
           <Button onClick={() => setDrawerOpen(true)} size="sm" className="w-fit h-8 md:h-9">
             <Plus className="mr-1.5 h-4 w-4" />

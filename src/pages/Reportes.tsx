@@ -67,7 +67,7 @@ export default function Reportes() {
   if (loading) {
     return (
       <div>
-        <PageHeader title="Reportes M&A" description="Dashboard ejecutivo y análisis" />
+        <PageHeader title="Reportes M&A" description="Dashboard ejecutivo y análisis" showHelp />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           {[1,2,3,4,5,6,7,8].map(i => <Skeleton key={i} className="h-24 md:h-28" />)}
         </div>
@@ -81,6 +81,7 @@ export default function Reportes() {
         title="Reportes M&A" 
         description="Dashboard ejecutivo y análisis"
         icon={<BarChart3 className="w-5 h-5 md:w-6 md:h-6" />}
+        showHelp
       />
 
       {/* Filters - responsive */}

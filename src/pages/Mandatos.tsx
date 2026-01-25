@@ -8,6 +8,7 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
 import { TargetsSublist } from "@/components/mandatos/TargetsSublist";
 import { MandatoCard } from "@/components/mandatos/MandatoCard";
 import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
@@ -1109,11 +1110,14 @@ export default function Mandatos() {
     <PageTransition className="h-full">
       {/* Header - Mobile-first responsive */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
-        <div>
-          <h1 className="text-xl md:text-3xl font-medium text-foreground">Mandatos M&A</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">
-            {mandatosFiltrados.length} de {mandatos.length} mandatos
-          </p>
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-xl md:text-3xl font-medium text-foreground">Mandatos M&A</h1>
+            <p className="text-sm text-muted-foreground mt-0.5 md:mt-1">
+              {mandatosFiltrados.length} de {mandatos.length} mandatos
+            </p>
+          </div>
+          <ContextualHelpButton slug="mandatos" />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* View toggle */}

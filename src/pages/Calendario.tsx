@@ -67,6 +67,7 @@ export default function Calendario() {
         title="Calendario"
         subtitle="Visualiza fechas de cierre, hitos y tareas"
         icon={CalendarIcon}
+        showHelp
       />
 
       {/* Controls - responsive */}

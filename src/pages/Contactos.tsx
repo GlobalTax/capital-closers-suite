@@ -431,6 +431,7 @@ export default function Contactos() {
         description="Gestiona tus contactos profesionales"
         actionLabel="Nuevo Contacto"
         onAction={() => setDrawerOpen(true)}
+        showHelp
         extraActions={
           <div className="flex gap-1.5 md:gap-2">
             <Button variant="outline" size="sm" onClick={() => setLinkImportOpen(true)} className="h-8 px-2 md:px-3">
