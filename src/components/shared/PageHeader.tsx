@@ -1,6 +1,9 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, type LucideIcon } from "lucide-react";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
+import { getHelpSlugForRoute } from "@/config/helpMapping";
 
 interface PageHeaderProps {
   title: string;
@@ -11,6 +14,10 @@ interface PageHeaderProps {
   onAction?: () => void;
   actions?: React.ReactNode;
   extraActions?: React.ReactNode;
+  /** Specific help slug to show in contextual help */
+  helpSlug?: string;
+  /** Auto-detect help slug from current route */
+  showHelp?: boolean;
 }
 
 export function PageHeader({
@@ -22,7 +29,12 @@ export function PageHeader({
   onAction,
   actions,
   extraActions,
+  helpSlug,
+  showHelp = false,
 }: PageHeaderProps) {
+  const location = useLocation();
+  const resolvedSlug = helpSlug || (showHelp ? getHelpSlugForRoute(location.pathname) : null);
+
   const renderIcon = () => {
     if (!icon) return null;
     
@@ -44,12 +56,15 @@ export function PageHeader({
             {renderIcon()}
           </div>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-center gap-2">
           <h1 className="text-xl md:text-2xl text-foreground tracking-tight truncate">{title}</h1>
-          {(description || subtitle) && (
-            <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 truncate">{description || subtitle}</p>
+          {resolvedSlug && (
+            <ContextualHelpButton slug={resolvedSlug} />
           )}
         </div>
+        {(description || subtitle) && (
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1 truncate hidden sm:block">{description || subtitle}</p>
+        )}
       </div>
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
         {extraActions}

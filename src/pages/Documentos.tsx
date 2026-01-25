@@ -247,6 +247,7 @@ export default function Documentos() {
         description="Gestión de documentos y archivos"
         actionLabel="Subir Documento"
         onAction={() => setUploadDialogOpen(true)}
+        showHelp
       />
       
       <DataTableEnhanced
