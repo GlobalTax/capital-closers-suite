@@ -857,6 +857,17 @@ export interface CriteriosBusqueda {
   margen_min?: number;
 }
 
+// Tipo de comprador para clasificación
+export type BuyerType = 'estrategico' | 'financiero' | 'adyacente' | 'mixto';
+
+// Configuración de tipo de comprador
+export const BUYER_TYPE_CONFIG: Record<BuyerType, { label: string; color: string; description: string }> = {
+  estrategico: { label: 'Estratégico', color: '#3b82f6', description: 'Comprador del mismo sector o complementario' },
+  financiero: { label: 'Financiero', color: '#22c55e', description: 'Private equity o inversor financiero' },
+  adyacente: { label: 'Adyacente', color: '#f59e0b', description: 'Sectores relacionados o sinergias' },
+  mixto: { label: 'Mixto', color: '#8b5cf6', description: 'Estratégico + financiero' },
+};
+
 // MandatoEmpresa extendido para Buy-Side
 export interface MandatoEmpresaBuySide extends MandatoEmpresa {
   funnel_stage?: TargetFunnelStage;
@@ -865,6 +876,15 @@ export interface MandatoEmpresaBuySide extends MandatoEmpresa {
   pipeline_stage_changed_at?: string;
   scoring?: TargetScoring;
   ofertas?: TargetOferta[];
+  // Nuevos campos Buyer Universe
+  buyer_type?: BuyerType;
+  tags?: string[];
+  no_contactar?: boolean;
+  no_contactar_motivo?: string;
+  tiene_conflicto?: boolean;
+  conflicto_descripcion?: string;
+  geografia?: string;
+  notas_internas?: string;
 }
 
 // Estadísticas del pipeline de targets
