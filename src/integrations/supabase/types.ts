@@ -559,6 +559,13 @@ export type Database = {
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
           },
+          {
+            foreignKeyName: "admin_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
         ]
       }
       admin_notifications: {
@@ -1225,6 +1232,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "ai_imports_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4073,6 +4087,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_valuations_lead_form_fkey"
             columns: ["lead_form"]
             isOneToOne: false
@@ -4342,6 +4363,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contact_leads_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
@@ -4354,6 +4382,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "contact_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "contact_leads_lead_form_fkey"
@@ -4611,6 +4646,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "contactos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "contactos_import_log_id_fkey"
@@ -6394,6 +6436,13 @@ export type Database = {
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
           },
+          {
+            foreignKeyName: "empresa_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
         ]
       }
       empresa_favorites: {
@@ -6432,6 +6481,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "empresa_favorites_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -6615,6 +6671,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "empresa_financial_statements_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7606,6 +7669,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "general_contact_leads_crm_empresa_id_fkey"
+            columns: ["crm_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "general_contact_leads_lead_form_fkey"
             columns: ["lead_form"]
             isOneToOne: false
@@ -7858,6 +7928,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "interacciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "interacciones_mandato_id_fkey"
@@ -9978,6 +10055,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "mandate_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mandate_leads_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
@@ -10647,6 +10731,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "mandato_empresas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "mandato_empresas_mandato_id_fkey"
             columns: ["mandato_id"]
             isOneToOne: false
@@ -11171,6 +11262,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "mandatos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "mandatos_import_log_id_fkey"
@@ -13303,6 +13401,13 @@ export type Database = {
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
           },
+          {
+            foreignKeyName: "presentation_projects_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
         ]
       }
       presentation_sharing_links: {
@@ -13964,6 +14069,13 @@ export type Database = {
             referencedColumns: ["matched_empresa_id"]
           },
           {
+            foreignKeyName: "propuestas_honorarios_empresa_cliente_id_fkey"
+            columns: ["empresa_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "propuestas_honorarios_empresa_target_id_fkey"
             columns: ["empresa_target_id"]
             isOneToOne: false
@@ -13976,6 +14088,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "propuestas_honorarios_empresa_target_id_fkey"
+            columns: ["empresa_target_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "propuestas_honorarios_mandato_id_fkey"
@@ -17715,6 +17834,108 @@ export type Database = {
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
           },
+          {
+            foreignKeyName: "company_valuations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_empresas_con_actividad: {
+        Row: {
+          actividades_destacadas: string[] | null
+          alexa_ranking: number | null
+          año_datos_financieros: number | null
+          apollo_enriched_at: string | null
+          apollo_intent_level: string | null
+          apollo_last_synced_at: string | null
+          apollo_org_id: string | null
+          apollo_raw_data: Json | null
+          apollo_score: number | null
+          apollo_visitor_date: string | null
+          apollo_visitor_source: string | null
+          brevo_id: string | null
+          brevo_last_modified_at: string | null
+          brevo_synced_at: string | null
+          capital_circulante: number | null
+          cif: string | null
+          cnae_codigo: string | null
+          cnae_descripcion: string | null
+          created_at: string | null
+          departmental_headcount: Json | null
+          descripcion: string | null
+          deuda: number | null
+          ebitda: number | null
+          ebitda_margin: number | null
+          empleados: number | null
+          es_target: boolean | null
+          estado_target: string | null
+          facebook_url: string | null
+          facturacion: number | null
+          fecha_enriquecimiento: string | null
+          founded_year: number | null
+          fuente_enriquecimiento: string | null
+          id: string | null
+          import_log_id: string | null
+          keywords: string[] | null
+          linkedin_url: string | null
+          margen_ebitda: number | null
+          nivel_interes: string | null
+          nombre: string | null
+          origen: string | null
+          potencial_search_fund: boolean | null
+          revenue: number | null
+          sector: string | null
+          sector_id: string | null
+          sitio_web: string | null
+          source: string | null
+          source_id: string | null
+          source_pro_valuation_id: string | null
+          source_valuation_id: string | null
+          subsector: string | null
+          technologies: Json | null
+          ubicacion: string | null
+          ultima_actividad: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresas_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_pro_valuation_id_fkey"
+            columns: ["source_pro_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "professional_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_valuation_id_fkey"
+            columns: ["source_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "company_valuations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresas_source_valuation_id_fkey"
+            columns: ["source_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresa_valuations"
+            referencedColumns: ["id"]
+          },
         ]
       }
       v_enrichment_stats: {
@@ -17792,6 +18013,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "mandatos_empresa_principal_id_fkey"
+            columns: ["empresa_principal_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "mandatos_import_log_id_fkey"
@@ -18033,6 +18261,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_empresa_valuations"
             referencedColumns: ["matched_empresa_id"]
+          },
+          {
+            foreignKeyName: "mandate_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "v_empresas_con_actividad"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "mandate_leads_valuation_id_fkey"
