@@ -16949,6 +16949,9 @@ export type Database = {
           cim_access_granted: boolean | null
           cim_access_granted_at: string | null
           cim_access_granted_by: string | null
+          cim_access_revoke_reason: string | null
+          cim_access_revoked_at: string | null
+          cim_access_revoked_by: string | null
           click_count: number | null
           clicked_at: string | null
           contacto_id: string | null
@@ -16966,6 +16969,7 @@ export type Database = {
           nda_sent_at: string | null
           nda_sent_by: string | null
           nda_signed_at: string | null
+          nda_signed_by: string | null
           nda_status: string | null
           nombre: string | null
           open_count: number | null
@@ -16990,6 +16994,9 @@ export type Database = {
           cim_access_granted?: boolean | null
           cim_access_granted_at?: string | null
           cim_access_granted_by?: string | null
+          cim_access_revoke_reason?: string | null
+          cim_access_revoked_at?: string | null
+          cim_access_revoked_by?: string | null
           click_count?: number | null
           clicked_at?: string | null
           contacto_id?: string | null
@@ -17007,6 +17014,7 @@ export type Database = {
           nda_sent_at?: string | null
           nda_sent_by?: string | null
           nda_signed_at?: string | null
+          nda_signed_by?: string | null
           nda_status?: string | null
           nombre?: string | null
           open_count?: number | null
@@ -17031,6 +17039,9 @@ export type Database = {
           cim_access_granted?: boolean | null
           cim_access_granted_at?: string | null
           cim_access_granted_by?: string | null
+          cim_access_revoke_reason?: string | null
+          cim_access_revoked_at?: string | null
+          cim_access_revoked_by?: string | null
           click_count?: number | null
           clicked_at?: string | null
           contacto_id?: string | null
@@ -17048,6 +17059,7 @@ export type Database = {
           nda_sent_at?: string | null
           nda_sent_by?: string | null
           nda_signed_at?: string | null
+          nda_signed_by?: string | null
           nda_status?: string | null
           nombre?: string | null
           open_count?: number | null
