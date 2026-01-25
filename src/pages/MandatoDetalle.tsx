@@ -215,7 +215,7 @@ export default function MandatoDetalle() {
         </TabsContent>
 
         {!esServicio && (
-          <TabsContent value="marketing">
+          <TabsContent value="marketing" className="space-y-6">
             <TeaserManager 
               mandatoId={id!} 
               mandatoNombre={mandato.empresa_principal?.nombre || mandato.codigo}
