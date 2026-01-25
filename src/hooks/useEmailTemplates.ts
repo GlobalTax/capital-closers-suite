@@ -7,11 +7,13 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  sendTestEmail,
   type EmailTemplate,
   type CreateTemplateData,
   type UpdateTemplateData,
   type TemplateLanguage,
   type TemplateType,
+  type RenderVariables,
 } from "@/services/emailTemplate.service";
 
 // =============================================
@@ -87,6 +89,30 @@ export function useDeleteTemplate() {
     },
     onError: (error: Error) => {
       toast.error(`Error al eliminar plantilla: ${error.message}`);
+    },
+  });
+}
+
+// =============================================
+// TEST EMAIL HOOK
+// =============================================
+
+interface SendTestEmailParams {
+  templateId?: string;
+  testEmail: string;
+  subjectTemplate: string;
+  htmlContent: string;
+  variables?: RenderVariables;
+}
+
+export function useSendTestEmail() {
+  return useMutation({
+    mutationFn: (params: SendTestEmailParams) => sendTestEmail(params),
+    onSuccess: () => {
+      toast.success("Email de prueba enviado correctamente");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al enviar email de prueba: ${error.message}`);
     },
   });
 }
