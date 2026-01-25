@@ -251,3 +251,24 @@ export const PREVIEW_DATA: RenderVariables = {
   custom_message: "",
   teaser_link: "https://capittal.es/teaser/example",
 };
+
+// =============================================
+// SEND TEST EMAIL
+// =============================================
+
+interface SendTestEmailParams {
+  templateId?: string;
+  testEmail: string;
+  subjectTemplate: string;
+  htmlContent: string;
+  variables?: RenderVariables;
+}
+
+export async function sendTestEmail(params: SendTestEmailParams): Promise<{ success: boolean; emailId?: string }> {
+  const { data, error } = await supabase.functions.invoke("send-test-email", {
+    body: params,
+  });
+
+  if (error) throw error;
+  return data;
+}

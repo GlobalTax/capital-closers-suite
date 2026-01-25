@@ -60,6 +60,7 @@ const EmpresasMonitor = lazy(() => import("./pages/admin/EmpresasMonitor"));
 const SyncCenter = lazy(() => import("./pages/SyncCenter"));
 const Index = lazy(() => import("./pages/Index"));
 const TaskAIQA = lazy(() => import("./pages/admin/TaskAIQA"));
+const PlantillasEmail = lazy(() => import("./pages/PlantillasEmail"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -112,6 +113,7 @@ function AppContent() {
             <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
+            <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
           
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />
