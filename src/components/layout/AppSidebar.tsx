@@ -243,12 +243,23 @@ export function AppSidebar() {
   const renderMenuGroup = (group: MenuGroup, key: string) => {
     const groupIsActive = isGroupActive(group);
     
+    // Apply custom item ordering from store
+    const itemOrder = sidebarConfig.groupItemsOrder[group.id] || [];
+    const orderedItems = [...group.items].sort((a, b) => {
+      const indexA = itemOrder.indexOf(a.id);
+      const indexB = itemOrder.indexOf(b.id);
+      if (indexA === -1 && indexB === -1) return 0;
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+    
     // Collapsed mode: show items directly with tooltips
     if (isCollapsed) {
       return (
         <SidebarGroup key={key} className="p-0 px-2">
           <SidebarMenu>
-            {group.items.map((item) => (
+            {orderedItems.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild tooltip={item.title}>
                   {item.external ? (
@@ -301,7 +312,7 @@ export function AppSidebar() {
           <CollapsibleContent>
             <SidebarGroupContent className="px-2 pb-2">
               <SidebarMenu>
-                {group.items.map((item) => (
+                {orderedItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       {item.external ? (
@@ -442,6 +453,11 @@ export function AppSidebar() {
     id: group.id,
     label: group.label,
     icon: <group.icon className="h-4 w-4" />,
+    items: group.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      icon: <item.icon className="h-4 w-4" />,
+    })),
   }));
 
   return (
