@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Clamp expiresIn between 60 seconds and 1 hour
-    const validExpiresIn = Math.min(Math.max(60, expiresIn), 3600)
+    // Clamp expiresIn between 60 seconds and 7 days (604800s)
+    const validExpiresIn = Math.min(Math.max(60, expiresIn), 604800)
 
     console.log(`Generating signed URL for ${bucket}/${filePath} (expires in ${validExpiresIn}s)`)
 
