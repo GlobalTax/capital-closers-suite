@@ -8086,6 +8086,50 @@ export type Database = {
           },
         ]
       }
+      help_section_versions: {
+        Row: {
+          change_summary: string | null
+          changed_by: string | null
+          content_md: string
+          created_at: string | null
+          description: string | null
+          id: string
+          section_id: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          changed_by?: string | null
+          content_md: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          section_id: string
+          title: string
+          version_number: number
+        }
+        Update: {
+          change_summary?: string | null
+          changed_by?: string | null
+          content_md?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          section_id?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_section_versions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "help_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       help_sections: {
         Row: {
           content_md: string
@@ -17917,6 +17961,36 @@ export type Database = {
           metadata?: Json | null
           title?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          skipped: boolean | null
+          step_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          skipped?: boolean | null
+          step_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          skipped?: boolean | null
+          step_id?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
