@@ -98,11 +98,6 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
     transition,
   };
 
-  // Stop propagation to prevent parent group context from capturing the drag
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation();
-  };
-
   return (
     <div
       ref={setNodeRef}
@@ -111,12 +106,11 @@ function SortableSubItem({ id, label, icon }: SortableSubItemProps) {
         "flex items-center gap-2 p-2 bg-muted/50 border rounded-md ml-4",
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary"
       )}
-      onPointerDown={handlePointerDown}
     >
       <button
         {...attributes}
         {...listeners}
-        onPointerDown={handlePointerDown}
+        onPointerDown={(e) => e.stopPropagation()}
         className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
       >
         <GripVertical className="h-3 w-3" />
