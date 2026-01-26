@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { fetchEmpresas, createEmpresa } from "@/services/empresas";
+import { EmpresaSearchSelect } from "@/components/shared/EmpresaSearchSelect";
 import { createMandato, fetchMandatos } from "@/services/mandatos";
 import type { Empresa, Mandato } from "@/types";
 import { Loader2, Plus, Building2, Calendar, Briefcase, Search, FileText, Calculator, Users, Link } from "lucide-react";
@@ -106,9 +107,9 @@ export function NuevoMandatoDrawer({
   onOpenChange,
   onSuccess,
 }: NuevoMandatoDrawerProps) {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]); // Solo para crear nueva empresa
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
-  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [loadingMandatos, setLoadingMandatos] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showNewEmpresa, setShowNewEmpresa] = useState(false);
 
@@ -144,13 +145,9 @@ export function NuevoMandatoDrawer({
   }, [open]);
 
   const cargarDatos = async () => {
-    setLoadingEmpresas(true);
+    setLoadingMandatos(true);
     try {
-      const [empresasData, mandatosData] = await Promise.all([
-        fetchEmpresas(),
-        fetchMandatos(),
-      ]);
-      setEmpresas(empresasData);
+      const mandatosData = await fetchMandatos();
       // Solo mostrar mandatos M&A activos para vincular
       setMandatos(mandatosData.filter(m => 
         (m.categoria === "operacion_ma" || !m.categoria) && 
@@ -161,7 +158,7 @@ export function NuevoMandatoDrawer({
       console.error("Error cargando datos:", error);
       toast.error("Error al cargar los datos");
     } finally {
-      setLoadingEmpresas(false);
+      setLoadingMandatos(false);
     }
   };
 
@@ -374,32 +371,17 @@ export function NuevoMandatoDrawer({
                         name="empresaId"
                         render={({ field }) => (
                           <FormItem>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={loadingEmpresas}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona una empresa" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="bg-background max-h-60">
-                                {empresas.map((empresa) => (
-                                  <SelectItem key={empresa.id} value={empresa.id}>
-                                    <span className="flex items-center gap-2">
-                                      <Building2 className="w-3 h-3" />
-                                      {empresa.nombre}
-                                      {empresa.sector && (
-                                        <span className="text-xs text-muted-foreground">
-                                          ({empresa.sector})
-                                        </span>
-                                      )}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <EmpresaSearchSelect
+                                value={field.value}
+                                onValueChange={(id) => field.onChange(id)}
+                                placeholder="Buscar empresa por nombre o CIF..."
+                                onCreateNew={() => {
+                                  setShowNewEmpresa(true);
+                                  form.setValue("empresaId", "");
+                                }}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

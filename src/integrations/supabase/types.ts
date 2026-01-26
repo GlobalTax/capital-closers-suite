@@ -4976,6 +4976,81 @@ export type Database = {
         }
         Relationships: []
       }
+      corporate_outreach: {
+        Row: {
+          buyer_id: string | null
+          channel: string | null
+          contact_id: string | null
+          content: string | null
+          created_at: string | null
+          email_mode: string | null
+          error_message: string | null
+          id: string
+          notes: string | null
+          operation_id: string | null
+          outreach_type: string
+          provider_message_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          email_mode?: string | null
+          error_message?: string | null
+          id?: string
+          notes?: string | null
+          operation_id?: string | null
+          outreach_type?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          channel?: string | null
+          contact_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          email_mode?: string | null
+          error_message?: string | null
+          id?: string
+          notes?: string | null
+          operation_id?: string | null
+          outreach_type?: string
+          provider_message_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corporate_outreach_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corporate_outreach_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cr_apollo_imports: {
         Row: {
           completed_at: string | null
