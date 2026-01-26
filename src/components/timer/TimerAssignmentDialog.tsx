@@ -31,6 +31,7 @@ import { createTimeEntry } from '@/services/timeTracking';
 import { ensureLeadInMandateLeads } from '@/services/leadActivities';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 // UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
@@ -67,6 +68,7 @@ interface FormData {
 }
 
 export function TimerAssignmentDialog() {
+  const { user } = useAuth();
   const { 
     isAssignmentModalOpen, 
     pendingTimeSeconds, 
@@ -149,6 +151,12 @@ export function TimerAssignmentDialog() {
   };
   
   const onSubmit = async (data: FormData) => {
+    // Validate user is authenticated
+    if (!user?.id) {
+      toast.error('Debes iniciar sesión para registrar tiempo');
+      return;
+    }
+    
     // Validate mandato selection (required)
     if (!data.mandatoId) {
       toast.error('Selecciona un mandato');
@@ -201,6 +209,7 @@ export function TimerAssignmentDialog() {
       
       // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
       const entryData: Record<string, any> = {
+        user_id: user.id,
         work_task_type_id: data.workTaskTypeId,
         value_type: data.valueType,
         start_time: startTime.toISOString(),
@@ -240,7 +249,7 @@ export function TimerAssignmentDialog() {
   
   return (
     <Dialog open={isAssignmentModalOpen} onOpenChange={(open) => !open && handleDiscard()}>
-      <DialogContent className="sm:max-w-[420px] gap-0">
+      <DialogContent className="sm:max-w-[420px] gap-0 bg-background z-[100] overflow-y-auto max-h-[90vh]">
         {/* Compact Header with Time */}
         <DialogHeader className="pb-4 text-center border-b">
           <div className="flex items-center justify-center gap-2 mb-2">
