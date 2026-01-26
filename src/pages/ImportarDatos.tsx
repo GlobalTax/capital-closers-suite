@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, Upload, AlertCircle, History, Undo2 } from "lucide-react";
+import { Download, Upload, AlertCircle, Undo2, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import { parseCSV } from "@/services/importacion/csvParser";
-import { validateMandatoRow, validateContactoRow } from "@/services/importacion/validator";
+import { parseSpreadsheet, type ParsedSpreadsheet } from "@/services/importacion/spreadsheetParser";
+import { validateMandatoRow, validateContactoRowTolerant, type ValidationResult } from "@/services/importacion/validator";
+import { normalizeMandatoRow, normalizeContactoRow } from "@/services/importacion/columnNormalizer";
 import { importMandatos } from "@/services/importacion/importMandatos";
 import { importContactos } from "@/services/importacion/importContactos";
 import { ImportConfigComponent } from "@/components/importacion/ImportConfig";
@@ -14,13 +15,20 @@ import { ImportProgress } from "@/components/importacion/ImportProgress";
 import { ImportPreview } from "@/components/importacion/ImportPreview";
 import { useImportacion, type ImportType, type ImportConfig } from "@/hooks/useImportacion";
 import { useToast } from "@/hooks/use-toast";
-import type { ParsedCSV } from "@/services/importacion/csvParser";
-import type { ValidationResult } from "@/services/importacion/validator";
+
+// Interface compatible con ParsedSpreadsheet
+interface ParsedData {
+  headers: string[];
+  rows: Record<string, string>[];
+  rawRows: string[][];
+  format?: 'xlsx' | 'xls' | 'csv';
+}
 
 export default function ImportarDatos() {
   const [activeTab, setActiveTab] = useState<ImportType>('mandatos');
-  const [parsedData, setParsedData] = useState<ParsedCSV | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [config, setConfig] = useState<ImportConfig>({
     autoCrearEmpresas: true,
     estrategiaDuplicados: 'skip',
@@ -50,45 +58,87 @@ export default function ImportarDatos() {
     if (acceptedFiles.length === 0) return;
 
     const file = acceptedFiles[0];
+    const extension = file.name.split('.').pop()?.toLowerCase();
     
-    if (!file.name.endsWith('.csv')) {
+    // Validar extensión
+    if (!['csv', 'xlsx', 'xls'].includes(extension || '')) {
       toast({
-        title: "❌ Formato inválido",
-        description: "Solo se permiten archivos CSV",
+        title: "❌ Formato no soportado",
+        description: "Use archivos CSV, XLSX o XLS",
         variant: "destructive"
       });
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const parsed = await parseCSV(file);
-      setParsedData(parsed);
+      // Usar parser universal que soporta CSV, XLSX, XLS
+      const parsed = await parseSpreadsheet(file);
       
-      // Validar filas según el tipo
-      const validator = activeTab === 'mandatos' ? validateMandatoRow : validateContactoRow;
-      const validations = parsed.rows.map(row => validator(row));
+      console.log('[ImportarDatos] Headers detectados:', parsed.headers);
+      console.log('[ImportarDatos] Primera fila raw:', parsed.rows[0]);
+      
+      // Normalizar filas según el tipo de importación
+      const normalizedRows = parsed.rows.map(row => {
+        if (activeTab === 'contactos') {
+          return normalizeContactoRow(row);
+        }
+        return normalizeMandatoRow(row);
+      });
+      
+      console.log('[ImportarDatos] Primera fila normalizada:', normalizedRows[0]);
+      
+      // Actualizar headers para mostrar los normalizados
+      const normalizedHeaders = activeTab === 'contactos'
+        ? ['nombre', 'apellidos', 'email', 'telefono', 'cargo', 'empresa_nombre', 'linkedin']
+        : ['titulo', 'tipo', 'empresa_nombre', 'sector', 'valor', 'estado', 'fecha_inicio', 'descripcion'];
+      
+      setParsedData({
+        headers: normalizedHeaders,
+        rows: normalizedRows,
+        rawRows: parsed.rawRows,
+        format: parsed.format
+      });
+      
+      // Validar con función tolerante para contactos
+      const validator = activeTab === 'mandatos' 
+        ? validateMandatoRow 
+        : validateContactoRowTolerant;
+      const validations = normalizedRows.map(row => validator(row));
       setValidationResults(validations);
 
-      const errors = validations.filter(v => !v.isValid).length;
+      const valid = validations.filter(v => v.isValid).length;
+      const invalid = validations.filter(v => !v.isValid).length;
+      const warnings = validations.reduce((acc, v) => 
+        acc + v.errors.filter(e => e.severity === 'warning').length, 0);
+      
       toast({
-        title: "✅ Archivo cargado",
-        description: `${parsed.rows.length} filas detectadas${errors > 0 ? `, ${errors} con errores` : ''}`,
+        title: `✅ Archivo cargado (${parsed.format.toUpperCase()})`,
+        description: `${valid} válidos, ${invalid} con errores${warnings > 0 ? `, ${warnings} advertencias` : ''}`,
       });
 
     } catch (error: any) {
+      console.error('[ImportarDatos] Error:', error);
       toast({
         title: "❌ Error al leer archivo",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   }, [activeTab, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'text/csv': ['.csv'] },
+    accept: { 
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls']
+    },
     maxFiles: 1,
-    maxSize: 5 * 1024 * 1024 // 5MB
+    maxSize: 10 * 1024 * 1024 // 10MB para Excel
   });
 
   const handleImport = async () => {
@@ -225,7 +275,10 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>1️⃣ Subir Archivo CSV</span>
+                <span className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  1️⃣ Subir Archivo
+                </span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -237,7 +290,7 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
                 </Button>
               </CardTitle>
               <CardDescription>
-                Descarga la plantilla, complétala y súbela aquí (máximo 5MB)
+                Soporta <strong>CSV, XLSX y XLS</strong>. Descarga la plantilla, complétala y súbela aquí (máximo 10MB)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -245,16 +298,21 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
                   isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                }`}
+                } ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
               >
                 <input {...getInputProps()} />
-                <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                {isDragActive ? (
+                {isLoading ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-lg font-medium">Procesando archivo...</p>
+                  </div>
+                ) : isDragActive ? (
                   <p className="text-lg font-medium">Suelta el archivo aquí...</p>
                 ) : (
                   <div>
+                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-lg font-medium mb-2">
-                      Arrastra un archivo CSV aquí
+                      Arrastra un archivo CSV, XLSX o XLS aquí
                     </p>
                     <p className="text-sm text-muted-foreground">
                       o haz clic para seleccionar desde tu ordenador
@@ -267,19 +325,19 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
                 <Alert className="mt-4 border-green-500/50 bg-green-500/10">
                   <AlertCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-700 dark:text-green-300">
-                    ✅ Archivo cargado: <strong>{parsedData.rows.length} oportunidades</strong> detectadas
+                    ✅ Archivo {parsedData.format?.toUpperCase()} cargado: <strong>{parsedData.rows.length} registros</strong> detectados
                     {totalErrors > 0 && ` · ${totalErrors} con errores que deben corregirse`}
                   </AlertDescription>
                 </Alert>
               )}
               
-              {!parsedData && (
+              {!parsedData && !isLoading && (
                 <Alert className="mt-4 border-blue-500/50 bg-blue-500/10">
                   <AlertCircle className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-700 dark:text-blue-300">
-                    <strong>📝 Columnas requeridas:</strong> titulo, tipo (venta/compra), empresa_nombre
+                    <strong>📝 Formatos aceptados:</strong> CSV, XLSX, XLS
                     <br />
-                    <strong>💡 Tip:</strong> El validador acepta variaciones como "nombre", "company", etc.
+                    <strong>💡 Tip:</strong> El sistema detecta automáticamente columnas como "Nombre", "Email", "Company", etc.
                   </AlertDescription>
                 </Alert>
               )}

@@ -158,7 +158,74 @@ export const validateMandatoRow = (row: Record<string, string>): ValidationResul
   };
 };
 
-// Validación de contactos
+// Regex más tolerante para email (case-insensitive, permite subdominios)
+const EMAIL_REGEX_TOLERANT = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
+/**
+ * Validación TOLERANTE de contactos
+ * - Válido si tiene email válido O (nombre + empresa)
+ * - Auto-trim y lowercase en emails
+ * - Warnings no bloquean la importación
+ */
+export const validateContactoRowTolerant = (
+  row: Record<string, string>
+): ValidationResult => {
+  const errors: ValidationError[] = [];
+
+  // Limpiar email antes de validar
+  const email = (row.email || '').trim().toLowerCase();
+  const nombre = (row.nombre || '').trim();
+  const empresa = (row.empresa_nombre || '').trim();
+
+  // Regla principal: es válido si tiene email válido O (nombre + empresa)
+  const hasValidEmail = email.length > 0 && EMAIL_REGEX_TOLERANT.test(email);
+  const hasNameAndCompany = nombre.length >= 2 && empresa.length >= 2;
+
+  if (!hasValidEmail && !hasNameAndCompany) {
+    errors.push({
+      field: 'email',
+      message: 'Se requiere email válido O (nombre + empresa con mín. 2 caracteres cada uno)',
+      severity: 'error'
+    });
+  }
+
+  // Validaciones secundarias (warnings, NO bloquean)
+  if (email && !hasValidEmail) {
+    errors.push({
+      field: 'email',
+      message: `Email "${email}" tiene formato inválido (se intentará importar igualmente)`,
+      severity: 'warning'
+    });
+  }
+
+  // Validar teléfono (warning)
+  if (row.telefono) {
+    const phone = row.telefono.replace(/[\s\-\(\)]/g, '');
+    if (phone.length > 0 && phone.length < 9) {
+      errors.push({
+        field: 'telefono',
+        message: 'Teléfono muy corto (se importará igualmente)',
+        severity: 'warning'
+      });
+    }
+  }
+
+  // Validar LinkedIn URL (warning)
+  if (row.linkedin && !row.linkedin.includes('linkedin')) {
+    errors.push({
+      field: 'linkedin',
+      message: 'URL de LinkedIn no parece válida (se importará igualmente)',
+      severity: 'warning'
+    });
+  }
+
+  return {
+    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    errors
+  };
+};
+
+// Validación ESTRICTA de contactos (mantener para compatibilidad)
 export const validateContactoRow = (row: Record<string, string>): ValidationResult => {
   const errors: ValidationError[] = [];
 
@@ -177,7 +244,7 @@ export const validateContactoRow = (row: Record<string, string>): ValidationResu
       message: 'El email es requerido',
       severity: 'error'
     });
-  } else if (!validateEmail(row.email)) {
+  } else if (!validateEmail(row.email.trim().toLowerCase())) {
     errors.push({
       field: 'email',
       message: 'El email no tiene formato válido',

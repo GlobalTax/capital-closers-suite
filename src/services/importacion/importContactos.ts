@@ -1,10 +1,12 @@
 /**
  * Servicio de importación de Contactos
+ * Soporta datos ya normalizados con normalizeContactoRow()
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { findOrCreateEmpresa, findContacto } from "./entityLinker";
-import { validateContactoRow } from "./validator";
+import { validateContactoRowTolerant } from "./validator";
+import { normalizeContactoRow } from "./columnNormalizer";
 import type { ImportConfig, ImportResult } from "@/hooks/useImportacion";
 
 export const importContacto = async (
@@ -13,37 +15,40 @@ export const importContacto = async (
   config: ImportConfig,
   importLogId: string
 ): Promise<ImportResult> => {
-  const name = `${row.nombre || row.first_name || 'Sin nombre'} ${row.apellidos || row.last_name || ''}`.trim();
+  // NUEVO: Normalizar la fila primero para mapear columnas flexibles
+  const normalizedRow = normalizeContactoRow(row);
+  
+  const name = `${normalizedRow.nombre || 'Sin nombre'} ${normalizedRow.apellidos || ''}`.trim();
 
   try {
-    // 1. Validar datos
-    const validation = validateContactoRow(row);
+    // 1. Validar datos con validación TOLERANTE
+    const validation = validateContactoRowTolerant(normalizedRow);
     if (!validation.isValid) {
       return {
         name,
         status: 'error',
-        message: validation.errors.map(e => e.message).join('; '),
+        message: validation.errors.filter(e => e.severity === 'error').map(e => e.message).join('; '),
         rowIndex
       };
     }
 
-    // 2. Crear o encontrar empresa si se proporciona
+    // 2. Crear o encontrar empresa si se proporciona (usando datos normalizados)
     let empresaId: string | undefined;
-    if (config.autoCrearEmpresas && (row.empresa_nombre || row.company_name)) {
+    if (config.autoCrearEmpresas && normalizedRow.empresa_nombre) {
       const empresa = await findOrCreateEmpresa(
         {
-          nombre: row.empresa_nombre || row.company_name,
-          cif: row.empresa_cif || row.company_cif,
-          sector: row.sector || 'Sin clasificar'
+          nombre: normalizedRow.empresa_nombre,
+          cif: normalizedRow.empresa_cif,
+          sector: normalizedRow.sector || 'Sin clasificar'
         },
         importLogId
       );
       empresaId = empresa.id;
     }
 
-    // 3. Verificar si el contacto ya existe
+    // 3. Verificar si el contacto ya existe (usando email normalizado)
     const existingContacto = await findContacto({
-      email: row.email,
+      email: normalizedRow.email,
       nombre: name,
       empresa_id: empresaId
     });
@@ -57,17 +62,17 @@ export const importContacto = async (
           rowIndex
         };
       } else if (config.estrategiaDuplicados === 'update') {
-        // Actualizar contacto existente
+        // Actualizar contacto existente con datos normalizados
         const { error } = await supabase
           .from('contactos')
           .update({
-            nombre: row.nombre || row.first_name,
-            apellidos: row.apellidos || row.last_name || null,
-            telefono: row.telefono || row.phone || null,
-            cargo: row.cargo || row.position || row.title || null,
+            nombre: normalizedRow.nombre,
+            apellidos: normalizedRow.apellidos || null,
+            telefono: normalizedRow.telefono || null,
+            cargo: normalizedRow.cargo || null,
             empresa_principal_id: empresaId || null,
-            linkedin: row.linkedin || null,
-            notas: row.notas || row.notes || null,
+            linkedin: normalizedRow.linkedin || null,
+            notas: normalizedRow.notas || null,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingContacto.entity.id);
@@ -84,16 +89,16 @@ export const importContacto = async (
       // create_new: continuar con la creación
     }
 
-    // 4. Crear nuevo contacto
+    // 4. Crear nuevo contacto con datos normalizados
     const contactoData: any = {
-      nombre: row.nombre || row.first_name,
-      apellidos: row.apellidos || row.last_name || null,
-      email: (row.email || '').toLowerCase(),
-      telefono: row.telefono || row.phone || null,
-      cargo: row.cargo || row.position || row.title || null,
+      nombre: normalizedRow.nombre,
+      apellidos: normalizedRow.apellidos || null,
+      email: normalizedRow.email || null,
+      telefono: normalizedRow.telefono || null,
+      cargo: normalizedRow.cargo || null,
       empresa_principal_id: empresaId || null,
-      linkedin: row.linkedin || null,
-      notas: row.notas || row.notes || null,
+      linkedin: normalizedRow.linkedin || null,
+      notas: normalizedRow.notas || null,
       import_log_id: importLogId
     };
 
