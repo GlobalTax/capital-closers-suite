@@ -98,8 +98,34 @@ class EmpresaService extends BaseService<Empresa> {
   }
 
   /**
+   * Obtener empresas recientes (para mostrar cuando no hay búsqueda)
+   */
+  async getRecent(limit: number = 10, esTarget?: boolean): Promise<Empresa[]> {
+    let query = supabase
+      .from(this.tableName as any)
+      .select('*')
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (esTarget !== undefined) {
+      query = query.eq('es_target', esTarget);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new DatabaseError('Error al obtener empresas recientes', {
+        table: this.tableName,
+        code: error.code,
+      });
+    }
+
+    return this.transformMany((data || []) as any[]);
+  }
+
+  /**
    * Búsqueda rápida de empresas (server-side) para selectores typeahead
-   * Busca por nombre o CIF, ordenado por updated_at (más recientes primero)
+   * Busca por nombre o CIF, ordenado por relevancia y updated_at
    */
   async search(
     query: string,
@@ -137,7 +163,38 @@ class EmpresaService extends BaseService<Empresa> {
       });
     }
 
-    return this.transformMany((data || []) as any[]);
+    // Ordenar por relevancia en cliente
+    const results = this.transformMany((data || []) as any[]);
+    return this.sortByRelevance(results, searchTerm);
+  }
+
+  /**
+   * Ordenar resultados por relevancia de coincidencia
+   */
+  private sortByRelevance(empresas: Empresa[], searchTerm: string): Empresa[] {
+    const term = searchTerm.toLowerCase();
+    
+    return empresas.sort((a, b) => {
+      const aName = a.nombre.toLowerCase();
+      const bName = b.nombre.toLowerCase();
+      const aCif = (a.cif || '').toLowerCase();
+      const bCif = (b.cif || '').toLowerCase();
+
+      // Prioridad 1: Coincidencia exacta
+      const aExact = aName === term || aCif === term;
+      const bExact = bName === term || bCif === term;
+      if (aExact && !bExact) return -1;
+      if (bExact && !aExact) return 1;
+
+      // Prioridad 2: Comienza con el término
+      const aStarts = aName.startsWith(term) || aCif.startsWith(term);
+      const bStarts = bName.startsWith(term) || bCif.startsWith(term);
+      if (aStarts && !bStarts) return -1;
+      if (bStarts && !aStarts) return 1;
+
+      // Prioridad 3: Por updated_at (ya ordenado en query, mantener)
+      return 0;
+    });
   }
 
   /**

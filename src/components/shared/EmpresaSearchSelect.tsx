@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Check, ChevronsUpDown, Building2, Loader2, Plus, Target, Users } from 'lucide-react';
+import { Check, ChevronsUpDown, Building2, Loader2, Plus, Target, Users, Clock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Command,
   CommandEmpty,
@@ -42,7 +43,8 @@ export function EmpresaSearchSelect({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | undefined>();
   
-  const { empresas, loading } = useEmpresasSearch(searchQuery, 250, filterTarget);
+  // Buscar empresas con query o mostrar recientes cuando está vacío
+  const { empresas, loading, recientes } = useEmpresasSearch(searchQuery, 250, filterTarget);
 
   // Agrupar empresas por tipo
   const { targets, clientes } = useMemo(() => {
@@ -76,11 +78,9 @@ export function EmpresaSearchSelect({
     onCreateNew?.();
   };
 
-  const displayValue = selectedEmpresa
-    ? selectedEmpresa.nombre
-    : value
-      ? 'Cargando...'
-      : placeholder;
+  // Determinar si mostrar recientes (query vacío y hay recientes)
+  const showRecent = !searchQuery && recientes.length > 0;
+  const showSearchResults = searchQuery.length >= 2;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -91,26 +91,48 @@ export function EmpresaSearchSelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            'w-full justify-between font-normal',
+            'w-full justify-between font-normal h-auto min-h-10 py-2',
             !selectedEmpresa && !value && 'text-muted-foreground',
             className
           )}
         >
-          <span className="flex items-center gap-2 truncate">
-            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">{displayValue}</span>
-            {selectedEmpresa?.cif && (
-              <span className="text-xs text-muted-foreground">
-                ({selectedEmpresa.cif})
-              </span>
-            )}
-          </span>
+          {selectedEmpresa ? (
+            <div className="flex items-center gap-2 w-full min-w-0">
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "gap-1 shrink-0 text-xs",
+                  selectedEmpresa.es_target 
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" 
+                    : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                )}
+              >
+                {selectedEmpresa.es_target ? (
+                  <Target className="h-3 w-3" />
+                ) : (
+                  <Building2 className="h-3 w-3" />
+                )}
+                {selectedEmpresa.es_target ? 'Target' : 'Cliente'}
+              </Badge>
+              <span className="truncate font-medium">{selectedEmpresa.nombre}</span>
+              {selectedEmpresa.cif && (
+                <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                  {selectedEmpresa.cif}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="truncate">{placeholder}</span>
+            </span>
+          )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       
       <PopoverContent 
-        className="w-[400px] p-0 bg-background z-50" 
+        className="w-[400px] p-0 bg-background z-[200] border shadow-lg" 
         align="start"
         sideOffset={4}
       >
@@ -131,8 +153,8 @@ export function EmpresaSearchSelect({
               </div>
             )}
             
-            {/* Sin resultados */}
-            {!loading && searchQuery.length >= 2 && empresas.length === 0 && (
+            {/* Sin resultados en búsqueda */}
+            {!loading && showSearchResults && empresas.length === 0 && (
               <CommandEmpty>
                 <div className="text-center py-6">
                   <Building2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
@@ -154,17 +176,71 @@ export function EmpresaSearchSelect({
               </CommandEmpty>
             )}
 
-            {/* Mensaje inicial */}
-            {!loading && searchQuery.length < 2 && empresas.length === 0 && (
+            {/* Mensaje cuando no hay query y no hay recientes */}
+            {!loading && !searchQuery && recientes.length === 0 && (
+              <div className="py-6 text-center">
+                <Search className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">
+                  Escribe para buscar empresas
+                </p>
+              </div>
+            )}
+
+            {/* Mensaje cuando query es muy corto */}
+            {!loading && searchQuery.length > 0 && searchQuery.length < 2 && (
               <div className="py-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Escribe al menos 2 caracteres para buscar
                 </p>
               </div>
             )}
+
+            {/* Sección: Recientes (cuando no hay búsqueda) */}
+            {!loading && showRecent && (
+              <CommandGroup heading={
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" />
+                  Recientes
+                </span>
+              }>
+                {recientes.map((empresa) => (
+                  <CommandItem
+                    key={empresa.id}
+                    value={empresa.id}
+                    onSelect={() => handleSelect(empresa)}
+                    className="flex items-center gap-2 py-2"
+                  >
+                    <Check
+                      className={cn(
+                        'h-4 w-4 shrink-0',
+                        value === empresa.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "gap-1 shrink-0 text-xs",
+                        empresa.es_target 
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" 
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                      )}
+                    >
+                      {empresa.es_target ? <Target className="h-2.5 w-2.5" /> : <Building2 className="h-2.5 w-2.5" />}
+                    </Badge>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-medium truncate">{empresa.nombre}</span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-2">
+                        {empresa.cif && <span>{empresa.cif}</span>}
+                        {empresa.sector && <span>• {empresa.sector}</span>}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
             
-            {/* Resultados: Clientes */}
-            {clientes.length > 0 && (
+            {/* Resultados de búsqueda: Clientes */}
+            {!loading && showSearchResults && clientes.length > 0 && (
               <CommandGroup heading={
                 <span className="flex items-center gap-1.5">
                   <Users className="h-3 w-3" />
@@ -197,8 +273,8 @@ export function EmpresaSearchSelect({
               </CommandGroup>
             )}
             
-            {/* Resultados: Targets */}
-            {targets.length > 0 && (
+            {/* Resultados de búsqueda: Targets */}
+            {!loading && showSearchResults && targets.length > 0 && (
               <CommandGroup heading={
                 <span className="flex items-center gap-1.5">
                   <Target className="h-3 w-3" />
