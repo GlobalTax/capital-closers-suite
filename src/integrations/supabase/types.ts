@@ -3779,6 +3779,8 @@ export type Database = {
           last_modified_field: string | null
           lead_entry_date: string | null
           lead_form: string | null
+          lead_source: string | null
+          lead_source_detail: string | null
           lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
           location: string | null
           net_profit_margin: number | null
@@ -3891,6 +3893,8 @@ export type Database = {
           last_modified_field?: string | null
           lead_entry_date?: string | null
           lead_form?: string | null
+          lead_source?: string | null
+          lead_source_detail?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
@@ -4003,6 +4007,8 @@ export type Database = {
           last_modified_field?: string | null
           lead_entry_date?: string | null
           lead_form?: string | null
+          lead_source?: string | null
+          lead_source_detail?: string | null
           lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
           location?: string | null
           net_profit_margin?: number | null
@@ -10043,6 +10049,78 @@ export type Database = {
           position?: number
           stage_key?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lead_potential_buyers: {
+        Row: {
+          added_by: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          ebitda: number | null
+          employees: number | null
+          id: string
+          lead_id: string
+          lead_origin: string
+          logo_url: string | null
+          name: string
+          notes: string | null
+          priority: number | null
+          revenue: number | null
+          revenue_range: string | null
+          sector_focus: string[] | null
+          status: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          ebitda?: number | null
+          employees?: number | null
+          id?: string
+          lead_id: string
+          lead_origin: string
+          logo_url?: string | null
+          name: string
+          notes?: string | null
+          priority?: number | null
+          revenue?: number | null
+          revenue_range?: string | null
+          sector_focus?: string[] | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          ebitda?: number | null
+          employees?: number | null
+          id?: string
+          lead_id?: string
+          lead_origin?: string
+          logo_url?: string | null
+          name?: string
+          notes?: string | null
+          priority?: number | null
+          revenue?: number | null
+          revenue_range?: string | null
+          sector_focus?: string[] | null
+          status?: string | null
+          updated_at?: string | null
+          website?: string | null
         }
         Relationships: []
       }
