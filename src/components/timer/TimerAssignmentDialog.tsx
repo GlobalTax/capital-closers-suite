@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -249,7 +250,7 @@ export function TimerAssignmentDialog() {
   
   return (
     <Dialog open={isAssignmentModalOpen} onOpenChange={(open) => !open && handleDiscard()}>
-      <DialogContent className="sm:max-w-[420px] gap-0 bg-background z-[100] overflow-y-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-[420px] gap-0 bg-background z-[100] overflow-y-auto max-h-[90vh] border-2 shadow-2xl">
         {/* Compact Header with Time */}
         <DialogHeader className="pb-4 text-center border-b">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -260,6 +261,9 @@ export function TimerAssignmentDialog() {
           <DialogTitle className="text-3xl font-mono font-bold tabular-nums">
             {displayTime}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Asigna el tiempo registrado a un mandato y tipo de tarea
+          </DialogDescription>
           {presetWorkTaskTypeId && presetWorkTaskTypeName && (
             <Badge variant="secondary" className="mt-2 gap-1.5">
               <Zap className="h-3 w-3" />
