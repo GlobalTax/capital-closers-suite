@@ -6,6 +6,8 @@ import { handleError } from '@/lib/error-handler';
 /**
  * Hook para búsqueda de empresas con debounce server-side
  * Optimizado para selectores typeahead
+ * - Cuando query está vacío: devuelve empresas recientes
+ * - Cuando query >= 2 chars: busca server-side
  */
 export function useEmpresasSearch(
   query: string,
@@ -13,8 +15,23 @@ export function useEmpresasSearch(
   esTarget?: boolean
 ) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [recientes, setRecientes] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Cargar recientes al montar
+  useEffect(() => {
+    const loadRecent = async () => {
+      try {
+        const results = await empresaService.getRecent(10, esTarget);
+        setRecientes(results);
+      } catch (error) {
+        console.error('Error loading recent empresas:', error);
+      }
+    };
+    loadRecent();
+  }, [esTarget]);
+
+  // Búsqueda con debounce
   useEffect(() => {
     // Mínimo 2 caracteres para buscar
     if (!query || query.trim().length < 2) {
@@ -43,5 +60,5 @@ export function useEmpresasSearch(
     return () => clearTimeout(timer);
   }, [query, debounceMs, esTarget]);
 
-  return { empresas, loading };
+  return { empresas, recientes, loading };
 }
