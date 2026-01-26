@@ -349,7 +349,7 @@ export function TimerAssignmentDialog() {
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Seleccionar tipo..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[200]">
                 {workTaskTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     {type.name}
