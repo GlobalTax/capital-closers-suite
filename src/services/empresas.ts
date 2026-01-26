@@ -98,6 +98,49 @@ class EmpresaService extends BaseService<Empresa> {
   }
 
   /**
+   * Búsqueda rápida de empresas (server-side) para selectores typeahead
+   * Busca por nombre o CIF, ordenado por updated_at (más recientes primero)
+   */
+  async search(
+    query: string,
+    options?: {
+      limit?: number;
+      esTarget?: boolean;
+    }
+  ): Promise<Empresa[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = query.trim();
+    const limit = options?.limit ?? 20;
+
+    let queryBuilder = supabase
+      .from(this.tableName as any)
+      .select('*')
+      // Búsqueda por nombre O CIF (tolerante a mayúsculas)
+      .or(`nombre.ilike.%${searchTerm}%,cif.ilike.%${searchTerm}%`)
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (options?.esTarget !== undefined) {
+      queryBuilder = queryBuilder.eq('es_target', options.esTarget);
+    }
+
+    const { data, error } = await queryBuilder;
+
+    if (error) {
+      throw new DatabaseError('Error al buscar empresas', {
+        table: this.tableName,
+        code: error.code,
+        query: searchTerm,
+      });
+    }
+
+    return this.transformMany((data || []) as any[]);
+  }
+
+  /**
    * Obtener mandatos de una empresa
    */
   async getMandatos(empresaId: string) {
@@ -149,7 +192,7 @@ class EmpresaService extends BaseService<Empresa> {
 }
 
 // Exportar instancia singleton del servicio
-const empresaService = new EmpresaService();
+export const empresaService = new EmpresaService();
 
 // Exportar métodos para mantener compatibilidad con código existente
 export const fetchEmpresas = (esTarget?: boolean) => empresaService.getAll(esTarget);
