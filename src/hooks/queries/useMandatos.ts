@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchMandatos, getMandatoById, createMandato, updateMandato, deleteMandato } from "@/services/mandatos";
+import { fetchMandatos, fetchServicios, getMandatoById, createMandato, updateMandato, deleteMandato } from "@/services/mandatos";
 import type { Mandato } from "@/types";
 import { handleError } from "@/lib/error-handler";
 import { toast } from "@/hooks/use-toast";
@@ -8,6 +8,14 @@ export function useMandatos() {
   return useQuery({
     queryKey: ['mandatos'],
     queryFn: fetchMandatos,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+}
+
+export function useServicios() {
+  return useQuery({
+    queryKey: ['servicios'],
+    queryFn: fetchServicios,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }
