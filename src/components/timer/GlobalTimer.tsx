@@ -126,7 +126,7 @@ export function GlobalTimer() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2 h-8">
+          <Button variant="outline" size="sm" className="gap-1 sm:gap-2 h-8 px-2 sm:px-3">
             <Play className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Iniciar</span>
             <ChevronDown className="h-3 w-3 opacity-50" />
@@ -177,7 +177,7 @@ export function GlobalTimer() {
   return (
     <div 
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-colors",
+        "flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border transition-colors",
         timerState === 'running' 
           ? "bg-emerald-500/10 border-emerald-500/20" 
           : "bg-amber-500/10 border-amber-500/20"

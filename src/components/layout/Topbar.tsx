@@ -140,8 +140,8 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1.5 md:gap-3">
-        {/* Timer Global - hidden on very small screens */}
-        <div className="hidden xs:block">
+        {/* Timer Global - siempre visible */}
+        <div className="flex-shrink-0">
           <GlobalTimer />
         </div>
 
