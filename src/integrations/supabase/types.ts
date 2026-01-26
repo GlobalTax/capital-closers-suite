@@ -4814,11 +4814,15 @@ export type Database = {
           description: string | null
           ebitda_max: number | null
           ebitda_min: number | null
+          enriched_at: string | null
+          enriched_data: Json | null
+          enrichment_source: string | null
           geography_focus: string[] | null
           id: string
           investment_thesis: string | null
           is_active: boolean | null
           is_deleted: boolean | null
+          key_highlights: string[] | null
           name: string
           notes_internal: string | null
           revenue_max: number | null
@@ -4840,11 +4844,15 @@ export type Database = {
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           geography_focus?: string[] | null
           id?: string
           investment_thesis?: string | null
           is_active?: boolean | null
           is_deleted?: boolean | null
+          key_highlights?: string[] | null
           name: string
           notes_internal?: string | null
           revenue_max?: number | null
@@ -4866,11 +4874,15 @@ export type Database = {
           description?: string | null
           ebitda_max?: number | null
           ebitda_min?: number | null
+          enriched_at?: string | null
+          enriched_data?: Json | null
+          enrichment_source?: string | null
           geography_focus?: string[] | null
           id?: string
           investment_thesis?: string | null
           is_active?: boolean | null
           is_deleted?: boolean | null
+          key_highlights?: string[] | null
           name?: string
           notes_internal?: string | null
           revenue_max?: number | null
