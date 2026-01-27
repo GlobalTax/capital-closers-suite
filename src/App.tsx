@@ -65,6 +65,7 @@ const TaskAIQA = lazy(() => import("./pages/admin/TaskAIQA"));
 const PlantillasEmail = lazy(() => import("./pages/PlantillasEmail"));
 const EmailQueueMonitor = lazy(() => import("./pages/EmailQueueMonitor"));
 const DataRoomAccess = lazy(() => import("./pages/DataRoomAccess"));
+const CampaignContacts = lazy(() => import("./pages/admin/CampaignContacts"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -120,6 +121,10 @@ function AppContent() {
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
             <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
             
+            {/* Campaign Contacts - Buy and Sell */}
+            <Route path="/admin/buyer-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/seller-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
+
             {/* Help Center */}
             <Route path="/ayuda" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
             <Route path="/ayuda/:slug" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />

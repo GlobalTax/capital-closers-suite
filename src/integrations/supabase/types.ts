@@ -2337,6 +2337,7 @@ export type Database = {
       buyer_contacts: {
         Row: {
           campaign_name: string | null
+          campaign_type: string | null
           company: string | null
           created_at: string | null
           email: string
@@ -2366,6 +2367,7 @@ export type Database = {
         }
         Insert: {
           campaign_name?: string | null
+          campaign_type?: string | null
           company?: string | null
           created_at?: string | null
           email: string
@@ -2395,6 +2397,7 @@ export type Database = {
         }
         Update: {
           campaign_name?: string | null
+          campaign_type?: string | null
           company?: string | null
           created_at?: string | null
           email?: string

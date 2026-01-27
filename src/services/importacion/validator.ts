@@ -337,3 +337,53 @@ export const validateEmpresaRow = (row: Record<string, string>): ValidationResul
     errors
   };
 };
+
+
+/**
+ * Validación para CAMPAIGN CONTACTS (buyer_contacts)
+ * - Requiere first_name (mínimo 2 caracteres)
+ * - Requiere email válido
+ */
+export const validateCampaignContactRow = (
+  row: Record<string, string>
+): ValidationResult => {
+  const errors: ValidationError[] = [];
+  
+  const firstName = (row.first_name || '').trim();
+  const email = (row.email || '').trim().toLowerCase();
+  
+  // Requerido: first_name
+  if (firstName.length < 2) {
+    errors.push({
+      field: 'first_name',
+      message: 'Nombre requerido (mínimo 2 caracteres)',
+      severity: 'error'
+    });
+  }
+  
+  // Requerido: email válido
+  if (!email || !EMAIL_REGEX_TOLERANT.test(email)) {
+    errors.push({
+      field: 'email',
+      message: 'Email válido requerido',
+      severity: 'error'
+    });
+  }
+  
+  // Validaciones secundarias (warnings, NO bloquean)
+  if (row.phone) {
+    const phone = row.phone.replace(/[\s\-\(\)]/g, '');
+    if (phone.length > 0 && phone.length < 9) {
+      errors.push({
+        field: 'phone',
+        message: 'Teléfono muy corto (se importará igualmente)',
+        severity: 'warning'
+      });
+    }
+  }
+
+  return {
+    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    errors
+  };
+};
