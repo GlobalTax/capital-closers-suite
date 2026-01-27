@@ -5954,6 +5954,160 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_plan_items: {
+        Row: {
+          actual_time_entry_id: string | null
+          assigned_by_admin: boolean | null
+          completed: boolean | null
+          created_at: string | null
+          description: string | null
+          estimated_minutes: number
+          id: string
+          mandato_id: string | null
+          order_index: number | null
+          plan_id: string
+          priority: string | null
+          title: string
+          work_task_type_id: string | null
+        }
+        Insert: {
+          actual_time_entry_id?: string | null
+          assigned_by_admin?: boolean | null
+          completed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          estimated_minutes?: number
+          id?: string
+          mandato_id?: string | null
+          order_index?: number | null
+          plan_id: string
+          priority?: string | null
+          title: string
+          work_task_type_id?: string | null
+        }
+        Update: {
+          actual_time_entry_id?: string | null
+          assigned_by_admin?: boolean | null
+          completed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          estimated_minutes?: number
+          id?: string
+          mandato_id?: string | null
+          order_index?: number | null
+          plan_id?: string
+          priority?: string | null
+          title?: string
+          work_task_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_plan_items_actual_time_entry_id_fkey"
+            columns: ["actual_time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "daily_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_work_task_type_id_fkey"
+            columns: ["work_task_type_id"]
+            isOneToOne: false
+            referencedRelation: "work_task_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_plans: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          planned_for_date: string
+          status: string
+          submitted_at: string | null
+          updated_at: string | null
+          user_id: string
+          user_notes: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          planned_for_date: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          user_notes?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          planned_for_date?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_notes?: string | null
+        }
+        Relationships: []
+      }
       dashboard_highlights: {
         Row: {
           color: string | null

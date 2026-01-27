@@ -95,6 +95,7 @@ const topLevelItems: MenuItem[] = [
   { id: "dashboard", title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { id: "tareas", title: "Tareas", url: "/tareas", icon: CheckSquare },
   { id: "mis-horas", title: "Mis Horas", url: "/mis-horas", icon: Clock },
+  { id: "plan-diario", title: "Plan Diario", url: "/plan-diario", icon: ClipboardList },
   { id: "gestion-leads", title: "Gestión de Leads", url: "/gestion-leads", icon: Target },
 ];
 
@@ -167,6 +168,7 @@ const superAdminGroup: MenuGroup = {
   icon: ShieldCheck,
   defaultOpen: false,
   items: [
+    { id: "planes-equipo", title: "Planes Equipo", url: "/admin/planes-diarios", icon: ClipboardList },
     { id: "sync-center", title: "Sync Center", url: "/sync-center", icon: RefreshCw },
     { id: "usuarios", title: "Usuarios", url: "/usuarios", icon: UserCog },
     { id: "auditoria-ia", title: "Auditoría IA", url: "/admin/task-ai-qa", icon: Sparkles },
