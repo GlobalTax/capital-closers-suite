@@ -55,6 +55,55 @@ const contactAliases: Record<string, string[]> = {
   ]
 };
 
+// Mapeo de aliases de columnas para CAMPAIGN CONTACTS (buyer_contacts)
+const campaignContactAliases: Record<string, string[]> = {
+  first_name: [
+    'first_name', 'firstname', 'nombre', 'name', 'first name', 'primer_nombre',
+    'nombre_completo', 'full_name', 'fullname', 'contacto', 'contact_name'
+  ],
+  last_name: [
+    'last_name', 'lastname', 'apellidos', 'apellido', 'surname', 
+    'last name', 'segundo_nombre', 'family_name'
+  ],
+  email: [
+    'email', 'e-mail', 'correo', 'mail', 'correo_electronico', 'correo electronico',
+    'email_address', 'emailaddress', 'e_mail', 'direccion_email'
+  ],
+  phone: [
+    'phone', 'telefono', 'teléfono', 'mobile', 'movil', 'móvil',
+    'celular', 'tel', 'telephone', 'phone_number', 'numero_telefono'
+  ],
+  company: [
+    'company', 'empresa', 'empresa_nombre', 'company_name', 
+    'compania', 'compañia', 'compañía', 'organizacion', 'organización', 
+    'organization', 'org', 'cliente', 'client'
+  ],
+  position: [
+    'position', 'cargo', 'job_title', 'title', 'puesto', 'rol',
+    'role', 'job', 'ocupacion', 'ocupación', 'posicion', 'titulo'
+  ],
+  investor_type: [
+    'investor_type', 'tipo_inversor', 'tipo', 'type', 'investor',
+    'categoria', 'category'
+  ],
+  investment_range: [
+    'investment_range', 'rango_inversion', 'inversion', 'investment',
+    'ticket', 'rango', 'range', 'budget'
+  ],
+  sectors_of_interest: [
+    'sectors_of_interest', 'sectores', 'sectors', 'sector',
+    'industrias', 'industries', 'intereses'
+  ],
+  preferred_location: [
+    'preferred_location', 'ubicacion', 'location', 'geografia',
+    'geography', 'region', 'pais', 'country'
+  ],
+  notas: [
+    'notas', 'notes', 'comentarios', 'comments', 'observaciones',
+    'descripcion', 'description', 'internal_notes'
+  ]
+};
+
 /**
  * Normaliza una clave para comparación flexible
  * Elimina acentos, guiones, espacios y pasa a minúsculas
@@ -202,4 +251,47 @@ export const hasMinimumContactData = (row: Record<string, string>): boolean => {
   const hasNameAndCompany = nombre.length >= 2 && empresa.length >= 2;
   
   return hasEmail || hasNameAndCompany;
+};
+
+/**
+ * Normaliza una fila para CAMPAIGN CONTACTS (buyer_contacts) con mapeo flexible
+ */
+export const normalizeCampaignContactRow = (
+  row: Record<string, string>
+): Record<string, string> => {
+  const normalized: Record<string, string> = {};
+
+  for (const [standardField, aliases] of Object.entries(campaignContactAliases)) {
+    const value = findValueByAliases(row, aliases);
+    
+    if (value) {
+      let processedValue = value;
+      
+      // Limpiezas específicas por campo
+      if (standardField === 'email') {
+        processedValue = value.toLowerCase().trim().replace(/\s/g, '');
+      }
+      
+      if (standardField === 'phone') {
+        processedValue = value.replace(/[^\d+\s\-()]/g, '').trim();
+      }
+      
+      normalized[standardField] = processedValue;
+    }
+  }
+
+  // Si no hay first_name pero hay email, extraer posible nombre del email
+  if (!normalized.first_name && normalized.email) {
+    const emailName = normalized.email.split('@')[0];
+    if (emailName && /[a-zA-Z]/.test(emailName)) {
+      normalized.first_name = emailName
+        .replace(/[._\-]/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+        .trim();
+    }
+  }
+
+  return normalized;
 };
