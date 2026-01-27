@@ -66,6 +66,8 @@ const PlantillasEmail = lazy(() => import("./pages/PlantillasEmail"));
 const EmailQueueMonitor = lazy(() => import("./pages/EmailQueueMonitor"));
 const DataRoomAccess = lazy(() => import("./pages/DataRoomAccess"));
 const CampaignContacts = lazy(() => import("./pages/admin/CampaignContacts"));
+const PlanDiario = lazy(() => import("./pages/PlanDiario"));
+const DailyPlansAdmin = lazy(() => import("./pages/admin/DailyPlansAdmin"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -98,7 +100,9 @@ function AppContent() {
           <Route path="/calendario" element={<ProtectedRoute><AppLayout><Calendario /></AppLayout></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
           <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />
+          <Route path="/plan-diario" element={<ProtectedRoute><AppLayout><PlanDiario /></AppLayout></ProtectedRoute>} />
           <Route path="/horas-equipo" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><HorasEquipo /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/planes-diarios" element={<ProtectedRoute requiredRole="admin"><AppLayout><DailyPlansAdmin /></AppLayout></ProtectedRoute>} />
           <Route path="/audit-logs" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><AuditLogs /></AppLayout></ProtectedRoute>} />
           <Route path="/email-queue" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmailQueueMonitor /></AppLayout></ProtectedRoute>} />
           <Route path="/usuarios" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><Usuarios /></AppLayout></ProtectedRoute>} />

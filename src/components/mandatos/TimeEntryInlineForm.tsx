@@ -16,6 +16,8 @@ import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from "@/components/shared/LeadByMandatoSelect";
 import { GlobalLeadSearch } from "@/components/shared/GlobalLeadSearch";
 import { type GlobalLead } from "@/hooks/useGlobalLeadSearch";
+import { useDailyPlanValidation } from "@/hooks/useDailyPlanValidation";
+import { DailyPlanBlocker } from "@/components/plans/DailyPlanBlocker";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 
@@ -69,6 +71,11 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const [notes, setNotes] = useState('');
   
   const hoursInputRef = useRef<HTMLInputElement>(null);
+  
+  // Daily plan validation
+  const { checkCanRegisterHours } = useDailyPlanValidation();
+  const [showPlanBlocker, setShowPlanBlocker] = useState(false);
+  const [blockerReason, setBlockerReason] = useState('');
   
   // Check if mandato is an internal project WITHOUT leads (Prospección has leads)
   const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(mandatoId);
@@ -234,6 +241,16 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
       }
 
       const startDateTime = new Date(`${advancedDate}T${advancedStartTime}`);
+      
+      // Check if plan is required for future dates
+      const validation = await checkCanRegisterHours(startDateTime);
+      if (!validation.allowed) {
+        setBlockerReason(validation.reason || 'Debes crear tu plan diario primero');
+        setShowPlanBlocker(true);
+        setLoading(false);
+        return;
+      }
+      
       const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -536,6 +553,14 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
           </div>
         </CollapsibleContent>
       </Collapsible>
+      
+      {/* Daily Plan Blocker Modal */}
+      <DailyPlanBlocker
+        open={showPlanBlocker}
+        onOpenChange={setShowPlanBlocker}
+        targetDate={advancedDate}
+        reason={blockerReason}
+      />
     </form>
   );
 }
