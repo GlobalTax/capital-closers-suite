@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
+        model: 'openai/gpt-5-mini',
         messages: [
           {
             role: 'system',
@@ -366,7 +366,7 @@ ${markdown.slice(0, 10000)}`
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'openai/gpt-4o-mini',
+          model: 'openai/gpt-5-mini',
           messages: [
             {
               role: 'system',
