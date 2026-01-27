@@ -1,325 +1,267 @@
 
 
-## Plan: Sistema Robusto de Importacion de Excel para Contactos
+## Plan: Modulo de Ventas - Clon del Modulo de Compras
 
-### Diagnostico del Problema
+### Contexto y Analisis
 
-He identificado la causa raiz por la cual todos los registros se marcan como "Invalidos" al importar archivos Excel:
+El sistema actual tiene:
+- **Tabla `buyer_contacts`**: Para contactos de campanas de compra (inversores)
+- **Pagina `/importar-datos`**: Importa a tabla `contactos` (CRM general), NO a `buyer_contacts`
+- **NO existe ruta `/admin/buyer-contacts`** en el enrutador actual
 
-**Problemas Criticos Encontrados:**
+Segun tu descripcion, necesitas un modulo completo para importar contactos de campanas (compra y venta) que use el esquema de `buyer_contacts`.
 
-1. **Sin soporte para Excel (XLSX/XLS)**: El sistema solo acepta CSV (`ImportarDatos.tsx:54-61`)
-2. **No existe biblioteca de parsing Excel**: `package.json` no incluye ninguna libreria como `xlsx` o `sheetjs`
-3. **Normalizacion no aplicada**: La funcion `normalizeContactoRow` existe pero NO SE USA antes de validar
-4. **Validacion demasiado estricta**: Requiere AMBOS `nombre` (min 2 chars) Y `email` valido
+---
+
+### Arquitectura Propuesta
+
+**Opcion elegida: Tabla unificada con discriminador `campaign_type`**
+
+Esto minimiza cambios y evita duplicar estructura:
 
 ```text
-FLUJO ACTUAL (ROTO):
-┌─────────────────┐     ┌──────────────┐     ┌───────────────┐
-│ Archivo Excel   │────▶│ parseCSV()   │────▶│ Datos corrup- │
-│ (.xlsx)         │     │ (solo CSV!)  │     │ tos/vacios    │
-└─────────────────┘     └──────────────┘     └───────────────┘
-                                                     │
-                                                     ▼
-                               ┌───────────────────────────────────┐
-                               │ validateContactoRow()             │
-                               │ - busca row.nombre → undefined    │
-                               │ - busca row.email → undefined     │
-                               │ → TODOS INVALIDOS                 │
-                               └───────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                    buyer_contacts (renombrar a campaign_contacts?)
+├────────────────────────────────────────────────────────────────┤
+│  + campaign_type: 'buy' | 'sell'   ← NUEVO CAMPO              │
+│  + first_name, last_name, email, company ...                  │
+│  + investor_type, investment_range, sectors_of_interest ...   │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Solucion Propuesta
-
-```text
-FLUJO CORREGIDO:
-┌─────────────────┐     ┌──────────────────┐     ┌────────────────┐
-│ Archivo Excel   │────▶│ parseSpreadsheet │────▶│ Datos JSON     │
-│ (.xlsx/.csv)    │     │ (detecta formato)│     │ estructurados  │
-└─────────────────┘     └──────────────────┘     └────────────────┘
-                                                        │
-                        ┌───────────────────────────────┘
-                        ▼
-            ┌─────────────────────────┐     ┌───────────────────────┐
-            │ normalizeContactoRow()  │────▶│ Mapeo de columnas:    │
-            │ - Mapea "Nombre" → nombre   │ "Correo" → email      │
-            │ - Trim + lowercase          │ "Empresa" → empresa   │
-            └─────────────────────────┘     └───────────────────────┘
-                                                        │
-                                                        ▼
-                               ┌───────────────────────────────────┐
-                               │ validateContactoRowTolerant()     │
-                               │ - Valido si: email                │
-                               │   OR (nombre + empresa)           │
-                               │ - Trim emails antes de validar    │
-                               │ - Case-insensitive                │
-                               └───────────────────────────────────┘
-```
-
----
-
-### Archivos a Modificar/Crear
+### Archivos a Crear/Modificar
 
 | Archivo | Accion | Descripcion |
 |---------|--------|-------------|
-| `package.json` | Modificar | Agregar dependencia `xlsx` (SheetJS) |
-| `src/services/importacion/spreadsheetParser.ts` | Crear | Parser universal para CSV y XLSX |
-| `src/services/importacion/columnNormalizer.ts` | Modificar | Ampliar aliases y agregar normalizacion de headers |
-| `src/services/importacion/validator.ts` | Modificar | Hacer validacion tolerante, usar normalizacion previa |
-| `src/pages/ImportarDatos.tsx` | Modificar | Aceptar XLSX/XLS, usar nuevo parser |
-| `src/services/importacion/importContactos.ts` | Modificar | Aplicar normalizacion antes de importar |
+| **Migracion SQL** | Crear | Agregar columna `campaign_type` a `buyer_contacts` |
+| `src/pages/admin/CampaignContacts.tsx` | Crear | Pagina unificada para Compras y Ventas |
+| `src/App.tsx` | Modificar | Agregar rutas `/admin/buyer-contacts` y `/admin/seller-contacts` |
+| `src/services/importacion/importCampaignContacts.ts` | Crear | Servicio de importacion para buyer_contacts |
+| `src/services/importacion/columnNormalizer.ts` | Modificar | Agregar `normalizeCampaignContactRow()` |
+| `src/services/importacion/validator.ts` | Modificar | Agregar `validateCampaignContactRow()` |
+| `src/hooks/useCampaignContacts.ts` | Crear | Hook para fetch y gestion de contactos de campana |
+| `src/components/campaigns/CampaignContactsTable.tsx` | Crear | Tabla con filtros para listar contactos |
 
 ---
 
-### Cambios Detallados
+### 1. Migracion SQL
 
-#### 1. package.json - Agregar Dependencia XLSX
+Agregar `campaign_type` a la tabla existente:
 
-```json
-"dependencies": {
-  "xlsx": "^0.18.5",
-  // ... resto de dependencias
-}
+```sql
+-- Agregar campo campaign_type a buyer_contacts
+ALTER TABLE buyer_contacts 
+ADD COLUMN IF NOT EXISTS campaign_type TEXT 
+DEFAULT 'buy' 
+CHECK (campaign_type IN ('buy', 'sell'));
+
+-- Actualizar registros existentes a 'buy'
+UPDATE buyer_contacts SET campaign_type = 'buy' WHERE campaign_type IS NULL;
+
+-- Indice para consultas por tipo
+CREATE INDEX IF NOT EXISTS idx_buyer_contacts_campaign_type 
+ON buyer_contacts(campaign_type);
+
+-- RLS: misma politica que ya existe (autenticados pueden leer/escribir)
 ```
 
-La libreria `xlsx` (SheetJS) es el estandar de la industria para parsear archivos Excel en JavaScript. Soporta XLS, XLSX, CSV, y muchos mas formatos.
-
 ---
 
-#### 2. Nuevo: `src/services/importacion/spreadsheetParser.ts`
+### 2. Nueva Pagina: `src/pages/admin/CampaignContacts.tsx`
 
-Parser universal que detecta automaticamente el formato del archivo:
+Pagina que recibe el tipo via URL y adapta la UI:
 
 ```typescript
-import * as XLSX from 'xlsx';
-
-export interface ParsedSpreadsheet {
-  headers: string[];
-  rows: Record<string, string>[];
-  rawRows: string[][];
-  format: 'xlsx' | 'xls' | 'csv';
-}
-
-// Normaliza headers: trim, lowercase, eliminar acentos
-const normalizeHeader = (header: string): string => {
-  return header
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, ''); // Eliminar acentos
-};
-
-// Detectar si una fila esta completamente vacia
-const isEmptyRow = (row: any[]): boolean => {
-  return row.every(cell => 
-    cell === null || 
-    cell === undefined || 
-    String(cell).trim() === ''
-  );
-};
-
-export const parseSpreadsheet = async (file: File): Promise<ParsedSpreadsheet> => {
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const isExcel = ['xlsx', 'xls'].includes(extension || '');
+// Estructura de la pagina
+export default function CampaignContacts() {
+  const { type } = useParams<{ type: 'buyer' | 'seller' }>();
+  const campaignType = type === 'seller' ? 'sell' : 'buy';
   
-  if (!isExcel && extension !== 'csv') {
-    throw new Error('Formato no soportado. Use CSV, XLS o XLSX.');
-  }
-
-  const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-  
-  // Tomar primera hoja
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  
-  // Convertir a JSON (array de arrays)
-  const rawData: any[][] = XLSX.utils.sheet_to_json(sheet, { 
-    header: 1,
-    defval: '',
-    raw: false // Convertir todo a string
-  });
-
-  if (rawData.length < 2) {
-    throw new Error('El archivo debe tener al menos headers y una fila de datos');
-  }
-
-  // Normalizar headers
-  const headers = (rawData[0] as string[])
-    .map(h => normalizeHeader(h))
-    .filter(h => h.length > 0);
-
-  const rawRows: string[][] = [];
-  const rows: Record<string, string>[] = [];
-
-  // Procesar filas (saltando header)
-  for (let i = 1; i < rawData.length; i++) {
-    const rowArray = rawData[i] as any[];
-    
-    // Ignorar filas completamente vacias
-    if (isEmptyRow(rowArray)) continue;
-
-    rawRows.push(rowArray.map(String));
-
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      const value = rowArray[index];
-      row[header] = value !== null && value !== undefined 
-        ? String(value).trim() 
-        : '';
-    });
-    rows.push(row);
-  }
-
-  if (rows.length === 0) {
-    throw new Error('No se encontraron filas con datos validos');
-  }
-
-  return {
-    headers,
-    rows,
-    rawRows,
-    format: extension as 'xlsx' | 'xls' | 'csv'
+  // Labels dinamicos
+  const labels = {
+    buy: { title: 'Contactos de Compra', singular: 'Buyer' },
+    sell: { title: 'Contactos de Venta', singular: 'Seller' }
   };
+  
+  // Estados
+  const [activeTab, setActiveTab] = useState<'list' | 'import'>('list');
+  
+  return (
+    <div>
+      <PageHeader title={labels[campaignType].title} />
+      
+      <Tabs value={activeTab}>
+        <TabsList>
+          <TabsTrigger value="list">Listado</TabsTrigger>
+          <TabsTrigger value="import">Importar Excel</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="list">
+          <CampaignContactsTable campaignType={campaignType} />
+        </TabsContent>
+        
+        <TabsContent value="import">
+          <CampaignContactsImport campaignType={campaignType} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+```
+
+---
+
+### 3. Rutas en `src/App.tsx`
+
+```typescript
+const CampaignContacts = lazy(() => import("./pages/admin/CampaignContacts"));
+
+// Dentro de Routes:
+<Route 
+  path="/admin/buyer-contacts" 
+  element={
+    <ProtectedRoute requiredRole="admin">
+      <AppLayout><CampaignContacts /></AppLayout>
+    </ProtectedRoute>
+  } 
+/>
+<Route 
+  path="/admin/seller-contacts" 
+  element={
+    <ProtectedRoute requiredRole="admin">
+      <AppLayout><CampaignContacts /></AppLayout>
+    </ProtectedRoute>
+  } 
+/>
+```
+
+---
+
+### 4. Servicio de Importacion: `src/services/importacion/importCampaignContacts.ts`
+
+Reutiliza el pipeline existente pero escribe en `buyer_contacts`:
+
+```typescript
+import { supabase } from "@/integrations/supabase/client";
+import { normalizeCampaignContactRow } from "./columnNormalizer";
+import { validateCampaignContactRow } from "./validator";
+
+export const importCampaignContact = async (
+  row: Record<string, string>,
+  rowIndex: number,
+  campaignType: 'buy' | 'sell',
+  importBatchId: string,
+  importFilename: string,
+  userId: string
+): Promise<ImportResult> => {
+  const normalizedRow = normalizeCampaignContactRow(row);
+  const name = `${normalizedRow.first_name} ${normalizedRow.last_name || ''}`.trim();
+
+  // Validar
+  const validation = validateCampaignContactRow(normalizedRow);
+  if (!validation.isValid) {
+    return { name, status: 'error', message: validation.errors[0].message, rowIndex };
+  }
+
+  // Verificar duplicado por email + campaign_type
+  const { data: existing } = await supabase
+    .from('buyer_contacts')
+    .select('id')
+    .eq('email', normalizedRow.email.toLowerCase())
+    .eq('campaign_type', campaignType)
+    .maybeSingle();
+
+  if (existing) {
+    return { name, status: 'skipped', message: 'Duplicado en sistema', rowIndex };
+  }
+
+  // Insertar
+  const { error } = await supabase
+    .from('buyer_contacts')
+    .insert({
+      first_name: normalizedRow.first_name,
+      last_name: normalizedRow.last_name || null,
+      email: normalizedRow.email.toLowerCase(),
+      phone: normalizedRow.phone || null,
+      company: normalizedRow.company || null,
+      position: normalizedRow.position || null,
+      investor_type: normalizedRow.investor_type || null,
+      investment_range: normalizedRow.investment_range || null,
+      sectors_of_interest: normalizedRow.sectors_of_interest || null,
+      preferred_location: normalizedRow.preferred_location || null,
+      campaign_type: campaignType,
+      import_batch_id: importBatchId,
+      import_filename: importFilename,
+      imported_by: userId,
+      imported_at: new Date().toISOString(),
+      origin: 'excel_import',
+      status: 'new'
+    });
+
+  if (error) throw error;
+
+  return { name, status: 'success', message: 'Contacto creado', rowIndex };
 };
 ```
 
 ---
 
-#### 3. Modificar: `src/services/importacion/columnNormalizer.ts`
-
-Ampliar los aliases y agregar normalizacion robusta:
+### 5. Normalizador: Agregar en `columnNormalizer.ts`
 
 ```typescript
-// Ampliar aliases para contactos
-const contactAliases: Record<string, string[]> = {
-  nombre: [
-    'nombre', 'name', 'first_name', 'firstname', 'first name',
-    'nombre completo', 'full_name', 'fullname', 'contacto', 'contact_name'
-  ],
-  apellidos: [
-    'apellidos', 'apellido', 'lastname', 'last_name', 'surname', 
-    'last name', 'segundo nombre'
-  ],
-  email: [
-    'email', 'e-mail', 'correo', 'mail', 'correo electronico',
-    'email_address', 'emailaddress', 'correo_electronico'
-  ],
-  telefono: [
-    'telefono', 'teléfono', 'phone', 'mobile', 'movil', 'móvil',
-    'celular', 'tel', 'telephone', 'phone_number'
-  ],
-  cargo: [
-    'cargo', 'position', 'job_title', 'title', 'puesto', 'rol',
-    'role', 'job', 'ocupacion'
-  ],
-  empresa_nombre: [
-    'empresa_nombre', 'empresa', 'company', 'company_name', 
-    'compania', 'compañia', 'organizacion', 'organization'
-  ],
-  linkedin: [
-    'linkedin', 'linkedin_url', 'linkedin_profile', 'perfil_linkedin'
-  ]
+const campaignContactAliases: Record<string, string[]> = {
+  first_name: ['nombre', 'first_name', 'firstname', 'name'],
+  last_name: ['apellidos', 'last_name', 'lastname', 'surname'],
+  email: ['email', 'correo', 'mail', 'e-mail'],
+  phone: ['telefono', 'phone', 'mobile', 'movil'],
+  company: ['empresa', 'company', 'compania'],
+  position: ['cargo', 'position', 'puesto', 'title'],
+  investor_type: ['tipo_inversor', 'investor_type', 'tipo'],
+  investment_range: ['rango_inversion', 'investment_range', 'inversion'],
+  sectors_of_interest: ['sectores', 'sectors_of_interest', 'sector'],
+  preferred_location: ['ubicacion', 'location', 'preferred_location']
 };
 
-// Normaliza una fila aplicando mapeo flexible + limpieza
-export const normalizeContactoRow = (
+export const normalizeCampaignContactRow = (
   row: Record<string, string>
 ): Record<string, string> => {
-  const normalized: Record<string, string> = {};
-
-  // Normalizar la clave para comparacion
-  const normalizeKey = (key: string): string => {
-    return key
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[_\-\s]+/g, '')
-      .trim();
-  };
-
-  for (const [standardField, aliases] of Object.entries(contactAliases)) {
-    for (const alias of aliases) {
-      const normalizedAlias = normalizeKey(alias);
-      const matchingKey = Object.keys(row).find(
-        k => normalizeKey(k) === normalizedAlias
-      );
-      
-      if (matchingKey && row[matchingKey]) {
-        let value = row[matchingKey].trim();
-        
-        // Limpiezas especificas por campo
-        if (standardField === 'email') {
-          value = value.toLowerCase().trim();
-        }
-        
-        normalized[standardField] = value;
-        break;
-      }
-    }
-  }
-
-  return normalized;
+  // Misma logica que normalizeContactoRow pero con campaignContactAliases
 };
 ```
 
 ---
 
-#### 4. Modificar: `src/services/importacion/validator.ts`
-
-Hacer la validacion tolerante:
+### 6. Validador: Agregar en `validator.ts`
 
 ```typescript
-// Regex mas tolerante para email
-const EMAIL_REGEX_TOLERANT = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-
-// Nueva funcion de validacion tolerante
-export const validateContactoRowTolerant = (
+export const validateCampaignContactRow = (
   row: Record<string, string>
 ): ValidationResult => {
   const errors: ValidationError[] = [];
-
-  // Limpiar email antes de validar
+  
+  const firstName = (row.first_name || '').trim();
   const email = (row.email || '').trim().toLowerCase();
-  const nombre = (row.nombre || '').trim();
-  const empresa = (row.empresa_nombre || '').trim();
-
-  // Regla principal: es valido si tiene email valido
-  // O si tiene (nombre + empresa)
-  const hasValidEmail = email && EMAIL_REGEX_TOLERANT.test(email);
-  const hasNameAndCompany = nombre.length >= 2 && empresa.length >= 2;
-
-  if (!hasValidEmail && !hasNameAndCompany) {
+  
+  // Requerido: first_name
+  if (firstName.length < 2) {
     errors.push({
-      field: 'email',
-      message: 'Se requiere email valido O (nombre + empresa)',
+      field: 'first_name',
+      message: 'Nombre requerido (min 2 caracteres)',
       severity: 'error'
     });
   }
-
-  // Validaciones secundarias (warnings, no bloquean)
-  if (email && !hasValidEmail) {
+  
+  // Requerido: email valido
+  if (!email || !EMAIL_REGEX_TOLERANT.test(email)) {
     errors.push({
       field: 'email',
-      message: `Email "${email}" tiene formato invalido`,
-      severity: 'warning'
+      message: 'Email valido requerido',
+      severity: 'error'
     });
   }
-
-  if (row.telefono) {
-    const phone = row.telefono.replace(/[\s\-\(\)]/g, '');
-    if (phone.length < 9) {
-      errors.push({
-        field: 'telefono',
-        message: 'Telefono muy corto (se importara igualmente)',
-        severity: 'warning'
-      });
-    }
-  }
-
+  
   return {
     isValid: errors.filter(e => e.severity === 'error').length === 0,
     errors
@@ -329,149 +271,72 @@ export const validateContactoRowTolerant = (
 
 ---
 
-#### 5. Modificar: `src/pages/ImportarDatos.tsx`
-
-Aceptar Excel y usar nuevo parser:
+### 7. Hook: `src/hooks/useCampaignContacts.ts`
 
 ```typescript
-// Cambiar imports
-import { parseSpreadsheet } from "@/services/importacion/spreadsheetParser";
-import { normalizeContactoRow } from "@/services/importacion/columnNormalizer";
-
-// Modificar dropzone config
-const { getRootProps, getInputProps, isDragActive } = useDropzone({
-  onDrop,
-  accept: { 
-    'text/csv': ['.csv'],
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-    'application/vnd.ms-excel': ['.xls']
-  },
-  maxFiles: 1,
-  maxSize: 10 * 1024 * 1024 // 10MB para Excel
-});
-
-// Modificar onDrop
-const onDrop = useCallback(async (acceptedFiles: File[]) => {
-  if (acceptedFiles.length === 0) return;
-
-  const file = acceptedFiles[0];
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  
-  // Validar extension
-  if (!['csv', 'xlsx', 'xls'].includes(extension || '')) {
-    toast({
-      title: "Formato no soportado",
-      description: "Use archivos CSV, XLSX o XLS",
-      variant: "destructive"
-    });
-    return;
-  }
-
-  try {
-    // Usar parser universal
-    const parsed = await parseSpreadsheet(file);
-    
-    // Normalizar filas antes de validar
-    const normalizedRows = parsed.rows.map(row => {
-      if (activeTab === 'contactos') {
-        return normalizeContactoRow(row);
-      }
-      return normalizeMandatoRow(row);
-    });
-    
-    setParsedData({
-      ...parsed,
-      rows: normalizedRows
-    });
-    
-    // Validar con funcion tolerante
-    const validator = activeTab === 'mandatos' 
-      ? validateMandatoRow 
-      : validateContactoRowTolerant;
-    const validations = normalizedRows.map(row => validator(row));
-    setValidationResults(validations);
-
-    const valid = validations.filter(v => v.isValid).length;
-    const invalid = validations.filter(v => !v.isValid).length;
-    
-    toast({
-      title: `Archivo cargado (${parsed.format.toUpperCase()})`,
-      description: `${valid} validos, ${invalid} requieren revision`,
-    });
-
-  } catch (error: any) {
-    toast({
-      title: "Error al leer archivo",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-}, [activeTab, toast]);
-```
-
----
-
-#### 6. Modificar: `src/services/importacion/importContactos.ts`
-
-Aplicar normalizacion antes de importar:
-
-```typescript
-import { normalizeContactoRow } from "./columnNormalizer";
-import { validateContactoRowTolerant } from "./validator";
-
-export const importContacto = async (
-  row: Record<string, string>,
-  rowIndex: number,
-  config: ImportConfig,
-  importLogId: string
-): Promise<ImportResult> => {
-  // NUEVO: Normalizar la fila primero
-  const normalizedRow = normalizeContactoRow(row);
-  
-  const name = `${normalizedRow.nombre || 'Sin nombre'} ${normalizedRow.apellidos || ''}`.trim();
-
-  try {
-    // Usar validacion tolerante
-    const validation = validateContactoRowTolerant(normalizedRow);
-    if (!validation.isValid) {
-      return {
-        name,
-        status: 'error',
-        message: validation.errors.map(e => e.message).join('; '),
-        rowIndex
-      };
+export function useCampaignContacts(campaignType: 'buy' | 'sell') {
+  return useQuery({
+    queryKey: ['campaign-contacts', campaignType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('buyer_contacts')
+        .select('*')
+        .eq('campaign_type', campaignType)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     }
-
-    // Resto del codigo usando normalizedRow en lugar de row
-    // ...
-  }
-};
+  });
+}
 ```
 
 ---
 
-### Resumen de Mejoras
+### 8. Componente Tabla: `src/components/campaigns/CampaignContactsTable.tsx`
 
-| Aspecto | Antes | Despues |
-|---------|-------|---------|
-| Formatos soportados | Solo CSV | CSV, XLSX, XLS |
-| Normalizacion headers | Solo lowercase + trim | + eliminar acentos + mapeo flexible |
-| Mapeo columnas | No se aplicaba | Aplicado antes de validar |
-| Validacion email | Requiere nombre Y email | Email O (nombre + empresa) |
-| Emails con espacios | Error | Auto-trim |
-| Emails mayusculas | Posible error | Auto-lowercase |
-| Filas vacias | Podian causar error | Ignoradas automaticamente |
-| Feedback errores | Generico | Especifico por campo |
+Tabla con:
+- Columnas: Nombre, Email, Empresa, Cargo, Tipo Inversor, Estado
+- Filtros: Por estado, por fecha importacion
+- Acciones: Ver detalle, eliminar
 
 ---
 
-### Pruebas Post-Implementacion
+### Flujo Final
 
-1. Subir Excel con headers en espanol ("Nombre", "Correo", "Empresa")
-2. Subir Excel con headers en ingles ("Name", "Email", "Company")
-3. Subir Excel con columnas extra no esperadas
-4. Subir Excel con emails en MAYUSCULAS
-5. Subir Excel con espacios en emails
-6. Subir Excel con filas vacias intermedias
-7. Confirmar que contactos validos se crean en la base de datos
+```text
+Usuario navega a /admin/seller-contacts
+          │
+          ▼
+┌─────────────────────────────────────────────────┐
+│  CampaignContacts.tsx (type='seller')           │
+│  ├─ Tab "Listado" → CampaignContactsTable       │
+│  └─ Tab "Importar Excel" → Import component     │
+│       ├─ Subir Excel                            │
+│       ├─ normalizeCampaignContactRow()          │
+│       ├─ validateCampaignContactRow()           │
+│       ├─ Preview con contadores                 │
+│       └─ importCampaignContacts(type='sell')    │
+│            └─ INSERT buyer_contacts             │
+│                 campaign_type = 'sell'          │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### Regla de Oro Aplicada
+
+**Compras NO se toca**: El modulo existente de importacion (`ImportarDatos.tsx`) sigue funcionando exactamente igual. Este nuevo modulo es completamente independiente.
+
+---
+
+### Pruebas Obligatorias
+
+1. Navegar a `/admin/buyer-contacts` → Ver listado de compras
+2. Navegar a `/admin/seller-contacts` → Ver listado vacio de ventas
+3. Importar Excel en `/admin/seller-contacts`:
+   - Validacion muestra contadores
+   - Contactos se crean con `campaign_type = 'sell'`
+4. Verificar que datos de compra y venta NO se mezclan
+5. Verificar que `/importar-datos` sigue funcionando igual
 
