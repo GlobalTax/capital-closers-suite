@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type WorkTaskTypeContext = 'all' | 'mandate' | 'prospection';
+export type WorkTaskTypeContext = 'all' | 'mandate' | 'prospection' | 'internal';
 
 export interface WorkTaskType {
   id: string;
