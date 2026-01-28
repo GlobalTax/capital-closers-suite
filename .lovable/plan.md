@@ -1,213 +1,313 @@
 
 
-## Plan: Completar Panel Admin de Planes Diarios
+## Plan: Conversión Automática de Ítems a Tareas Reales
 
-### Resumen de Estado Actual
+### Resumen
 
-El panel admin (`/admin/planes-diarios`) ya tiene implementado:
-- Tabla con columnas Usuario, Tareas, Horas, Estado
-- Navegación por fecha (prev/next)
-- Drawer de detalle con lista de tareas
-- Añadir nuevas tareas asignadas por admin
-- Aprobar/Rechazar planes con comentarios
-- Políticas RLS completas para admins
-
-### Cambios Necesarios
+Implementar la funcionalidad para que al enviar un plan diario, los ítems del plan se conviertan automáticamente en tareas reales en la tabla `tareas`. Incluye un toggle para activar/desactivar esta conversión y evita duplicados si el ítem ya tiene una tarea vinculada.
 
 ---
 
-### 1. Añadir Columna "Última Edición" a la Tabla
+### Cambios en Base de Datos
 
-**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
+**Migración SQL - Añadir columna `linked_task_id` a `daily_plan_items`:**
 
-Añadir columna en el TableHeader y mostrar `updated_at` formateado:
+```sql
+-- Añadir columna para vincular ítem del plan con tarea generada
+ALTER TABLE public.daily_plan_items 
+ADD COLUMN IF NOT EXISTS linked_task_id UUID REFERENCES public.tareas(id) ON DELETE SET NULL;
 
-```typescript
-// En TableHeader
-<TableHead>Última edición</TableHead>
-
-// En TableBody
-<TableCell className="text-xs text-muted-foreground">
-  {format(new Date(plan.updated_at), "HH:mm", { locale: es })}
-</TableCell>
+-- Índice para búsquedas rápidas
+CREATE INDEX IF NOT EXISTS idx_daily_plan_items_linked_task 
+ON public.daily_plan_items(linked_task_id);
 ```
 
 ---
 
-### 2. Añadir Filtro por Usuario
+### Lógica de Conversión
 
-**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
+**Archivo: `src/services/dailyPlans.service.ts`**
 
-Añadir un Select para filtrar por usuario específico:
-
-```typescript
-const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
-
-// En la UI, junto a la navegación de fecha
-<Select value={selectedUserId} onValueChange={setSelectedUserId}>
-  <SelectTrigger className="w-[200px]">
-    <SelectValue placeholder="Todos los usuarios" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="all">Todos los usuarios</SelectItem>
-    {allUsers.map(user => (
-      <SelectItem key={user.user_id} value={user.user_id}>
-        {user.full_name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-
-// Filtrar planes
-const filteredPlans = selectedUserId === 'all' 
-  ? plans 
-  : plans.filter(p => p.user_id === selectedUserId);
-```
-
----
-
-### 3. Permitir Edición de Estimaciones y Prioridad por Admin
-
-**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
-
-Cambiar el drawer para que el admin pueda editar tareas:
+Nueva función `convertPlanItemsToTasks`:
 
 ```typescript
-// Estado para tracking de cambios
-const [editedItems, setEditedItems] = useState<Map<string, Partial<DailyPlanItem>>>(new Map());
-
-// En el drawer, cambiar canEdit a true y conectar onUpdate
-<DailyPlanItemRow
-  key={item.id}
-  item={item}
-  canEdit={true}  // Permitir edición
-  onUpdate={(updates) => handleAdminUpdateItem(item.id, updates)}
-  onDelete={() => handleAdminDeleteItem(item.id)}
-/>
-
-// Función para actualizar
-const handleAdminUpdateItem = async (itemId: string, updates: Partial<DailyPlanItem>) => {
-  try {
-    await updatePlanItem(itemId, updates);
-    loadData();
-    toast.success('Tarea actualizada');
-  } catch (error) {
-    toast.error('Error al actualizar tarea');
-  }
-};
-```
-
-**Archivo:** `src/services/dailyPlans.service.ts`
-
-Crear función específica para actualización admin que incluya auditoría:
-
-```typescript
-export async function adminUpdatePlanItem(
-  itemId: string,
-  updates: Partial<NewDailyPlanItem>,
-  adminId: string
-): Promise<DailyPlanItem> {
-  const { data, error } = await supabase
+export async function convertPlanItemsToTasks(
+  planId: string,
+  userId: string,
+  plannedForDate: string
+): Promise<{ created: number; skipped: number }> {
+  // 1. Obtener ítems sin tarea vinculada
+  const { data: items } = await supabase
     .from('daily_plan_items')
-    .update({
-      ...updates,
-      // Opcionalmente: guardar quién modificó
-    })
-    .eq('id', itemId)
-    .select()
-    .single();
+    .select('*')
+    .eq('plan_id', planId)
+    .is('linked_task_id', null);
   
-  if (error) throw error;
-  return data as DailyPlanItem;
+  if (!items || items.length === 0) {
+    return { created: 0, skipped: 0 };
+  }
+  
+  // 2. Mapear prioridad del plan a prioridad de tarea
+  const priorityMap = {
+    'urgente': 'urgente',
+    'alta': 'alta', 
+    'media': 'media',
+    'baja': 'baja'
+  };
+  
+  let created = 0;
+  
+  // 3. Crear tareas para cada ítem
+  for (const item of items) {
+    const { data: tarea, error } = await supabase
+      .from('tareas')
+      .insert({
+        titulo: item.title,
+        descripcion: item.description,
+        estado: 'pendiente',
+        prioridad: priorityMap[item.priority] || 'media',
+        asignado_a: userId,
+        mandato_id: item.mandato_id,
+        fecha_vencimiento: plannedForDate,
+        tipo: 'individual',
+        creado_por: userId,
+        es_visible_equipo: false
+      })
+      .select()
+      .single();
+    
+    if (!error && tarea) {
+      // 4. Vincular tarea al ítem
+      await supabase
+        .from('daily_plan_items')
+        .update({ linked_task_id: tarea.id })
+        .eq('id', item.id);
+      
+      created++;
+    }
+  }
+  
+  return { created, skipped: items.length - created };
 }
 ```
 
 ---
 
-### 4. Implementar Auditoría de Acciones Admin
+### Modificación de `submitPlan`
 
-**Migración SQL** - Crear trigger de auditoría para daily_plans y daily_plan_items:
+**Archivo: `src/services/dailyPlans.service.ts`**
 
-```sql
--- Añadir trigger de auditoría a daily_plans
-CREATE TRIGGER audit_daily_plans
-  AFTER INSERT OR UPDATE OR DELETE ON public.daily_plans
-  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+Actualizar la función para aceptar parámetro de conversión:
 
--- Añadir trigger de auditoría a daily_plan_items
-CREATE TRIGGER audit_daily_plan_items
-  AFTER INSERT OR UPDATE OR DELETE ON public.daily_plan_items
-  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+```typescript
+export async function submitPlan(
+  planId: string, 
+  createTasks: boolean = false
+): Promise<DailyPlan> {
+  // Obtener plan para datos adicionales
+  const { data: plan } = await supabase
+    .from('daily_plans')
+    .select('user_id, planned_for_date')
+    .eq('id', planId)
+    .single();
+  
+  // Actualizar estado
+  const { data, error } = await supabase
+    .from('daily_plans')
+    .update({
+      status: 'submitted',
+      submitted_at: new Date().toISOString()
+    })
+    .eq('id', planId)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  // Crear tareas si está habilitado
+  if (createTasks && plan) {
+    await convertPlanItemsToTasks(planId, plan.user_id, plan.planned_for_date);
+  }
+  
+  return data as DailyPlan;
+}
 ```
-
-Esto registrará automáticamente en la tabla `audit_logs`:
-- Quién hizo el cambio (`auth.uid()`)
-- Qué tabla y registro
-- Qué acción (INSERT/UPDATE/DELETE)
-- Valores anteriores y nuevos
 
 ---
 
-### 5. Actualizar Tipos para incluir updated_at
+### Hook `useDailyPlan`
 
-**Archivo:** `src/types/dailyPlans.ts`
+**Archivo: `src/hooks/useDailyPlan.ts`**
 
-El tipo `DailyPlanWithUser` ya hereda de `DailyPlan` que tiene `updated_at`.
+Añadir estado y lógica para el toggle:
+
+```typescript
+const [autoCreateTasks, setAutoCreateTasks] = useState(true);
+
+const submitPlan = async () => {
+  // ... validaciones existentes ...
+  
+  try {
+    setSaving(true);
+    const updated = await dailyPlansService.submitPlan(plan.id, autoCreateTasks);
+    setPlan(prev => prev ? { ...prev, ...updated } : null);
+    
+    if (autoCreateTasks) {
+      toast.success('Plan enviado y tareas creadas ✓');
+    } else {
+      toast.success('Plan enviado ✓');
+    }
+  } catch (error) {
+    // ...
+  }
+};
+
+return {
+  // ... existente ...
+  autoCreateTasks,
+  setAutoCreateTasks,
+};
+```
+
+---
+
+### UI - Toggle en `DailyPlanForm`
+
+**Archivo: `src/components/plans/DailyPlanForm.tsx`**
+
+Añadir toggle antes del botón de envío:
+
+```typescript
+// Props adicionales
+interface DailyPlanFormProps {
+  // ... existentes ...
+  autoCreateTasks: boolean;
+  onAutoCreateTasksChange: (value: boolean) => void;
+}
+
+// En el JSX, antes del botón Enviar
+<div className="flex items-center justify-between pt-4 border-t">
+  <div className="flex items-center gap-3">
+    <Switch
+      id="auto-create-tasks"
+      checked={autoCreateTasks}
+      onCheckedChange={onAutoCreateTasksChange}
+    />
+    <Label htmlFor="auto-create-tasks" className="text-sm">
+      Crear tareas automáticamente
+    </Label>
+  </div>
+  
+  <Button onClick={onSubmit} disabled={...}>
+    <Send className="h-4 w-4 mr-2" />
+    {plan.status === 'draft' ? 'Enviar Plan' : 'Re-enviar Plan'}
+  </Button>
+</div>
+```
+
+---
+
+### Admin: Convertir Tareas Asignadas
+
+**Archivo: `src/pages/admin/DailyPlansAdmin.tsx`**
+
+Añadir botón en el drawer para convertir ítems asignados por admin:
+
+```typescript
+// En el drawer de detalle, después de añadir tarea admin
+<Button 
+  variant="outline" 
+  size="sm"
+  onClick={() => handleConvertAdminTasks(selectedPlan.id)}
+>
+  Convertir a tareas reales
+</Button>
+
+// Función
+const handleConvertAdminTasks = async (planId: string) => {
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+  
+  const result = await convertPlanItemsToTasks(
+    planId, 
+    plan.user_id, 
+    plan.planned_for_date
+  );
+  
+  toast.success(`${result.created} tareas creadas`);
+  loadData();
+};
+```
+
+---
+
+### Tipos Actualizados
+
+**Archivo: `src/types/dailyPlans.ts`**
+
+Añadir campo al tipo `DailyPlanItem`:
+
+```typescript
+export interface DailyPlanItem {
+  // ... existentes ...
+  linked_task_id: string | null;
+}
+```
 
 ---
 
 ### Flujo Resultante
 
 ```text
-Admin accede a /admin/planes-diarios
-            │
-            ▼
-    ┌───────────────────────────────────┐
-    │  [◀] Lun 29 Ene [▶]  [Usuario ▼]  │  ← Filtros
-    └───────────────────────────────────┘
-            │
-            ▼
-    ┌───────────────────────────────────────────────────────────┐
-    │ Usuario    │ Tareas │ Horas │ Estado   │ Última Ed │ Acc  │
-    ├────────────┼────────┼───────┼──────────┼───────────┼──────┤
-    │ Juan López │   5    │ 8.5h  │ Enviado  │ 09:45     │ [👁] │
-    │ Ana García │   3    │ 6.0h  │ Borrador │ 08:30     │ [👁] │
-    └───────────────────────────────────────────────────────────┘
-            │
-            ▼ (click Ver)
-    ┌─────────────────────────────────────┐
-    │  Plan de Juan López                 │
-    │  ─────────────────────────────────  │
-    │  [✓] Tarea 1    2h   [Alta ▼]  [🗑] │  ← Admin puede editar
-    │  [✓] Tarea 2    1h   [Media▼]  [🗑] │
-    │  [★] Tarea admin 1h  [Urgente]      │  ← No borrable
-    │  ─────────────────────────────────  │
-    │  [+ Añadir tarea]                   │
-    │  ─────────────────────────────────  │
-    │  Comentarios: [________________]    │
-    │  ─────────────────────────────────  │
-    │  [Rechazar]  [Aprobar]              │
-    └─────────────────────────────────────┘
+Usuario crea plan
+       │
+       ▼
+  Añade tareas (ítems)
+       │
+       ▼
+  [✓] Crear tareas automáticamente  ← Toggle (ON por defecto)
+       │
+       ▼
+  [Enviar Plan]
+       │
+       ├──────────────────────────────────────┐
+       │                                      │
+   Toggle ON                             Toggle OFF
+       │                                      │
+       ▼                                      ▼
+  Para cada ítem sin linked_task_id:    Solo envía plan
+       │
+       ▼
+  INSERT INTO tareas (...)
+       │
+       ▼
+  UPDATE daily_plan_items 
+    SET linked_task_id = tarea.id
+       │
+       ▼
+  Toast: "Plan enviado y X tareas creadas ✓"
 ```
+
+---
+
+### Evitar Duplicados
+
+La lógica solo crea tareas para ítems donde `linked_task_id IS NULL`. Si el usuario re-envía el plan:
+- Los ítems ya vinculados se ignoran
+- Solo los nuevos ítems (sin vínculo) generan tareas
 
 ---
 
 ### Resumen de Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/pages/admin/DailyPlansAdmin.tsx` | Columna "Última edición", filtro usuario, edición inline |
-| `src/services/dailyPlans.service.ts` | Función `adminUpdatePlanItem` (opcional) |
-| **Nueva migración SQL** | Triggers de auditoría para `daily_plans` y `daily_plan_items` |
-
----
-
-### Impacto
-
-- Admins podrán filtrar planes por usuario específico
-- Verán cuándo fue la última modificación de cada plan
-- Podrán editar estimaciones y prioridad de cualquier tarea
-- Todas las acciones quedarán registradas en `audit_logs` para trazabilidad
+| Archivo | Cambio |
+|---------|--------|
+| **Nueva migración SQL** | Añadir columna `linked_task_id` |
+| `src/services/dailyPlans.service.ts` | Función `convertPlanItemsToTasks` + modificar `submitPlan` |
+| `src/hooks/useDailyPlan.ts` | Estado `autoCreateTasks` + pasar a `submitPlan` |
+| `src/components/plans/DailyPlanForm.tsx` | Toggle UI + props |
+| `src/types/dailyPlans.ts` | Añadir `linked_task_id` al tipo |
+| `src/pages/admin/DailyPlansAdmin.tsx` | Botón para convertir tareas admin |
 
 ---
 
@@ -215,7 +315,20 @@ Admin accede a /admin/planes-diarios
 
 **Dependencias:** No se requieren nuevas dependencias.
 
-**RLS:** Las políticas existentes ya permiten a admins hacer UPDATE en `daily_plan_items`, por lo que la edición funcionará sin cambios adicionales.
+**RLS:** Las políticas existentes permiten a usuarios crear tareas (`tareas_insert_policy`) y actualizar sus propios `daily_plan_items`.
 
-**Auditoría:** La función `audit_trigger_function` ya existe en el proyecto y se usa en otras tablas (mandatos, contactos, empresas, etc.). Los nuevos triggers seguirán el mismo patrón.
+**Mapeo de Campos:**
+
+| daily_plan_items | tareas |
+|------------------|--------|
+| title | titulo |
+| description | descripcion |
+| priority → | prioridad (mismo enum) |
+| mandato_id | mandato_id |
+| plan.user_id | asignado_a, creado_por |
+| plan.planned_for_date | fecha_vencimiento |
+| - | estado = 'pendiente' |
+| - | tipo = 'individual' |
+
+**Auditoría:** Los triggers de auditoría existentes registrarán automáticamente la creación de tareas y la actualización de `linked_task_id`.
 
