@@ -435,9 +435,47 @@ export async function canRegisterHoursForDate(
     return { allowed: true };
   }
   
-  // TODAY: allowed without strict plan requirement
+  // TODAY: requires a submitted plan (8h+) from YESTERDAY or TODAY
   if (targetDate === today) {
-    return { allowed: true };
+    const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
+    const MIN_MINUTES = 480;
+    
+    // Check TODAY's plan first
+    const { data: todayPlan } = await supabase
+      .from('daily_plans')
+      .select('id, status, total_estimated_minutes')
+      .eq('user_id', userId)
+      .eq('planned_for_date', today)
+      .maybeSingle();
+    
+    // If today's plan exists, is submitted, and has 8h+ → allowed
+    if (todayPlan && 
+        todayPlan.status !== 'draft' && 
+        (todayPlan.total_estimated_minutes || 0) >= MIN_MINUTES) {
+      return { allowed: true, planId: todayPlan.id };
+    }
+    
+    // Check YESTERDAY's plan
+    const { data: yesterdayPlan } = await supabase
+      .from('daily_plans')
+      .select('id, status, total_estimated_minutes')
+      .eq('user_id', userId)
+      .eq('planned_for_date', yesterday)
+      .maybeSingle();
+    
+    // If yesterday's plan exists, is submitted, and has 8h+ → allowed
+    if (yesterdayPlan && 
+        yesterdayPlan.status !== 'draft' && 
+        (yesterdayPlan.total_estimated_minutes || 0) >= MIN_MINUTES) {
+      return { allowed: true, planId: yesterdayPlan.id };
+    }
+    
+    // No valid plan found - block with helpful message
+    return {
+      allowed: false,
+      reason: 'Debes tener un plan diario enviado (mín 8h) de ayer o de hoy para registrar horas',
+      planId: todayPlan?.id
+    };
   }
   
   // TOMORROW ONLY: requires a submitted plan with minimum 8 hours
