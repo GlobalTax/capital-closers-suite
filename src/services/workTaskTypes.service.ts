@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type WorkTaskTypeContext = 'all' | 'mandate' | 'prospection' | 'internal';
+export type TimeEntryValueType = 'core_ma' | 'soporte' | 'bajo_valor';
 
 export interface WorkTaskType {
   id: string;
@@ -9,6 +10,7 @@ export interface WorkTaskType {
   is_active: boolean;
   sort_order: number;
   context: WorkTaskTypeContext;
+  default_value_type: TimeEntryValueType;
   created_at: string;
   updated_at: string;
   // Dynamic validation requirements
@@ -24,6 +26,13 @@ export interface CreateWorkTaskTypeData {
   name: string;
   description?: string;
   sort_order?: number;
+  context?: WorkTaskTypeContext;
+  default_value_type?: TimeEntryValueType;
+  require_mandato?: boolean;
+  require_lead?: boolean;
+  require_description?: boolean;
+  min_description_length?: number;
+  default_billable?: boolean;
 }
 
 export interface UpdateWorkTaskTypeData {
@@ -31,6 +40,8 @@ export interface UpdateWorkTaskTypeData {
   description?: string;
   is_active?: boolean;
   sort_order?: number;
+  context?: WorkTaskTypeContext;
+  default_value_type?: TimeEntryValueType;
   // Validation rules editable from admin
   require_mandato?: boolean;
   require_lead?: boolean;
@@ -48,10 +59,11 @@ export async function fetchActiveWorkTaskTypes(): Promise<WorkTaskType[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  // Cast context from string to WorkTaskTypeContext
+  // Cast context and default_value_type from string to typed values
   return (data || []).map(item => ({
     ...item,
-    context: (item.context as WorkTaskTypeContext) || 'all'
+    context: (item.context as WorkTaskTypeContext) || 'all',
+    default_value_type: (item.default_value_type as TimeEntryValueType) || 'core_ma'
   }));
 }
 
@@ -63,10 +75,11 @@ export async function fetchAllWorkTaskTypes(): Promise<WorkTaskType[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  // Cast context from string to WorkTaskTypeContext
+  // Cast context and default_value_type from string to typed values
   return (data || []).map(item => ({
     ...item,
-    context: (item.context as WorkTaskTypeContext) || 'all'
+    context: (item.context as WorkTaskTypeContext) || 'all',
+    default_value_type: (item.default_value_type as TimeEntryValueType) || 'core_ma'
   }));
 }
 
@@ -81,7 +94,11 @@ export async function getWorkTaskTypeById(id: string): Promise<WorkTaskType | nu
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-  return data ? { ...data, context: (data.context as WorkTaskTypeContext) || 'all' } : null;
+  return data ? { 
+    ...data, 
+    context: (data.context as WorkTaskTypeContext) || 'all',
+    default_value_type: (data.default_value_type as TimeEntryValueType) || 'core_ma'
+  } : null;
 }
 
 export async function createWorkTaskType(data: CreateWorkTaskTypeData): Promise<WorkTaskType> {
@@ -104,7 +121,11 @@ export async function createWorkTaskType(data: CreateWorkTaskTypeData): Promise<
     .single();
 
   if (error) throw error;
-  return { ...result, context: (result.context as WorkTaskTypeContext) || 'all' };
+  return { 
+    ...result, 
+    context: (result.context as WorkTaskTypeContext) || 'all',
+    default_value_type: (result.default_value_type as TimeEntryValueType) || 'core_ma'
+  };
 }
 
 export async function updateWorkTaskType(id: string, data: UpdateWorkTaskTypeData): Promise<WorkTaskType> {
@@ -116,7 +137,11 @@ export async function updateWorkTaskType(id: string, data: UpdateWorkTaskTypeDat
     .single();
 
   if (error) throw error;
-  return { ...result, context: (result.context as WorkTaskTypeContext) || 'all' };
+  return { 
+    ...result, 
+    context: (result.context as WorkTaskTypeContext) || 'all',
+    default_value_type: (result.default_value_type as TimeEntryValueType) || 'core_ma'
+  };
 }
 
 export async function toggleWorkTaskTypeActive(id: string, isActive: boolean): Promise<WorkTaskType> {

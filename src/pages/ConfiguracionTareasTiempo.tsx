@@ -11,6 +11,13 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -43,12 +50,16 @@ import {
   useCreateWorkTaskType, 
   useUpdateWorkTaskType,
   useToggleWorkTaskTypeActive,
-  type WorkTaskType 
+  type WorkTaskType,
+  type WorkTaskTypeContext,
+  type TimeEntryValueType
 } from "@/hooks/useWorkTaskTypes";
 
 interface FormData {
   name: string;
   description: string;
+  context: WorkTaskTypeContext;
+  default_value_type: TimeEntryValueType;
   require_mandato: boolean;
   require_lead: boolean;
   require_description: boolean;
@@ -59,11 +70,52 @@ interface FormData {
 const defaultFormData: FormData = {
   name: '',
   description: '',
+  context: 'all',
+  default_value_type: 'core_ma',
   require_mandato: true,
   require_lead: false,
   require_description: false,
   min_description_length: 20,
   default_billable: true,
+};
+
+const CONTEXT_OPTIONS: { value: WorkTaskTypeContext; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'mandate', label: 'Mandatos' },
+  { value: 'prospection', label: 'Prospección' },
+  { value: 'internal', label: 'Interno' },
+];
+
+const VALUE_TYPE_OPTIONS: { value: TimeEntryValueType; label: string }[] = [
+  { value: 'core_ma', label: 'Core M&A' },
+  { value: 'soporte', label: 'Soporte' },
+  { value: 'bajo_valor', label: 'Bajo Valor' },
+];
+
+const getContextBadgeStyles = (context: WorkTaskTypeContext) => {
+  switch (context) {
+    case 'mandate':
+      return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+    case 'prospection':
+      return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
+    case 'internal':
+      return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+};
+
+const getValueTypeBadgeStyles = (valueType: TimeEntryValueType) => {
+  switch (valueType) {
+    case 'core_ma':
+      return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+    case 'soporte':
+      return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+    case 'bajo_valor':
+      return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
 };
 
 export default function ConfiguracionTareasTiempo() {
@@ -87,6 +139,8 @@ export default function ConfiguracionTareasTiempo() {
     setFormData({
       name: task.name,
       description: task.description || '',
+      context: task.context,
+      default_value_type: task.default_value_type || 'core_ma',
       require_mandato: task.require_mandato,
       require_lead: task.require_lead,
       require_description: task.require_description,
@@ -105,6 +159,8 @@ export default function ConfiguracionTareasTiempo() {
         data: { 
           name: formData.name.trim(), 
           description: formData.description.trim() || null,
+          context: formData.context,
+          default_value_type: formData.default_value_type,
           require_mandato: formData.require_mandato,
           require_lead: formData.require_lead,
           require_description: formData.require_description,
@@ -115,7 +171,14 @@ export default function ConfiguracionTareasTiempo() {
     } else {
       await createMutation.mutateAsync({
         name: formData.name.trim(),
-        description: formData.description.trim() || undefined
+        description: formData.description.trim() || undefined,
+        context: formData.context,
+        default_value_type: formData.default_value_type,
+        require_mandato: formData.require_mandato,
+        require_lead: formData.require_lead,
+        require_description: formData.require_description,
+        min_description_length: formData.min_description_length,
+        default_billable: formData.default_billable,
       });
     }
     
@@ -211,7 +274,8 @@ export default function ConfiguracionTareasTiempo() {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
+                    <TableHead>Contexto</TableHead>
+                    <TableHead>Tipo Valor</TableHead>
                     <TableHead>Reglas</TableHead>
                     <TableHead className="w-24 text-center">Estado</TableHead>
                     <TableHead className="w-24 text-right">Acciones</TableHead>
@@ -232,8 +296,15 @@ export default function ConfiguracionTareasTiempo() {
                       <TableCell className="font-medium">
                         {task.name}
                       </TableCell>
-                      <TableCell className="text-muted-foreground max-w-xs truncate">
-                        {task.description || "—"}
+                      <TableCell>
+                        <Badge variant="outline" className={getContextBadgeStyles(task.context)}>
+                          {CONTEXT_OPTIONS.find(o => o.value === task.context)?.label || task.context}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getValueTypeBadgeStyles(task.default_value_type || 'core_ma')}>
+                          {VALUE_TYPE_OPTIONS.find(o => o.value === task.default_value_type)?.label || 'Core M&A'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {renderRuleBadges(task)}
@@ -307,96 +378,144 @@ export default function ConfiguracionTareasTiempo() {
                 </div>
               </div>
 
-              {/* Validation rules - only show when editing */}
-              {editingTask && (
-                <>
-                  <Separator />
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">Reglas de Validación</Label>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="require_mandato"
-                          checked={formData.require_mandato}
-                          onCheckedChange={(checked) => 
-                            setFormData(prev => ({ ...prev, require_mandato: checked === true }))
-                          }
-                        />
-                        <label htmlFor="require_mandato" className="text-sm cursor-pointer">
-                          Requiere seleccionar Mandato
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="require_lead"
-                          checked={formData.require_lead}
-                          onCheckedChange={(checked) => 
-                            setFormData(prev => ({ ...prev, require_lead: checked === true }))
-                          }
-                        />
-                        <label htmlFor="require_lead" className="text-sm cursor-pointer">
-                          Requiere seleccionar Lead
-                        </label>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id="require_description"
-                            checked={formData.require_description}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, require_description: checked === true }))
-                            }
-                          />
-                          <label htmlFor="require_description" className="text-sm cursor-pointer">
-                            Requiere descripción
-                          </label>
-                        </div>
-                        {formData.require_description && (
-                          <div className="ml-7 flex items-center gap-2">
-                            <Label htmlFor="min_length" className="text-xs text-muted-foreground whitespace-nowrap">
-                              Longitud mínima:
-                            </Label>
-                            <Input
-                              id="min_length"
-                              type="number"
-                              min={1}
-                              max={500}
-                              value={formData.min_description_length}
-                              onChange={(e) => setFormData(prev => ({ 
-                                ...prev, 
-                                min_description_length: parseInt(e.target.value) || 20 
-                              }))}
-                              className="w-20 h-8"
-                            />
-                            <span className="text-xs text-muted-foreground">caracteres</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+              <Separator />
 
-                  <Separator />
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">Valores por Defecto</Label>
-                    
+              {/* Categorization */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Categorización</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="context" className="text-xs text-muted-foreground">Contexto</Label>
+                    <Select
+                      value={formData.context}
+                      onValueChange={(value: WorkTaskTypeContext) => 
+                        setFormData(prev => ({ ...prev, context: value }))
+                      }
+                    >
+                      <SelectTrigger id="context">
+                        <SelectValue placeholder="Seleccionar contexto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONTEXT_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="value_type" className="text-xs text-muted-foreground">Tipo de Valor</Label>
+                    <Select
+                      value={formData.default_value_type}
+                      onValueChange={(value: TimeEntryValueType) => 
+                        setFormData(prev => ({ ...prev, default_value_type: value }))
+                      }
+                    >
+                      <SelectTrigger id="value_type">
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VALUE_TYPE_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Validation rules */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Reglas de Validación</Label>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="require_mandato"
+                      checked={formData.require_mandato}
+                      onCheckedChange={(checked) => 
+                        setFormData(prev => ({ ...prev, require_mandato: checked === true }))
+                      }
+                    />
+                    <label htmlFor="require_mandato" className="text-sm cursor-pointer">
+                      Requiere seleccionar Mandato
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="require_lead"
+                      checked={formData.require_lead}
+                      onCheckedChange={(checked) => 
+                        setFormData(prev => ({ ...prev, require_lead: checked === true }))
+                      }
+                    />
+                    <label htmlFor="require_lead" className="text-sm cursor-pointer">
+                      Requiere seleccionar Lead
+                    </label>
+                  </div>
+                  
+                  <div className="space-y-2">
                     <div className="flex items-center space-x-3">
                       <Checkbox
-                        id="default_billable"
-                        checked={formData.default_billable}
+                        id="require_description"
+                        checked={formData.require_description}
                         onCheckedChange={(checked) => 
-                          setFormData(prev => ({ ...prev, default_billable: checked === true }))
+                          setFormData(prev => ({ ...prev, require_description: checked === true }))
                         }
                       />
-                      <label htmlFor="default_billable" className="text-sm cursor-pointer">
-                        Facturable por defecto
+                      <label htmlFor="require_description" className="text-sm cursor-pointer">
+                        Requiere descripción
                       </label>
                     </div>
+                    {formData.require_description && (
+                      <div className="ml-7 flex items-center gap-2">
+                        <Label htmlFor="min_length" className="text-xs text-muted-foreground whitespace-nowrap">
+                          Longitud mínima:
+                        </Label>
+                        <Input
+                          id="min_length"
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={formData.min_description_length}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            min_description_length: parseInt(e.target.value) || 20 
+                          }))}
+                          className="w-20 h-8"
+                        />
+                        <span className="text-xs text-muted-foreground">caracteres</span>
+                      </div>
+                    )}
                   </div>
-                </>
-              )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Default values */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Valores por Defecto</Label>
+                
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="default_billable"
+                    checked={formData.default_billable}
+                    onCheckedChange={(checked) => 
+                      setFormData(prev => ({ ...prev, default_billable: checked === true }))
+                    }
+                  />
+                  <label htmlFor="default_billable" className="text-sm cursor-pointer">
+                    Facturable por defecto
+                  </label>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
