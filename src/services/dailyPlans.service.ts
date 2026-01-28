@@ -290,7 +290,7 @@ export async function addAdminTask(
   return data as DailyPlanItem;
 }
 
-// Check if user can register hours for a future date
+// Check if user can register hours for a date (today or future requires submitted plan)
 export async function canRegisterHoursForDate(
   userId: string,
   date: Date
@@ -298,12 +298,12 @@ export async function canRegisterHoursForDate(
   const targetDate = format(date, 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   
-  // Past dates and today are always allowed
-  if (targetDate <= today) {
+  // Only PAST dates (before today) are allowed without a plan
+  if (targetDate < today) {
     return { allowed: true };
   }
   
-  // Future dates require a submitted plan
+  // TODAY and FUTURE dates require a submitted plan
   const { data: plan, error } = await supabase
     .from('daily_plans')
     .select('id, status')
@@ -314,16 +314,19 @@ export async function canRegisterHoursForDate(
   if (error) throw error;
   
   if (!plan) {
+    const isToday = targetDate === today;
     return {
       allowed: false,
-      reason: 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
+      reason: isToday 
+        ? 'Debes crear y enviar tu plan para hoy antes de registrar horas'
+        : 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
     };
   }
   
   if (plan.status === 'draft') {
     return {
       allowed: false,
-      reason: 'Debes enviar tu plan diario antes de registrar horas para este día',
+      reason: 'Debes enviar tu plan diario antes de registrar horas',
       planId: plan.id
     };
   }
