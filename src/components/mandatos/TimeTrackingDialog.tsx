@@ -17,7 +17,7 @@ import { ensureLeadInMandateLeads } from "@/services/leadActivities";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry } from "@/components/shared/LeadByMandatoSelect";
 import type { TimeEntryValueType } from "@/types";
-import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
+import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import type { MandatoChecklistTask } from "@/types";
 import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
 
@@ -86,8 +86,11 @@ export function TimeTrackingDialog({
   const isInternalProject = INTERNAL_PROJECT_IDS_NO_LEADS.includes(selectedMandatoId);
   const isProspeccionProject = selectedMandatoId === PROSPECCION_PROJECT_ID;
   
-  // Tipos de tarea desde la base de datos
-  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
+  // Effective mandato for filtering work task types
+  const effectiveMandatoForFilter = selectedMandatoId || mandatoId || null;
+  
+  // Tipos de tarea desde la base de datos - filtered by context
+  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(effectiveMandatoForFilter);
   
   // Get selected task type for dynamic validation
   const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
@@ -130,11 +133,12 @@ export function TimeTrackingDialog({
     }
   }, [selectedMandatoId, isInternalProject]);
 
-  // Reset lead when mandato changes
+  // Reset lead and work task type when mandato changes
   useEffect(() => {
     setSelectedLeadId(null);
     setSelectedLeadData(null);
     setTaskId('');
+    setWorkTaskTypeId(''); // Reset task type since available options change by context
   }, [selectedMandatoId]);
 
   // Load tasks when mandato changes

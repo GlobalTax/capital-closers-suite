@@ -17,6 +17,13 @@ import { handleError } from "@/lib/error-handler";
 
 const PROSPECCION_PROJECT_ID = '00000000-0000-0000-0000-000000000004';
 
+// Internal projects (excluding Prospección which has its own context)
+const INTERNAL_PROJECT_IDS = [
+  '00000000-0000-0000-0000-000000000001', // Business Development
+  '00000000-0000-0000-0000-000000000002', // Reuniones Internas
+  '00000000-0000-0000-0000-000000000003', // Administrativo
+];
+
 export function useActiveWorkTaskTypes() {
   return useQuery({
     queryKey: ['workTaskTypes', 'active'],
@@ -36,25 +43,38 @@ export function useAllWorkTaskTypes() {
 /**
  * Hook that returns work task types filtered by context based on the selected mandato.
  * - For Prospección project: returns 'prospection' + 'all' context types
+ * - For internal projects (BD, Meetings, Admin): returns 'internal' + 'all' context types
  * - For regular mandatos: returns 'mandate' + 'all' context types
+ * - No mandato selected: returns only 'all' context types
  */
 export function useFilteredWorkTaskTypes(mandatoId: string | null) {
   const { data: workTaskTypes = [], isLoading } = useActiveWorkTaskTypes();
   
-  const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
-  
   const filteredTypes = useMemo(() => {
-    if (isProspeccionProject) {
-      // For Prospección: show 'prospection' and 'all' context types
+    if (!mandatoId) {
+      // No mandato selected: show only 'all'
+      return workTaskTypes.filter(t => t.context === 'all');
+    }
+    
+    if (mandatoId === PROSPECCION_PROJECT_ID) {
+      // Prospección: show 'prospection' + 'all' context types
       return workTaskTypes.filter(t => 
         t.context === 'prospection' || t.context === 'all'
       );
     }
-    // For regular mandatos: show 'mandate' and 'all' context types
+    
+    if (INTERNAL_PROJECT_IDS.includes(mandatoId)) {
+      // Internal projects: show 'internal' + 'all' context types
+      return workTaskTypes.filter(t => 
+        t.context === 'internal' || t.context === 'all'
+      );
+    }
+    
+    // Regular mandatos: show 'mandate' + 'all' context types
     return workTaskTypes.filter(t => 
       t.context === 'mandate' || t.context === 'all'
     );
-  }, [workTaskTypes, isProspeccionProject]);
+  }, [workTaskTypes, mandatoId]);
   
   return { data: filteredTypes, isLoading };
 }
