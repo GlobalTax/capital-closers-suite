@@ -1,146 +1,147 @@
 
 
-## Plan: Arreglar Bug de Guardado de Interacciones
+## Plan: Extender work_task_types con Reglas de Validación Adicionales
 
-### Diagnóstico Confirmado
+### Estado Actual (Confirmado)
 
-**Causa raíz identificada:** La política RLS de INSERT en la tabla `interacciones` requiere que `created_by = auth.uid()`, pero el código frontend no envía este campo.
+La tabla `work_task_types` ya tiene estos campos de validación:
 
-```text
-Tabla: interacciones
-Error: RLS violation - "new row violates row-level security policy"
-Policy: (current_user_can_read() AND (created_by = auth.uid()))
+| Campo | Tipo | Default | Estado |
+|-------|------|---------|--------|
+| `require_mandato` | boolean | true | ✅ Existe |
+| `require_lead` | boolean | false | ✅ Existe |
+| `require_description` | boolean | false | ✅ Existe |
+| `context` | text | 'all' | ✅ Existe |
+| `default_value_type` | enum | 'core_ma' | ✅ Existe |
 
-Payload actual:
-{
-  empresa_id: "xxx",
-  mandato_id: "yyy", 
-  tipo: "email",
-  titulo: "Test",
-  descripcion: "...",
-  fecha: "2026-01-28T..."
-  // ⚠️ FALTA: created_by: auth.uid()
+Campos solicitados que **NO existen**:
+
+| Campo | Tipo | Default | Estado |
+|-------|------|---------|--------|
+| `min_description_length` | int | 20 | ❌ No existe |
+| `default_billable` | boolean | true | ❌ No existe |
+
+---
+
+### Cambios Requeridos
+
+#### 1. Migración de Base de Datos
+
+```sql
+-- Añadir columnas de reglas adicionales a work_task_types
+ALTER TABLE public.work_task_types
+ADD COLUMN IF NOT EXISTS min_description_length integer NOT NULL DEFAULT 20,
+ADD COLUMN IF NOT EXISTS default_billable boolean NOT NULL DEFAULT true;
+
+-- Comentarios descriptivos
+COMMENT ON COLUMN public.work_task_types.min_description_length IS 
+  'Longitud mínima de descripción requerida cuando require_description es true';
+COMMENT ON COLUMN public.work_task_types.default_billable IS 
+  'Si las entradas de tiempo de este tipo son facturables por defecto';
+```
+
+---
+
+#### 2. Actualizar TypeScript Types
+
+**Archivo: `src/services/workTaskTypes.service.ts`**
+
+```typescript
+export interface WorkTaskType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  context: WorkTaskTypeContext;
+  created_at: string;
+  updated_at: string;
+  // Dynamic validation requirements
+  require_mandato: boolean;
+  require_lead: boolean;
+  require_description: boolean;
+  // NEW: Additional validation rules
+  min_description_length: number;
+  default_billable: boolean;
+}
+
+export interface UpdateWorkTaskTypeData {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+  sort_order?: number;
+  // NEW: Validation rules editable from admin
+  require_mandato?: boolean;
+  require_lead?: boolean;
+  require_description?: boolean;
+  min_description_length?: number;
+  default_billable?: boolean;
 }
 ```
 
 ---
 
-### Solución: Añadir created_by al Payload
+#### 3. Actualizar UI de Administración
 
-#### 1. Modificar InteraccionTimeline.tsx
+**Archivo: `src/pages/ConfiguracionTareasTiempo.tsx`**
 
-```typescript
-// Líneas 70-80 - Añadir created_by
-const onSubmit = async (data: FormData) => {
-  setSaving(true);
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    await createInteraccion({
-      empresa_id: empresaId,
-      mandato_id: mandatoId,
-      tipo: data.tipo,
-      titulo: data.titulo,
-      descripcion: data.descripcion || undefined,
-      fecha: new Date(data.fecha).toISOString(),
-      created_by: user?.id,  // ✅ AÑADIR ESTO
-    });
-    // ...
-  }
-};
+Añadir al formulario de edición (Dialog) controles para:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Editar Tipo de Tarea                                   [X]  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│ Nombre *                                                    │
+│ [___________________________________________________]       │
+│                                                             │
+│ Descripción (opcional)                                      │
+│ [___________________________________________________]       │
+│                                                             │
+│ ─────────────── Reglas de Validación ───────────────       │
+│                                                             │
+│ [✓] Requiere seleccionar Mandato                           │
+│ [ ] Requiere seleccionar Lead                              │
+│ [✓] Requiere descripción                                   │
+│     └─ Longitud mínima: [20___] caracteres                 │
+│                                                             │
+│ [✓] Facturable por defecto                                 │
+│                                                             │
+│                              [Cancelar]  [Guardar Cambios]  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-#### 2. Modificar NuevaInteraccionDialog.tsx
+**Tabla principal** - Añadir columna visual de reglas:
 
-```typescript
-// Líneas 39-61 - Añadir created_by
-const onSubmit = async (data: any) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    await createInteraccion({
-      ...data,
-      contacto_id: contactoId,
-      empresa_id: empresaId,
-      mandato_id: mandatoId,
-      fecha: fecha.toISOString(),
-      fecha_siguiente_accion: fechaSiguienteAccion?.toISOString().split('T')[0],
-      duracion_minutos: data.duracion_minutos ? parseInt(data.duracion_minutos) : undefined,
-      created_by: user?.id,  // ✅ AÑADIR ESTO
-    });
-    // ...
-  }
-};
-```
+| # | Nombre | Descripción | Reglas | Estado | Acciones |
+|---|--------|-------------|--------|--------|----------|
+| 1 | IM | ... | 📋 Mandato • 📝 Desc(20) | ✓ Activa | ✏️ 🔘 |
+| 2 | Leads | ... | 📋 Mandato • 👤 Lead | ✓ Activa | ✏️ 🔘 |
 
 ---
 
-### Alternativa: Mejora en el Servicio (Centralizada)
+### Archivos a Modificar
 
-En lugar de modificar cada componente, centralizar la lógica en el servicio:
-
-```typescript
-// src/services/interacciones.ts - Líneas 55-64
-export const createInteraccion = async (interaccion: Partial<Interaccion>) => {
-  // Obtener usuario actual si no viene en el payload
-  let created_by = interaccion.created_by;
-  if (!created_by) {
-    const { data: { user } } = await supabase.auth.getUser();
-    created_by = user?.id;
-  }
-
-  const { data, error } = await supabase
-    .from('interacciones')
-    .insert({ ...interaccion, created_by } as any)
-    .select()
-    .single();
-  
-  if (error) throw error;
-  return data as Interaccion;
-};
-```
-
-**Ventaja:** Todos los componentes que usen `createInteraccion` funcionarán sin modificaciones adicionales.
-
----
-
-### Resumen de Archivos a Modificar
-
-| Archivo | Cambio | Prioridad |
-|---------|--------|-----------|
-| `src/services/interacciones.ts` | Añadir `created_by` automático en `createInteraccion()` | ✅ Opción preferida |
-| `src/components/targets/InteraccionTimeline.tsx` | Añadir import de supabase + `created_by` | Alternativa |
-| `src/components/shared/NuevaInteraccionDialog.tsx` | Añadir import de supabase + `created_by` | Alternativa |
-
----
-
-### Pruebas Post-Fix
-
-1. Abrir mandato → Tab Targets → Empresa → Timeline
-2. Click "Nueva Interacción"
-3. Rellenar tipo (Email), título, descripción
-4. Click "Guardar Interacción"
-5. Verificar:
-   - Toast "Interacción registrada" ✅
-   - Interacción aparece en timeline ✅
-   - No hay errores en consola ✅
-6. Repetir en perfil de empresa (NuevaInteraccionDialog)
-7. Verificar que interacciones se listan correctamente
+| Archivo | Cambio |
+|---------|--------|
+| Nueva migración SQL | Añadir `min_description_length` y `default_billable` |
+| `src/services/workTaskTypes.service.ts` | Actualizar interfaces `WorkTaskType` y `UpdateWorkTaskTypeData` |
+| `src/pages/ConfiguracionTareasTiempo.tsx` | Añadir controles de validación al formulario y columna de reglas |
 
 ---
 
 ### Sección Técnica
 
-**Por qué falla:**
-- La tabla `interacciones` tiene RLS habilitado
-- La política `interacciones_insert` valida: `created_by = auth.uid()`
-- El campo `created_by` es nullable en la BD pero la policy lo requiere
-- Sin `created_by`, la comparación `null = auth.uid()` es `false`
+**Migración segura:**
+- Usa `ADD COLUMN IF NOT EXISTS` para idempotencia
+- Valores por defecto sensatos (min_description_length=20, default_billable=true)
+- No rompe datos existentes
 
-**Por qué la solución es segura:**
-- Solo añade un campo que ya existe en el schema
-- No modifica la estructura de la tabla
-- No cambia las policies RLS
-- Compatible con todos los componentes existentes
-- El usuario siempre está autenticado en esta sección
+**Compatibilidad hacia atrás:**
+- Los tipos existentes seguirán funcionando con los defaults
+- El código de validación existente (validateByTaskType) ya usa `require_*` flags
+
+**Próximos pasos (fuera de este plan):**
+- Actualizar `validateByTaskType` para usar `min_description_length` en vez de hardcoded 10
+- Usar `default_billable` en formularios de entrada de tiempo
 
