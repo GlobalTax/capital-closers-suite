@@ -1,136 +1,221 @@
 
 
-## Plan: Añadir Validación de 8 Horas Mínimas al Bloqueo
+## Plan: Completar Panel Admin de Planes Diarios
 
-### Problema Actual
+### Resumen de Estado Actual
 
-La función `canRegisterHoursForDate` en `src/services/dailyPlans.service.ts` verifica que exista un plan enviado, pero **no valida** que el plan tenga al menos 8 horas planificadas.
+El panel admin (`/admin/planes-diarios`) ya tiene implementado:
+- Tabla con columnas Usuario, Tareas, Horas, Estado
+- Navegación por fecha (prev/next)
+- Drawer de detalle con lista de tareas
+- Añadir nuevas tareas asignadas por admin
+- Aprobar/Rechazar planes con comentarios
+- Políticas RLS completas para admins
 
-### Cambio Propuesto
+### Cambios Necesarios
 
-**Archivo: `src/services/dailyPlans.service.ts`**
+---
 
-Modificar la consulta para incluir `total_estimated_minutes` y añadir validación:
+### 1. Añadir Columna "Última Edición" a la Tabla
+
+**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
+
+Añadir columna en el TableHeader y mostrar `updated_at` formateado:
 
 ```typescript
-// Línea 355-360: Añadir total_estimated_minutes al SELECT
-const { data: plan, error } = await supabase
-  .from('daily_plans')
-  .select('id, status, total_estimated_minutes')  // ← CAMBIO
-  .eq('user_id', userId)
-  .eq('planned_for_date', targetDate)
-  .maybeSingle();
+// En TableHeader
+<TableHead>Última edición</TableHead>
 
-// Después de la validación de draft (línea 374-380):
-// NUEVO: Verificar mínimo 8 horas
-const MIN_MINUTES = 480; // 8 horas
-if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
-  const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
-  return {
-    allowed: false,
-    reason: `Tu plan solo tiene ${currentHours}h. Necesitas mínimo 8h para registrar horas`,
-    planId: plan.id
-  };
-}
+// En TableBody
+<TableCell className="text-xs text-muted-foreground">
+  {format(new Date(plan.updated_at), "HH:mm", { locale: es })}
+</TableCell>
 ```
 
-### Código Final de la Función
+---
+
+### 2. Añadir Filtro por Usuario
+
+**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
+
+Añadir un Select para filtrar por usuario específico:
 
 ```typescript
-export async function canRegisterHoursForDate(
-  userId: string,
-  date: Date
-): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
-  const targetDate = format(date, 'yyyy-MM-dd');
-  const today = format(new Date(), 'yyyy-MM-dd');
-  
-  // Días pasados permitidos sin plan
-  if (targetDate < today) {
-    return { allowed: true };
+const [selectedUserId, setSelectedUserId] = useState<string | 'all'>('all');
+
+// En la UI, junto a la navegación de fecha
+<Select value={selectedUserId} onValueChange={setSelectedUserId}>
+  <SelectTrigger className="w-[200px]">
+    <SelectValue placeholder="Todos los usuarios" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">Todos los usuarios</SelectItem>
+    {allUsers.map(user => (
+      <SelectItem key={user.user_id} value={user.user_id}>
+        {user.full_name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
+// Filtrar planes
+const filteredPlans = selectedUserId === 'all' 
+  ? plans 
+  : plans.filter(p => p.user_id === selectedUserId);
+```
+
+---
+
+### 3. Permitir Edición de Estimaciones y Prioridad por Admin
+
+**Archivo:** `src/pages/admin/DailyPlansAdmin.tsx`
+
+Cambiar el drawer para que el admin pueda editar tareas:
+
+```typescript
+// Estado para tracking de cambios
+const [editedItems, setEditedItems] = useState<Map<string, Partial<DailyPlanItem>>>(new Map());
+
+// En el drawer, cambiar canEdit a true y conectar onUpdate
+<DailyPlanItemRow
+  key={item.id}
+  item={item}
+  canEdit={true}  // Permitir edición
+  onUpdate={(updates) => handleAdminUpdateItem(item.id, updates)}
+  onDelete={() => handleAdminDeleteItem(item.id)}
+/>
+
+// Función para actualizar
+const handleAdminUpdateItem = async (itemId: string, updates: Partial<DailyPlanItem>) => {
+  try {
+    await updatePlanItem(itemId, updates);
+    loadData();
+    toast.success('Tarea actualizada');
+  } catch (error) {
+    toast.error('Error al actualizar tarea');
   }
-  
-  // HOY y FUTURO requieren plan enviado con mínimo 8h
-  const { data: plan, error } = await supabase
-    .from('daily_plans')
-    .select('id, status, total_estimated_minutes')
-    .eq('user_id', userId)
-    .eq('planned_for_date', targetDate)
-    .maybeSingle();
+};
+```
+
+**Archivo:** `src/services/dailyPlans.service.ts`
+
+Crear función específica para actualización admin que incluya auditoría:
+
+```typescript
+export async function adminUpdatePlanItem(
+  itemId: string,
+  updates: Partial<NewDailyPlanItem>,
+  adminId: string
+): Promise<DailyPlanItem> {
+  const { data, error } = await supabase
+    .from('daily_plan_items')
+    .update({
+      ...updates,
+      // Opcionalmente: guardar quién modificó
+    })
+    .eq('id', itemId)
+    .select()
+    .single();
   
   if (error) throw error;
-  
-  if (!plan) {
-    const isToday = targetDate === today;
-    return {
-      allowed: false,
-      reason: isToday 
-        ? 'Debes crear y enviar tu plan para hoy antes de registrar horas'
-        : 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
-    };
-  }
-  
-  if (plan.status === 'draft') {
-    return {
-      allowed: false,
-      reason: 'Debes enviar tu plan diario antes de registrar horas',
-      planId: plan.id
-    };
-  }
-  
-  // Validar mínimo 8 horas
-  const MIN_MINUTES = 480;
-  if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
-    const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
-    return {
-      allowed: false,
-      reason: `Tu plan solo tiene ${currentHours}h planificadas. Añade más tareas hasta completar 8h`,
-      planId: plan.id
-    };
-  }
-  
-  return { allowed: true, planId: plan.id };
+  return data as DailyPlanItem;
 }
 ```
 
-### Flujo de Validación Completo
+---
 
-```text
-Usuario intenta registrar horas
-          │
-          ▼
-   ¿Fecha pasada?  ───Sí───▶ ✅ Permitido
-          │
-         No
-          │
-          ▼
-   ¿Existe plan?   ───No───▶ ❌ "Crea tu plan"
-          │
-         Sí
-          │
-          ▼
-   ¿Plan enviado?  ───No───▶ ❌ "Envía tu plan"
-   (status≠draft)
-          │
-         Sí
-          │
-          ▼
-   ¿Plan ≥ 8h?     ───No───▶ ❌ "Añade más tareas"
-          │
-         Sí
-          │
-          ▼
-      ✅ Permitido
+### 4. Implementar Auditoría de Acciones Admin
+
+**Migración SQL** - Crear trigger de auditoría para daily_plans y daily_plan_items:
+
+```sql
+-- Añadir trigger de auditoría a daily_plans
+CREATE TRIGGER audit_daily_plans
+  AFTER INSERT OR UPDATE OR DELETE ON public.daily_plans
+  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
+
+-- Añadir trigger de auditoría a daily_plan_items
+CREATE TRIGGER audit_daily_plan_items
+  AFTER INSERT OR UPDATE OR DELETE ON public.daily_plan_items
+  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
 ```
 
-### Resumen
+Esto registrará automáticamente en la tabla `audit_logs`:
+- Quién hizo el cambio (`auth.uid()`)
+- Qué tabla y registro
+- Qué acción (INSERT/UPDATE/DELETE)
+- Valores anteriores y nuevos
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/services/dailyPlans.service.ts` | Añadir `total_estimated_minutes` al SELECT + nueva validación |
+---
+
+### 5. Actualizar Tipos para incluir updated_at
+
+**Archivo:** `src/types/dailyPlans.ts`
+
+El tipo `DailyPlanWithUser` ya hereda de `DailyPlan` que tiene `updated_at`.
+
+---
+
+### Flujo Resultante
+
+```text
+Admin accede a /admin/planes-diarios
+            │
+            ▼
+    ┌───────────────────────────────────┐
+    │  [◀] Lun 29 Ene [▶]  [Usuario ▼]  │  ← Filtros
+    └───────────────────────────────────┘
+            │
+            ▼
+    ┌───────────────────────────────────────────────────────────┐
+    │ Usuario    │ Tareas │ Horas │ Estado   │ Última Ed │ Acc  │
+    ├────────────┼────────┼───────┼──────────┼───────────┼──────┤
+    │ Juan López │   5    │ 8.5h  │ Enviado  │ 09:45     │ [👁] │
+    │ Ana García │   3    │ 6.0h  │ Borrador │ 08:30     │ [👁] │
+    └───────────────────────────────────────────────────────────┘
+            │
+            ▼ (click Ver)
+    ┌─────────────────────────────────────┐
+    │  Plan de Juan López                 │
+    │  ─────────────────────────────────  │
+    │  [✓] Tarea 1    2h   [Alta ▼]  [🗑] │  ← Admin puede editar
+    │  [✓] Tarea 2    1h   [Media▼]  [🗑] │
+    │  [★] Tarea admin 1h  [Urgente]      │  ← No borrable
+    │  ─────────────────────────────────  │
+    │  [+ Añadir tarea]                   │
+    │  ─────────────────────────────────  │
+    │  Comentarios: [________________]    │
+    │  ─────────────────────────────────  │
+    │  [Rechazar]  [Aprobar]              │
+    └─────────────────────────────────────┘
+```
+
+---
+
+### Resumen de Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/pages/admin/DailyPlansAdmin.tsx` | Columna "Última edición", filtro usuario, edición inline |
+| `src/services/dailyPlans.service.ts` | Función `adminUpdatePlanItem` (opcional) |
+| **Nueva migración SQL** | Triggers de auditoría para `daily_plans` y `daily_plan_items` |
+
+---
 
 ### Impacto
 
-- Usuarios no podrán registrar horas para hoy/mañana si su plan tiene menos de 8 horas
-- El mensaje es claro y accionable: indica cuántas horas tienen y qué necesitan
-- El `planId` se incluye para que el modal pueda enlazar directamente al plan
+- Admins podrán filtrar planes por usuario específico
+- Verán cuándo fue la última modificación de cada plan
+- Podrán editar estimaciones y prioridad de cualquier tarea
+- Todas las acciones quedarán registradas en `audit_logs` para trazabilidad
+
+---
+
+### Sección Técnica
+
+**Dependencias:** No se requieren nuevas dependencias.
+
+**RLS:** Las políticas existentes ya permiten a admins hacer UPDATE en `daily_plan_items`, por lo que la edición funcionará sin cambios adicionales.
+
+**Auditoría:** La función `audit_trigger_function` ya existe en el proyecto y se usa en otras tablas (mandatos, contactos, empresas, etc.). Los nuevos triggers seguirán el mismo patrón.
 
