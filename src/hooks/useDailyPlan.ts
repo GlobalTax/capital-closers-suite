@@ -105,11 +105,22 @@ export function useDailyPlan(date?: Date) {
     }
   };
   
+  const totalMinutes = plan?.items.reduce((sum, item) => sum + item.estimated_minutes, 0) || 0;
+  const totalHours = totalMinutes / 60;
+  
+  const MIN_HOURS = 8;
+  
   const submitPlan = async () => {
     if (!plan) return;
     
     if (plan.items.length === 0) {
       toast.error('Debes añadir al menos una tarea');
+      return;
+    }
+    
+    // Validate minimum 8 hours
+    if (totalHours < MIN_HOURS) {
+      toast.error(`El plan debe tener al menos ${MIN_HOURS} horas. Actualmente: ${totalHours.toFixed(1)}h`);
       return;
     }
     
@@ -126,9 +137,6 @@ export function useDailyPlan(date?: Date) {
     }
   };
   
-  const totalMinutes = plan?.items.reduce((sum, item) => sum + item.estimated_minutes, 0) || 0;
-  const totalHours = totalMinutes / 60;
-  
   return {
     plan,
     loading,
@@ -141,7 +149,9 @@ export function useDailyPlan(date?: Date) {
     refresh: loadPlan,
     totalMinutes,
     totalHours,
-    canEdit: plan?.status === 'draft',
+    minHours: MIN_HOURS,
+    hoursRemaining: Math.max(0, MIN_HOURS - totalHours),
+    canEdit: plan?.status !== 'rejected',
     isSubmitted: plan?.status === 'submitted' || plan?.status === 'approved',
   };
 }

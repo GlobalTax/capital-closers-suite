@@ -2532,6 +2532,54 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_errors: {
+        Row: {
+          action: string
+          company_data: Json | null
+          component: string
+          created_at: string
+          current_step: number | null
+          error_message: string
+          error_stack: string | null
+          error_type: string
+          id: string
+          ip_address: unknown
+          source_project: string | null
+          unique_token: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          company_data?: Json | null
+          component: string
+          created_at?: string
+          current_step?: number | null
+          error_message: string
+          error_stack?: string | null
+          error_type: string
+          id?: string
+          ip_address?: unknown
+          source_project?: string | null
+          unique_token?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          company_data?: Json | null
+          component?: string
+          created_at?: string
+          current_step?: number | null
+          error_message?: string
+          error_stack?: string | null
+          error_type?: string
+          id?: string
+          ip_address?: unknown
+          source_project?: string | null
+          unique_token?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       calendar_bookings: {
         Row: {
           assigned_at: string | null
@@ -6076,6 +6124,7 @@ export type Database = {
           approved_by: string | null
           created_at: string | null
           id: string
+          modified_after_submit: boolean | null
           planned_for_date: string
           status: string
           submitted_at: string | null
@@ -6090,6 +6139,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           id?: string
+          modified_after_submit?: boolean | null
           planned_for_date: string
           status?: string
           submitted_at?: string | null
@@ -6104,6 +6154,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           id?: string
+          modified_after_submit?: boolean | null
           planned_for_date?: string
           status?: string
           submitted_at?: string | null

@@ -90,6 +90,25 @@ export async function getTomorrowPlan(userId: string): Promise<DailyPlanWithItem
   } as DailyPlanWithItems;
 }
 
+// Helper: Mark plan as modified if already submitted
+async function markPlanAsModified(planId: string): Promise<void> {
+  const { data: plan } = await supabase
+    .from('daily_plans')
+    .select('status')
+    .eq('id', planId)
+    .single();
+  
+  if (plan && plan.status !== 'draft') {
+    await supabase
+      .from('daily_plans')
+      .update({ 
+        modified_after_submit: true, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', planId);
+  }
+}
+
 // Add item to plan
 export async function addPlanItem(
   planId: string,
@@ -121,6 +140,10 @@ export async function addPlanItem(
     .single();
   
   if (error) throw error;
+  
+  // Mark plan as modified if already submitted
+  await markPlanAsModified(planId);
+  
   return data as DailyPlanItem;
 }
 
@@ -129,6 +152,13 @@ export async function updatePlanItem(
   itemId: string,
   updates: Partial<NewDailyPlanItem & { completed?: boolean }>
 ): Promise<DailyPlanItem> {
+  // First get the plan_id to mark as modified
+  const { data: item } = await supabase
+    .from('daily_plan_items')
+    .select('plan_id')
+    .eq('id', itemId)
+    .single();
+  
   const { data, error } = await supabase
     .from('daily_plan_items')
     .update(updates)
@@ -137,17 +167,35 @@ export async function updatePlanItem(
     .single();
   
   if (error) throw error;
+  
+  // Mark plan as modified if already submitted
+  if (item?.plan_id) {
+    await markPlanAsModified(item.plan_id);
+  }
+  
   return data as DailyPlanItem;
 }
 
 // Delete plan item
 export async function deletePlanItem(itemId: string): Promise<void> {
+  // First get the plan_id to mark as modified
+  const { data: item } = await supabase
+    .from('daily_plan_items')
+    .select('plan_id')
+    .eq('id', itemId)
+    .single();
+  
   const { error } = await supabase
     .from('daily_plan_items')
     .delete()
     .eq('id', itemId);
   
   if (error) throw error;
+  
+  // Mark plan as modified if already submitted
+  if (item?.plan_id) {
+    await markPlanAsModified(item.plan_id);
+  }
 }
 
 // Submit plan
