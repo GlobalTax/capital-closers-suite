@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +32,11 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  FileText,
+  Users,
+  ClipboardList,
+  DollarSign
 } from "lucide-react";
 import { 
   useAllWorkTaskTypes, 
@@ -40,6 +46,26 @@ import {
   type WorkTaskType 
 } from "@/hooks/useWorkTaskTypes";
 
+interface FormData {
+  name: string;
+  description: string;
+  require_mandato: boolean;
+  require_lead: boolean;
+  require_description: boolean;
+  min_description_length: number;
+  default_billable: boolean;
+}
+
+const defaultFormData: FormData = {
+  name: '',
+  description: '',
+  require_mandato: true,
+  require_lead: false,
+  require_description: false,
+  min_description_length: 20,
+  default_billable: true,
+};
+
 export default function ConfiguracionTareasTiempo() {
   const { data: taskTypes = [], isLoading } = useAllWorkTaskTypes();
   const createMutation = useCreateWorkTaskType();
@@ -48,17 +74,25 @@ export default function ConfiguracionTareasTiempo() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<WorkTaskType | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState<FormData>(defaultFormData);
 
   const handleOpenCreate = () => {
     setEditingTask(null);
-    setFormData({ name: '', description: '' });
+    setFormData(defaultFormData);
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (task: WorkTaskType) => {
     setEditingTask(task);
-    setFormData({ name: task.name, description: task.description || '' });
+    setFormData({
+      name: task.name,
+      description: task.description || '',
+      require_mandato: task.require_mandato,
+      require_lead: task.require_lead,
+      require_description: task.require_description,
+      min_description_length: task.min_description_length ?? 20,
+      default_billable: task.default_billable ?? true,
+    });
     setIsDialogOpen(true);
   };
 
@@ -70,7 +104,12 @@ export default function ConfiguracionTareasTiempo() {
         id: editingTask.id,
         data: { 
           name: formData.name.trim(), 
-          description: formData.description.trim() || null 
+          description: formData.description.trim() || null,
+          require_mandato: formData.require_mandato,
+          require_lead: formData.require_lead,
+          require_description: formData.require_description,
+          min_description_length: formData.min_description_length,
+          default_billable: formData.default_billable,
         }
       });
     } else {
@@ -81,7 +120,7 @@ export default function ConfiguracionTareasTiempo() {
     }
     
     setIsDialogOpen(false);
-    setFormData({ name: '', description: '' });
+    setFormData(defaultFormData);
     setEditingTask(null);
   };
 
@@ -93,6 +132,52 @@ export default function ConfiguracionTareasTiempo() {
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  // Helper to render rule badges
+  const renderRuleBadges = (task: WorkTaskType) => {
+    const badges = [];
+    
+    if (task.require_mandato) {
+      badges.push(
+        <Badge key="mandato" variant="outline" className="text-xs gap-1">
+          <ClipboardList className="h-3 w-3" />
+          Mandato
+        </Badge>
+      );
+    }
+    if (task.require_lead) {
+      badges.push(
+        <Badge key="lead" variant="outline" className="text-xs gap-1">
+          <Users className="h-3 w-3" />
+          Lead
+        </Badge>
+      );
+    }
+    if (task.require_description) {
+      badges.push(
+        <Badge key="desc" variant="outline" className="text-xs gap-1">
+          <FileText className="h-3 w-3" />
+          Desc({task.min_description_length ?? 20})
+        </Badge>
+      );
+    }
+    if (task.default_billable) {
+      badges.push(
+        <Badge key="billable" variant="outline" className="text-xs gap-1 text-green-600 border-green-600">
+          <DollarSign className="h-3 w-3" />
+          Facturable
+        </Badge>
+      );
+    }
+    
+    return badges.length > 0 ? (
+      <div className="flex flex-wrap gap-1">
+        {badges}
+      </div>
+    ) : (
+      <span className="text-muted-foreground text-sm">—</span>
+    );
+  };
 
   return (
     <AppLayout>
@@ -127,6 +212,7 @@ export default function ConfiguracionTareasTiempo() {
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Descripción</TableHead>
+                    <TableHead>Reglas</TableHead>
                     <TableHead className="w-24 text-center">Estado</TableHead>
                     <TableHead className="w-24 text-right">Acciones</TableHead>
                   </TableRow>
@@ -148,6 +234,9 @@ export default function ConfiguracionTareasTiempo() {
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-xs truncate">
                         {task.description || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {renderRuleBadges(task)}
                       </TableCell>
                       <TableCell className="text-center">
                         {task.is_active ? (
@@ -188,32 +277,126 @@ export default function ConfiguracionTareasTiempo() {
 
         {/* Dialog para crear/editar */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
                 {editingTask ? "Editar Tipo de Tarea" : "Nuevo Tipo de Tarea"}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ej: Due Diligence, Negociación..."
-                />
+            <div className="space-y-6 py-4">
+              {/* Basic info */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Ej: Due Diligence, Negociación..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Descripción (opcional)</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Descripción breve del tipo de tarea..."
+                    rows={2}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Descripción (opcional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción breve del tipo de tarea..."
-                  rows={3}
-                />
-              </div>
+
+              {/* Validation rules - only show when editing */}
+              {editingTask && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">Reglas de Validación</Label>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id="require_mandato"
+                          checked={formData.require_mandato}
+                          onCheckedChange={(checked) => 
+                            setFormData(prev => ({ ...prev, require_mandato: checked === true }))
+                          }
+                        />
+                        <label htmlFor="require_mandato" className="text-sm cursor-pointer">
+                          Requiere seleccionar Mandato
+                        </label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id="require_lead"
+                          checked={formData.require_lead}
+                          onCheckedChange={(checked) => 
+                            setFormData(prev => ({ ...prev, require_lead: checked === true }))
+                          }
+                        />
+                        <label htmlFor="require_lead" className="text-sm cursor-pointer">
+                          Requiere seleccionar Lead
+                        </label>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="require_description"
+                            checked={formData.require_description}
+                            onCheckedChange={(checked) => 
+                              setFormData(prev => ({ ...prev, require_description: checked === true }))
+                            }
+                          />
+                          <label htmlFor="require_description" className="text-sm cursor-pointer">
+                            Requiere descripción
+                          </label>
+                        </div>
+                        {formData.require_description && (
+                          <div className="ml-7 flex items-center gap-2">
+                            <Label htmlFor="min_length" className="text-xs text-muted-foreground whitespace-nowrap">
+                              Longitud mínima:
+                            </Label>
+                            <Input
+                              id="min_length"
+                              type="number"
+                              min={1}
+                              max={500}
+                              value={formData.min_description_length}
+                              onChange={(e) => setFormData(prev => ({ 
+                                ...prev, 
+                                min_description_length: parseInt(e.target.value) || 20 
+                              }))}
+                              className="w-20 h-8"
+                            />
+                            <span className="text-xs text-muted-foreground">caracteres</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">Valores por Defecto</Label>
+                    
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="default_billable"
+                        checked={formData.default_billable}
+                        onCheckedChange={(checked) => 
+                          setFormData(prev => ({ ...prev, default_billable: checked === true }))
+                        }
+                      />
+                      <label htmlFor="default_billable" className="text-sm cursor-pointer">
+                        Facturable por defecto
+                      </label>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
