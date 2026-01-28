@@ -1,252 +1,109 @@
 
 
-## Plan: Planificación de Días Futuros (Prompt 6)
+## Plan: Corregir Bloqueo de Horas sin Plan Diario Completado
 
-### Resumen
+### Problema Detectado
 
-Permitir que los usuarios seleccionen cualquier fecha futura para planificar, mientras que el bloqueo de registro de horas solo aplica a "mañana". Los admins pueden crear planes para cualquier fecha sin restricciones.
+La función `canRegisterHoursForDate` actualmente **solo bloquea registrar horas para MAÑANA** (si no hay plan enviado con 8h). Pero **permite registrar horas para HOY sin ninguna validación**.
 
----
+Según el requisito original (Prompt 3):
+> "No poder registrar horas de HOY si no existe un plan enviado (8h) de ayer o de hoy mismo."
 
-### 1. UI: Añadir DatePicker en PlanDiario
-
-**Archivo:** `src/pages/PlanDiario.tsx`
-
-Reemplazar la navegación actual (prev/next/button) con un componente DatePicker que permita seleccionar directamente cualquier fecha futura:
-
-```typescript
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-// En lugar de solo botones prev/next, añadir un popover con calendario
-<Popover>
-  <PopoverTrigger asChild>
-    <Button variant={isTomorrow ? "default" : "outline"} className="min-w-[180px]">
-      <CalendarDays className="h-4 w-4 mr-2" />
-      {format(selectedDate, "EEE d MMM", { locale: es })}
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-auto p-0" align="center">
-    <Calendar
-      mode="single"
-      selected={selectedDate}
-      onSelect={(date) => date && setSelectedDate(date)}
-      disabled={(date) => date < new Date()} // Solo fechas futuras
-      initialFocus
-      className="pointer-events-auto"
-    />
-  </PopoverContent>
-</Popover>
-```
-
-Mantener los botones prev/next para navegación rápida.
+El comportamiento correcto debería ser:
+- Para registrar horas de **HOY** → debe existir un plan enviado (8h+) para **AYER u HOY**
+- Para registrar horas de **MAÑANA** → debe existir un plan enviado (8h+) para **MAÑANA**
+- Para fechas **pasadas o futuras** → permitido (flexibilidad)
 
 ---
 
-### 2. Modificar Lógica de Bloqueo
+### Cambio Requerido
 
 **Archivo:** `src/services/dailyPlans.service.ts`
 
-Cambiar la función `canRegisterHoursForDate` para que el bloqueo **solo aplique a MAÑANA** (no a hoy ni otros días futuros):
+Modificar la función `canRegisterHoursForDate` para añadir validación de HOY:
 
-**Antes (actual):**
 ```typescript
-// TODAY and FUTURE dates require a submitted plan
-if (targetDate < today) {
-  return { allowed: true }; // Past dates allowed
-}
-// Block for today AND future...
-```
-
-**Después (nuevo):**
-```typescript
-export async function canRegisterHoursForDate(
-  userId: string,
-  date: Date
-): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
-  const targetDate = format(date, 'yyyy-MM-dd');
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-  
-  // Past dates: always allowed (no plan required)
-  if (targetDate < today) {
-    return { allowed: true };
-  }
-  
-  // Today: allowed without plan (flexible)
-  if (targetDate === today) {
-    return { allowed: true };
-  }
-  
-  // TOMORROW ONLY: requires submitted plan with 8+ hours
-  if (targetDate === tomorrow) {
-    // ... existing plan validation logic ...
-  }
-  
-  // FUTURE (beyond tomorrow): allowed without strict requirement
-  // But encourage planning
+// Línea 438-441: Cambiar lógica para TODAY
+// ANTES:
+if (targetDate === today) {
   return { allowed: true };
 }
-```
 
----
-
-### 3. Actualizar Textos de UI
-
-**Archivo:** `src/pages/PlanDiario.tsx`
-
-Cambiar el texto descriptivo para reflejar la flexibilidad:
-
-```typescript
-<p className="text-sm text-muted-foreground mt-0.5">
-  {isTomorrow 
-    ? "Planifica tu trabajo para mañana (requerido para registrar horas)"
-    : "Planifica tu trabajo con anticipación"
-  }
-</p>
-```
-
----
-
-### 4. Indicador Visual de Fecha Bloqueada
-
-**Archivo:** `src/components/plans/DailyPlanForm.tsx`
-
-Mostrar un indicador cuando la fecha seleccionada es mañana (la que tiene bloqueo):
-
-```typescript
-// Añadir prop para indicar si es fecha con bloqueo
-interface DailyPlanFormProps {
-  // ... existentes ...
-  isBlockingDate?: boolean; // true si es mañana
-}
-
-// En el JSX, mostrar advertencia si es fecha de bloqueo
-{isBlockingDate && plan.status === 'draft' && (
-  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-sm">
-    <p className="text-amber-700 dark:text-amber-400">
-      ⚠️ <strong>Importante:</strong> Debes enviar este plan con mínimo 8h 
-      antes de poder registrar horas para mañana.
-    </p>
-  </div>
-)}
-```
-
----
-
-### 5. Bypass para Admins
-
-**Archivo:** `src/services/dailyPlans.service.ts`
-
-Añadir parámetro opcional para bypass de admin:
-
-```typescript
-export async function canRegisterHoursForDate(
-  userId: string,
-  date: Date,
-  isAdmin: boolean = false
-): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
-  // Admin bypass
-  if (isAdmin) {
-    return { allowed: true };
+// DESPUÉS:
+if (targetDate === today) {
+  // Para HOY, verificar que existe plan enviado de AYER o de HOY
+  const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
+  
+  // Buscar plan de hoy
+  const { data: todayPlan } = await supabase
+    .from('daily_plans')
+    .select('id, status, total_estimated_minutes')
+    .eq('user_id', userId)
+    .eq('planned_for_date', today)
+    .maybeSingle();
+  
+  // Si hay plan de hoy enviado con 8h+, permitir
+  if (todayPlan && 
+      todayPlan.status !== 'draft' && 
+      (todayPlan.total_estimated_minutes || 0) >= 480) {
+    return { allowed: true, planId: todayPlan.id };
   }
   
-  // ... resto de la lógica ...
+  // Si no, buscar plan de ayer
+  const { data: yesterdayPlan } = await supabase
+    .from('daily_plans')
+    .select('id, status, total_estimated_minutes')
+    .eq('user_id', userId)
+    .eq('planned_for_date', yesterday)
+    .maybeSingle();
+  
+  // Si hay plan de ayer enviado con 8h+, permitir
+  if (yesterdayPlan && 
+      yesterdayPlan.status !== 'draft' && 
+      (yesterdayPlan.total_estimated_minutes || 0) >= 480) {
+    return { allowed: true, planId: yesterdayPlan.id };
+  }
+  
+  // No hay plan válido
+  return {
+    allowed: false,
+    reason: 'Debes tener un plan diario enviado (mín 8h) de ayer o de hoy para registrar horas',
+    planId: todayPlan?.id
+  };
 }
 ```
 
-**Archivo:** `src/hooks/useDailyPlanValidation.ts`
+---
 
-Actualizar para pasar el rol:
+### Lógica Actualizada
 
-```typescript
-import { useSimpleAuth } from "@/hooks/useSimpleAuth";
-
-export function useDailyPlanValidation() {
-  const { user } = useAuth();
-  const { isAdmin } = useSimpleAuth();
-  
-  const checkCanRegisterHours = useCallback(async (date: Date) => {
-    if (!user?.id) {
-      return { allowed: false, reason: 'Usuario no autenticado' };
-    }
-    
-    return await canRegisterHoursForDate(user.id, date, isAdmin);
-  }, [user?.id, isAdmin]);
-  
-  // ...
-}
-```
+| Fecha Objetivo | Requisito de Plan |
+|----------------|-------------------|
+| **Pasado** | Sin restricción |
+| **HOY** | Plan de AYER o HOY (enviado, 8h+) |
+| **MAÑANA** | Plan de MAÑANA (enviado, 8h+) |
+| **Futuro (>mañana)** | Sin restricción |
+| **Admin** | Siempre permitido (bypass) |
 
 ---
 
-### Flujo Resultante
-
-```text
-Usuario abre /plan-diario
-         │
-         ▼
-   ┌─────────────────────────────────────────────┐
-   │  [◀] [📅 Mié 29 Ene ▼] [▶]                   │  ← Click abre calendario
-   │      └──────────────────┘                   │
-   │         ┌─────────────────┐                 │
-   │         │   Enero 2026    │                 │
-   │         │ Lu Ma Mi Ju ... │                 │
-   │         │ 27 28 [29] 30   │  ← Seleccionar cualquier fecha
-   │         └─────────────────┘                 │
-   └─────────────────────────────────────────────┘
-         │
-         ▼
-   ¿Fecha = Mañana?
-         │
-    ┌────┴────┐
-    │         │
-   Sí         No
-    │         │
-    ▼         ▼
- Mostrar    Sin warning
- warning    (planificación
- bloqueo    preventiva)
-```
-
----
-
-### Lógica de Bloqueo Simplificada
-
-| Fecha | Bloqueo para registrar horas |
-|-------|------------------------------|
-| Pasado | ❌ No |
-| Hoy | ❌ No |
-| **Mañana** | ✅ **Sí** (requiere plan 8h+) |
-| Pasado mañana+ | ❌ No |
-| Admin cualquier fecha | ❌ No (bypass) |
-
----
-
-### Resumen de Archivos a Modificar
+### Archivo a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/PlanDiario.tsx` | Añadir DatePicker, actualizar textos |
-| `src/services/dailyPlans.service.ts` | Modificar `canRegisterHoursForDate` para solo bloquear mañana |
-| `src/hooks/useDailyPlanValidation.ts` | Pasar isAdmin al servicio |
-| `src/components/plans/DailyPlanForm.tsx` | Añadir indicador de fecha bloqueada |
+| `src/services/dailyPlans.service.ts` | Añadir validación para `targetDate === today` |
 
 ---
 
 ### Sección Técnica
 
-**Componentes utilizados:**
-- `Calendar` de shadcn/ui (ya instalado)
-- `Popover` de shadcn/ui (ya instalado)
+**Justificación:**
+- Se mantiene la flexibilidad para fechas pasadas (correcciones retrospectivas)
+- Se requiere planificación previa para trabajo del día actual
+- El plan puede ser de ayer (planificó mañana) o de hoy (planificó el mismo día temprano)
+- Admins tienen bypass completo
 
-**Dependencias:** No se requieren nuevas dependencias.
-
-**RLS:** No hay cambios de base de datos necesarios.
-
-**Consideraciones:**
-- El calendario solo permite seleccionar fechas futuras (`disabled={(date) => date < new Date()}`)
-- Se mantienen los botones prev/next para navegación rápida
-- El botón central muestra la fecha actual y abre el calendario al hacer click
-- Los admins tienen bypass completo del bloqueo
+**Impacto:**
+- Los usuarios verán el `DailyPlanBlocker` si intentan registrar horas para HOY sin plan válido
+- El mensaje guiará al usuario a crear/enviar su plan diario
 
