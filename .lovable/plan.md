@@ -1,164 +1,136 @@
 
 
-## Plan: Completar Validaciones UI Plan Diario
+## Plan: Añadir Validación de 8 Horas Mínimas al Bloqueo
 
-### Cambios Necesarios
+### Problema Actual
 
-#### 1. Validación de 8 horas mínimas
+La función `canRegisterHoursForDate` en `src/services/dailyPlans.service.ts` verifica que exista un plan enviado, pero **no valida** que el plan tenga al menos 8 horas planificadas.
 
-**Archivo: `src/hooks/useDailyPlan.ts`**
-
-Modificar la función `submitPlan` para validar mínimo 480 minutos (8 horas):
-
-```typescript
-const submitPlan = async () => {
-  if (!plan) return;
-  
-  if (plan.items.length === 0) {
-    toast.error('Debes añadir al menos una tarea');
-    return;
-  }
-  
-  // NUEVO: Validar mínimo 8 horas
-  const MIN_HOURS = 8;
-  if (totalHours < MIN_HOURS) {
-    toast.error(`El plan debe tener al menos ${MIN_HOURS} horas. Actualmente: ${totalHours.toFixed(1)}h`);
-    return;
-  }
-  
-  // ... resto del código
-};
-```
-
-**Archivo: `src/components/plans/DailyPlanForm.tsx`**
-
-Añadir indicador visual cuando faltan horas:
-
-```typescript
-const MIN_HOURS = 8;
-const hoursRemaining = MIN_HOURS - parseFloat(totalHours);
-const canSubmit = plan.items.length > 0 && hoursRemaining <= 0;
-
-// En el UI, mostrar mensaje de advertencia
-{hoursRemaining > 0 && (
-  <p className="text-sm text-amber-600">
-    Faltan {hoursRemaining.toFixed(1)}h para el mínimo de {MIN_HOURS}h
-  </p>
-)}
-```
-
----
-
-#### 2. Permitir edición después de enviar
-
-**Archivo: `src/hooks/useDailyPlan.ts`**
-
-Cambiar lógica de `canEdit`:
-
-```typescript
-// ANTES:
-canEdit: plan?.status === 'draft',
-
-// DESPUÉS: Permitir editar en draft, submitted y approved
-canEdit: plan?.status !== 'rejected',
-```
-
----
-
-#### 3. Campo "modified_after_submit" en base de datos
-
-**Migración SQL:**
-
-```sql
-ALTER TABLE public.daily_plans 
-ADD COLUMN IF NOT EXISTS modified_after_submit BOOLEAN DEFAULT FALSE;
-```
-
----
-
-#### 4. Lógica para marcar como modificado
+### Cambio Propuesto
 
 **Archivo: `src/services/dailyPlans.service.ts`**
 
-Modificar `addPlanItem`, `updatePlanItem`, y `deletePlanItem` para detectar si el plan ya fue enviado y marcarlo como modificado:
+Modificar la consulta para incluir `total_estimated_minutes` y añadir validación:
 
 ```typescript
-// Función auxiliar
-async function markPlanAsModified(planId: string): Promise<void> {
-  const { data: plan } = await supabase
-    .from('daily_plans')
-    .select('status')
-    .eq('id', planId)
-    .single();
-  
-  if (plan && plan.status !== 'draft') {
-    await supabase
-      .from('daily_plans')
-      .update({ modified_after_submit: true, updated_at: new Date().toISOString() })
-      .eq('id', planId);
-  }
+// Línea 355-360: Añadir total_estimated_minutes al SELECT
+const { data: plan, error } = await supabase
+  .from('daily_plans')
+  .select('id, status, total_estimated_minutes')  // ← CAMBIO
+  .eq('user_id', userId)
+  .eq('planned_for_date', targetDate)
+  .maybeSingle();
+
+// Después de la validación de draft (línea 374-380):
+// NUEVO: Verificar mínimo 8 horas
+const MIN_MINUTES = 480; // 8 horas
+if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
+  const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
+  return {
+    allowed: false,
+    reason: `Tu plan solo tiene ${currentHours}h. Necesitas mínimo 8h para registrar horas`,
+    planId: plan.id
+  };
 }
 ```
 
----
-
-#### 5. Mostrar badge "Modificado" en UI
-
-**Archivo: `src/components/plans/DailyPlanForm.tsx`**
-
-Añadir indicador visual cuando el plan fue modificado después de enviar:
+### Código Final de la Función
 
 ```typescript
-{plan.modified_after_submit && plan.status !== 'draft' && (
-  <Badge variant="outline" className="bg-orange-500/10 text-orange-600 ml-2">
-    Modificado
-  </Badge>
-)}
+export async function canRegisterHoursForDate(
+  userId: string,
+  date: Date
+): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
+  const targetDate = format(date, 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+  
+  // Días pasados permitidos sin plan
+  if (targetDate < today) {
+    return { allowed: true };
+  }
+  
+  // HOY y FUTURO requieren plan enviado con mínimo 8h
+  const { data: plan, error } = await supabase
+    .from('daily_plans')
+    .select('id, status, total_estimated_minutes')
+    .eq('user_id', userId)
+    .eq('planned_for_date', targetDate)
+    .maybeSingle();
+  
+  if (error) throw error;
+  
+  if (!plan) {
+    const isToday = targetDate === today;
+    return {
+      allowed: false,
+      reason: isToday 
+        ? 'Debes crear y enviar tu plan para hoy antes de registrar horas'
+        : 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
+    };
+  }
+  
+  if (plan.status === 'draft') {
+    return {
+      allowed: false,
+      reason: 'Debes enviar tu plan diario antes de registrar horas',
+      planId: plan.id
+    };
+  }
+  
+  // Validar mínimo 8 horas
+  const MIN_MINUTES = 480;
+  if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
+    const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
+    return {
+      allowed: false,
+      reason: `Tu plan solo tiene ${currentHours}h planificadas. Añade más tareas hasta completar 8h`,
+      planId: plan.id
+    };
+  }
+  
+  return { allowed: true, planId: plan.id };
+}
 ```
 
----
+### Flujo de Validación Completo
 
-### Resumen de Archivos a Modificar
+```text
+Usuario intenta registrar horas
+          │
+          ▼
+   ¿Fecha pasada?  ───Sí───▶ ✅ Permitido
+          │
+         No
+          │
+          ▼
+   ¿Existe plan?   ───No───▶ ❌ "Crea tu plan"
+          │
+         Sí
+          │
+          ▼
+   ¿Plan enviado?  ───No───▶ ❌ "Envía tu plan"
+   (status≠draft)
+          │
+         Sí
+          │
+          ▼
+   ¿Plan ≥ 8h?     ───No───▶ ❌ "Añade más tareas"
+          │
+         Sí
+          │
+          ▼
+      ✅ Permitido
+```
+
+### Resumen
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/hooks/useDailyPlan.ts` | Validación 8h + cambiar `canEdit` |
-| `src/components/plans/DailyPlanForm.tsx` | UI de advertencia horas + badge "Modificado" |
-| `src/services/dailyPlans.service.ts` | Lógica `markPlanAsModified` |
-| `src/types/dailyPlans.ts` | Añadir `modified_after_submit` al tipo |
-| **Nueva migración SQL** | Añadir columna `modified_after_submit` |
+| `src/services/dailyPlans.service.ts` | Añadir `total_estimated_minutes` al SELECT + nueva validación |
 
----
+### Impacto
 
-### Flujo Resultante
-
-```text
-Usuario crea plan
-       │
-       ▼
-  Añade tareas
-       │
-       ▼
-  ¿Total >= 8h? ──No──▶ Mensaje: "Faltan Xh"
-       │                    (botón deshabilitado)
-      Sí
-       │
-       ▼
-  [Enviar Plan] → status = 'submitted'
-       │
-       ▼
-  Usuario edita (opcional)
-       │
-       ▼
-  modified_after_submit = true
-       │
-       ▼
-  Badge "Modificado" visible
-```
-
----
-
-### Nota sobre "Guardar Borrador"
-
-El sistema actual ya guarda automáticamente cada cambio (add/update/delete de tareas). Si se desea un botón explícito "Guardar Borrador", sería redundante pero se puede añadir como confirmación visual. El guardado ya ocurre en tiempo real.
+- Usuarios no podrán registrar horas para hoy/mañana si su plan tiene menos de 8 horas
+- El mensaje es claro y accionable: indica cuántas horas tienen y qué necesitan
+- El `planId` se incluye para que el modal pueda enlazar directamente al plan
 
