@@ -338,7 +338,7 @@ export async function addAdminTask(
   return data as DailyPlanItem;
 }
 
-// Check if user can register hours for a date (today or future requires submitted plan)
+// Check if user can register hours for a date (today or future requires submitted plan with min 8h)
 export async function canRegisterHoursForDate(
   userId: string,
   date: Date
@@ -351,10 +351,10 @@ export async function canRegisterHoursForDate(
     return { allowed: true };
   }
   
-  // TODAY and FUTURE dates require a submitted plan
+  // TODAY and FUTURE dates require a submitted plan with minimum 8 hours
   const { data: plan, error } = await supabase
     .from('daily_plans')
-    .select('id, status')
+    .select('id, status, total_estimated_minutes')
     .eq('user_id', userId)
     .eq('planned_for_date', targetDate)
     .maybeSingle();
@@ -375,6 +375,17 @@ export async function canRegisterHoursForDate(
     return {
       allowed: false,
       reason: 'Debes enviar tu plan diario antes de registrar horas',
+      planId: plan.id
+    };
+  }
+  
+  // Validate minimum 8 hours (480 minutes)
+  const MIN_MINUTES = 480;
+  if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
+    const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
+    return {
+      allowed: false,
+      reason: `Tu plan solo tiene ${currentHours}h planificadas. Añade más tareas hasta completar 8h`,
       planId: plan.id
     };
   }
