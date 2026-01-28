@@ -500,7 +500,7 @@ export const createTimeEntry = async (
 export const updateTimeEntry = async (
   id: string,
   updates: Partial<TimeEntry>,
-  editReason?: string  // Optional reason for editing approved entries
+  editReason?: string  // ALWAYS required for any edit
 ): Promise<TimeEntry> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
@@ -514,22 +514,20 @@ export const updateTimeEntry = async (
 
   if (fetchError) throw fetchError;
 
-  // If entry is approved, require edit reason and set traceability fields
-  if (currentEntry.status === 'approved') {
-    if (!editReason || editReason.trim().length < 5) {
-      throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
-    }
-
-    // Add traceability fields and change status back to submitted
-    updates = {
-      ...updates,
-      status: 'submitted',  // Revert to submitted for re-approval
-      edited_at: new Date().toISOString(),
-      edited_by: user.id,
-      edit_reason: editReason.trim(),
-      edit_count: (currentEntry.edit_count || 0) + 1,
-    };
+  // Edit reason is ALWAYS required for any edit (as per new policy)
+  if (!editReason || editReason.trim().length < 5) {
+    throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
   }
+
+  // Add traceability fields but KEEP the original status (no re-approval needed)
+  updates = {
+    ...updates,
+    // Status remains unchanged - direct edit without re-approval
+    edited_at: new Date().toISOString(),
+    edited_by: user.id,
+    edit_reason: editReason.trim(),
+    edit_count: (currentEntry.edit_count || 0) + 1,
+  };
 
   const { data, error } = await supabase
     .from('mandato_time_entries')

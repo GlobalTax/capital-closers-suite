@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, startOfToday, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,10 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
   const [mandatoId, setMandatoId] = useState('');
   const [workTaskTypeId, setWorkTaskTypeId] = useState('');
   const [description, setDescription] = useState('');
+  const [justification, setJustification] = useState('');
+
+  // Check if this is a past date (retroactive entry)
+  const isPastDate = isBefore(date, startOfToday());
 
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
 
@@ -59,6 +63,7 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
     setMandatoId('');
     setWorkTaskTypeId('');
     setDescription('');
+    setJustification('');
     setExpanded(false);
   };
 
@@ -96,6 +101,13 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
         return;
       }
 
+      // For past dates, justification is required
+      const trimmedJustification = justification.trim();
+      if (isPastDate && trimmedJustification.length < 5) {
+        toast.error("La justificación es obligatoria para registros retroactivos (mín. 5 caracteres)");
+        return;
+      }
+
       // Create start time from the fixed date + user-selected time
       const [hrs, mins] = startTime.split(':').map(Number);
       const startDateTime = new Date(date);
@@ -120,6 +132,8 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
         status: 'approved',
         work_task_type_id: workTaskTypeId,
         mandato_id: mandatoId,
+        // For retroactive entries, store justification in notes field
+        notes: isPastDate ? `[Retroactivo] ${trimmedJustification}` : undefined,
       });
 
       toast.success("Entrada añadida al día");
@@ -134,7 +148,8 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
   };
 
   const totalDuration = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-  const isValid = mandatoId && workTaskTypeId && totalDuration > 0;
+  const isValid = mandatoId && workTaskTypeId && totalDuration > 0 && 
+    (!isPastDate || justification.trim().length >= 5);
 
   if (!expanded) {
     return (
@@ -245,6 +260,30 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
             )}
           />
         </div>
+
+        {/* Justification for past dates */}
+        {isPastDate && (
+          <div className="min-w-[200px]">
+            <div className="flex justify-between">
+              <label className="text-xs text-muted-foreground flex items-center gap-1">
+                Justificación *
+                <Info className="h-3 w-3" />
+              </label>
+              {justification.trim().length > 0 && justification.trim().length < 5 && (
+                <span className="text-xs text-destructive">{justification.trim().length}/5</span>
+              )}
+            </div>
+            <Input
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              placeholder="Motivo del registro retroactivo..."
+              className={cn(
+                "h-9",
+                justification.trim().length > 0 && justification.trim().length < 5 && "border-destructive"
+              )}
+            />
+          </div>
+        )}
 
         {/* Buttons */}
         <div className="flex gap-2">
