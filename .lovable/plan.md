@@ -1,70 +1,50 @@
 
 
-## Plan: Reapertura Automática de Entradas Aprobadas
+## Plan: Permitir Edición Retroactiva sin Tarea Asociada
 
 ### Resumen
 
-Permitir que los usuarios editen entradas de tiempo en estado `approved`, con las siguientes condiciones:
-1. El estado cambia automáticamente a `submitted` (requiere re-aprobación)
-2. Se requiere un `edit_reason` obligatorio
-3. Se registra trazabilidad completa (`edited_at`, `edited_by`, `edit_count`)
+Modificar el sistema de edición de horas para permitir la edición retroactiva de entradas sin tarea asociada (`task_id = null`), manteniendo trazabilidad completa. Basado en tus respuestas:
+
+- **Sin límite** de días retroactivos
+- **Edición directa** (sin re-aprobación)
+- **Motivo obligatorio** en toda edición
 
 ---
 
-### 1. Nuevas Columnas en Base de Datos
+### 1. Cambio Principal: Edición sin Re-aprobación
 
-Añadir a `mandato_time_entries`:
+Actualmente, editar una entrada `approved` la cambia a `submitted`. Con la nueva configuración, mantendrá `approved` pero registrará la edición.
 
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| `edited_at` | `timestamptz` | Fecha/hora de la última edición |
-| `edited_by` | `uuid` | Usuario que realizó la edición |
-| `edit_reason` | `text` | Motivo de la edición (obligatorio para entradas aprobadas) |
-| `edit_count` | `integer` | Contador de ediciones (default 0) |
+**Nuevo flujo:**
 
-```sql
-ALTER TABLE mandato_time_entries
-ADD COLUMN IF NOT EXISTS edited_at timestamptz,
-ADD COLUMN IF NOT EXISTS edited_by uuid REFERENCES auth.users(id),
-ADD COLUMN IF NOT EXISTS edit_reason text,
-ADD COLUMN IF NOT EXISTS edit_count integer DEFAULT 0;
+```
+Usuario edita entrada (cualquier estado)
+         │
+         ▼
+   ¿Hay cambios?
+         │ Sí
+         ▼
+   Dialog: "Motivo de edición"
+   [_________________________]
+   [Cancelar]     [Confirmar]
+         │
+         ▼
+   Guardar con:
+   - status = (mantiene el original)
+   - edit_reason = "..."
+   - edited_at = now()
+   - edited_by = user_id
+   - edit_count += 1
+         │
+         ▼
+   Feedback: "Entrada actualizada"
+   (Responsable ve historial en Panel)
 ```
 
 ---
 
-### 2. Nueva Política RLS
-
-Crear política que permita editar entradas aprobadas:
-
-```sql
--- Usuarios pueden editar sus entradas aprobadas (se cambian a submitted)
-CREATE POLICY "Users can edit own approved entries"
-ON mandato_time_entries
-FOR UPDATE
-TO authenticated
-USING (
-  auth.uid() = user_id 
-  AND status = 'approved'
-)
-WITH CHECK (
-  auth.uid() = user_id
-  AND status = 'submitted'  -- Debe cambiar a submitted
-  AND edit_reason IS NOT NULL  -- Razón obligatoria
-  AND length(trim(edit_reason)) >= 5  -- Mínimo 5 caracteres
-  AND edited_at IS NOT NULL
-  AND edited_by = auth.uid()
-);
-```
-
-Esta política:
-- Permite UPDATE solo si el usuario es el propietario
-- Requiere que el nuevo estado sea `submitted`
-- Requiere `edit_reason` con mínimo 5 caracteres
-- Requiere `edited_at` y `edited_by`
-
----
-
-### 3. Actualizar Servicio updateTimeEntry
+### 2. Actualizar Servicio updateTimeEntry
 
 Modificar `src/services/timeTracking.ts`:
 
@@ -72,12 +52,12 @@ Modificar `src/services/timeTracking.ts`:
 export const updateTimeEntry = async (
   id: string,
   updates: Partial<TimeEntry>,
-  editReason?: string  // Nuevo parámetro opcional
+  editReason?: string
 ): Promise<TimeEntry> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
-  // Primero, verificar el estado actual de la entrada
+  // Fetch current entry
   const { data: currentEntry, error: fetchError } = await supabase
     .from('mandato_time_entries')
     .select('status, user_id, edit_count')
@@ -86,22 +66,20 @@ export const updateTimeEntry = async (
 
   if (fetchError) throw fetchError;
 
-  // Si es entrada aprobada, validar y añadir campos de edición
-  if (currentEntry.status === 'approved') {
-    if (!editReason || editReason.trim().length < 5) {
-      throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
-    }
-
-    // Añadir campos de trazabilidad
-    updates = {
-      ...updates,
-      status: 'submitted',  // Cambiar a submitted
-      edited_at: new Date().toISOString(),
-      edited_by: user.id,
-      edit_reason: editReason.trim(),
-      edit_count: (currentEntry.edit_count || 0) + 1,
-    };
+  // NUEVO: Edit reason siempre obligatorio
+  if (!editReason || editReason.trim().length < 5) {
+    throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
   }
+
+  // Añadir campos de trazabilidad (SIN cambiar status)
+  updates = {
+    ...updates,
+    // NO cambiamos status - mantiene el original
+    edited_at: new Date().toISOString(),
+    edited_by: user.id,
+    edit_reason: editReason.trim(),
+    edit_count: (currentEntry.edit_count || 0) + 1,
+  };
 
   const { data, error } = await supabase
     .from('mandato_time_entries')
@@ -117,180 +95,135 @@ export const updateTimeEntry = async (
 
 ---
 
+### 3. Actualizar Política RLS
+
+Modificar la política para permitir edición sin requerir cambio de status:
+
+```sql
+-- Eliminar política anterior restrictiva
+DROP POLICY IF EXISTS "Users can edit own approved entries" 
+ON mandato_time_entries;
+
+-- Nueva política: usuarios pueden editar sus propias entradas
+-- con trazabilidad obligatoria
+CREATE POLICY "Users can edit own entries with tracking"
+ON mandato_time_entries
+FOR UPDATE
+TO authenticated
+USING (
+  auth.uid() = user_id
+)
+WITH CHECK (
+  auth.uid() = user_id
+  AND edit_reason IS NOT NULL
+  AND length(trim(edit_reason)) >= 5
+  AND edited_at IS NOT NULL
+  AND edited_by = auth.uid()
+);
+```
+
+---
+
 ### 4. Actualizar UI: EditableTimeEntryRow
 
 Modificar `src/components/mandatos/EditableTimeEntryRow.tsx`:
 
+**Cambios:**
+1. **Siempre pedir motivo** - No solo para entries approved
+2. **Mensaje de confirmación directo** - Sin advertencia de "volverá a pending"
+3. **Remover lógica condicional de status**
+
 ```typescript
-// Nuevo estado para el motivo de edición
-const [editReason, setEditReason] = useState('');
-const [showEditReasonDialog, setShowEditReasonDialog] = useState(false);
-
-// En handleSave:
-const handleSave = async () => {
-  try {
-    // Si es aprobada, pedir motivo primero
-    if (entry.status === 'approved') {
-      setShowEditReasonDialog(true);
-      return;
-    }
-    
-    await doSave();
-  } catch (error) {
-    // ...
+// ANTES: Solo pedía motivo si era approved
+const handleSaveClick = async () => {
+  if (entry.status === 'approved') {
+    setShowEditReasonDialog(true);
+    return;
   }
+  await doSave();
 };
 
-const doSave = async (reason?: string) => {
-  // ... validaciones existentes ...
-  
-  await updateTimeEntry(entry.id, {
-    // ... campos actuales ...
-  }, reason);  // Pasar reason
-  
-  // ...
+// DESPUÉS: Siempre pedir motivo
+const handleSaveClick = async () => {
+  setShowEditReasonDialog(true);
 };
 
-// Nuevo diálogo para motivo de edición
-<AlertDialog open={showEditReasonDialog} onOpenChange={setShowEditReasonDialog}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Motivo de la edición</AlertDialogTitle>
-      <AlertDialogDescription>
-        Esta entrada ya fue aprobada. Para editarla, debes indicar el motivo.
-        La entrada volverá a estado "pendiente de aprobación".
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <Input
-      value={editReason}
-      onChange={(e) => setEditReason(e.target.value)}
-      placeholder="Motivo de la corrección..."
-    />
-    <AlertDialogFooter>
-      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-      <AlertDialogAction 
-        onClick={() => doSave(editReason)}
-        disabled={editReason.trim().length < 5}
-      >
-        Confirmar
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+// Actualizar el diálogo - quitar advertencia de re-aprobación
+<AlertDialogDescription>
+  Para guardar los cambios, indica el motivo de la edición.
+</AlertDialogDescription>
 ```
 
 ---
 
-### 5. Indicadores Visuales
+### 5. Actualizar UI: DayInlineAddForm
 
-Mostrar historial de ediciones en la UI:
+Para nuevas entradas retroactivas (días pasados sin tarea):
+
+Modificar `src/components/mandatos/DayInlineAddForm.tsx`:
 
 ```typescript
-// En EditableTimeEntryRow - vista readonly
-{entry.edit_count > 0 && (
-  <Tooltip>
-    <TooltipTrigger>
-      <Badge variant="outline" className="text-[10px] bg-amber-50">
-        <Edit className="h-3 w-3 mr-1" />
-        {entry.edit_count}x
-      </Badge>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>Editada {entry.edit_count} {entry.edit_count === 1 ? 'vez' : 'veces'}</p>
-      {entry.edited_at && (
-        <p className="text-xs text-muted-foreground">
-          Última: {format(new Date(entry.edited_at), 'dd/MM HH:mm')}
-        </p>
+// Detectar si es fecha pasada
+const isPastDate = date < startOfToday();
+
+// Si es fecha pasada:
+// - task_id puede ser null ✓ (ya lo es por defecto)
+// - description obligatoria (ya validado)
+// - No requiere plan diario (ya implementado en canRegisterHoursForDate)
+
+// Añadir campo de justificación para fechas pasadas
+{isPastDate && (
+  <div className="min-w-[200px]">
+    <label className="text-xs text-muted-foreground">
+      Justificación *
+    </label>
+    <Input
+      value={justification}
+      onChange={(e) => setJustification(e.target.value)}
+      placeholder="Motivo del registro retroactivo..."
+      className={cn(
+        justification.trim().length > 0 && 
+        justification.trim().length < 5 && 
+        "border-destructive"
       )}
-      {entry.edit_reason && (
-        <p className="text-xs italic mt-1">"{entry.edit_reason}"</p>
-      )}
-    </TooltipContent>
-  </Tooltip>
+    />
+  </div>
 )}
 ```
 
 ---
 
-### 6. Vista del Responsable
+### 6. Vista del Responsable: Mostrar Ediciones
 
-En el Panel Responsable (`DailyTimeEntriesDetail.tsx`), mostrar entradas editadas con indicador especial:
+El Panel Responsable ya muestra el badge "Re-enviada" para ediciones. Ajustar para mostrar ediciones sin cambio de estado:
 
 ```typescript
-// Columna adicional o badge
-{entry.status === 'submitted' && entry.edit_count > 0 && (
-  <Badge variant="warning" className="text-xs">
-    ⚠️ Re-enviada ({entry.edit_count}x)
+// En DailyTimeEntriesDetail.tsx
+{entry.edit_count > 0 && (
+  <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200">
+    ✏️ Editada ({entry.edit_count}x)
   </Badge>
 )}
 
-// Tooltip con el motivo de edición
-{entry.edit_reason && (
-  <Tooltip>
-    <TooltipTrigger>
-      <Info className="h-4 w-4 text-muted-foreground" />
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="font-medium">Motivo de edición:</p>
-      <p className="text-sm">{entry.edit_reason}</p>
-    </TooltipContent>
-  </Tooltip>
-)}
+// Tooltip con historial
+<TooltipContent>
+  <p className="font-medium">Editada {entry.edit_count} vez(es)</p>
+  <p className="text-xs">Última: {format(entry.edited_at, 'dd/MM HH:mm')}</p>
+  <p className="text-xs italic mt-1">"{entry.edit_reason}"</p>
+</TooltipContent>
 ```
 
 ---
 
-### Flujo de Usuario
+### 7. Validación de Campos
 
-```
-Usuario abre entrada aprobada
-         │
-         ▼
-   Hace clic en "Editar"
-         │
-         ▼
-   Modifica campos (mandato, tipo, descripción, duración)
-         │
-         ▼
-   Clic en "Guardar"
-         │
-         ▼
-   ┌──────────────────────────────┐
-   │ Dialog: "Motivo de edición" │
-   │ [________________________]   │
-   │ [Cancelar]    [Confirmar]    │
-   └──────────────────────────────┘
-         │
-         ▼
-   Se guarda con:
-   - status = 'submitted'
-   - edit_reason = "..."
-   - edited_at = now()
-   - edited_by = user_id
-   - edit_count += 1
-         │
-         ▼
-   Responsable ve entrada con badge "Re-enviada"
-   Puede aprobar o rechazar
-```
-
----
-
-### Actualizar Tipos TypeScript
-
-En `src/types/index.ts`:
-
-```typescript
-export interface TimeEntry {
-  // ... campos existentes ...
-  
-  // Campos de edición
-  edited_at?: string;
-  edited_by?: string;
-  edit_reason?: string;
-  edit_count?: number;
-}
-```
+| Campo | Nueva entrada retroactiva | Edición de entrada |
+|-------|--------------------------|-------------------|
+| `task_id` | Opcional (puede ser null) | Se mantiene |
+| `description` | Obligatorio (min 10 chars) | Obligatorio (min 10 chars) |
+| `edit_reason` | Se guarda como `notes` | Obligatorio (min 5 chars) |
+| `mandato_id` | Obligatorio | Obligatorio |
+| `work_task_type_id` | Obligatorio | Obligatorio |
 
 ---
 
@@ -298,35 +231,33 @@ export interface TimeEntry {
 
 | Archivo | Cambio |
 |---------|--------|
-| **Nueva migración SQL** | Añadir columnas + nueva política RLS |
-| `src/services/timeTracking.ts` | Modificar `updateTimeEntry` para manejar entradas aprobadas |
-| `src/types/index.ts` | Añadir nuevos campos a `TimeEntry` |
-| `src/components/mandatos/EditableTimeEntryRow.tsx` | Añadir diálogo de motivo + indicador de ediciones |
-| `src/components/mandatos/DailyTimeEntriesDetail.tsx` | Mostrar indicadores de re-envío |
+| **Migración SQL** | Actualizar política RLS para edición directa |
+| `src/services/timeTracking.ts` | Quitar cambio de status, mantener trazabilidad |
+| `src/components/mandatos/EditableTimeEntryRow.tsx` | Siempre pedir motivo, quitar advertencia de re-aprobación |
+| `src/components/mandatos/DayInlineAddForm.tsx` | Añadir justificación para fechas pasadas |
+| `src/components/mandatos/DailyTimeEntriesDetail.tsx` | Actualizar badge de edición |
 
 ---
 
 ### Sección Técnica
 
 **Seguridad RLS:**
-- La política `WITH CHECK` garantiza que:
-  - Solo el propietario puede editar
-  - El estado DEBE cambiar a `submitted`
-  - El `edit_reason` NO puede ser NULL ni vacío
-  - Se registra quién y cuándo editó
+- La política garantiza que solo el propietario puede editar
+- `edit_reason` siempre es obligatorio (5+ chars)
+- `edited_at` y `edited_by` proporcionan trazabilidad
 
-**Trazabilidad:**
-- `edit_count` permite saber cuántas veces se ha modificado
-- `edited_at` + `edited_by` permiten auditar la última edición
-- `edit_reason` proporciona contexto para el responsable
+**Sin límite temporal:**
+- `canRegisterHoursForDate` ya permite fechas pasadas sin restricción
+- No se añade validación de días máximos
 
-**Flujo de aprobación:**
-- Una entrada editada vuelve a `submitted`
-- El responsable la verá en su panel con indicador especial
-- Puede aprobar (vuelve a `approved`) o rechazar con `rejection_reason`
+**Edición directa:**
+- El status NO cambia al editar
+- `approved` sigue siendo `approved`
+- La trazabilidad se registra en campos auxiliares
 
-**Compatibilidad:**
-- Las políticas existentes para `draft` siguen funcionando igual
-- Los admins siguen teniendo acceso completo
-- No hay cambios breaking en la API existente
+**Trazabilidad completa:**
+- `edit_count` cuenta todas las ediciones
+- `edited_at` / `edited_by` muestran última edición
+- `edit_reason` documenta el motivo
+- El responsable ve todo en el Panel
 
