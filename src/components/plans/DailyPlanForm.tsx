@@ -128,10 +128,17 @@ export function DailyPlanForm({
             </p>
           </div>
           
-          <Badge variant="outline" className={status.class}>
-            <StatusIcon className="h-3.5 w-3.5 mr-1" />
-            {status.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={status.class}>
+              <StatusIcon className="h-3.5 w-3.5 mr-1" />
+              {status.label}
+            </Badge>
+            {plan.modified_after_submit && plan.status !== 'draft' && (
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-600">
+                Modificado
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       
@@ -236,6 +243,12 @@ export function DailyPlanForm({
                 )}
               </div>
             </div>
+            {/* Warning when below minimum hours */}
+            {parseFloat(totalHours) < 8 && (
+              <p className="text-sm text-amber-600 font-medium">
+                ⚠️ Faltan {(8 - parseFloat(totalHours)).toFixed(1)}h para el mínimo de 8h
+              </p>
+            )}
           </>
         )}
         
@@ -265,7 +278,7 @@ export function DailyPlanForm({
           <div className="flex justify-end pt-2">
             <Button 
               onClick={onSubmit} 
-              disabled={saving || plan.items.length === 0}
+              disabled={saving || plan.items.length === 0 || parseFloat(totalHours) < 8}
               className="min-w-[140px]"
             >
               {saving ? (
@@ -273,7 +286,7 @@ export function DailyPlanForm({
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Enviar Plan
+              {plan.status === 'draft' ? 'Enviar Plan' : 'Re-enviar Plan'}
             </Button>
           </div>
         )}

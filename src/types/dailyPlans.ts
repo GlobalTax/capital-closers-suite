@@ -11,6 +11,7 @@ export interface DailyPlan {
   approved_by: string | null;
   admin_notes: string | null;
   user_notes: string | null;
+  modified_after_submit: boolean;
   created_at: string;
   updated_at: string;
 }
