@@ -826,15 +826,22 @@ export type Database = {
           campaign_name: string
           clicks: number | null
           conversions: number | null
+          cost_per_result: number | null
+          cpm: number | null
           created_at: string
           currency: string
           date: string
+          frequency: number | null
           id: string
           imported_at: string
           imported_by: string | null
           impressions: number | null
+          link_clicks: number | null
           platform: Database["public"]["Enums"]["ads_platform"]
           raw_row: Json
+          reach: number | null
+          result_type: string | null
+          results: number | null
           spend: number
         }
         Insert: {
@@ -842,15 +849,22 @@ export type Database = {
           campaign_name: string
           clicks?: number | null
           conversions?: number | null
+          cost_per_result?: number | null
+          cpm?: number | null
           created_at?: string
           currency?: string
           date: string
+          frequency?: number | null
           id?: string
           imported_at?: string
           imported_by?: string | null
           impressions?: number | null
+          link_clicks?: number | null
           platform: Database["public"]["Enums"]["ads_platform"]
           raw_row: Json
+          reach?: number | null
+          result_type?: string | null
+          results?: number | null
           spend: number
         }
         Update: {
@@ -858,15 +872,22 @@ export type Database = {
           campaign_name?: string
           clicks?: number | null
           conversions?: number | null
+          cost_per_result?: number | null
+          cpm?: number | null
           created_at?: string
           currency?: string
           date?: string
+          frequency?: number | null
           id?: string
           imported_at?: string
           imported_by?: string | null
           impressions?: number | null
+          link_clicks?: number | null
           platform?: Database["public"]["Enums"]["ads_platform"]
           raw_row?: Json
+          reach?: number | null
+          result_type?: string | null
+          results?: number | null
           spend?: number
         }
         Relationships: []
