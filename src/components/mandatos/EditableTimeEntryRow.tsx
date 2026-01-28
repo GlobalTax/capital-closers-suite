@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TimeEntry } from "@/types";
+import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
 
 interface EditableTimeEntryRowProps {
   entry: TimeEntry;
@@ -57,6 +58,9 @@ export function EditableTimeEntryRow({
   const [minutes, setMinutes] = useState(String((entry.duration_minutes || 0) % 60));
 
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
+  
+  // Get selected task type for dynamic validation
+  const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
 
   // Reset form when entry changes or editing toggled off
   useEffect(() => {
@@ -130,6 +134,20 @@ export function EditableTimeEntryRow({
       if (trimmedDescription.length > 0 && trimmedDescription.length < 10) {
         toast.error("La descripción debe tener al menos 10 caracteres");
         return;
+      }
+
+      // Dynamic validation based on selected task type
+      if (selectedTaskType) {
+        const validation = validateByTaskType(selectedTaskType, {
+          mandatoId,
+          leadId: null, // Lead is not editable in this component
+          description
+        });
+        
+        if (!validation.isValid) {
+          toast.error(validation.errors.join('. '));
+          return;
+        }
       }
 
       // Parse the date from original entry and update time
@@ -311,7 +329,9 @@ export function EditableTimeEntryRow({
 
           {/* Work Task Type */}
           <div className="min-w-[150px]">
-            <label className="text-xs text-muted-foreground">Tipo de tarea</label>
+            <label className="text-xs text-muted-foreground">
+              Tipo de tarea {getFieldRequirement(selectedTaskType, 'mandato').label}
+            </label>
             <Select
               value={workTaskTypeId}
               onValueChange={setWorkTaskTypeId}
@@ -362,7 +382,9 @@ export function EditableTimeEntryRow({
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <div className="flex justify-between">
-              <label className="text-xs text-muted-foreground">Descripción</label>
+              <label className="text-xs text-muted-foreground">
+                Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+              </label>
               {description.trim().length > 0 && description.trim().length < 10 && (
                 <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
               )}

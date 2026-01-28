@@ -20,6 +20,7 @@ import { useDailyPlanValidation } from "@/hooks/useDailyPlanValidation";
 import { DailyPlanBlocker } from "@/components/plans/DailyPlanBlocker";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
+import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
 
 interface TimeEntryInlineFormProps {
   onSuccess?: () => void;
@@ -82,6 +83,9 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
   const isProspeccionProject = mandatoId === PROSPECCION_PROJECT_ID;
   
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
+  
+  // Get selected task type for dynamic validation
+  const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
 
   // Auto-focus on hours input on mount
   useEffect(() => {
@@ -233,7 +237,21 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         return;
       }
 
-      // Validate description length (DB requires minimum 10 characters)
+      // Dynamic validation based on selected task type
+      if (selectedTaskType) {
+        const validation = validateByTaskType(selectedTaskType, {
+          mandatoId,
+          leadId,
+          description
+        });
+        
+        if (!validation.isValid) {
+          toast.error(validation.errors.join('. '));
+          return;
+        }
+      }
+
+      // Validate description length (DB requires minimum 10 characters if provided)
       const trimmedDescription = description.trim();
       if (trimmedDescription.length > 0 && trimmedDescription.length < 10) {
         toast.error("La descripción debe tener al menos 10 caracteres");
@@ -402,7 +420,9 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         {/* Lead Select (Only show if no global lead and mandato supports leads) */}
         {mandatoId && !isInternalProject && !globalLead && (
           <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs text-muted-foreground">Lead del mandato</Label>
+            <Label className="text-xs text-muted-foreground">
+              Lead {getFieldRequirement(selectedTaskType, 'lead').label}
+            </Label>
             <LeadByMandatoSelect
               mandatoId={mandatoId}
               value={leadId}
@@ -435,7 +455,9 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
         {/* Description */}
         <div className="flex-1 min-w-[180px]">
           <div className="flex justify-between items-center">
-            <Label className="text-xs text-muted-foreground">Descripción (opcional)</Label>
+            <Label className="text-xs text-muted-foreground">
+              Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+            </Label>
             {description.trim().length > 0 && description.trim().length < 10 && (
               <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
             )}

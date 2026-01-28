@@ -19,6 +19,7 @@ import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry }
 import type { TimeEntryValueType } from "@/types";
 import { useActiveWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import type { MandatoChecklistTask } from "@/types";
+import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
 
 interface TimeTrackingDialogProps {
   open: boolean;
@@ -87,6 +88,9 @@ export function TimeTrackingDialog({
   
   // Tipos de tarea desde la base de datos
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useActiveWorkTaskTypes();
+  
+  // Get selected task type for dynamic validation
+  const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
 
   // Auto-focus on hours input when dialog opens
   useEffect(() => {
@@ -215,6 +219,24 @@ export function TimeTrackingDialog({
           variant: "destructive"
         });
         return;
+      }
+
+      // Dynamic validation based on selected task type
+      if (selectedTaskType) {
+        const validation = validateByTaskType(selectedTaskType, {
+          mandatoId: effectiveMandatoId,
+          leadId: selectedLeadId,
+          description
+        });
+        
+        if (!validation.isValid) {
+          toast({
+            title: "Campos requeridos",
+            description: validation.errors.join('. '),
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
       // Calculate start and end times
@@ -359,7 +381,9 @@ export function TimeTrackingDialog({
               {/* Lead Select (Optional, dependent on mandato) */}
               {showLeadSelector && (
                 <div>
-                  <Label className="text-sm font-medium">Lead (opcional)</Label>
+                  <Label className="text-sm font-medium">
+                    Lead {getFieldRequirement(selectedTaskType, 'lead').label}
+                  </Label>
                   <div className="mt-1.5">
                     <LeadByMandatoSelect
                       mandatoId={selectedMandatoId}
@@ -432,7 +456,9 @@ export function TimeTrackingDialog({
 
           {/* Description - Simple Input */}
           <div>
-            <Label className="text-sm font-medium">Descripción <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+            <Label className="text-sm font-medium">
+              Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+            </Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
