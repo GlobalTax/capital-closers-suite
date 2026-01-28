@@ -3642,6 +3642,8 @@ export type Database = {
           geographic_location: string | null
           growth_percentage: number | null
           highlights: string[] | null
+          highlights_ca: string[] | null
+          highlights_en: string[] | null
           id: string
           is_active: boolean | null
           is_deleted: boolean | null
@@ -3684,6 +3686,8 @@ export type Database = {
           geographic_location?: string | null
           growth_percentage?: number | null
           highlights?: string[] | null
+          highlights_ca?: string[] | null
+          highlights_en?: string[] | null
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null
@@ -3726,6 +3730,8 @@ export type Database = {
           geographic_location?: string | null
           growth_percentage?: number | null
           highlights?: string[] | null
+          highlights_ca?: string[] | null
+          highlights_en?: string[] | null
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null

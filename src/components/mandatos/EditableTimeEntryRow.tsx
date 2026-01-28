@@ -101,13 +101,8 @@ export function EditableTimeEntryRow({
   };
 
   const handleSaveClick = async () => {
-    // If entry is approved, show reason dialog first
-    if (entry.status === 'approved') {
-      setShowEditReasonDialog(true);
-      return;
-    }
-    
-    await doSave();
+    // ALWAYS show reason dialog for any edit
+    setShowEditReasonDialog(true);
   };
 
   const doSave = async (reason?: string) => {
@@ -153,11 +148,7 @@ export function EditableTimeEntryRow({
         description: trimmedDescription || 'Trabajo registrado',
       }, reason); // Pass the edit reason for approved entries
 
-      if (reason) {
-        toast.success("Entrada actualizada. Será revisada de nuevo.");
-      } else {
-        toast.success("Entrada actualizada");
-      }
+      toast.success("Entrada actualizada");
       
       setIsEditing(false);
       setShowEditReasonDialog(false);
@@ -413,23 +404,20 @@ export function EditableTimeEntryRow({
           </div>
         </div>
 
-        {/* Show warning if entry is approved */}
-        {entry.status === 'approved' && (
-          <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            Esta entrada ya fue aprobada. Al guardar, volverá a estado "pendiente de aprobación".
-          </div>
-        )}
+        {/* Info about edit tracking */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-2 py-1.5 rounded">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          Los cambios se guardarán con trazabilidad (motivo, fecha, usuario).
+        </div>
       </div>
 
-      {/* Edit Reason Dialog for Approved Entries */}
+      {/* Edit Reason Dialog - Required for ALL edits */}
       <AlertDialog open={showEditReasonDialog} onOpenChange={setShowEditReasonDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Motivo de la edición</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta entrada ya fue aprobada. Para editarla, debes indicar el motivo.
-              La entrada volverá a estado "pendiente de aprobación".
+              Para guardar los cambios, indica el motivo de la edición.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">

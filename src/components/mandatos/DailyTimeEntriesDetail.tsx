@@ -48,46 +48,60 @@ function getValueTypeBadge(valueType: string | null | undefined) {
   }
 }
 
-function getStatusBadge(status: string | null | undefined, editCount?: number | null, editReason?: string | null) {
-  // Check if this is a re-submitted entry (was approved, then edited)
-  const isResubmitted = status === 'submitted' && editCount && editCount > 0;
+function getStatusBadge(status: string | null | undefined, editCount?: number | null, editReason?: string | null, editedAt?: string | null) {
+  // Check if entry has been edited (regardless of status)
+  const hasEdits = editCount && editCount > 0;
   
-  if (isResubmitted) {
+  // Status badge
+  let statusBadge;
+  switch (status) {
+    case 'approved':
+      statusBadge = <Badge variant="outline" className="border-emerald-500 text-emerald-600">Aprobado</Badge>;
+      break;
+    case 'submitted':
+      statusBadge = <Badge variant="outline" className="border-blue-500 text-blue-600">Pendiente</Badge>;
+      break;
+    case 'rejected':
+      statusBadge = <Badge variant="outline" className="border-red-500 text-red-600">Rechazado</Badge>;
+      break;
+    default:
+      statusBadge = <Badge variant="outline">—</Badge>;
+  }
+
+  // If entry has edits, show edit indicator next to status
+  if (hasEdits) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1 cursor-help">
-              ⚠️ Re-enviada ({editCount}x)
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="font-medium">Entrada editada y re-enviada</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ha sido modificada después de su aprobación inicial.
-            </p>
-            {editReason && (
-              <div className="mt-2 pt-2 border-t">
-                <p className="text-xs font-medium">Motivo de edición:</p>
-                <p className="text-xs italic">"{editReason}"</p>
-              </div>
-            )}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center gap-1">
+        {statusBadge}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="bg-amber-50 border-amber-200 text-amber-700 gap-1 cursor-help">
+                <Edit className="h-3 w-3" />
+                {editCount}x
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="font-medium">Editada {editCount} {editCount === 1 ? 'vez' : 'veces'}</p>
+              {editedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Última: {format(new Date(editedAt), "dd/MM/yyyy HH:mm")}
+                </p>
+              )}
+              {editReason && (
+                <div className="mt-2 pt-2 border-t">
+                  <p className="text-xs font-medium">Último motivo:</p>
+                  <p className="text-xs italic">"{editReason}"</p>
+                </div>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     );
   }
   
-  switch (status) {
-    case 'approved':
-      return <Badge variant="outline" className="border-emerald-500 text-emerald-600">Aprobado</Badge>;
-    case 'submitted':
-      return <Badge variant="outline" className="border-blue-500 text-blue-600">Pendiente</Badge>;
-    case 'rejected':
-      return <Badge variant="outline" className="border-red-500 text-red-600">Rechazado</Badge>;
-    default:
-      return <Badge variant="outline">—</Badge>;
-  }
+  return statusBadge;
 }
 
 // Edit info icon component
@@ -229,9 +243,9 @@ export function DailyTimeEntriesDetail({ entries, date, userName, loading }: Dai
                     </div>
                   </TableCell>
 
-                  {/* Status with Re-submitted indicator */}
+                  {/* Status with edit indicator */}
                   <TableCell>
-                    {getStatusBadge(entry.status, entry.edit_count, entry.edit_reason)}
+                    {getStatusBadge(entry.status, entry.edit_count, entry.edit_reason, entry.edited_at)}
                   </TableCell>
                 </TableRow>
               ))}
