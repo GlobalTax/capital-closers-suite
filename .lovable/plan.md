@@ -1,138 +1,164 @@
 
 
-## Plan: Bloquear registro de horas sin Plan Diario previo
-
-### Problema Identificado
-
-La lógica actual permite registrar horas para **hoy y días pasados** sin verificar si existe un plan diario. El código en `canRegisterHoursForDate` retorna `allowed: true` inmediatamente si la fecha objetivo es hoy o pasada:
-
-```typescript
-// Línea 302 en dailyPlans.service.ts
-if (targetDate <= today) {
-  return { allowed: true };  // ← PROBLEMA: No verifica plan
-}
-```
-
-### Nuevo Comportamiento Propuesto
-
-| Fecha a registrar | Condición | Resultado |
-|-------------------|-----------|-----------|
-| **Hoy** | Sin plan para hoy | ❌ Bloqueado - "Crea tu plan para hoy" |
-| **Hoy** | Plan en draft | ❌ Bloqueado - "Envía tu plan primero" |
-| **Hoy** | Plan submitted/approved | ✅ Permitido |
-| **Ayer o antes** | Siempre | ✅ Permitido (días pasados no requieren plan) |
-| **Mañana o después** | Sin plan o en draft | ❌ Bloqueado |
-| **Mañana o después** | Plan submitted/approved | ✅ Permitido |
+## Plan: Completar Validaciones UI Plan Diario
 
 ### Cambios Necesarios
 
-#### Archivo: `src/services/dailyPlans.service.ts`
+#### 1. Validación de 8 horas mínimas
 
-Modificar la función `canRegisterHoursForDate` para:
+**Archivo: `src/hooks/useDailyPlan.ts`**
 
-1. **Días pasados**: Permitir siempre (no tiene sentido exigir plan retroactivo)
-2. **Hoy**: Requerir plan en estado `submitted` o `approved`
-3. **Días futuros**: Requerir plan en estado `submitted` o `approved` (ya funciona así)
+Modificar la función `submitPlan` para validar mínimo 480 minutos (8 horas):
 
 ```typescript
-export async function canRegisterHoursForDate(
-  userId: string,
-  date: Date
-): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
-  const targetDate = format(date, 'yyyy-MM-dd');
-  const today = format(new Date(), 'yyyy-MM-dd');
+const submitPlan = async () => {
+  if (!plan) return;
   
-  // CAMBIO: Solo días PASADOS (anteriores a hoy) son permitidos sin plan
-  if (targetDate < today) {
-    return { allowed: true };
+  if (plan.items.length === 0) {
+    toast.error('Debes añadir al menos una tarea');
+    return;
   }
   
-  // Para HOY y días FUTUROS, verificar que exista plan enviado
-  const { data: plan, error } = await supabase
+  // NUEVO: Validar mínimo 8 horas
+  const MIN_HOURS = 8;
+  if (totalHours < MIN_HOURS) {
+    toast.error(`El plan debe tener al menos ${MIN_HOURS} horas. Actualmente: ${totalHours.toFixed(1)}h`);
+    return;
+  }
+  
+  // ... resto del código
+};
+```
+
+**Archivo: `src/components/plans/DailyPlanForm.tsx`**
+
+Añadir indicador visual cuando faltan horas:
+
+```typescript
+const MIN_HOURS = 8;
+const hoursRemaining = MIN_HOURS - parseFloat(totalHours);
+const canSubmit = plan.items.length > 0 && hoursRemaining <= 0;
+
+// En el UI, mostrar mensaje de advertencia
+{hoursRemaining > 0 && (
+  <p className="text-sm text-amber-600">
+    Faltan {hoursRemaining.toFixed(1)}h para el mínimo de {MIN_HOURS}h
+  </p>
+)}
+```
+
+---
+
+#### 2. Permitir edición después de enviar
+
+**Archivo: `src/hooks/useDailyPlan.ts`**
+
+Cambiar lógica de `canEdit`:
+
+```typescript
+// ANTES:
+canEdit: plan?.status === 'draft',
+
+// DESPUÉS: Permitir editar en draft, submitted y approved
+canEdit: plan?.status !== 'rejected',
+```
+
+---
+
+#### 3. Campo "modified_after_submit" en base de datos
+
+**Migración SQL:**
+
+```sql
+ALTER TABLE public.daily_plans 
+ADD COLUMN IF NOT EXISTS modified_after_submit BOOLEAN DEFAULT FALSE;
+```
+
+---
+
+#### 4. Lógica para marcar como modificado
+
+**Archivo: `src/services/dailyPlans.service.ts`**
+
+Modificar `addPlanItem`, `updatePlanItem`, y `deletePlanItem` para detectar si el plan ya fue enviado y marcarlo como modificado:
+
+```typescript
+// Función auxiliar
+async function markPlanAsModified(planId: string): Promise<void> {
+  const { data: plan } = await supabase
     .from('daily_plans')
-    .select('id, status')
-    .eq('user_id', userId)
-    .eq('planned_for_date', targetDate)
-    .maybeSingle();
+    .select('status')
+    .eq('id', planId)
+    .single();
   
-  if (error) throw error;
-  
-  if (!plan) {
-    const isToday = targetDate === today;
-    return {
-      allowed: false,
-      reason: isToday 
-        ? 'Debes crear y enviar tu plan para hoy antes de registrar horas'
-        : 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
-    };
+  if (plan && plan.status !== 'draft') {
+    await supabase
+      .from('daily_plans')
+      .update({ modified_after_submit: true, updated_at: new Date().toISOString() })
+      .eq('id', planId);
   }
-  
-  if (plan.status === 'draft') {
-    return {
-      allowed: false,
-      reason: 'Debes enviar tu plan diario antes de registrar horas',
-      planId: plan.id
-    };
-  }
-  
-  // Plan exists and is submitted/approved
-  return { allowed: true, planId: plan.id };
 }
 ```
 
-### Detalle del Cambio
+---
 
-| Línea | Antes | Después |
-|-------|-------|---------|
-| 302 | `if (targetDate <= today)` | `if (targetDate < today)` |
+#### 5. Mostrar badge "Modificado" en UI
 
-**Un solo carácter cambia**: `<=` → `<`
+**Archivo: `src/components/plans/DailyPlanForm.tsx`**
 
-Este cambio significa:
-- `targetDate < today` → Solo días **estrictamente pasados** pasan sin verificación
-- `targetDate === today` → **Hoy** ahora requiere plan enviado
+Añadir indicador visual cuando el plan fue modificado después de enviar:
+
+```typescript
+{plan.modified_after_submit && plan.status !== 'draft' && (
+  <Badge variant="outline" className="bg-orange-500/10 text-orange-600 ml-2">
+    Modificado
+  </Badge>
+)}
+```
+
+---
+
+### Resumen de Archivos a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/hooks/useDailyPlan.ts` | Validación 8h + cambiar `canEdit` |
+| `src/components/plans/DailyPlanForm.tsx` | UI de advertencia horas + badge "Modificado" |
+| `src/services/dailyPlans.service.ts` | Lógica `markPlanAsModified` |
+| `src/types/dailyPlans.ts` | Añadir `modified_after_submit` al tipo |
+| **Nueva migración SQL** | Añadir columna `modified_after_submit` |
+
+---
 
 ### Flujo Resultante
 
 ```text
-Usuario intenta registrar horas para HOY
-         │
-         ▼
-  ┌──────────────────────┐
-  │ ¿Existe plan para    │
-  │ la fecha de hoy?     │
-  └──────────┬───────────┘
-             │
-    ┌────────┴────────┐
-    │ No              │ Sí
-    ▼                 ▼
-┌─────────────┐  ┌───────────────────┐
-│ Modal:      │  │ ¿Plan enviado?    │
-│ "Crea tu    │  │ (status!=draft)   │
-│ plan para   │  └─────────┬─────────┘
-│ hoy"        │       ┌────┴────┐
-└─────────────┘       │ No      │ Sí
-                      ▼         ▼
-              ┌─────────────┐ ┌─────────────┐
-              │ Modal:      │ │ ✅ Permitir │
-              │ "Envía tu   │ │ registrar   │
-              │ plan"       │ │ horas       │
-              └─────────────┘ └─────────────┘
+Usuario crea plan
+       │
+       ▼
+  Añade tareas
+       │
+       ▼
+  ¿Total >= 8h? ──No──▶ Mensaje: "Faltan Xh"
+       │                    (botón deshabilitado)
+      Sí
+       │
+       ▼
+  [Enviar Plan] → status = 'submitted'
+       │
+       ▼
+  Usuario edita (opcional)
+       │
+       ▼
+  modified_after_submit = true
+       │
+       ▼
+  Badge "Modificado" visible
 ```
 
-### Consideraciones de UX
+---
 
-El modal `DailyPlanBlocker` ya tiene un botón "Ir a Plan Diario" que redirige a `/plan-diario`. Esto facilita que el usuario cree/envíe su plan y luego vuelva a registrar horas.
+### Nota sobre "Guardar Borrador"
 
-### Impacto
-
-- **Usuarios**: Deberán crear su plan antes de registrar horas del día actual
-- **Días pasados**: Sin cambios, se permiten siempre (para correcciones retroactivas)
-- **Días futuros**: Sin cambios, ya requerían plan
-
-### Resumen
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/services/dailyPlans.service.ts` | Cambiar `<=` a `<` en línea 302 + actualizar mensaje para "hoy" |
+El sistema actual ya guarda automáticamente cada cambio (add/update/delete de tareas). Si se desea un botón explícito "Guardar Borrador", sería redundante pero se puede añadir como confirmación visual. El guardado ya ocurre en tiempo real.
 
