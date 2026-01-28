@@ -470,6 +470,12 @@ export interface TimeEntry {
   approved_by?: string;
   approved_at?: string;
   
+  // Edit tracking fields (for re-opening approved entries)
+  edited_at?: string;
+  edited_by?: string;
+  edit_reason?: string;
+  edit_count?: number;
+  
   created_at: string;
   updated_at: string;
   
