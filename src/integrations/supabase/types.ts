@@ -4567,6 +4567,45 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_statuses: {
+        Row: {
+          color: string
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          label: string
+          position: number
+          status_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          label: string
+          position?: number
+          status_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          label?: string
+          position?: number
+          status_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       contact_tags: {
         Row: {
           color: string | null

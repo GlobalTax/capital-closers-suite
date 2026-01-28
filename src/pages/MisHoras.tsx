@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { CompactTimeEntriesTable } from "@/components/mandatos/CompactTimeEntriesTable";
+import { DayGroupedTimeEntries } from "@/components/mandatos/DayGroupedTimeEntries";
 import { ActiveTimerWidget } from "@/components/mandatos/ActiveTimerWidget";
 import { TimeFilterBar } from "@/components/mandatos/TimeFilterBar";
 import { TimeEntryInlineForm } from "@/components/mandatos/TimeEntryInlineForm";
-import { TimeEntryEditDialog } from "@/components/mandatos/TimeEntryEditDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMyTimeEntries, getMyActiveTimer, stopTimer } from "@/services/timeTracking";
 import { toast } from "sonner";
@@ -20,7 +19,6 @@ export default function MisHoras() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [mandatos, setMandatos] = useState<{ id: string; name: string }[]>([]);
-  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [filters, setFilters] = useState<TimeFilterState>({
     startDate: startOfMonth(new Date()),
     endDate: endOfDay(new Date()),
@@ -179,7 +177,7 @@ export default function MisHoras() {
         showUserFilter={false} 
       />
 
-      {/* Time Entries - Compact grouped */}
+      {/* Time Entries - Day grouped with inline editing */}
       <div className="pt-2">
         {loading ? (
           <div className="space-y-2">
@@ -188,26 +186,14 @@ export default function MisHoras() {
             ))}
           </div>
         ) : (
-          <CompactTimeEntriesTable 
+          <DayGroupedTimeEntries 
             entries={timeEntries} 
             currentUserId={currentUserId} 
             isAdmin={isAdmin} 
             onRefresh={loadMyTimeData}
-            onEditEntry={(entry) => setEditingEntry(entry)}
           />
         )}
       </div>
-
-      {/* Edit Dialog */}
-      <TimeEntryEditDialog
-        entry={editingEntry}
-        open={!!editingEntry}
-        onOpenChange={(open) => !open && setEditingEntry(null)}
-        onSuccess={() => {
-          setEditingEntry(null);
-          loadMyTimeData();
-        }}
-      />
     </div>
   );
 }
