@@ -1,222 +1,296 @@
 
 
-## Plan: "Abrir día" y Edición de Horas en MisHoras
+## Plan: Reapertura Automática de Entradas Aprobadas
 
 ### Resumen
 
-Transformar la vista de MisHoras para agrupar las entradas por día y permitir "abrir" cualquier día para editar entradas existentes o añadir nuevas, todo de forma inline sin necesidad de modales.
+Permitir que los usuarios editen entradas de tiempo en estado `approved`, con las siguientes condiciones:
+1. El estado cambia automáticamente a `submitted` (requiere re-aprobación)
+2. Se requiere un `edit_reason` obligatorio
+3. Se registra trazabilidad completa (`edited_at`, `edited_by`, `edit_count`)
 
 ---
 
-### 1. Nueva Estructura Visual
+### 1. Nuevas Columnas en Base de Datos
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ 📅 Lunes 27 Enero 2026                        4h 30m    [Abrir]   │
-├────────────────────────────────────────────────────────────────────┤
-│ 09:15 │ V-478 SELK │ Reunión │ Kick-off con cliente  │ 1h 30m     │
-│ 11:00 │ V-382 OTEC │ IM      │ Preparar sección fin. │ 2h 00m     │
-│ 14:30 │ Trabajo Gen│ Adminis │ Emails y llamadas     │ 1h 00m     │
-└────────────────────────────────────────────────────────────────────┘
+Añadir a `mandato_time_entries`:
 
-┌────────────────────────────────────────────────────────────────────┐
-│ 📅 Domingo 26 Enero 2026                      0h        [Abrir]   │
-├────────────────────────────────────────────────────────────────────┤
-│ (Sin registros este día)                                           │
-└────────────────────────────────────────────────────────────────────┘
-```
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `edited_at` | `timestamptz` | Fecha/hora de la última edición |
+| `edited_by` | `uuid` | Usuario que realizó la edición |
+| `edit_reason` | `text` | Motivo de la edición (obligatorio para entradas aprobadas) |
+| `edit_count` | `integer` | Contador de ediciones (default 0) |
 
-**Al hacer clic en "Abrir día":**
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ 📅 Lunes 27 Enero 2026 (EDITANDO)             4h 30m    [Cerrar]  │
-├────────────────────────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────────────────────────────┐  │
-│ │ 09:15 │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ 1h 30m │ ✓ │
-│ └──────────────────────────────────────────────────────────────┘  │
-│ ┌──────────────────────────────────────────────────────────────┐  │
-│ │ 11:00 │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ 2h 00m │ ✓ │
-│ └──────────────────────────────────────────────────────────────┘  │
-│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │
-│ [+ Añadir entrada para este día]                                   │
-│                                                                    │
-│ [H:M] │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ [+ Añadir]   │
-└────────────────────────────────────────────────────────────────────┘
+```sql
+ALTER TABLE mandato_time_entries
+ADD COLUMN IF NOT EXISTS edited_at timestamptz,
+ADD COLUMN IF NOT EXISTS edited_by uuid REFERENCES auth.users(id),
+ADD COLUMN IF NOT EXISTS edit_reason text,
+ADD COLUMN IF NOT EXISTS edit_count integer DEFAULT 0;
 ```
 
 ---
 
-### 2. Nuevo Componente: DayGroupedTimeEntries
+### 2. Nueva Política RLS
 
-Crear `src/components/mandatos/DayGroupedTimeEntries.tsx`:
+Crear política que permita editar entradas aprobadas:
 
-**Props:**
-```typescript
-interface DayGroupedTimeEntriesProps {
-  entries: TimeEntry[];
-  currentUserId: string;
-  isAdmin: boolean;
-  onRefresh: () => void;
-}
+```sql
+-- Usuarios pueden editar sus entradas aprobadas (se cambian a submitted)
+CREATE POLICY "Users can edit own approved entries"
+ON mandato_time_entries
+FOR UPDATE
+TO authenticated
+USING (
+  auth.uid() = user_id 
+  AND status = 'approved'
+)
+WITH CHECK (
+  auth.uid() = user_id
+  AND status = 'submitted'  -- Debe cambiar a submitted
+  AND edit_reason IS NOT NULL  -- Razón obligatoria
+  AND length(trim(edit_reason)) >= 5  -- Mínimo 5 caracteres
+  AND edited_at IS NOT NULL
+  AND edited_by = auth.uid()
+);
 ```
 
-**Funcionalidades:**
-- Agrupa entradas por fecha (`start_time`)
-- Cada grupo muestra header con fecha, total de horas, y botón "Abrir día"
-- Estado `openedDay: string | null` para controlar qué día está abierto
-- Cuando un día está abierto, muestra filas editables
+Esta política:
+- Permite UPDATE solo si el usuario es el propietario
+- Requiere que el nuevo estado sea `submitted`
+- Requiere `edit_reason` con mínimo 5 caracteres
+- Requiere `edited_at` y `edited_by`
 
 ---
 
-### 3. Componente: EditableTimeEntryRow
+### 3. Actualizar Servicio updateTimeEntry
 
-Crear `src/components/mandatos/EditableTimeEntryRow.tsx`:
-
-**Props:**
-```typescript
-interface EditableTimeEntryRowProps {
-  entry: TimeEntry;
-  onSave: (updatedEntry: Partial<TimeEntry>) => Promise<void>;
-  onCancel: () => void;
-}
-```
-
-**Campos editables inline:**
-| Campo | Control | Notas |
-|-------|---------|-------|
-| Hora inicio | `<Input type="time">` | Solo hora, fecha fija del día |
-| Mandato | `<MandatoSelect>` | Reutilizar componente existente |
-| Tipo tarea | `<Select>` | Filtrado por mandato seleccionado |
-| Descripción | `<Input>` | Min 10 chars (validación existente) |
-| Duración | `<Input>` H:M | Inputs separados para horas y minutos |
-
-**Botones por fila:**
-- ✓ Guardar (llama `updateTimeEntry`)
-- ✕ Cancelar (restaura valores originales)
-
----
-
-### 4. Componente: DayInlineAddForm
-
-Crear `src/components/mandatos/DayInlineAddForm.tsx`:
-
-**Props:**
-```typescript
-interface DayInlineAddFormProps {
-  date: Date;  // Fecha fija del día abierto
-  onSuccess: () => void;
-}
-```
-
-**Comportamiento:**
-- Similar a `TimeEntryInlineForm` pero con **fecha bloqueada**
-- Solo permite modificar hora de inicio (dentro del mismo día)
-- Hereda la fecha del día "abierto"
-- Al crear, la entrada aparece inmediatamente en el día
-
----
-
-### 5. Lógica de Agrupación
+Modificar `src/services/timeTracking.ts`:
 
 ```typescript
-// Agrupar por fecha
-const groupedByDay = useMemo(() => {
-  const groups: Record<string, TimeEntry[]> = {};
+export const updateTimeEntry = async (
+  id: string,
+  updates: Partial<TimeEntry>,
+  editReason?: string  // Nuevo parámetro opcional
+): Promise<TimeEntry> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Primero, verificar el estado actual de la entrada
+  const { data: currentEntry, error: fetchError } = await supabase
+    .from('mandato_time_entries')
+    .select('status, user_id, edit_count')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Si es entrada aprobada, validar y añadir campos de edición
+  if (currentEntry.status === 'approved') {
+    if (!editReason || editReason.trim().length < 5) {
+      throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
+    }
+
+    // Añadir campos de trazabilidad
+    updates = {
+      ...updates,
+      status: 'submitted',  // Cambiar a submitted
+      edited_at: new Date().toISOString(),
+      edited_by: user.id,
+      edit_reason: editReason.trim(),
+      edit_count: (currentEntry.edit_count || 0) + 1,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from('mandato_time_entries')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as TimeEntry;
+};
+```
+
+---
+
+### 4. Actualizar UI: EditableTimeEntryRow
+
+Modificar `src/components/mandatos/EditableTimeEntryRow.tsx`:
+
+```typescript
+// Nuevo estado para el motivo de edición
+const [editReason, setEditReason] = useState('');
+const [showEditReasonDialog, setShowEditReasonDialog] = useState(false);
+
+// En handleSave:
+const handleSave = async () => {
+  try {
+    // Si es aprobada, pedir motivo primero
+    if (entry.status === 'approved') {
+      setShowEditReasonDialog(true);
+      return;
+    }
+    
+    await doSave();
+  } catch (error) {
+    // ...
+  }
+};
+
+const doSave = async (reason?: string) => {
+  // ... validaciones existentes ...
   
-  entries.forEach(entry => {
-    const dateKey = format(new Date(entry.start_time), 'yyyy-MM-dd');
-    if (!groups[dateKey]) groups[dateKey] = [];
-    groups[dateKey].push(entry);
-  });
+  await updateTimeEntry(entry.id, {
+    // ... campos actuales ...
+  }, reason);  // Pasar reason
   
-  // Ordenar días (más reciente primero)
-  return Object.entries(groups)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, entries]) => ({
-      date,
-      entries: entries.sort((a, b) => 
-        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-      ),
-      totalMinutes: entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0)
-    }));
-}, [entries]);
+  // ...
+};
+
+// Nuevo diálogo para motivo de edición
+<AlertDialog open={showEditReasonDialog} onOpenChange={setShowEditReasonDialog}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Motivo de la edición</AlertDialogTitle>
+      <AlertDialogDescription>
+        Esta entrada ya fue aprobada. Para editarla, debes indicar el motivo.
+        La entrada volverá a estado "pendiente de aprobación".
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <Input
+      value={editReason}
+      onChange={(e) => setEditReason(e.target.value)}
+      placeholder="Motivo de la corrección..."
+    />
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+      <AlertDialogAction 
+        onClick={() => doSave(editReason)}
+        disabled={editReason.trim().length < 5}
+      >
+        Confirmar
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
 ```
 
 ---
 
-### 6. Flujo de Usuario
+### 5. Indicadores Visuales
 
-```
-Usuario abre MisHoras
-         │
-         ▼
-   Vista agrupada por días
-   (cada día colapsado con resumen)
-         │
-         ▼
-   Clic en "Abrir día" del 27 Enero
-         │
-         ▼
-   ┌─────────────────────────────────┐
-   │ Entradas del día en modo edición│
-   │ - Campos inline editables       │
-   │ - Botón Guardar por fila        │
-   │ - Formulario para añadir nuevas │
-   └─────────────────────────────────┘
-         │
-         ▼
-   Usuario modifica descripción de una entrada
-         │
-         ▼
-   Clic en ✓ Guardar
-         │
-         ▼
-   Se actualiza la entrada
-   (feedback inmediato, sin cerrar día)
-         │
-         ▼
-   Usuario añade nueva entrada
-   (fecha heredada del día abierto)
-```
-
----
-
-### 7. Cambios en MisHoras.tsx
-
-Reemplazar `CompactTimeEntriesTable` con `DayGroupedTimeEntries`:
+Mostrar historial de ediciones en la UI:
 
 ```typescript
-// ANTES:
-<CompactTimeEntriesTable 
-  entries={timeEntries} 
-  currentUserId={currentUserId} 
-  isAdmin={isAdmin} 
-  onRefresh={loadMyTimeData}
-  onEditEntry={(entry) => setEditingEntry(entry)}
-/>
-
-// DESPUÉS:
-<DayGroupedTimeEntries
-  entries={timeEntries}
-  currentUserId={currentUserId}
-  isAdmin={isAdmin}
-  onRefresh={loadMyTimeData}
-/>
+// En EditableTimeEntryRow - vista readonly
+{entry.edit_count > 0 && (
+  <Tooltip>
+    <TooltipTrigger>
+      <Badge variant="outline" className="text-[10px] bg-amber-50">
+        <Edit className="h-3 w-3 mr-1" />
+        {entry.edit_count}x
+      </Badge>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p>Editada {entry.edit_count} {entry.edit_count === 1 ? 'vez' : 'veces'}</p>
+      {entry.edited_at && (
+        <p className="text-xs text-muted-foreground">
+          Última: {format(new Date(entry.edited_at), 'dd/MM HH:mm')}
+        </p>
+      )}
+      {entry.edit_reason && (
+        <p className="text-xs italic mt-1">"{entry.edit_reason}"</p>
+      )}
+    </TooltipContent>
+  </Tooltip>
+)}
 ```
-
-Eliminar `TimeEntryEditDialog` (ya no necesario, edición es inline).
 
 ---
 
-### 8. Validaciones
+### 6. Vista del Responsable
 
-| Validación | Comportamiento |
-|------------|----------------|
-| Descripción < 10 chars | Mostrar contador, deshabilitar Guardar |
-| Duración = 0 | Deshabilitar Guardar |
-| Mandato vacío | Deshabilitar Guardar |
-| Tipo tarea vacío | Deshabilitar Guardar |
+En el Panel Responsable (`DailyTimeEntriesDetail.tsx`), mostrar entradas editadas con indicador especial:
+
+```typescript
+// Columna adicional o badge
+{entry.status === 'submitted' && entry.edit_count > 0 && (
+  <Badge variant="warning" className="text-xs">
+    ⚠️ Re-enviada ({entry.edit_count}x)
+  </Badge>
+)}
+
+// Tooltip con el motivo de edición
+{entry.edit_reason && (
+  <Tooltip>
+    <TooltipTrigger>
+      <Info className="h-4 w-4 text-muted-foreground" />
+    </TooltipTrigger>
+    <TooltipContent>
+      <p className="font-medium">Motivo de edición:</p>
+      <p className="text-sm">{entry.edit_reason}</p>
+    </TooltipContent>
+  </Tooltip>
+)}
+```
+
+---
+
+### Flujo de Usuario
+
+```
+Usuario abre entrada aprobada
+         │
+         ▼
+   Hace clic en "Editar"
+         │
+         ▼
+   Modifica campos (mandato, tipo, descripción, duración)
+         │
+         ▼
+   Clic en "Guardar"
+         │
+         ▼
+   ┌──────────────────────────────┐
+   │ Dialog: "Motivo de edición" │
+   │ [________________________]   │
+   │ [Cancelar]    [Confirmar]    │
+   └──────────────────────────────┘
+         │
+         ▼
+   Se guarda con:
+   - status = 'submitted'
+   - edit_reason = "..."
+   - edited_at = now()
+   - edited_by = user_id
+   - edit_count += 1
+         │
+         ▼
+   Responsable ve entrada con badge "Re-enviada"
+   Puede aprobar o rechazar
+```
+
+---
+
+### Actualizar Tipos TypeScript
+
+En `src/types/index.ts`:
+
+```typescript
+export interface TimeEntry {
+  // ... campos existentes ...
+  
+  // Campos de edición
+  edited_at?: string;
+  edited_by?: string;
+  edit_reason?: string;
+  edit_count?: number;
+}
+```
 
 ---
 
@@ -224,29 +298,35 @@ Eliminar `TimeEntryEditDialog` (ya no necesario, edición es inline).
 
 | Archivo | Cambio |
 |---------|--------|
-| **Nuevo:** `src/components/mandatos/DayGroupedTimeEntries.tsx` | Vista agrupada con "Abrir día" |
-| **Nuevo:** `src/components/mandatos/EditableTimeEntryRow.tsx` | Fila editable inline |
-| **Nuevo:** `src/components/mandatos/DayInlineAddForm.tsx` | Formulario para añadir en día abierto |
-| `src/pages/MisHoras.tsx` | Usar nuevo componente, eliminar modal de edición |
+| **Nueva migración SQL** | Añadir columnas + nueva política RLS |
+| `src/services/timeTracking.ts` | Modificar `updateTimeEntry` para manejar entradas aprobadas |
+| `src/types/index.ts` | Añadir nuevos campos a `TimeEntry` |
+| `src/components/mandatos/EditableTimeEntryRow.tsx` | Añadir diálogo de motivo + indicador de ediciones |
+| `src/components/mandatos/DailyTimeEntriesDetail.tsx` | Mostrar indicadores de re-envío |
 
 ---
 
 ### Sección Técnica
 
-**Base de datos:** Sin cambios (usa `updateTimeEntry` existente)
+**Seguridad RLS:**
+- La política `WITH CHECK` garantiza que:
+  - Solo el propietario puede editar
+  - El estado DEBE cambiar a `submitted`
+  - El `edit_reason` NO puede ser NULL ni vacío
+  - Se registra quién y cuándo editó
 
-**Componentes reutilizados:**
-- `MandatoSelect` - selector de mandatos
-- `useFilteredWorkTaskTypes` - tipos de tarea filtrados por mandato
-- `updateTimeEntry` / `createTimeEntry` - servicios existentes
+**Trazabilidad:**
+- `edit_count` permite saber cuántas veces se ha modificado
+- `edited_at` + `edited_by` permiten auditar la última edición
+- `edit_reason` proporciona contexto para el responsable
 
-**Performance:**
-- La agrupación se calcula con `useMemo` para evitar recálculos innecesarios
-- Solo un día puede estar abierto a la vez (evita sobrecarga de formularios)
-- Las actualizaciones son atómicas por fila
+**Flujo de aprobación:**
+- Una entrada editada vuelve a `submitted`
+- El responsable la verá en su panel con indicador especial
+- Puede aprobar (vuelve a `approved`) o rechazar con `rejection_reason`
 
-**UX:**
-- Feedback inmediato tras guardar (toast + actualización visual)
-- Campos con valores previos para edición rápida
-- "Abrir día" funciona para cualquier día en el rango de filtros
+**Compatibilidad:**
+- Las políticas existentes para `draft` siguen funcionando igual
+- Los admins siguen teniendo acceso completo
+- No hay cambios breaking en la API existente
 
