@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, GripVertical, Star, Clock, Building2 } from "lucide-react";
+import { Trash2, GripVertical, Star, Clock, Building2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +12,7 @@ interface DailyPlanItemRowProps {
   item: DailyPlanItem;
   canEdit: boolean;
   mandatoName?: string;
+  leadName?: string;
   onUpdate: (updates: Partial<DailyPlanItem>) => void;
   onDelete: () => void;
 }
@@ -27,6 +28,7 @@ export function DailyPlanItemRow({
   item, 
   canEdit, 
   mandatoName,
+  leadName,
   onUpdate, 
   onDelete 
 }: DailyPlanItemRowProps) {
@@ -94,11 +96,21 @@ export function DailyPlanItemRow({
           </span>
         )}
         
-        {/* Mandato badge */}
-        {mandatoName && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-            <Building2 className="h-3 w-3" />
-            <span className="truncate">{mandatoName}</span>
+        {/* Mandato and Lead badges */}
+        {(mandatoName || leadName) && (
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+            {mandatoName && (
+              <span className="flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                <span className="truncate max-w-[120px]">{mandatoName}</span>
+              </span>
+            )}
+            {leadName && (
+              <Badge variant="outline" className="text-xs py-0 px-1.5 h-5">
+                <User className="h-3 w-3 mr-1" />
+                <span className="truncate max-w-[100px]">{leadName}</span>
+              </Badge>
+            )}
           </div>
         )}
       </div>

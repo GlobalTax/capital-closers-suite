@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { addDays, format, subDays, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CalendarDays, Clock, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Clock, CheckCircle2, Palmtree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
+import { useAbsences } from "@/hooks/useAbsences";
 import { DailyPlanForm } from "@/components/plans/DailyPlanForm";
+import { AbsenceMarker } from "@/components/plans/AbsenceMarker";
 import { PlanVsRealChart } from "@/components/plans/PlanVsRealChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +34,17 @@ export default function PlanDiario() {
     autoCreateTasks,
     setAutoCreateTasks,
   } = useDailyPlan(selectedDate);
+  
+  // Load absences for calendar display
+  const {
+    absences,
+    absenceDates,
+    absenceForSelectedDate,
+    addAbsence,
+    removeAbsence,
+    isAdding: addingAbsence,
+    isRemoving: removingAbsence,
+  } = useAbsences(selectedDate);
   
   // Load actual hours for the selected date
   useEffect(() => {
@@ -102,6 +115,13 @@ export default function PlanDiario() {
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
                 locale={es}
+                modifiers={{ absence: absenceDates }}
+                modifiersStyles={{
+                  absence: { 
+                    backgroundColor: 'hsl(var(--warning) / 0.15)', 
+                    borderRadius: '50%' 
+                  }
+                }}
               />
             </PopoverContent>
           </Popover>
@@ -112,8 +132,38 @@ export default function PlanDiario() {
         </div>
       </div>
       
+      {/* Absence indicator */}
+      {absenceForSelectedDate && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Palmtree className="h-5 w-5 text-warning" />
+            <div>
+              <p className="font-medium">
+                {absenceForSelectedDate.absence_type === 'vacation' && '🏖️ Vacaciones'}
+                {absenceForSelectedDate.absence_type === 'sick_leave' && '🤒 Baja médica'}
+                {absenceForSelectedDate.absence_type === 'personal' && '👤 Asunto personal'}
+                {absenceForSelectedDate.absence_type === 'other' && '📅 Ausencia'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                No se requiere planificación ni registro de horas para este día
+              </p>
+            </div>
+          </div>
+          {canEdit && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => removeAbsence(selectedDate)}
+              disabled={removingAbsence}
+            >
+              Cancelar ausencia
+            </Button>
+          )}
+        </div>
+      )}
+      
       {/* Quick stats */}
-      {plan && (
+      {plan && !absenceForSelectedDate && (
         <div className="flex flex-wrap items-center gap-6 py-3 px-1">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-muted-foreground" />
@@ -144,8 +194,19 @@ export default function PlanDiario() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main form */}
-        <div className="lg:col-span-2">
-          {plan && (
+        <div className="lg:col-span-2 space-y-4">
+          {/* Show AbsenceMarker if no plan items and no absence */}
+          {plan && !absenceForSelectedDate && plan.items.length === 0 && canEdit && (
+            <AbsenceMarker
+              date={selectedDate}
+              canEdit={canEdit}
+              onMarkAbsence={addAbsence}
+              isLoading={addingAbsence}
+            />
+          )}
+          
+          {/* Only show plan form if not an absence day */}
+          {plan && !absenceForSelectedDate && (
             <DailyPlanForm
               plan={plan}
               targetDate={selectedDate}
@@ -166,7 +227,7 @@ export default function PlanDiario() {
         
         {/* Sidebar with chart */}
         <div className="space-y-4">
-          {plan && isPast && (
+          {plan && isPast && !absenceForSelectedDate && (
             <PlanVsRealChart
               plannedHours={totalHours}
               actualHours={actualHours}

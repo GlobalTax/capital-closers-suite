@@ -31,6 +31,7 @@ export interface DailyPlanItem {
   order_index: number;
   created_at: string;
   linked_task_id: string | null;
+  mandate_lead_id: string | null;
 }
 
 export interface DailyPlanWithItems extends DailyPlan {
@@ -50,4 +51,5 @@ export interface NewDailyPlanItem {
   priority: DailyPlanItemPriority;
   mandato_id?: string | null;
   work_task_type_id?: string | null;
+  mandate_lead_id?: string | null;
 }
