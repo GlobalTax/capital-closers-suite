@@ -2532,6 +2532,42 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_error_alerts: {
+        Row: {
+          alert_sent_at: string
+          created_at: string
+          error_count: number
+          error_types: Json | null
+          id: string
+          recipients: string[]
+          sample_errors: Json | null
+          time_window_end: string
+          time_window_start: string
+        }
+        Insert: {
+          alert_sent_at?: string
+          created_at?: string
+          error_count: number
+          error_types?: Json | null
+          id?: string
+          recipients?: string[]
+          sample_errors?: Json | null
+          time_window_end: string
+          time_window_start: string
+        }
+        Update: {
+          alert_sent_at?: string
+          created_at?: string
+          error_count?: number
+          error_types?: Json | null
+          id?: string
+          recipients?: string[]
+          sample_errors?: Json | null
+          time_window_end?: string
+          time_window_start?: string
+        }
+        Relationships: []
+      }
       calculator_errors: {
         Row: {
           action: string

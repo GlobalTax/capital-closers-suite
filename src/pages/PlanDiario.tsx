@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { addDays, format, subDays } from "date-fns";
+import { addDays, format, subDays, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, CalendarDays, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useDailyPlan } from "@/hooks/useDailyPlan";
 import { DailyPlanForm } from "@/components/plans/DailyPlanForm";
 import { PlanVsRealChart } from "@/components/plans/PlanVsRealChart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 export default function PlanDiario() {
   const { user } = useAuth();
@@ -53,8 +56,9 @@ export default function PlanDiario() {
   const handleNextDay = () => setSelectedDate(addDays(selectedDate, 1));
   const handleToday = () => setSelectedDate(addDays(new Date(), 1));
   
-  const isTomorrow = format(selectedDate, 'yyyy-MM-dd') === format(addDays(new Date(), 1), 'yyyy-MM-dd');
-  const isPast = selectedDate < new Date();
+  const tomorrow = addDays(new Date(), 1);
+  const isTomorrow = format(selectedDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
+  const isPast = selectedDate < startOfToday();
   
   const completedTasks = plan?.items.filter(i => i.completed).length || 0;
   const totalTasks = plan?.items.length || 0;
@@ -66,24 +70,41 @@ export default function PlanDiario() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Plan Diario</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Planifica tu trabajo para el día siguiente
+            {isTomorrow 
+              ? "Planifica tu trabajo para mañana (requerido para registrar horas)"
+              : "Planifica tu trabajo con anticipación"
+            }
           </p>
         </div>
         
-        {/* Date navigation */}
+        {/* Date navigation with DatePicker */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={handlePrevDay}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <Button 
-            variant={isTomorrow ? "default" : "outline"} 
-            onClick={handleToday}
-            className="min-w-[180px]"
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            {format(selectedDate, "EEE d MMM", { locale: es })}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button 
+                variant={isTomorrow ? "default" : "outline"} 
+                className="min-w-[180px]"
+              >
+                <CalendarDays className="h-4 w-4 mr-2" />
+                {format(selectedDate, "EEE d MMM", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                disabled={(date) => date < startOfToday()}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+                locale={es}
+              />
+            </PopoverContent>
+          </Popover>
           
           <Button variant="outline" size="icon" onClick={handleNextDay}>
             <ChevronRight className="h-4 w-4" />
@@ -131,6 +152,7 @@ export default function PlanDiario() {
               loading={loading}
               saving={saving}
               canEdit={canEdit}
+              isBlockingDate={isTomorrow}
               autoCreateTasks={autoCreateTasks}
               onAutoCreateTasksChange={setAutoCreateTasks}
               onAddItem={addItem}
