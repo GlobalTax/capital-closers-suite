@@ -1,292 +1,222 @@
 
 
-## Plan: Panel Responsable - Vista Diaria Detallada por Persona
+## Plan: "Abrir día" y Edición de Horas en MisHoras
 
 ### Resumen
 
-Crear un nuevo panel "Responsable" dentro de la página "Horas Equipo" que permita a los responsables ver en detalle qué hizo cada operativo cada día. El panel mostrará un timeline diario con todas las entradas de tiempo, incluyendo descripción visible sin necesidad de modales.
+Transformar la vista de MisHoras para agrupar las entradas por día y permitir "abrir" cualquier día para editar entradas existentes o añadir nuevas, todo de forma inline sin necesidad de modales.
 
 ---
 
-### 1. Estructura de la Página
+### 1. Nueva Estructura Visual
 
-Modificar `src/pages/HorasEquipo.tsx` para añadir navegación por pestañas:
+```
+┌────────────────────────────────────────────────────────────────────┐
+│ 📅 Lunes 27 Enero 2026                        4h 30m    [Abrir]   │
+├────────────────────────────────────────────────────────────────────┤
+│ 09:15 │ V-478 SELK │ Reunión │ Kick-off con cliente  │ 1h 30m     │
+│ 11:00 │ V-382 OTEC │ IM      │ Preparar sección fin. │ 2h 00m     │
+│ 14:30 │ Trabajo Gen│ Adminis │ Emails y llamadas     │ 1h 00m     │
+└────────────────────────────────────────────────────────────────────┘
 
-- **Tab "Resumen"**: Vista actual con KPIs, gráficos y análisis estratégico
-- **Tab "Responsable"**: Nueva vista con detalle diario por persona
+┌────────────────────────────────────────────────────────────────────┐
+│ 📅 Domingo 26 Enero 2026                      0h        [Abrir]   │
+├────────────────────────────────────────────────────────────────────┤
+│ (Sin registros este día)                                           │
+└────────────────────────────────────────────────────────────────────┘
+```
 
-```typescript
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+**Al hacer clic en "Abrir día":**
 
-// En el return:
-<Tabs defaultValue="resumen">
-  <TabsList>
-    <TabsTrigger value="resumen">Resumen</TabsTrigger>
-    <TabsTrigger value="responsable">Panel Responsable</TabsTrigger>
-  </TabsList>
-  <TabsContent value="resumen">
-    {/* Contenido actual */}
-  </TabsContent>
-  <TabsContent value="responsable">
-    <ResponsablePanel entries={timeEntries} users={users} mandatos={mandatos} />
-  </TabsContent>
-</Tabs>
+```
+┌────────────────────────────────────────────────────────────────────┐
+│ 📅 Lunes 27 Enero 2026 (EDITANDO)             4h 30m    [Cerrar]  │
+├────────────────────────────────────────────────────────────────────┤
+│ ┌──────────────────────────────────────────────────────────────┐  │
+│ │ 09:15 │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ 1h 30m │ ✓ │
+│ └──────────────────────────────────────────────────────────────┘  │
+│ ┌──────────────────────────────────────────────────────────────┐  │
+│ │ 11:00 │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ 2h 00m │ ✓ │
+│ └──────────────────────────────────────────────────────────────┘  │
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │
+│ [+ Añadir entrada para este día]                                   │
+│                                                                    │
+│ [H:M] │ [Mandato ▼] │ [Tipo ▼] │ [Descripción____] │ [+ Añadir]   │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 2. Nuevo Componente: ResponsablePanel
+### 2. Nuevo Componente: DayGroupedTimeEntries
 
-Crear `src/components/mandatos/ResponsablePanel.tsx`:
+Crear `src/components/mandatos/DayGroupedTimeEntries.tsx`:
 
 **Props:**
 ```typescript
-interface ResponsablePanelProps {
+interface DayGroupedTimeEntriesProps {
   entries: TimeEntry[];
-  users: { id: string; name: string }[];
-  mandatos: { id: string; name: string }[];
-  loading?: boolean;
+  currentUserId: string;
+  isAdmin: boolean;
+  onRefresh: () => void;
 }
 ```
 
 **Funcionalidades:**
-- Filtro por usuario (obligatorio - selección única)
-- Filtro por fecha (DatePicker - día específico)
-- Filtro por mandato (opcional)
-- Vista agrupada por día con totales
+- Agrupa entradas por fecha (`start_time`)
+- Cada grupo muestra header con fecha, total de horas, y botón "Abrir día"
+- Estado `openedDay: string | null` para controlar qué día está abierto
+- Cuando un día está abierto, muestra filas editables
 
 ---
 
-### 3. Filtros del Panel Responsable
+### 3. Componente: EditableTimeEntryRow
 
-**UI de Filtros:**
+Crear `src/components/mandatos/EditableTimeEntryRow.tsx`:
+
+**Props:**
 ```typescript
-<div className="flex items-center gap-4">
-  {/* Selector de Usuario (prominente) */}
-  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-    <SelectTrigger className="w-[200px]">
-      <SelectValue placeholder="Seleccionar operativo" />
-    </SelectTrigger>
-    <SelectContent>
-      {users.map(user => (
-        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-  
-  {/* DatePicker - Día específico */}
-  <Popover>
-    <PopoverTrigger asChild>
-      <Button variant="outline">
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {format(selectedDate, 'EEEE d MMM yyyy', { locale: es })}
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent>
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={(date) => date && setSelectedDate(date)}
-      />
-    </PopoverContent>
-  </Popover>
-  
-  {/* Mandato (opcional) */}
-  <Select value={selectedMandatoId} onValueChange={setSelectedMandatoId}>
-    <SelectTrigger className="w-[200px]">
-      <SelectValue placeholder="Todos los mandatos" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="all">Todos los mandatos</SelectItem>
-      {mandatos.map(m => (
-        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
-```
-
----
-
-### 4. Vista Diaria con Timeline y Tabla Detallada
-
-**Estructura Visual:**
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 📅 Miércoles 28 Enero 2026                                      │
-│ Usuario: Samuel Navarro                                         │
-│ ─────────────────────────────────────────────────────────────── │
-│                                                                 │
-│ RESUMEN DEL DÍA                                                 │
-│ ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
-│ │ 7h 30m   │  │ 5h 15m   │  │ 2h 15m   │  │ 6        │         │
-│ │ Total    │  │ Core M&A │  │ Soporte  │  │ Entradas │         │
-│ └──────────┘  └──────────┘  └──────────┘  └──────────┘         │
-│                                                                 │
-│ DETALLE DE ENTRADAS                                             │
-│ ┌───────┬──────────────┬────────────┬────────────┬──────────┐  │
-│ │ Hora  │ Mandato      │ Tipo       │ Descripción│ Duración │  │
-│ ├───────┼──────────────┼────────────┼────────────┼──────────┤  │
-│ │ 09:15 │ V-478 SELK   │ Reunión    │ Reunión de │ 1h 30m   │  │
-│ │       │              │            │ kick-off   │          │  │
-│ │       │              │            │ con equipo │          │  │
-│ │       │              │            │ del client │          │  │
-│ ├───────┼──────────────┼────────────┼────────────┼──────────┤  │
-│ │ 11:00 │ V-382 OTEC   │ IM         │ Preparar   │ 2h 00m   │  │
-│ │       │              │            │ sección    │          │  │
-│ │       │              │            │ financiera │          │  │
-│ │       │              │            │ del IM     │          │  │
-│ └───────┴──────────────┴────────────┴────────────┴──────────┘  │
-│                                                                 │
-│ [◀ Día anterior]                        [Día siguiente ▶]       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 5. Componente de Tabla con Descripción Visible
-
-Crear `src/components/mandatos/DailyTimeEntriesDetail.tsx`:
-
-**Características:**
-- Descripción siempre visible (no truncada)
-- Hora de inicio destacada
-- Badge de tipo de valor (Core M&A / Soporte / Bajo Valor)
-- Colores por estado (aprobado verde, pendiente ámbar, rechazado rojo)
-
-```typescript
-interface DailyTimeEntriesDetailProps {
-  entries: TimeEntry[];
-  date: Date;
-  userName: string;
+interface EditableTimeEntryRowProps {
+  entry: TimeEntry;
+  onSave: (updatedEntry: Partial<TimeEntry>) => Promise<void>;
+  onCancel: () => void;
 }
-
-// Tabla con descripción expandida
-<Table>
-  <TableHeader>
-    <TableRow>
-      <TableHead className="w-[80px]">Hora</TableHead>
-      <TableHead className="w-[150px]">Mandato</TableHead>
-      <TableHead className="w-[120px]">Tipo Tarea</TableHead>
-      <TableHead className="min-w-[300px]">Descripción</TableHead>
-      <TableHead className="w-[90px] text-right">Duración</TableHead>
-      <TableHead className="w-[80px]">Estado</TableHead>
-    </TableRow>
-  </TableHeader>
-  <TableBody>
-    {entries.map(entry => (
-      <TableRow key={entry.id}>
-        <TableCell className="font-mono text-sm">
-          {format(new Date(entry.start_time), 'HH:mm')}
-        </TableCell>
-        <TableCell>
-          <Link to={`/mandatos/${entry.mandato?.id}`}>
-            <span className="font-mono text-primary">{entry.mandato?.codigo}</span>
-            <br />
-            <span className="text-xs text-muted-foreground">
-              {entry.mandato?.empresa_principal?.nombre}
-            </span>
-          </Link>
-        </TableCell>
-        <TableCell>
-          <Badge variant="secondary">{entry.work_task_type?.name}</Badge>
-        </TableCell>
-        <TableCell>
-          {/* DESCRIPCIÓN VISIBLE SIN TRUNCAR */}
-          <div className="text-sm whitespace-pre-wrap">
-            {entry.description}
-          </div>
-          {entry.notes && (
-            <div className="text-xs text-muted-foreground mt-1 italic">
-              Notas: {entry.notes}
-            </div>
-          )}
-        </TableCell>
-        <TableCell className="text-right font-mono font-medium">
-          {formatDuration(entry.duration_minutes)}
-        </TableCell>
-        <TableCell>
-          <StatusBadge status={entry.status} />
-        </TableCell>
-      </TableRow>
-    ))}
-  </TableBody>
-</Table>
 ```
+
+**Campos editables inline:**
+| Campo | Control | Notas |
+|-------|---------|-------|
+| Hora inicio | `<Input type="time">` | Solo hora, fecha fija del día |
+| Mandato | `<MandatoSelect>` | Reutilizar componente existente |
+| Tipo tarea | `<Select>` | Filtrado por mandato seleccionado |
+| Descripción | `<Input>` | Min 10 chars (validación existente) |
+| Duración | `<Input>` H:M | Inputs separados para horas y minutos |
+
+**Botones por fila:**
+- ✓ Guardar (llama `updateTimeEntry`)
+- ✕ Cancelar (restaura valores originales)
 
 ---
 
-### 6. Resumen KPIs del Día
+### 4. Componente: DayInlineAddForm
 
-Crear `src/components/mandatos/DaySummaryKPIs.tsx`:
+Crear `src/components/mandatos/DayInlineAddForm.tsx`:
 
+**Props:**
 ```typescript
-interface DaySummaryKPIsProps {
-  entries: TimeEntry[];
-  date: Date;
-  userName: string;
+interface DayInlineAddFormProps {
+  date: Date;  // Fecha fija del día abierto
+  onSuccess: () => void;
 }
-
-// Métricas calculadas:
-const totalMinutes = entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-const coreMAMinutes = entries.filter(e => e.value_type === 'core_ma')
-  .reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-const soporteMinutes = entries.filter(e => e.value_type === 'soporte')
-  .reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
-const mandatosCount = new Set(entries.map(e => e.mandato_id).filter(Boolean)).size;
-
-// UI: 4 cards compactas
 ```
+
+**Comportamiento:**
+- Similar a `TimeEntryInlineForm` pero con **fecha bloqueada**
+- Solo permite modificar hora de inicio (dentro del mismo día)
+- Hereda la fecha del día "abierto"
+- Al crear, la entrada aparece inmediatamente en el día
 
 ---
 
-### 7. Navegación entre Días
-
-Añadir navegación rápida para moverse entre días:
+### 5. Lógica de Agrupación
 
 ```typescript
-<div className="flex items-center justify-between">
-  <Button 
-    variant="outline" 
-    onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-  >
-    <ChevronLeft className="h-4 w-4 mr-2" />
-    {format(subDays(selectedDate, 1), 'EEE d', { locale: es })}
-  </Button>
+// Agrupar por fecha
+const groupedByDay = useMemo(() => {
+  const groups: Record<string, TimeEntry[]> = {};
   
-  <span className="font-medium">
-    {format(selectedDate, 'EEEE d MMMM yyyy', { locale: es })}
-  </span>
+  entries.forEach(entry => {
+    const dateKey = format(new Date(entry.start_time), 'yyyy-MM-dd');
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(entry);
+  });
   
-  <Button 
-    variant="outline"
-    onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-    disabled={isToday(selectedDate)}
-  >
-    {format(addDays(selectedDate, 1), 'EEE d', { locale: es })}
-    <ChevronRight className="h-4 w-4 ml-2" />
-  </Button>
-</div>
+  // Ordenar días (más reciente primero)
+  return Object.entries(groups)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, entries]) => ({
+      date,
+      entries: entries.sort((a, b) => 
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      ),
+      totalMinutes: entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0)
+    }));
+}, [entries]);
 ```
 
 ---
 
-### 8. Datos Requeridos
+### 6. Flujo de Usuario
 
-Los datos ya están disponibles en `mandato_time_entries`:
+```
+Usuario abre MisHoras
+         │
+         ▼
+   Vista agrupada por días
+   (cada día colapsado con resumen)
+         │
+         ▼
+   Clic en "Abrir día" del 27 Enero
+         │
+         ▼
+   ┌─────────────────────────────────┐
+   │ Entradas del día en modo edición│
+   │ - Campos inline editables       │
+   │ - Botón Guardar por fila        │
+   │ - Formulario para añadir nuevas │
+   └─────────────────────────────────┘
+         │
+         ▼
+   Usuario modifica descripción de una entrada
+         │
+         ▼
+   Clic en ✓ Guardar
+         │
+         ▼
+   Se actualiza la entrada
+   (feedback inmediato, sin cerrar día)
+         │
+         ▼
+   Usuario añade nueva entrada
+   (fecha heredada del día abierto)
+```
 
-| Campo | Uso en Panel |
-|-------|--------------|
-| `mandato_id` | Link y badge de mandato |
-| `contacto_id` | Info del lead si aplica |
-| `work_task_type_id` | Badge de tipo de tarea |
-| `description` | Texto visible principal |
-| `duration_minutes` | Duración formateada |
-| `start_time` | Hora del día |
-| `value_type` | Badge Core/Soporte/Bajo Valor |
-| `status` | Indicador de estado |
-| `user_id` | Filtro por operativo |
+---
+
+### 7. Cambios en MisHoras.tsx
+
+Reemplazar `CompactTimeEntriesTable` con `DayGroupedTimeEntries`:
+
+```typescript
+// ANTES:
+<CompactTimeEntriesTable 
+  entries={timeEntries} 
+  currentUserId={currentUserId} 
+  isAdmin={isAdmin} 
+  onRefresh={loadMyTimeData}
+  onEditEntry={(entry) => setEditingEntry(entry)}
+/>
+
+// DESPUÉS:
+<DayGroupedTimeEntries
+  entries={timeEntries}
+  currentUserId={currentUserId}
+  isAdmin={isAdmin}
+  onRefresh={loadMyTimeData}
+/>
+```
+
+Eliminar `TimeEntryEditDialog` (ya no necesario, edición es inline).
+
+---
+
+### 8. Validaciones
+
+| Validación | Comportamiento |
+|------------|----------------|
+| Descripción < 10 chars | Mostrar contador, deshabilitar Guardar |
+| Duración = 0 | Deshabilitar Guardar |
+| Mandato vacío | Deshabilitar Guardar |
+| Tipo tarea vacío | Deshabilitar Guardar |
 
 ---
 
@@ -294,28 +224,29 @@ Los datos ya están disponibles en `mandato_time_entries`:
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/HorasEquipo.tsx` | Añadir Tabs con "Resumen" y "Panel Responsable" |
-| **Nuevo:** `src/components/mandatos/ResponsablePanel.tsx` | Panel principal con filtros |
-| **Nuevo:** `src/components/mandatos/DailyTimeEntriesDetail.tsx` | Tabla con descripción visible |
-| **Nuevo:** `src/components/mandatos/DaySummaryKPIs.tsx` | Métricas del día |
+| **Nuevo:** `src/components/mandatos/DayGroupedTimeEntries.tsx` | Vista agrupada con "Abrir día" |
+| **Nuevo:** `src/components/mandatos/EditableTimeEntryRow.tsx` | Fila editable inline |
+| **Nuevo:** `src/components/mandatos/DayInlineAddForm.tsx` | Formulario para añadir en día abierto |
+| `src/pages/MisHoras.tsx` | Usar nuevo componente, eliminar modal de edición |
 
 ---
 
 ### Sección Técnica
 
-**Dependencias:** Ninguna nueva (usa componentes shadcn existentes)
+**Base de datos:** Sin cambios (usa `updateTimeEntry` existente)
 
-**Base de datos:** No requiere cambios (usa `mandato_time_entries` existente)
-
-**Filtrado:** Se realiza en frontend sobre los datos ya cargados por `fetchAllTimeEntries`
+**Componentes reutilizados:**
+- `MandatoSelect` - selector de mandatos
+- `useFilteredWorkTaskTypes` - tipos de tarea filtrados por mandato
+- `updateTimeEntry` / `createTimeEntry` - servicios existentes
 
 **Performance:**
-- Los datos ya están cargados para la página actual
-- El filtrado por usuario/fecha se hace en memoria
-- Solo se renderizan las entradas del día seleccionado
+- La agrupación se calcula con `useMemo` para evitar recálculos innecesarios
+- Solo un día puede estar abierto a la vez (evita sobrecarga de formularios)
+- Las actualizaciones son atómicas por fila
 
-**Flujo de datos:**
-1. `HorasEquipo` carga todos los `timeEntries` con el rango de fechas actual
-2. `ResponsablePanel` recibe las entradas y aplica filtros locales
-3. `DailyTimeEntriesDetail` renderiza solo las entradas del día/usuario seleccionado
+**UX:**
+- Feedback inmediato tras guardar (toast + actualización visual)
+- Campos con valores previos para edición rápida
+- "Abrir día" funciona para cualquier día en el rango de filtros
 
