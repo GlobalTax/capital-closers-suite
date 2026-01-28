@@ -1,256 +1,180 @@
 
 
-## Plan: Conversión Automática de Ítems a Tareas Reales
+## Plan: Planificación de Días Futuros (Prompt 6)
 
 ### Resumen
 
-Implementar la funcionalidad para que al enviar un plan diario, los ítems del plan se conviertan automáticamente en tareas reales en la tabla `tareas`. Incluye un toggle para activar/desactivar esta conversión y evita duplicados si el ítem ya tiene una tarea vinculada.
+Permitir que los usuarios seleccionen cualquier fecha futura para planificar, mientras que el bloqueo de registro de horas solo aplica a "mañana". Los admins pueden crear planes para cualquier fecha sin restricciones.
 
 ---
 
-### Cambios en Base de Datos
+### 1. UI: Añadir DatePicker en PlanDiario
 
-**Migración SQL - Añadir columna `linked_task_id` a `daily_plan_items`:**
+**Archivo:** `src/pages/PlanDiario.tsx`
 
-```sql
--- Añadir columna para vincular ítem del plan con tarea generada
-ALTER TABLE public.daily_plan_items 
-ADD COLUMN IF NOT EXISTS linked_task_id UUID REFERENCES public.tareas(id) ON DELETE SET NULL;
-
--- Índice para búsquedas rápidas
-CREATE INDEX IF NOT EXISTS idx_daily_plan_items_linked_task 
-ON public.daily_plan_items(linked_task_id);
-```
-
----
-
-### Lógica de Conversión
-
-**Archivo: `src/services/dailyPlans.service.ts`**
-
-Nueva función `convertPlanItemsToTasks`:
+Reemplazar la navegación actual (prev/next/button) con un componente DatePicker que permita seleccionar directamente cualquier fecha futura:
 
 ```typescript
-export async function convertPlanItemsToTasks(
-  planId: string,
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// En lugar de solo botones prev/next, añadir un popover con calendario
+<Popover>
+  <PopoverTrigger asChild>
+    <Button variant={isTomorrow ? "default" : "outline"} className="min-w-[180px]">
+      <CalendarDays className="h-4 w-4 mr-2" />
+      {format(selectedDate, "EEE d MMM", { locale: es })}
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="w-auto p-0" align="center">
+    <Calendar
+      mode="single"
+      selected={selectedDate}
+      onSelect={(date) => date && setSelectedDate(date)}
+      disabled={(date) => date < new Date()} // Solo fechas futuras
+      initialFocus
+      className="pointer-events-auto"
+    />
+  </PopoverContent>
+</Popover>
+```
+
+Mantener los botones prev/next para navegación rápida.
+
+---
+
+### 2. Modificar Lógica de Bloqueo
+
+**Archivo:** `src/services/dailyPlans.service.ts`
+
+Cambiar la función `canRegisterHoursForDate` para que el bloqueo **solo aplique a MAÑANA** (no a hoy ni otros días futuros):
+
+**Antes (actual):**
+```typescript
+// TODAY and FUTURE dates require a submitted plan
+if (targetDate < today) {
+  return { allowed: true }; // Past dates allowed
+}
+// Block for today AND future...
+```
+
+**Después (nuevo):**
+```typescript
+export async function canRegisterHoursForDate(
   userId: string,
-  plannedForDate: string
-): Promise<{ created: number; skipped: number }> {
-  // 1. Obtener ítems sin tarea vinculada
-  const { data: items } = await supabase
-    .from('daily_plan_items')
-    .select('*')
-    .eq('plan_id', planId)
-    .is('linked_task_id', null);
+  date: Date
+): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
+  const targetDate = format(date, 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
   
-  if (!items || items.length === 0) {
-    return { created: 0, skipped: 0 };
+  // Past dates: always allowed (no plan required)
+  if (targetDate < today) {
+    return { allowed: true };
   }
   
-  // 2. Mapear prioridad del plan a prioridad de tarea
-  const priorityMap = {
-    'urgente': 'urgente',
-    'alta': 'alta', 
-    'media': 'media',
-    'baja': 'baja'
-  };
-  
-  let created = 0;
-  
-  // 3. Crear tareas para cada ítem
-  for (const item of items) {
-    const { data: tarea, error } = await supabase
-      .from('tareas')
-      .insert({
-        titulo: item.title,
-        descripcion: item.description,
-        estado: 'pendiente',
-        prioridad: priorityMap[item.priority] || 'media',
-        asignado_a: userId,
-        mandato_id: item.mandato_id,
-        fecha_vencimiento: plannedForDate,
-        tipo: 'individual',
-        creado_por: userId,
-        es_visible_equipo: false
-      })
-      .select()
-      .single();
-    
-    if (!error && tarea) {
-      // 4. Vincular tarea al ítem
-      await supabase
-        .from('daily_plan_items')
-        .update({ linked_task_id: tarea.id })
-        .eq('id', item.id);
-      
-      created++;
-    }
+  // Today: allowed without plan (flexible)
+  if (targetDate === today) {
+    return { allowed: true };
   }
   
-  return { created, skipped: items.length - created };
+  // TOMORROW ONLY: requires submitted plan with 8+ hours
+  if (targetDate === tomorrow) {
+    // ... existing plan validation logic ...
+  }
+  
+  // FUTURE (beyond tomorrow): allowed without strict requirement
+  // But encourage planning
+  return { allowed: true };
 }
 ```
 
 ---
 
-### Modificación de `submitPlan`
+### 3. Actualizar Textos de UI
 
-**Archivo: `src/services/dailyPlans.service.ts`**
+**Archivo:** `src/pages/PlanDiario.tsx`
 
-Actualizar la función para aceptar parámetro de conversión:
+Cambiar el texto descriptivo para reflejar la flexibilidad:
 
 ```typescript
-export async function submitPlan(
-  planId: string, 
-  createTasks: boolean = false
-): Promise<DailyPlan> {
-  // Obtener plan para datos adicionales
-  const { data: plan } = await supabase
-    .from('daily_plans')
-    .select('user_id, planned_for_date')
-    .eq('id', planId)
-    .single();
-  
-  // Actualizar estado
-  const { data, error } = await supabase
-    .from('daily_plans')
-    .update({
-      status: 'submitted',
-      submitted_at: new Date().toISOString()
-    })
-    .eq('id', planId)
-    .select()
-    .single();
-  
-  if (error) throw error;
-  
-  // Crear tareas si está habilitado
-  if (createTasks && plan) {
-    await convertPlanItemsToTasks(planId, plan.user_id, plan.planned_for_date);
+<p className="text-sm text-muted-foreground mt-0.5">
+  {isTomorrow 
+    ? "Planifica tu trabajo para mañana (requerido para registrar horas)"
+    : "Planifica tu trabajo con anticipación"
   }
-  
-  return data as DailyPlan;
-}
+</p>
 ```
 
 ---
 
-### Hook `useDailyPlan`
+### 4. Indicador Visual de Fecha Bloqueada
 
-**Archivo: `src/hooks/useDailyPlan.ts`**
+**Archivo:** `src/components/plans/DailyPlanForm.tsx`
 
-Añadir estado y lógica para el toggle:
-
-```typescript
-const [autoCreateTasks, setAutoCreateTasks] = useState(true);
-
-const submitPlan = async () => {
-  // ... validaciones existentes ...
-  
-  try {
-    setSaving(true);
-    const updated = await dailyPlansService.submitPlan(plan.id, autoCreateTasks);
-    setPlan(prev => prev ? { ...prev, ...updated } : null);
-    
-    if (autoCreateTasks) {
-      toast.success('Plan enviado y tareas creadas ✓');
-    } else {
-      toast.success('Plan enviado ✓');
-    }
-  } catch (error) {
-    // ...
-  }
-};
-
-return {
-  // ... existente ...
-  autoCreateTasks,
-  setAutoCreateTasks,
-};
-```
-
----
-
-### UI - Toggle en `DailyPlanForm`
-
-**Archivo: `src/components/plans/DailyPlanForm.tsx`**
-
-Añadir toggle antes del botón de envío:
+Mostrar un indicador cuando la fecha seleccionada es mañana (la que tiene bloqueo):
 
 ```typescript
-// Props adicionales
+// Añadir prop para indicar si es fecha con bloqueo
 interface DailyPlanFormProps {
   // ... existentes ...
-  autoCreateTasks: boolean;
-  onAutoCreateTasksChange: (value: boolean) => void;
+  isBlockingDate?: boolean; // true si es mañana
 }
 
-// En el JSX, antes del botón Enviar
-<div className="flex items-center justify-between pt-4 border-t">
-  <div className="flex items-center gap-3">
-    <Switch
-      id="auto-create-tasks"
-      checked={autoCreateTasks}
-      onCheckedChange={onAutoCreateTasksChange}
-    />
-    <Label htmlFor="auto-create-tasks" className="text-sm">
-      Crear tareas automáticamente
-    </Label>
+// En el JSX, mostrar advertencia si es fecha de bloqueo
+{isBlockingDate && plan.status === 'draft' && (
+  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-sm">
+    <p className="text-amber-700 dark:text-amber-400">
+      ⚠️ <strong>Importante:</strong> Debes enviar este plan con mínimo 8h 
+      antes de poder registrar horas para mañana.
+    </p>
   </div>
-  
-  <Button onClick={onSubmit} disabled={...}>
-    <Send className="h-4 w-4 mr-2" />
-    {plan.status === 'draft' ? 'Enviar Plan' : 'Re-enviar Plan'}
-  </Button>
-</div>
+)}
 ```
 
 ---
 
-### Admin: Convertir Tareas Asignadas
+### 5. Bypass para Admins
 
-**Archivo: `src/pages/admin/DailyPlansAdmin.tsx`**
+**Archivo:** `src/services/dailyPlans.service.ts`
 
-Añadir botón en el drawer para convertir ítems asignados por admin:
+Añadir parámetro opcional para bypass de admin:
 
 ```typescript
-// En el drawer de detalle, después de añadir tarea admin
-<Button 
-  variant="outline" 
-  size="sm"
-  onClick={() => handleConvertAdminTasks(selectedPlan.id)}
->
-  Convertir a tareas reales
-</Button>
-
-// Función
-const handleConvertAdminTasks = async (planId: string) => {
-  const plan = plans.find(p => p.id === planId);
-  if (!plan) return;
+export async function canRegisterHoursForDate(
+  userId: string,
+  date: Date,
+  isAdmin: boolean = false
+): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
+  // Admin bypass
+  if (isAdmin) {
+    return { allowed: true };
+  }
   
-  const result = await convertPlanItemsToTasks(
-    planId, 
-    plan.user_id, 
-    plan.planned_for_date
-  );
-  
-  toast.success(`${result.created} tareas creadas`);
-  loadData();
-};
+  // ... resto de la lógica ...
+}
 ```
 
----
+**Archivo:** `src/hooks/useDailyPlanValidation.ts`
 
-### Tipos Actualizados
-
-**Archivo: `src/types/dailyPlans.ts`**
-
-Añadir campo al tipo `DailyPlanItem`:
+Actualizar para pasar el rol:
 
 ```typescript
-export interface DailyPlanItem {
-  // ... existentes ...
-  linked_task_id: string | null;
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
+
+export function useDailyPlanValidation() {
+  const { user } = useAuth();
+  const { isAdmin } = useSimpleAuth();
+  
+  const checkCanRegisterHours = useCallback(async (date: Date) => {
+    if (!user?.id) {
+      return { allowed: false, reason: 'Usuario no autenticado' };
+    }
+    
+    return await canRegisterHoursForDate(user.id, date, isAdmin);
+  }, [user?.id, isAdmin]);
+  
+  // ...
 }
 ```
 
@@ -259,42 +183,43 @@ export interface DailyPlanItem {
 ### Flujo Resultante
 
 ```text
-Usuario crea plan
-       │
-       ▼
-  Añade tareas (ítems)
-       │
-       ▼
-  [✓] Crear tareas automáticamente  ← Toggle (ON por defecto)
-       │
-       ▼
-  [Enviar Plan]
-       │
-       ├──────────────────────────────────────┐
-       │                                      │
-   Toggle ON                             Toggle OFF
-       │                                      │
-       ▼                                      ▼
-  Para cada ítem sin linked_task_id:    Solo envía plan
-       │
-       ▼
-  INSERT INTO tareas (...)
-       │
-       ▼
-  UPDATE daily_plan_items 
-    SET linked_task_id = tarea.id
-       │
-       ▼
-  Toast: "Plan enviado y X tareas creadas ✓"
+Usuario abre /plan-diario
+         │
+         ▼
+   ┌─────────────────────────────────────────────┐
+   │  [◀] [📅 Mié 29 Ene ▼] [▶]                   │  ← Click abre calendario
+   │      └──────────────────┘                   │
+   │         ┌─────────────────┐                 │
+   │         │   Enero 2026    │                 │
+   │         │ Lu Ma Mi Ju ... │                 │
+   │         │ 27 28 [29] 30   │  ← Seleccionar cualquier fecha
+   │         └─────────────────┘                 │
+   └─────────────────────────────────────────────┘
+         │
+         ▼
+   ¿Fecha = Mañana?
+         │
+    ┌────┴────┐
+    │         │
+   Sí         No
+    │         │
+    ▼         ▼
+ Mostrar    Sin warning
+ warning    (planificación
+ bloqueo    preventiva)
 ```
 
 ---
 
-### Evitar Duplicados
+### Lógica de Bloqueo Simplificada
 
-La lógica solo crea tareas para ítems donde `linked_task_id IS NULL`. Si el usuario re-envía el plan:
-- Los ítems ya vinculados se ignoran
-- Solo los nuevos ítems (sin vínculo) generan tareas
+| Fecha | Bloqueo para registrar horas |
+|-------|------------------------------|
+| Pasado | ❌ No |
+| Hoy | ❌ No |
+| **Mañana** | ✅ **Sí** (requiere plan 8h+) |
+| Pasado mañana+ | ❌ No |
+| Admin cualquier fecha | ❌ No (bypass) |
 
 ---
 
@@ -302,33 +227,26 @@ La lógica solo crea tareas para ítems donde `linked_task_id IS NULL`. Si el us
 
 | Archivo | Cambio |
 |---------|--------|
-| **Nueva migración SQL** | Añadir columna `linked_task_id` |
-| `src/services/dailyPlans.service.ts` | Función `convertPlanItemsToTasks` + modificar `submitPlan` |
-| `src/hooks/useDailyPlan.ts` | Estado `autoCreateTasks` + pasar a `submitPlan` |
-| `src/components/plans/DailyPlanForm.tsx` | Toggle UI + props |
-| `src/types/dailyPlans.ts` | Añadir `linked_task_id` al tipo |
-| `src/pages/admin/DailyPlansAdmin.tsx` | Botón para convertir tareas admin |
+| `src/pages/PlanDiario.tsx` | Añadir DatePicker, actualizar textos |
+| `src/services/dailyPlans.service.ts` | Modificar `canRegisterHoursForDate` para solo bloquear mañana |
+| `src/hooks/useDailyPlanValidation.ts` | Pasar isAdmin al servicio |
+| `src/components/plans/DailyPlanForm.tsx` | Añadir indicador de fecha bloqueada |
 
 ---
 
 ### Sección Técnica
 
+**Componentes utilizados:**
+- `Calendar` de shadcn/ui (ya instalado)
+- `Popover` de shadcn/ui (ya instalado)
+
 **Dependencias:** No se requieren nuevas dependencias.
 
-**RLS:** Las políticas existentes permiten a usuarios crear tareas (`tareas_insert_policy`) y actualizar sus propios `daily_plan_items`.
+**RLS:** No hay cambios de base de datos necesarios.
 
-**Mapeo de Campos:**
-
-| daily_plan_items | tareas |
-|------------------|--------|
-| title | titulo |
-| description | descripcion |
-| priority → | prioridad (mismo enum) |
-| mandato_id | mandato_id |
-| plan.user_id | asignado_a, creado_por |
-| plan.planned_for_date | fecha_vencimiento |
-| - | estado = 'pendiente' |
-| - | tipo = 'individual' |
-
-**Auditoría:** Los triggers de auditoría existentes registrarán automáticamente la creación de tareas y la actualización de `linked_task_id`.
+**Consideraciones:**
+- El calendario solo permite seleccionar fechas futuras (`disabled={(date) => date < new Date()}`)
+- Se mantienen los botones prev/next para navegación rápida
+- El botón central muestra la fecha actual y abre el calendario al hacer click
+- Los admins tienen bypass completo del bloqueo
 
