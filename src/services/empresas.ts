@@ -22,14 +22,27 @@ class EmpresaService extends BaseService<Empresa> {
       nombre: raw.nombre,
       cif: raw.cif,
       sector: raw.sector,
+      subsector: raw.subsector,
       sitio_web: raw.sitio_web,
       empleados: raw.empleados ? Number(raw.empleados) : null,
       facturacion: raw.facturacion ? Number(raw.facturacion) : null,
-      ebitda: raw.ebitda ? Number(raw.ebitda) : null,
       ubicacion: raw.ubicacion,
       descripcion: raw.descripcion,
       es_target: raw.es_target || false,
       potencial_search_fund: raw.potencial_search_fund || false,
+      
+      // Campos financieros completos
+      revenue: raw.revenue ? Number(raw.revenue) : null,
+      ebitda: raw.ebitda ? Number(raw.ebitda) : null,
+      margen_ebitda: raw.margen_ebitda ? Number(raw.margen_ebitda) : null,
+      deuda: raw.deuda ? Number(raw.deuda) : null,
+      capital_circulante: raw.capital_circulante ? Number(raw.capital_circulante) : null,
+      año_datos_financieros: raw.año_datos_financieros ? Number(raw.año_datos_financieros) : null,
+      
+      // Campos de estado
+      nivel_interes: raw.nivel_interes,
+      estado_target: raw.estado_target,
+      
       created_at: raw.created_at,
       updated_at: raw.updated_at,
     } as Empresa;
