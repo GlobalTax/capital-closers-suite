@@ -9,6 +9,7 @@ import {
   reorderWorkTaskTypes,
   type WorkTaskType,
   type WorkTaskTypeContext,
+  type TimeEntryValueType,
   type CreateWorkTaskTypeData,
   type UpdateWorkTaskTypeData
 } from "@/services/workTaskTypes.service";
@@ -141,4 +142,4 @@ export function useReorderWorkTaskTypes() {
   });
 }
 
-export type { WorkTaskType, WorkTaskTypeContext, CreateWorkTaskTypeData, UpdateWorkTaskTypeData };
+export type { WorkTaskType, WorkTaskTypeContext, TimeEntryValueType, CreateWorkTaskTypeData, UpdateWorkTaskTypeData };
