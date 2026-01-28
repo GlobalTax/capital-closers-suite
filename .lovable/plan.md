@@ -1,229 +1,317 @@
 
-
-## Plan: Permitir Edición Retroactiva sin Tarea Asociada
+## Plan: Validaciones Dinámicas por Tipo de Tarea
 
 ### Resumen
 
-Modificar el sistema de edición de horas para permitir la edición retroactiva de entradas sin tarea asociada (`task_id = null`), manteniendo trazabilidad completa. Basado en tus respuestas:
-
-- **Sin límite** de días retroactivos
-- **Edición directa** (sin re-aprobación)
-- **Motivo obligatorio** en toda edición
-
----
-
-### 1. Cambio Principal: Edición sin Re-aprobación
-
-Actualmente, editar una entrada `approved` la cambia a `submitted`. Con la nueva configuración, mantendrá `approved` pero registrará la edición.
-
-**Nuevo flujo:**
-
-```
-Usuario edita entrada (cualquier estado)
-         │
-         ▼
-   ¿Hay cambios?
-         │ Sí
-         ▼
-   Dialog: "Motivo de edición"
-   [_________________________]
-   [Cancelar]     [Confirmar]
-         │
-         ▼
-   Guardar con:
-   - status = (mantiene el original)
-   - edit_reason = "..."
-   - edited_at = now()
-   - edited_by = user_id
-   - edit_count += 1
-         │
-         ▼
-   Feedback: "Entrada actualizada"
-   (Responsable ve historial en Panel)
-```
+Implementar reglas de validación dinámicas en los formularios de registro de tiempo, basadas en las propiedades del tipo de tarea seleccionado:
+- `require_mandato` = true → Mandato obligatorio
+- `require_lead` = true → Lead obligatorio  
+- `require_description` = true → Descripción obligatoria
 
 ---
 
-### 2. Actualizar Servicio updateTimeEntry
+### 1. Nuevas Columnas en Base de Datos
 
-Modificar `src/services/timeTracking.ts`:
+Añadir a `work_task_types`:
 
-```typescript
-export const updateTimeEntry = async (
-  id: string,
-  updates: Partial<TimeEntry>,
-  editReason?: string
-): Promise<TimeEntry> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('No autenticado');
-
-  // Fetch current entry
-  const { data: currentEntry, error: fetchError } = await supabase
-    .from('mandato_time_entries')
-    .select('status, user_id, edit_count')
-    .eq('id', id)
-    .single();
-
-  if (fetchError) throw fetchError;
-
-  // NUEVO: Edit reason siempre obligatorio
-  if (!editReason || editReason.trim().length < 5) {
-    throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
-  }
-
-  // Añadir campos de trazabilidad (SIN cambiar status)
-  updates = {
-    ...updates,
-    // NO cambiamos status - mantiene el original
-    edited_at: new Date().toISOString(),
-    edited_by: user.id,
-    edit_reason: editReason.trim(),
-    edit_count: (currentEntry.edit_count || 0) + 1,
-  };
-
-  const { data, error } = await supabase
-    .from('mandato_time_entries')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as TimeEntry;
-};
-```
-
----
-
-### 3. Actualizar Política RLS
-
-Modificar la política para permitir edición sin requerir cambio de status:
+| Columna | Tipo | Default | Descripción |
+|---------|------|---------|-------------|
+| `require_mandato` | `boolean` | `true` | Si el mandato es obligatorio |
+| `require_lead` | `boolean` | `false` | Si el lead es obligatorio |
+| `require_description` | `boolean` | `false` | Si la descripción es obligatoria |
 
 ```sql
--- Eliminar política anterior restrictiva
-DROP POLICY IF EXISTS "Users can edit own approved entries" 
-ON mandato_time_entries;
+ALTER TABLE work_task_types
+ADD COLUMN IF NOT EXISTS require_mandato boolean DEFAULT true,
+ADD COLUMN IF NOT EXISTS require_lead boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS require_description boolean DEFAULT false;
+```
 
--- Nueva política: usuarios pueden editar sus propias entradas
--- con trazabilidad obligatoria
-CREATE POLICY "Users can edit own entries with tracking"
-ON mandato_time_entries
-FOR UPDATE
-TO authenticated
-USING (
-  auth.uid() = user_id
-)
-WITH CHECK (
-  auth.uid() = user_id
-  AND edit_reason IS NOT NULL
-  AND length(trim(edit_reason)) >= 5
-  AND edited_at IS NOT NULL
-  AND edited_by = auth.uid()
-);
+**Configuración inicial sugerida:**
+
+| Tipo de Tarea | require_mandato | require_lead | require_description |
+|--------------|-----------------|--------------|---------------------|
+| Reunión / Puesta en Contacto | true | false | true |
+| IM | true | false | false |
+| Teaser | true | false | false |
+| Datapack | true | false | false |
+| Leads | true | true | false |
+| Llamada inicial | true | true | true |
+| Email de seguimiento | true | true | false |
+| Reunión de captación | true | true | true |
+| Propuesta comercial | true | true | true |
+| (resto) | true | false | false |
+
+---
+
+### 2. Actualizar Tipos e Interfaces
+
+Modificar `src/services/workTaskTypes.service.ts`:
+
+```typescript
+export interface WorkTaskType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  context: WorkTaskTypeContext;
+  created_at: string;
+  updated_at: string;
+  // Nuevos campos de validación
+  require_mandato: boolean;
+  require_lead: boolean;
+  require_description: boolean;
+}
 ```
 
 ---
 
-### 4. Actualizar UI: EditableTimeEntryRow
+### 3. Función Helper para Validación
 
-Modificar `src/components/mandatos/EditableTimeEntryRow.tsx`:
+Crear utilidad reutilizable en `src/lib/taskTypeValidation.ts`:
+
+```typescript
+import type { WorkTaskType } from '@/services/workTaskTypes.service';
+
+export interface TaskTypeValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export function validateByTaskType(
+  taskType: WorkTaskType | undefined,
+  values: {
+    mandatoId: string | null;
+    leadId: string | null;
+    description: string;
+  }
+): TaskTypeValidationResult {
+  const errors: string[] = [];
+  
+  if (!taskType) {
+    return { isValid: true, errors: [] }; // No task type = no dynamic rules
+  }
+  
+  if (taskType.require_mandato && !values.mandatoId) {
+    errors.push('Mandato es obligatorio para este tipo de tarea');
+  }
+  
+  if (taskType.require_lead && !values.leadId) {
+    errors.push('Lead es obligatorio para este tipo de tarea');
+  }
+  
+  if (taskType.require_description) {
+    const trimmed = values.description.trim();
+    if (trimmed.length === 0) {
+      errors.push('Descripción es obligatoria para este tipo de tarea');
+    } else if (trimmed.length < 10) {
+      errors.push('Descripción debe tener al menos 10 caracteres');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+```
+
+---
+
+### 4. Actualizar TimeEntryInlineForm
+
+Modificar `src/components/mandatos/TimeEntryInlineForm.tsx`:
 
 **Cambios:**
-1. **Siempre pedir motivo** - No solo para entries approved
-2. **Mensaje de confirmación directo** - Sin advertencia de "volverá a pending"
-3. **Remover lógica condicional de status**
+1. Buscar el tipo de tarea seleccionado en la lista
+2. Usar `validateByTaskType` antes de guardar
+3. Marcar visualmente campos obligatorios
+4. Mostrar errores específicos
 
 ```typescript
-// ANTES: Solo pedía motivo si era approved
-const handleSaveClick = async () => {
-  if (entry.status === 'approved') {
-    setShowEditReasonDialog(true);
+// Obtener el task type completo
+const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
+
+// En handleSubmit:
+if (selectedTaskType) {
+  const validation = validateByTaskType(selectedTaskType, {
+    mandatoId,
+    leadId,
+    description
+  });
+  
+  if (!validation.isValid) {
+    toast.error(validation.errors.join('. '));
     return;
   }
-  await doSave();
-};
+}
 
-// DESPUÉS: Siempre pedir motivo
-const handleSaveClick = async () => {
-  setShowEditReasonDialog(true);
-};
+// UI: Indicar campos dinámicamente obligatorios
+<Label className="text-xs text-muted-foreground">
+  Descripción {selectedTaskType?.require_description && '*'}
+</Label>
 
-// Actualizar el diálogo - quitar advertencia de re-aprobación
-<AlertDialogDescription>
-  Para guardar los cambios, indica el motivo de la edición.
-</AlertDialogDescription>
+<Label className="text-xs text-muted-foreground">
+  Lead {selectedTaskType?.require_lead && '(obligatorio)'}
+</Label>
 ```
 
 ---
 
-### 5. Actualizar UI: DayInlineAddForm
+### 5. Actualizar TimeTrackingDialog
 
-Para nuevas entradas retroactivas (días pasados sin tarea):
+Modificar `src/components/mandatos/TimeTrackingDialog.tsx`:
 
-Modificar `src/components/mandatos/DayInlineAddForm.tsx`:
+Mismo patrón que TimeEntryInlineForm:
 
 ```typescript
-// Detectar si es fecha pasada
-const isPastDate = date < startOfToday();
+const { data: workTaskTypes = [] } = useActiveWorkTaskTypes();
+const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
 
-// Si es fecha pasada:
-// - task_id puede ser null ✓ (ya lo es por defecto)
-// - description obligatoria (ya validado)
-// - No requiere plan diario (ya implementado en canRegisterHoursForDate)
+// En handleSubmit, después de validaciones básicas:
+if (selectedTaskType) {
+  const validation = validateByTaskType(selectedTaskType, {
+    mandatoId: effectiveMandatoId,
+    leadId: selectedLeadId,
+    description
+  });
+  
+  if (!validation.isValid) {
+    toast({
+      title: "Campos requeridos",
+      description: validation.errors.join('. '),
+      variant: "destructive"
+    });
+    return;
+  }
+}
+```
 
-// Añadir campo de justificación para fechas pasadas
-{isPastDate && (
-  <div className="min-w-[200px]">
-    <label className="text-xs text-muted-foreground">
-      Justificación *
-    </label>
-    <Input
-      value={justification}
-      onChange={(e) => setJustification(e.target.value)}
-      placeholder="Motivo del registro retroactivo..."
-      className={cn(
-        justification.trim().length > 0 && 
-        justification.trim().length < 5 && 
-        "border-destructive"
-      )}
-    />
+---
+
+### 6. Actualizar TimerAssignmentDialog
+
+Modificar `src/components/timer/TimerAssignmentDialog.tsx`:
+
+```typescript
+const selectedTaskType = workTaskTypes.find(t => t.id === watch('workTaskTypeId'));
+
+// En onSubmit:
+if (selectedTaskType) {
+  const validation = validateByTaskType(selectedTaskType, {
+    mandatoId: data.mandatoId,
+    leadId: data.leadId,
+    description: data.description || ''
+  });
+  
+  if (!validation.isValid) {
+    toast.error(validation.errors.join('. '));
+    return;
+  }
+}
+
+// UI dinámica
+{showLeadSelector && (
+  <div className="space-y-1.5">
+    <Label className="text-xs font-medium text-muted-foreground">
+      Lead {selectedTaskType?.require_lead ? '*' : '(opcional)'}
+    </Label>
+    <LeadByMandatoSelect ... />
   </div>
 )}
 ```
 
 ---
 
-### 6. Vista del Responsable: Mostrar Ediciones
+### 7. Actualizar EditableTimeEntryRow
 
-El Panel Responsable ya muestra el badge "Re-enviada" para ediciones. Ajustar para mostrar ediciones sin cambio de estado:
+Modificar `src/components/mandatos/EditableTimeEntryRow.tsx`:
 
 ```typescript
-// En DailyTimeEntriesDetail.tsx
-{entry.edit_count > 0 && (
-  <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200">
-    ✏️ Editada ({entry.edit_count}x)
-  </Badge>
-)}
+const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
 
-// Tooltip con historial
-<TooltipContent>
-  <p className="font-medium">Editada {entry.edit_count} vez(es)</p>
-  <p className="text-xs">Última: {format(entry.edited_at, 'dd/MM HH:mm')}</p>
-  <p className="text-xs italic mt-1">"{entry.edit_reason}"</p>
-</TooltipContent>
+// En doSave:
+if (selectedTaskType) {
+  const validation = validateByTaskType(selectedTaskType, {
+    mandatoId,
+    leadId: entry.mandate_lead_id, // Si aplica
+    description
+  });
+  
+  if (!validation.isValid) {
+    toast.error(validation.errors.join('. '));
+    return;
+  }
+}
 ```
 
 ---
 
-### 7. Validación de Campos
+### 8. Actualizar DayInlineAddForm
 
-| Campo | Nueva entrada retroactiva | Edición de entrada |
-|-------|--------------------------|-------------------|
-| `task_id` | Opcional (puede ser null) | Se mantiene |
-| `description` | Obligatorio (min 10 chars) | Obligatorio (min 10 chars) |
-| `edit_reason` | Se guarda como `notes` | Obligatorio (min 5 chars) |
-| `mandato_id` | Obligatorio | Obligatorio |
-| `work_task_type_id` | Obligatorio | Obligatorio |
+Modificar `src/components/mandatos/DayInlineAddForm.tsx`:
+
+```typescript
+const selectedTaskType = workTaskTypes.find(t => t.id === workTaskTypeId);
+
+// En handleSubmit:
+if (selectedTaskType) {
+  const validation = validateByTaskType(selectedTaskType, {
+    mandatoId,
+    leadId: null, // Este form no tiene lead selector
+    description
+  });
+  
+  if (!validation.isValid) {
+    toast.error(validation.errors.join('. '));
+    return;
+  }
+}
+```
+
+---
+
+### 9. Indicadores Visuales
+
+Para todos los formularios, mostrar visualmente qué campos son obligatorios:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Tipo de tarea: [Llamada inicial ▼]                          │
+│                                                             │
+│ Mandato *     Lead *                 Descripción *          │
+│ [SELK ▼]      [Juan García ▼]        [Llamada con clien...]  │
+│                                                             │
+│ ⚠️ Los campos marcados con * son obligatorios para este tipo│
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Flujo de Validación
+
+```text
+Usuario selecciona tipo de tarea
+         │
+         ▼
+   Sistema carga require_mandato, require_lead, require_description
+         │
+         ▼
+   UI muestra indicadores dinámicos (* en campos obligatorios)
+         │
+         ▼
+   Usuario llena formulario y hace clic en Guardar
+         │
+         ▼
+   validateByTaskType(selectedTaskType, {mandato, lead, description})
+         │
+         ├─ isValid = true ──────────────────────> Guardar entrada
+         │
+         └─ isValid = false ─> Mostrar errores específicos
+                               "Lead es obligatorio para este tipo"
+                               "Descripción es obligatoria para este tipo"
+```
 
 ---
 
@@ -231,33 +319,29 @@ El Panel Responsable ya muestra el badge "Re-enviada" para ediciones. Ajustar pa
 
 | Archivo | Cambio |
 |---------|--------|
-| **Migración SQL** | Actualizar política RLS para edición directa |
-| `src/services/timeTracking.ts` | Quitar cambio de status, mantener trazabilidad |
-| `src/components/mandatos/EditableTimeEntryRow.tsx` | Siempre pedir motivo, quitar advertencia de re-aprobación |
-| `src/components/mandatos/DayInlineAddForm.tsx` | Añadir justificación para fechas pasadas |
-| `src/components/mandatos/DailyTimeEntriesDetail.tsx` | Actualizar badge de edición |
+| **Nueva migración SQL** | Añadir columnas require_* + valores iniciales |
+| **Nuevo:** `src/lib/taskTypeValidation.ts` | Función helper validateByTaskType |
+| `src/services/workTaskTypes.service.ts` | Actualizar interface WorkTaskType |
+| `src/components/mandatos/TimeEntryInlineForm.tsx` | Integrar validación dinámica |
+| `src/components/mandatos/TimeTrackingDialog.tsx` | Integrar validación dinámica |
+| `src/components/timer/TimerAssignmentDialog.tsx` | Integrar validación dinámica |
+| `src/components/mandatos/EditableTimeEntryRow.tsx` | Integrar validación dinámica |
+| `src/components/mandatos/DayInlineAddForm.tsx` | Integrar validación dinámica |
 
 ---
 
 ### Sección Técnica
 
-**Seguridad RLS:**
-- La política garantiza que solo el propietario puede editar
-- `edit_reason` siempre es obligatorio (5+ chars)
-- `edited_at` y `edited_by` proporcionan trazabilidad
+**Estrategia de validación:**
+- Validación centralizada en `validateByTaskType()` para consistencia
+- Los errores se muestran con `toast.error()` indicando exactamente qué falta
+- Los campos muestran `*` dinámicamente según el tipo de tarea seleccionado
 
-**Sin límite temporal:**
-- `canRegisterHoursForDate` ya permite fechas pasadas sin restricción
-- No se añade validación de días máximos
+**Compatibilidad:**
+- Valores por defecto (`require_mandato: true`, resto `false`) no rompen comportamiento existente
+- La validación solo aplica si hay un tipo de tarea seleccionado
+- Formularios existentes siguen funcionando igual si no cambian los valores
 
-**Edición directa:**
-- El status NO cambia al editar
-- `approved` sigue siendo `approved`
-- La trazabilidad se registra en campos auxiliares
-
-**Trazabilidad completa:**
-- `edit_count` cuenta todas las ediciones
-- `edited_at` / `edited_by` muestran última edición
-- `edit_reason` documenta el motivo
-- El responsable ve todo en el Panel
-
+**Configuración futura:**
+- Los valores `require_*` pueden configurarse desde la UI de admin (`/configuracion/tareas-tiempo`)
+- Permite ajustar reglas sin código
