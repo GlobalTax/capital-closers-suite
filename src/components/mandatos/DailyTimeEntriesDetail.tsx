@@ -11,7 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, FileText } from "lucide-react";
+import { Clock, FileText, Info, Edit } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TimeEntry } from "@/types";
 
 interface DailyTimeEntriesDetailProps {
@@ -42,17 +48,70 @@ function getValueTypeBadge(valueType: string | null | undefined) {
   }
 }
 
-function getStatusBadge(status: string | null | undefined) {
+function getStatusBadge(status: string | null | undefined, editCount?: number | null, editReason?: string | null) {
+  // Check if this is a re-submitted entry (was approved, then edited)
+  const isResubmitted = status === 'submitted' && editCount && editCount > 0;
+  
+  if (isResubmitted) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1 cursor-help">
+              ⚠️ Re-enviada ({editCount}x)
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p className="font-medium">Entrada editada y re-enviada</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ha sido modificada después de su aprobación inicial.
+            </p>
+            {editReason && (
+              <div className="mt-2 pt-2 border-t">
+                <p className="text-xs font-medium">Motivo de edición:</p>
+                <p className="text-xs italic">"{editReason}"</p>
+              </div>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
   switch (status) {
     case 'approved':
       return <Badge variant="outline" className="border-emerald-500 text-emerald-600">Aprobado</Badge>;
-    case 'pending':
-      return <Badge variant="outline" className="border-amber-500 text-amber-600">Pendiente</Badge>;
+    case 'submitted':
+      return <Badge variant="outline" className="border-blue-500 text-blue-600">Pendiente</Badge>;
     case 'rejected':
       return <Badge variant="outline" className="border-red-500 text-red-600">Rechazado</Badge>;
     default:
       return <Badge variant="outline">—</Badge>;
   }
+}
+
+// Edit info icon component
+function EditInfoIcon({ entry }: { entry: TimeEntry }) {
+  if (!entry.edit_reason) return null;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-4 w-4 text-muted-foreground cursor-help inline-block ml-2" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="font-medium">Motivo de edición:</p>
+          <p className="text-sm">{entry.edit_reason}</p>
+          {entry.edited_at && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Editada: {format(new Date(entry.edited_at), "dd/MM/yyyy HH:mm")}
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function DailyTimeEntriesDetail({ entries, date, userName, loading }: DailyTimeEntriesDetailProps) {
@@ -98,7 +157,7 @@ export function DailyTimeEntriesDetail({ entries, date, userName, loading }: Dai
                 <TableHead className="w-[100px]">Valor</TableHead>
                 <TableHead className="min-w-[300px]">Descripción</TableHead>
                 <TableHead className="w-[90px] text-right">Duración</TableHead>
-                <TableHead className="w-[90px]">Estado</TableHead>
+                <TableHead className="w-[130px]">Estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,6 +210,7 @@ export function DailyTimeEntriesDetail({ entries, date, userName, loading }: Dai
                   <TableCell>
                     <div className="text-sm whitespace-pre-wrap">
                       {entry.description || <span className="text-muted-foreground italic">Sin descripción</span>}
+                      <EditInfoIcon entry={entry} />
                     </div>
                     {entry.notes && (
                       <div className="text-xs text-muted-foreground mt-1 italic border-l-2 border-muted pl-2">
@@ -169,9 +229,9 @@ export function DailyTimeEntriesDetail({ entries, date, userName, loading }: Dai
                     </div>
                   </TableCell>
 
-                  {/* Status */}
+                  {/* Status with Re-submitted indicator */}
                   <TableCell>
-                    {getStatusBadge(entry.status)}
+                    {getStatusBadge(entry.status, entry.edit_count, entry.edit_reason)}
                   </TableCell>
                 </TableRow>
               ))}

@@ -499,8 +499,38 @@ export const createTimeEntry = async (
 
 export const updateTimeEntry = async (
   id: string,
-  updates: Partial<TimeEntry>
+  updates: Partial<TimeEntry>,
+  editReason?: string  // Optional reason for editing approved entries
 ): Promise<TimeEntry> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // First, fetch current entry state
+  const { data: currentEntry, error: fetchError } = await supabase
+    .from('mandato_time_entries')
+    .select('status, user_id, edit_count')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // If entry is approved, require edit reason and set traceability fields
+  if (currentEntry.status === 'approved') {
+    if (!editReason || editReason.trim().length < 5) {
+      throw new Error('Debes proporcionar un motivo de edición (mínimo 5 caracteres)');
+    }
+
+    // Add traceability fields and change status back to submitted
+    updates = {
+      ...updates,
+      status: 'submitted',  // Revert to submitted for re-approval
+      edited_at: new Date().toISOString(),
+      edited_by: user.id,
+      edit_reason: editReason.trim(),
+      edit_count: (currentEntry.edit_count || 0) + 1,
+    };
+  }
+
   const { data, error } = await supabase
     .from('mandato_time_entries')
     .update(updates)

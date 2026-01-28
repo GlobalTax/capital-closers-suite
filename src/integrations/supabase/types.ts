@@ -11825,6 +11825,10 @@ export type Database = {
           deleted_by: string | null
           description: string
           duration_minutes: number | null
+          edit_count: number | null
+          edit_reason: string | null
+          edited_at: string | null
+          edited_by: string | null
           end_time: string | null
           id: string
           is_billable: boolean | null
@@ -11853,6 +11857,10 @@ export type Database = {
           deleted_by?: string | null
           description: string
           duration_minutes?: number | null
+          edit_count?: number | null
+          edit_reason?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null
@@ -11881,6 +11889,10 @@ export type Database = {
           deleted_by?: string | null
           description?: string
           duration_minutes?: number | null
+          edit_count?: number | null
+          edit_reason?: string | null
+          edited_at?: string | null
+          edited_by?: string | null
           end_time?: string | null
           id?: string
           is_billable?: boolean | null

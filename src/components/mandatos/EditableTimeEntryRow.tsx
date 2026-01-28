@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Check, X, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Check, X, Pencil, Trash2, Loader2, Edit, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,22 @@ import { MandatoSelect } from "@/components/shared/MandatoSelect";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import { updateTimeEntry, deleteTimeEntry } from "@/services/timeTracking";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TimeEntry } from "@/types";
@@ -29,6 +45,8 @@ export function EditableTimeEntryRow({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditReasonDialog, setShowEditReasonDialog] = useState(false);
+  const [editReason, setEditReason] = useState('');
   
   // Editable fields
   const [startTime, setStartTime] = useState(format(new Date(entry.start_time), 'HH:mm'));
@@ -49,6 +67,7 @@ export function EditableTimeEntryRow({
       setDescription(entry.description || '');
       setHours(String(Math.floor((entry.duration_minutes || 0) / 60)));
       setMinutes(String((entry.duration_minutes || 0) % 60));
+      setEditReason('');
     }
   }, [entry, isEditing]);
 
@@ -81,7 +100,17 @@ export function EditableTimeEntryRow({
     return colors[status] || colors.draft;
   };
 
-  const handleSave = async () => {
+  const handleSaveClick = async () => {
+    // If entry is approved, show reason dialog first
+    if (entry.status === 'approved') {
+      setShowEditReasonDialog(true);
+      return;
+    }
+    
+    await doSave();
+  };
+
+  const doSave = async (reason?: string) => {
     try {
       setLoading(true);
 
@@ -122,10 +151,17 @@ export function EditableTimeEntryRow({
         mandato_id: mandatoId,
         work_task_type_id: workTaskTypeId,
         description: trimmedDescription || 'Trabajo registrado',
-      });
+      }, reason); // Pass the edit reason for approved entries
 
-      toast.success("Entrada actualizada");
+      if (reason) {
+        toast.success("Entrada actualizada. Será revisada de nuevo.");
+      } else {
+        toast.success("Entrada actualizada");
+      }
+      
       setIsEditing(false);
+      setShowEditReasonDialog(false);
+      setEditReason('');
       onSave();
     } catch (error: any) {
       console.error('Error updating entry:', error);
@@ -147,6 +183,37 @@ export function EditableTimeEntryRow({
 
   const totalDuration = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
   const isValid = mandatoId && workTaskTypeId && totalDuration > 0;
+
+  // Edit history badge component
+  const EditHistoryBadge = () => {
+    if (!entry.edit_count || entry.edit_count === 0) return null;
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="text-[10px] bg-amber-50 border-amber-200 gap-1 cursor-help">
+              <Edit className="h-3 w-3" />
+              {entry.edit_count}x
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p className="font-medium">
+              Editada {entry.edit_count} {entry.edit_count === 1 ? 'vez' : 'veces'}
+            </p>
+            {entry.edited_at && (
+              <p className="text-xs text-muted-foreground">
+                Última: {format(new Date(entry.edited_at), 'dd/MM HH:mm')}
+              </p>
+            )}
+            {entry.edit_reason && (
+              <p className="text-xs italic mt-1 border-t pt-1">"{entry.edit_reason}"</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   // Read-only view
   if (!isEditing) {
@@ -187,6 +254,9 @@ export function EditableTimeEntryRow({
           {entry.status}
         </Badge>
 
+        {/* Edit History Badge */}
+        <EditHistoryBadge />
+
         {/* Actions */}
         {canEdit && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -224,123 +294,173 @@ export function EditableTimeEntryRow({
 
   // Editing view
   return (
-    <div className="p-3 rounded-md border-2 border-primary/30 bg-primary/5 space-y-3">
-      <div className="flex flex-wrap items-end gap-3">
-        {/* Start Time */}
-        <div className="w-20">
-          <label className="text-xs text-muted-foreground">Hora</label>
-          <Input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="h-9 font-mono"
-          />
-        </div>
-
-        {/* Mandato */}
-        <div className="flex-1 min-w-[180px]">
-          <label className="text-xs text-muted-foreground">Mandato</label>
-          <MandatoSelect
-            value={mandatoId}
-            onValueChange={setMandatoId}
-            includeGeneralWork={true}
-          />
-        </div>
-
-        {/* Work Task Type */}
-        <div className="min-w-[150px]">
-          <label className="text-xs text-muted-foreground">Tipo de tarea</label>
-          <Select
-            value={workTaskTypeId}
-            onValueChange={setWorkTaskTypeId}
-            disabled={loadingWorkTaskTypes}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder={loadingWorkTaskTypes ? "..." : "Seleccionar"} />
-            </SelectTrigger>
-            <SelectContent>
-              {workTaskTypes.map((taskType) => (
-                <SelectItem key={taskType.id} value={taskType.id}>
-                  {taskType.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Duration */}
-        <div className="flex items-end gap-1">
-          <div className="w-14">
-            <label className="text-xs text-muted-foreground">H</label>
+    <>
+      <div className="p-3 rounded-md border-2 border-primary/30 bg-primary/5 space-y-3">
+        <div className="flex flex-wrap items-end gap-3">
+          {/* Start Time */}
+          <div className="w-20">
+            <label className="text-xs text-muted-foreground">Hora</label>
             <Input
-              type="number"
-              min="0"
-              max="23"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              className="h-9 text-center font-mono"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="h-9 font-mono"
             />
           </div>
-          <span className="text-muted-foreground pb-2">:</span>
-          <div className="w-14">
-            <label className="text-xs text-muted-foreground">M</label>
-            <Input
-              type="number"
-              min="0"
-              max="59"
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              className="h-9 text-center font-mono"
+
+          {/* Mandato */}
+          <div className="flex-1 min-w-[180px]">
+            <label className="text-xs text-muted-foreground">Mandato</label>
+            <MandatoSelect
+              value={mandatoId}
+              onValueChange={setMandatoId}
+              includeGeneralWork={true}
             />
           </div>
+
+          {/* Work Task Type */}
+          <div className="min-w-[150px]">
+            <label className="text-xs text-muted-foreground">Tipo de tarea</label>
+            <Select
+              value={workTaskTypeId}
+              onValueChange={setWorkTaskTypeId}
+              disabled={loadingWorkTaskTypes}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder={loadingWorkTaskTypes ? "..." : "Seleccionar"} />
+              </SelectTrigger>
+              <SelectContent>
+                {workTaskTypes.map((taskType) => (
+                  <SelectItem key={taskType.id} value={taskType.id}>
+                    {taskType.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Duration */}
+          <div className="flex items-end gap-1">
+            <div className="w-14">
+              <label className="text-xs text-muted-foreground">H</label>
+              <Input
+                type="number"
+                min="0"
+                max="23"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+                className="h-9 text-center font-mono"
+              />
+            </div>
+            <span className="text-muted-foreground pb-2">:</span>
+            <div className="w-14">
+              <label className="text-xs text-muted-foreground">M</label>
+              <Input
+                type="number"
+                min="0"
+                max="59"
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
+                className="h-9 text-center font-mono"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Description row */}
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <div className="flex justify-between">
+              <label className="text-xs text-muted-foreground">Descripción</label>
+              {description.trim().length > 0 && description.trim().length < 10 && (
+                <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
+              )}
+            </div>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descripción del trabajo..."
+              className={cn(
+                "h-9",
+                description.trim().length > 0 && description.trim().length < 10 && "border-destructive"
+              )}
+            />
+          </div>
+
+          {/* Save/Cancel buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setIsEditing(false)}
+              disabled={loading}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-9 w-9"
+              onClick={handleSaveClick}
+              disabled={loading || !isValid}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Show warning if entry is approved */}
+        {entry.status === 'approved' && (
+          <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded">
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            Esta entrada ya fue aprobada. Al guardar, volverá a estado "pendiente de aprobación".
+          </div>
+        )}
       </div>
 
-      {/* Description row */}
-      <div className="flex items-end gap-3">
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <label className="text-xs text-muted-foreground">Descripción</label>
-            {description.trim().length > 0 && description.trim().length < 10 && (
-              <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
+      {/* Edit Reason Dialog for Approved Entries */}
+      <AlertDialog open={showEditReasonDialog} onOpenChange={setShowEditReasonDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Motivo de la edición</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta entrada ya fue aprobada. Para editarla, debes indicar el motivo.
+              La entrada volverá a estado "pendiente de aprobación".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+              placeholder="Motivo de la corrección (mín. 5 caracteres)..."
+              className={cn(
+                editReason.trim().length > 0 && editReason.trim().length < 5 && "border-destructive"
+              )}
+            />
+            {editReason.trim().length > 0 && editReason.trim().length < 5 && (
+              <p className="text-xs text-destructive mt-1">
+                {editReason.trim().length}/5 caracteres mínimo
+              </p>
             )}
           </div>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descripción del trabajo..."
-            className={cn(
-              "h-9",
-              description.trim().length > 0 && description.trim().length < 10 && "border-destructive"
-            )}
-          />
-        </div>
-
-        {/* Save/Cancel buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setIsEditing(false)}
-            disabled={loading}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            className="h-9 w-9"
-            onClick={handleSave}
-            disabled={loading || !isValid}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setEditReason('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => doSave(editReason)}
+              disabled={editReason.trim().length < 5 || loading}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
