@@ -53,9 +53,16 @@ export const fetchInteraccionesByMandato = async (mandatoId: string): Promise<In
 };
 
 export const createInteraccion = async (interaccion: Partial<Interaccion>) => {
+  // Obtener usuario actual si no viene en el payload (requerido por RLS)
+  let created_by = interaccion.created_by;
+  if (!created_by) {
+    const { data: { user } } = await supabase.auth.getUser();
+    created_by = user?.id;
+  }
+
   const { data, error } = await supabase
     .from('interacciones')
-    .insert(interaccion as any)
+    .insert({ ...interaccion, created_by } as any)
     .select()
     .single();
   
