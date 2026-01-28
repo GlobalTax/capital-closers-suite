@@ -15,6 +15,9 @@ export interface WorkTaskType {
   require_mandato: boolean;
   require_lead: boolean;
   require_description: boolean;
+  // Additional validation rules
+  min_description_length: number;
+  default_billable: boolean;
 }
 
 export interface CreateWorkTaskTypeData {
@@ -28,6 +31,12 @@ export interface UpdateWorkTaskTypeData {
   description?: string;
   is_active?: boolean;
   sort_order?: number;
+  // Validation rules editable from admin
+  require_mandato?: boolean;
+  require_lead?: boolean;
+  require_description?: boolean;
+  min_description_length?: number;
+  default_billable?: boolean;
 }
 
 export async function fetchActiveWorkTaskTypes(): Promise<WorkTaskType[]> {
