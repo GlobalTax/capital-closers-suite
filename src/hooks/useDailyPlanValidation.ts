@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { canRegisterHoursForDate } from "@/services/dailyPlans.service";
 
 interface ValidationResult {
@@ -10,6 +11,7 @@ interface ValidationResult {
 
 export function useDailyPlanValidation() {
   const { user } = useAuth();
+  const { isAdmin } = useSimpleAuth();
   const [checking, setChecking] = useState(false);
   
   const checkCanRegisterHours = useCallback(async (date: Date): Promise<ValidationResult> => {
@@ -19,7 +21,7 @@ export function useDailyPlanValidation() {
     
     try {
       setChecking(true);
-      return await canRegisterHoursForDate(user.id, date);
+      return await canRegisterHoursForDate(user.id, date, isAdmin);
     } catch (error) {
       console.error('Error checking plan validation:', error);
       // On error, allow registration (fail open)
@@ -27,7 +29,7 @@ export function useDailyPlanValidation() {
     } finally {
       setChecking(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isAdmin]);
   
   return {
     checkCanRegisterHours,

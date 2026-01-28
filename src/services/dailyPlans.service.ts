@@ -413,57 +413,74 @@ export async function addAdminTask(
   return data as DailyPlanItem;
 }
 
-// Check if user can register hours for a date (today or future requires submitted plan with min 8h)
+// Check if user can register hours for a date
+// Only TOMORROW requires a submitted plan with minimum 8 hours
+// Past, today, and future (beyond tomorrow) are allowed without strict requirements
 export async function canRegisterHoursForDate(
   userId: string,
-  date: Date
+  date: Date,
+  isAdmin: boolean = false
 ): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
+  // Admin bypass - always allowed
+  if (isAdmin) {
+    return { allowed: true };
+  }
+  
   const targetDate = format(date, 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
+  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
   
-  // Only PAST dates (before today) are allowed without a plan
+  // PAST dates: always allowed (no plan required)
   if (targetDate < today) {
     return { allowed: true };
   }
   
-  // TODAY and FUTURE dates require a submitted plan with minimum 8 hours
-  const { data: plan, error } = await supabase
-    .from('daily_plans')
-    .select('id, status, total_estimated_minutes')
-    .eq('user_id', userId)
-    .eq('planned_for_date', targetDate)
-    .maybeSingle();
-  
-  if (error) throw error;
-  
-  if (!plan) {
-    const isToday = targetDate === today;
-    return {
-      allowed: false,
-      reason: isToday 
-        ? 'Debes crear y enviar tu plan para hoy antes de registrar horas'
-        : 'Debes crear y enviar tu plan diario antes de registrar horas para este día'
-    };
+  // TODAY: allowed without strict plan requirement
+  if (targetDate === today) {
+    return { allowed: true };
   }
   
-  if (plan.status === 'draft') {
-    return {
-      allowed: false,
-      reason: 'Debes enviar tu plan diario antes de registrar horas',
-      planId: plan.id
-    };
+  // TOMORROW ONLY: requires a submitted plan with minimum 8 hours
+  if (targetDate === tomorrow) {
+    const { data: plan, error } = await supabase
+      .from('daily_plans')
+      .select('id, status, total_estimated_minutes')
+      .eq('user_id', userId)
+      .eq('planned_for_date', targetDate)
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    if (!plan) {
+      return {
+        allowed: false,
+        reason: 'Debes crear y enviar tu plan para mañana antes de registrar horas'
+      };
+    }
+    
+    if (plan.status === 'draft') {
+      return {
+        allowed: false,
+        reason: 'Debes enviar tu plan diario antes de registrar horas para mañana',
+        planId: plan.id
+      };
+    }
+    
+    // Validate minimum 8 hours (480 minutes)
+    const MIN_MINUTES = 480;
+    if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
+      const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
+      return {
+        allowed: false,
+        reason: `Tu plan solo tiene ${currentHours}h planificadas. Añade más tareas hasta completar 8h`,
+        planId: plan.id
+      };
+    }
+    
+    return { allowed: true, planId: plan.id };
   }
   
-  // Validate minimum 8 hours (480 minutes)
-  const MIN_MINUTES = 480;
-  if ((plan.total_estimated_minutes || 0) < MIN_MINUTES) {
-    const currentHours = ((plan.total_estimated_minutes || 0) / 60).toFixed(1);
-    return {
-      allowed: false,
-      reason: `Tu plan solo tiene ${currentHours}h planificadas. Añade más tareas hasta completar 8h`,
-      planId: plan.id
-    };
-  }
-  
-  return { allowed: true, planId: plan.id };
+  // FUTURE (beyond tomorrow): allowed without strict requirement
+  // Encourage planning but don't block
+  return { allowed: true };
 }
