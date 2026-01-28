@@ -26,6 +26,8 @@ export default function PlanDiario() {
     totalHours,
     canEdit,
     isSubmitted,
+    autoCreateTasks,
+    setAutoCreateTasks,
   } = useDailyPlan(selectedDate);
   
   // Load actual hours for the selected date
@@ -129,6 +131,8 @@ export default function PlanDiario() {
               loading={loading}
               saving={saving}
               canEdit={canEdit}
+              autoCreateTasks={autoCreateTasks}
+              onAutoCreateTasksChange={setAutoCreateTasks}
               onAddItem={addItem}
               onUpdateItem={updateItem}
               onDeleteItem={deleteItem}

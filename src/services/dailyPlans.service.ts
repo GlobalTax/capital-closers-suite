@@ -198,8 +198,71 @@ export async function deletePlanItem(itemId: string): Promise<void> {
   }
 }
 
+// Convert plan items to real tasks
+export async function convertPlanItemsToTasks(
+  planId: string,
+  userId: string,
+  plannedForDate: string
+): Promise<{ created: number; skipped: number }> {
+  // 1. Get items without linked task
+  const { data: items } = await supabase
+    .from('daily_plan_items')
+    .select('*')
+    .eq('plan_id', planId)
+    .is('linked_task_id', null);
+  
+  if (!items || items.length === 0) {
+    return { created: 0, skipped: 0 };
+  }
+  
+  let created = 0;
+  
+  // 2. Create tasks for each item
+  for (const item of items) {
+    const { data: tarea, error } = await supabase
+      .from('tareas')
+      .insert({
+        titulo: item.title,
+        descripcion: item.description,
+        estado: 'pendiente',
+        prioridad: item.priority,
+        asignado_a: userId,
+        mandato_id: item.mandato_id,
+        fecha_vencimiento: plannedForDate,
+        tipo: 'individual',
+        creado_por: userId,
+        es_visible_equipo: false
+      })
+      .select()
+      .single();
+    
+    if (!error && tarea) {
+      // 3. Link task to item
+      await supabase
+        .from('daily_plan_items')
+        .update({ linked_task_id: tarea.id })
+        .eq('id', item.id);
+      
+      created++;
+    }
+  }
+  
+  return { created, skipped: items.length - created };
+}
+
 // Submit plan
-export async function submitPlan(planId: string): Promise<DailyPlan> {
+export async function submitPlan(
+  planId: string, 
+  createTasks: boolean = false
+): Promise<{ plan: DailyPlan; tasksCreated: number }> {
+  // Get plan for additional data
+  const { data: planData } = await supabase
+    .from('daily_plans')
+    .select('user_id, planned_for_date')
+    .eq('id', planId)
+    .single();
+  
+  // Update status
   const { data, error } = await supabase
     .from('daily_plans')
     .update({
@@ -211,7 +274,19 @@ export async function submitPlan(planId: string): Promise<DailyPlan> {
     .single();
   
   if (error) throw error;
-  return data as DailyPlan;
+  
+  // Create tasks if enabled
+  let tasksCreated = 0;
+  if (createTasks && planData) {
+    const result = await convertPlanItemsToTasks(
+      planId, 
+      planData.user_id, 
+      planData.planned_for_date
+    );
+    tasksCreated = result.created;
+  }
+  
+  return { plan: data as DailyPlan, tasksCreated };
 }
 
 // Update plan notes
