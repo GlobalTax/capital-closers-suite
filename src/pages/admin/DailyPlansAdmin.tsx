@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getPlansForDate, updatePlanStatus, addAdminTask, updatePlanItem, deletePlanItem } from "@/services/dailyPlans.service";
+import { getPlansForDate, updatePlanStatus, addAdminTask, updatePlanItem, deletePlanItem, convertPlanItemsToTasks } from "@/services/dailyPlans.service";
 import { DailyPlanItemRow } from "@/components/plans/DailyPlanItemRow";
 import type { DailyPlanWithUser, DailyPlanItemPriority } from "@/types/dailyPlans";
 
@@ -437,17 +437,44 @@ export default function DailyPlansAdmin() {
               </div>
               
               {/* Add task button */}
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  setShowDetailDialog(false);
-                  setShowAddTaskDialog(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Añadir tarea al plan
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setShowDetailDialog(false);
+                    setShowAddTaskDialog(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Añadir tarea
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  className="flex-1"
+                  onClick={async () => {
+                    try {
+                      const result = await convertPlanItemsToTasks(
+                        selectedPlan.id,
+                        selectedPlan.user_id,
+                        selectedPlan.planned_for_date
+                      );
+                      if (result.created > 0) {
+                        toast.success(`${result.created} ${result.created === 1 ? 'tarea creada' : 'tareas creadas'}`);
+                        loadData();
+                      } else {
+                        toast.info('No hay tareas nuevas para convertir');
+                      }
+                    } catch (error) {
+                      toast.error('Error al convertir tareas');
+                    }
+                  }}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Crear tareas reales
+                </Button>
+              </div>
               
               {/* User notes */}
               {selectedPlan.user_notes && (

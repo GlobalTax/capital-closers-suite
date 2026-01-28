@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { DailyPlanItemRow } from "./DailyPlanItemRow";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
@@ -21,6 +22,8 @@ interface DailyPlanFormProps {
   loading?: boolean;
   saving?: boolean;
   canEdit: boolean;
+  autoCreateTasks: boolean;
+  onAutoCreateTasksChange: (value: boolean) => void;
   onAddItem: (item: NewDailyPlanItem) => void;
   onUpdateItem: (itemId: string, updates: Partial<NewDailyPlanItem & { completed?: boolean }>) => void;
   onDeleteItem: (itemId: string) => void;
@@ -34,6 +37,8 @@ export function DailyPlanForm({
   loading,
   saving,
   canEdit,
+  autoCreateTasks,
+  onAutoCreateTasksChange,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
@@ -273,9 +278,20 @@ export function DailyPlanForm({
           </div>
         )}
         
-        {/* Submit button */}
+        {/* Submit section with toggle */}
         {canEdit && (
-          <div className="flex justify-end pt-2">
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="auto-create-tasks"
+                checked={autoCreateTasks}
+                onCheckedChange={onAutoCreateTasksChange}
+              />
+              <Label htmlFor="auto-create-tasks" className="text-sm cursor-pointer">
+                Crear tareas automáticamente
+              </Label>
+            </div>
+            
             <Button 
               onClick={onSubmit} 
               disabled={saving || plan.items.length === 0 || parseFloat(totalHours) < 8}

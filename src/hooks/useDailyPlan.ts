@@ -10,6 +10,7 @@ export function useDailyPlan(date?: Date) {
   const [plan, setPlan] = useState<DailyPlanWithItems | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoCreateTasks, setAutoCreateTasks] = useState(true);
   
   // Default to tomorrow if no date provided
   const targetDate = date || addDays(new Date(), 1);
@@ -126,9 +127,14 @@ export function useDailyPlan(date?: Date) {
     
     try {
       setSaving(true);
-      const updated = await dailyPlansService.submitPlan(plan.id);
+      const { plan: updated, tasksCreated } = await dailyPlansService.submitPlan(plan.id, autoCreateTasks);
       setPlan(prev => prev ? { ...prev, ...updated } : null);
-      toast.success('Plan enviado ✓');
+      
+      if (autoCreateTasks && tasksCreated > 0) {
+        toast.success(`Plan enviado y ${tasksCreated} ${tasksCreated === 1 ? 'tarea creada' : 'tareas creadas'} ✓`);
+      } else {
+        toast.success('Plan enviado ✓');
+      }
     } catch (error) {
       console.error('Error submitting plan:', error);
       toast.error('Error al enviar plan');
@@ -153,5 +159,7 @@ export function useDailyPlan(date?: Date) {
     hoursRemaining: Math.max(0, MIN_HOURS - totalHours),
     canEdit: plan?.status !== 'rejected',
     isSubmitted: plan?.status === 'submitted' || plan?.status === 'approved',
+    autoCreateTasks,
+    setAutoCreateTasks,
   };
 }

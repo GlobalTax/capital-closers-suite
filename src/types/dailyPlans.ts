@@ -30,6 +30,7 @@ export interface DailyPlanItem {
   actual_time_entry_id: string | null;
   order_index: number;
   created_at: string;
+  linked_task_id: string | null;
 }
 
 export interface DailyPlanWithItems extends DailyPlan {
