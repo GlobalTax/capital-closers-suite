@@ -9,6 +9,7 @@ import { InvestmentByMandatoChart } from "@/components/mandatos/InvestmentByMand
 import { AtRiskMandatosPanel } from "@/components/mandatos/AtRiskMandatosPanel";
 import { HoursByWeekChart } from "@/components/mandatos/HoursByWeekChart";
 import { HoursTrendChart } from "@/components/mandatos/HoursTrendChart";
+import { ResponsablePanel } from "@/components/mandatos/ResponsablePanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllTimeEntries } from "@/services/timeTracking";
@@ -16,8 +17,9 @@ import { toast } from "sonner";
 import type { TimeEntry, TimeFilterState } from "@/types";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, BarChart3, UserCheck } from "lucide-react";
 
 export default function HorasEquipo() {
   const { user, adminUser } = useAuth();
@@ -111,87 +113,113 @@ export default function HorasEquipo() {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <PageHeader
         title="Inversión del Equipo"
         description="¿Estamos invirtiendo bien el tiempo?"
       />
 
-      {/* Executive KPIs - Strategic metrics */}
-      <ExecutiveTimeKPIs entries={timeEntries} loading={loading} />
+      <Tabs defaultValue="resumen" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="resumen" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Resumen
+          </TabsTrigger>
+          <TabsTrigger value="responsable" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Panel Responsable
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Operational KPIs - Quick numbers */}
-      <OperationalTimeKPIs entries={timeEntries} loading={loading} />
+        {/* Tab: Resumen (existing content) */}
+        <TabsContent value="resumen" className="space-y-8">
+          {/* Executive KPIs - Strategic metrics */}
+          <ExecutiveTimeKPIs entries={timeEntries} loading={loading} />
 
-      {/* Compact Filter Bar */}
-      <TimeFilterBar
-        filters={filters}
-        onChange={setFilters}
-        users={users}
-        mandatos={mandatos}
-        showUserFilter={true}
-      />
+          {/* Operational KPIs - Quick numbers */}
+          <OperationalTimeKPIs entries={timeEntries} loading={loading} />
 
-      {/* Main Chart - Strategic Matrix (LARGE) */}
-      <ValueVsInvestmentChart
-        entries={timeEntries}
-        hoursThreshold={40}
-        probabilityThreshold={50}
-        loading={loading}
-      />
-
-      {/* Risk Alerts */}
-      <AtRiskMandatosPanel
-        entries={timeEntries}
-        minHoursThreshold={30}
-        maxProbability={40}
-        loading={loading}
-      />
-
-      {/* Investment by Mandato */}
-      <InvestmentByMandatoChart 
-        entries={timeEntries} 
-        limit={10}
-        loading={loading}
-      />
-
-      {/* Collapsible Detailed Analysis */}
-      <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <CollapsibleTrigger asChild>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-between text-muted-foreground hover:text-foreground h-12"
-          >
-            <span>Análisis detallado</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-4 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <HoursByWeekChart entries={timeEntries} weeks={4} />
-            <HoursTrendChart entries={timeEntries} weeks={8} />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Time Entries Table */}
-      <div className="space-y-4">
-        <h3 className="text-lg">Registros de Tiempo</h3>
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Cargando registros...
-          </div>
-        ) : (
-          <TimeEntriesTable
-            entries={timeEntries}
-            currentUserId={user?.id || ''}
-            isAdmin={true}
-            onRefresh={handleRefresh}
-            showMandato={true}
-            pageSize={20}
+          {/* Compact Filter Bar */}
+          <TimeFilterBar
+            filters={filters}
+            onChange={setFilters}
+            users={users}
+            mandatos={mandatos}
+            showUserFilter={true}
           />
-        )}
-      </div>
+
+          {/* Main Chart - Strategic Matrix (LARGE) */}
+          <ValueVsInvestmentChart
+            entries={timeEntries}
+            hoursThreshold={40}
+            probabilityThreshold={50}
+            loading={loading}
+          />
+
+          {/* Risk Alerts */}
+          <AtRiskMandatosPanel
+            entries={timeEntries}
+            minHoursThreshold={30}
+            maxProbability={40}
+            loading={loading}
+          />
+
+          {/* Investment by Mandato */}
+          <InvestmentByMandatoChart 
+            entries={timeEntries} 
+            limit={10}
+            loading={loading}
+          />
+
+          {/* Collapsible Detailed Analysis */}
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="w-full justify-between text-muted-foreground hover:text-foreground h-12"
+              >
+                <span>Análisis detallado</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <HoursByWeekChart entries={timeEntries} weeks={4} />
+                <HoursTrendChart entries={timeEntries} weeks={8} />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Time Entries Table */}
+          <div className="space-y-4">
+            <h3 className="text-lg">Registros de Tiempo</h3>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Cargando registros...
+              </div>
+            ) : (
+              <TimeEntriesTable
+                entries={timeEntries}
+                currentUserId={user?.id || ''}
+                isAdmin={true}
+                onRefresh={handleRefresh}
+                showMandato={true}
+                pageSize={20}
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Tab: Panel Responsable (new) */}
+        <TabsContent value="responsable">
+          <ResponsablePanel
+            entries={timeEntries}
+            users={users}
+            mandatos={mandatos}
+            loading={loading}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
