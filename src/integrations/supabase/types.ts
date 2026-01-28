@@ -5960,6 +5960,7 @@ export type Database = {
           assigned_by_admin: boolean | null
           completed: boolean | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           estimated_minutes: number
           id: string
@@ -5975,6 +5976,7 @@ export type Database = {
           assigned_by_admin?: boolean | null
           completed?: boolean | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           estimated_minutes?: number
           id?: string
@@ -5990,6 +5992,7 @@ export type Database = {
           assigned_by_admin?: boolean | null
           completed?: boolean | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           estimated_minutes?: number
           id?: string
@@ -6076,6 +6079,7 @@ export type Database = {
           planned_for_date: string
           status: string
           submitted_at: string | null
+          total_estimated_minutes: number | null
           updated_at: string | null
           user_id: string
           user_notes: string | null
@@ -6089,6 +6093,7 @@ export type Database = {
           planned_for_date: string
           status?: string
           submitted_at?: string | null
+          total_estimated_minutes?: number | null
           updated_at?: string | null
           user_id: string
           user_notes?: string | null
@@ -6102,6 +6107,7 @@ export type Database = {
           planned_for_date?: string
           status?: string
           submitted_at?: string | null
+          total_estimated_minutes?: number | null
           updated_at?: string | null
           user_id?: string
           user_notes?: string | null
