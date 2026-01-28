@@ -134,6 +134,7 @@ export async function addPlanItem(
       priority: item.priority,
       mandato_id: item.mandato_id || null,
       work_task_type_id: item.work_task_type_id || null,
+      mandate_lead_id: item.mandate_lead_id || null,
       order_index: nextOrder
     })
     .select()
@@ -414,13 +415,13 @@ export async function addAdminTask(
 }
 
 // Check if user can register hours for a date
-// Only TOMORROW requires a submitted plan with minimum 8 hours
-// Past, today, and future (beyond tomorrow) are allowed without strict requirements
+// Only TODAY and TOMORROW require a submitted plan with minimum 8 hours
+// Absences (vacations, sick leave) bypass the plan requirement
 export async function canRegisterHoursForDate(
   userId: string,
   date: Date,
   isAdmin: boolean = false
-): Promise<{ allowed: boolean; reason?: string; planId?: string }> {
+): Promise<{ allowed: boolean; reason?: string; planId?: string; isAbsence?: boolean; absenceType?: string }> {
   // Admin bypass - always allowed
   if (isAdmin) {
     return { allowed: true };
@@ -429,6 +430,23 @@ export async function canRegisterHoursForDate(
   const targetDate = format(date, 'yyyy-MM-dd');
   const today = format(new Date(), 'yyyy-MM-dd');
   const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+  
+  // Check if this date is marked as absence (vacation, sick leave, etc.)
+  const { data: absence } = await supabase
+    .from('user_absences')
+    .select('id, absence_type')
+    .eq('user_id', userId)
+    .eq('absence_date', targetDate)
+    .maybeSingle();
+  
+  if (absence) {
+    // Day is marked as absence - allow but flag it
+    return { 
+      allowed: true, 
+      isAbsence: true, 
+      absenceType: absence.absence_type 
+    };
+  }
   
   // PAST dates: always allowed (no plan required)
   if (targetDate < today) {

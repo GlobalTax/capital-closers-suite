@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { DailyPlanItemRow } from "./DailyPlanItemRow";
 import { MandatoSelect } from "@/components/shared/MandatoSelect";
+import { LeadByMandatoSelect } from "@/components/shared/LeadByMandatoSelect";
 import type { DailyPlanWithItems, NewDailyPlanItem, DailyPlanItemPriority } from "@/types/dailyPlans";
 
 interface DailyPlanFormProps {
@@ -52,8 +53,10 @@ export function DailyPlanForm({
   const [newMinutes, setNewMinutes] = useState(60);
   const [newPriority, setNewPriority] = useState<DailyPlanItemPriority>('media');
   const [newMandatoId, setNewMandatoId] = useState('');
+  const [newLeadId, setNewLeadId] = useState<string | null>(null);
   const [notes, setNotes] = useState(plan.user_notes || '');
   const [mandatoNames, setMandatoNames] = useState<Record<string, string>>({});
+  const [leadNames, setLeadNames] = useState<Record<string, string>>({});
   
   // Load mandato names for display
   useEffect(() => {
@@ -75,6 +78,26 @@ export function DailyPlanForm({
       });
   }, [plan.items]);
   
+  // Load lead names for display
+  useEffect(() => {
+    const leadIds = [...new Set(plan.items.map(i => i.mandate_lead_id).filter(Boolean))];
+    if (leadIds.length === 0) return;
+    
+    supabase
+      .from('mandate_leads')
+      .select('id, company_name, contact_name')
+      .in('id', leadIds as string[])
+      .then(({ data }) => {
+        if (data) {
+          const names: Record<string, string> = {};
+          data.forEach(l => {
+            names[l.id] = l.company_name || l.contact_name || 'Lead';
+          });
+          setLeadNames(names);
+        }
+      });
+  }, [plan.items]);
+  
   const handleAddItem = () => {
     if (!newTitle.trim()) return;
     
@@ -83,6 +106,7 @@ export function DailyPlanForm({
       estimated_minutes: newMinutes,
       priority: newPriority,
       mandato_id: newMandatoId || null,
+      mandate_lead_id: newLeadId,
     });
     
     // Reset form
@@ -90,6 +114,13 @@ export function DailyPlanForm({
     setNewMinutes(60);
     setNewPriority('media');
     setNewMandatoId('');
+    setNewLeadId(null);
+  };
+  
+  // Reset lead when mandato changes
+  const handleMandatoChange = (value: string) => {
+    setNewMandatoId(value);
+    setNewLeadId(null);
   };
   
   const handleNotesBlur = () => {
@@ -205,11 +236,23 @@ export function DailyPlanForm({
               <div className="min-w-[180px]">
                 <MandatoSelect
                   value={newMandatoId}
-                  onValueChange={setNewMandatoId}
+                  onValueChange={handleMandatoChange}
                   includeGeneralWork={true}
                   placeholder="Mandato (opcional)"
                 />
               </div>
+              
+              {/* Lead selector - only show when mandato is selected */}
+              {newMandatoId && (
+                <div className="min-w-[180px]">
+                  <LeadByMandatoSelect
+                    mandatoId={newMandatoId}
+                    value={newLeadId}
+                    onValueChange={(id) => setNewLeadId(id)}
+                    placeholder="Lead (opcional)"
+                  />
+                </div>
+              )}
               
               <Button onClick={handleAddItem} disabled={!newTitle.trim() || saving}>
                 <Plus className="h-4 w-4 mr-1" />
@@ -234,6 +277,7 @@ export function DailyPlanForm({
                 item={item}
                 canEdit={canEdit}
                 mandatoName={item.mandato_id ? mandatoNames[item.mandato_id] : undefined}
+                leadName={item.mandate_lead_id ? leadNames[item.mandate_lead_id] : undefined}
                 onUpdate={(updates) => onUpdateItem(item.id, updates)}
                 onDelete={() => onDeleteItem(item.id)}
               />

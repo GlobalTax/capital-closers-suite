@@ -6049,6 +6049,7 @@ export type Database = {
           estimated_minutes: number
           id: string
           linked_task_id: string | null
+          mandate_lead_id: string | null
           mandato_id: string | null
           order_index: number | null
           plan_id: string
@@ -6066,6 +6067,7 @@ export type Database = {
           estimated_minutes?: number
           id?: string
           linked_task_id?: string | null
+          mandate_lead_id?: string | null
           mandato_id?: string | null
           order_index?: number | null
           plan_id: string
@@ -6083,6 +6085,7 @@ export type Database = {
           estimated_minutes?: number
           id?: string
           linked_task_id?: string | null
+          mandate_lead_id?: string | null
           mandato_id?: string | null
           order_index?: number | null
           plan_id?: string
@@ -6104,6 +6107,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tareas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandate_lead_id_fkey"
+            columns: ["mandate_lead_id"]
+            isOneToOne: false
+            referencedRelation: "mandate_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_plan_items_mandate_lead_id_fkey"
+            columns: ["mandate_lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandate_lead_id"]
           },
           {
             foreignKeyName: "daily_plan_items_mandato_id_fkey"
@@ -18318,6 +18335,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_absences: {
+        Row: {
+          absence_date: string
+          absence_type: Database["public"]["Enums"]["absence_type"]
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          absence_date: string
+          absence_type?: Database["public"]["Enums"]["absence_type"]
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          absence_date?: string
+          absence_type?: Database["public"]["Enums"]["absence_type"]
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_dashboard_layouts: {
         Row: {
           created_at: string
@@ -20508,6 +20558,7 @@ export type Database = {
       verify_valuation_token: { Args: { token: string }; Returns: boolean }
     }
     Enums: {
+      absence_type: "vacation" | "sick_leave" | "personal" | "other"
       access_level: "internal" | "client" | "public"
       admin_role: "super_admin" | "admin" | "editor" | "viewer"
       dd_workstream:
@@ -20741,6 +20792,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      absence_type: ["vacation", "sick_leave", "personal", "other"],
       access_level: ["internal", "client", "public"],
       admin_role: ["super_admin", "admin", "editor", "viewer"],
       dd_workstream: [
