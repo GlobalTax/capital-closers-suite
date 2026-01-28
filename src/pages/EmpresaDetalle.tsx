@@ -14,7 +14,9 @@ import { useEmpresaMandatos, useEmpresaContactos } from "@/hooks/queries/useEmpr
 import { useEmpresaInteracciones } from "@/hooks/queries/useInteracciones";
 import { useEmpresaDocumentos } from "@/hooks/queries/useDocumentos";
 import type { Mandato, Contacto } from "@/types";
-import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus, BarChart3, Percent, Calculator } from "lucide-react";
+import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus, BarChart3, Percent, Calculator, CalendarDays } from "lucide-react";
+import { CompanyMeetingsTab } from "@/components/empresas/CompanyMeetingsTab";
+import { useCompanyMeetings } from "@/hooks/queries/useCompanyMeetings";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { format } from "date-fns";
@@ -37,7 +39,7 @@ export default function EmpresaDetalle() {
   const { data: contactos = [], isLoading: loadingContactos } = useEmpresaContactos(id);
   const { data: interacciones = [], isLoading: loadingInteracciones } = useEmpresaInteracciones(id);
   const { data: documentos = [], isLoading: loadingDocumentos } = useEmpresaDocumentos(id);
-  
+  const { data: meetings = [], isLoading: loadingMeetings } = useCompanyMeetings(id);
   const { mutate: deleteEmpresaMutation } = useDeleteEmpresa();
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -211,7 +213,7 @@ export default function EmpresaDetalle() {
 
           {/* Tabs Navigation */}
           <Tabs defaultValue="general" className="space-y-4">
-            <TabsList className="grid grid-cols-7 w-full bg-muted/50">
+            <TabsList className="grid grid-cols-8 w-full bg-muted/50">
               <TabsTrigger 
                 value="general" 
                 className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
@@ -260,6 +262,13 @@ export default function EmpresaDetalle() {
               >
                 <FileText className="h-5 w-5 mr-2" />
                 Documentos ({documentos.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reuniones"
+                className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
+              >
+                <CalendarDays className="h-5 w-5 mr-2" />
+                Reuniones ({meetings.length})
               </TabsTrigger>
             </TabsList>
 
@@ -534,6 +543,11 @@ export default function EmpresaDetalle() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab Reuniones */}
+        <TabsContent value="reuniones">
+          <CompanyMeetingsTab companyId={id!} />
         </TabsContent>
           </Tabs>
         </div>
