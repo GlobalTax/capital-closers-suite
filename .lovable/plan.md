@@ -1,131 +1,146 @@
 
 
-## Plan: Completar Visualización de Datos Financieros en Perfil de Empresa
+## Plan: Arreglar Bug de Guardado de Interacciones
 
-### Diagnóstico Actual
+### Diagnóstico Confirmado
 
-He investigado exhaustivamente el código y la base de datos. Aquí está el estado actual:
+**Causa raíz identificada:** La política RLS de INSERT en la tabla `interacciones` requiere que `created_by = auth.uid()`, pero el código frontend no envía este campo.
 
-#### ✅ Fuentes de Datos CONFIRMADAS
+```text
+Tabla: interacciones
+Error: RLS violation - "new row violates row-level security policy"
+Policy: (current_user_can_read() AND (created_by = auth.uid()))
 
-Los datos financieros **YA EXISTEN** en la tabla `empresas`:
-
-| Campo | Tipo | Ejemplo Real |
-|-------|------|--------------|
-| `facturacion` | number | 4,100,000 |
-| `revenue` | number | 568,000 |
-| `ebitda` | number | 500,000 |
-| `año_datos_financieros` | number | null (vacío en la mayoría) |
-| `margen_ebitda` | number | null |
-| `deuda` | number | null |
-| `capital_circulante` | number | null |
-
-#### ⚠️ Problema Detectado
-
-El servicio `empresas.service.ts` tiene un **transform incompleto** que descarta campos financieros importantes:
-
-```typescript
-// Campos incluidos en transform:
-facturacion, ebitda, empleados ✅
-
-// Campos NO incluidos en transform:
-revenue, año_datos_financieros, margen_ebitda, deuda, capital_circulante ❌
-```
-
-#### ✅ Estado Actual de la UI
-
-- **Listado `/empresas`**: Ya muestra columnas de Facturación, EBITDA y Año con edición inline
-- **Perfil de empresa**: Ya muestra KPIs financieros, pero algunos datos pueden estar incompletos
-
----
-
-### Cambios Mínimos Propuestos
-
-Solo 1 archivo necesita modificación para completar la funcionalidad:
-
-#### 1. Corregir `src/services/empresas.ts` - Transform Incompleto
-
-**Problema**: La función `transform` no extrae todos los campos financieros.
-
-**Solución**: Añadir los campos faltantes al transform:
-
-```typescript
-protected transform(raw: any): Empresa {
-  return {
-    id: raw.id,
-    nombre: raw.nombre,
-    cif: raw.cif,
-    sector: raw.sector,
-    subsector: raw.subsector,
-    sitio_web: raw.sitio_web,
-    empleados: raw.empleados ? Number(raw.empleados) : undefined,
-    facturacion: raw.facturacion ? Number(raw.facturacion) : undefined,
-    ubicacion: raw.ubicacion,
-    descripcion: raw.descripcion,
-    es_target: raw.es_target || false,
-    potencial_search_fund: raw.potencial_search_fund || false,
-    
-    // ✅ CAMPOS FINANCIEROS COMPLETOS
-    revenue: raw.revenue ? Number(raw.revenue) : undefined,
-    ebitda: raw.ebitda ? Number(raw.ebitda) : undefined,
-    margen_ebitda: raw.margen_ebitda ? Number(raw.margen_ebitda) : undefined,
-    deuda: raw.deuda ? Number(raw.deuda) : undefined,
-    capital_circulante: raw.capital_circulante ? Number(raw.capital_circulante) : undefined,
-    año_datos_financieros: raw.año_datos_financieros ? Number(raw.año_datos_financieros) : undefined,
-    
-    // Otros campos
-    nivel_interes: raw.nivel_interes,
-    estado_target: raw.estado_target,
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-  } as Empresa;
+Payload actual:
+{
+  empresa_id: "xxx",
+  mandato_id: "yyy", 
+  tipo: "email",
+  titulo: "Test",
+  descripcion: "...",
+  fecha: "2026-01-28T..."
+  // ⚠️ FALTA: created_by: auth.uid()
 }
 ```
 
 ---
 
-### Por Qué Esto Es Seguro
+### Solución: Añadir created_by al Payload
 
-| Criterio | Estado |
-|----------|--------|
-| No modifica modelo de datos | ✅ Solo lee campos existentes |
-| No cambia queries | ✅ Ya hace `SELECT *` |
-| No afecta permisos | ✅ Respeta RLS existente |
-| No rompe UI existente | ✅ Solo añade datos faltantes |
-| Valores null/undefined | ✅ Fallback seguro en transform |
+#### 1. Modificar InteraccionTimeline.tsx
+
+```typescript
+// Líneas 70-80 - Añadir created_by
+const onSubmit = async (data: FormData) => {
+  setSaving(true);
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    await createInteraccion({
+      empresa_id: empresaId,
+      mandato_id: mandatoId,
+      tipo: data.tipo,
+      titulo: data.titulo,
+      descripcion: data.descripcion || undefined,
+      fecha: new Date(data.fecha).toISOString(),
+      created_by: user?.id,  // ✅ AÑADIR ESTO
+    });
+    // ...
+  }
+};
+```
+
+#### 2. Modificar NuevaInteraccionDialog.tsx
+
+```typescript
+// Líneas 39-61 - Añadir created_by
+const onSubmit = async (data: any) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    await createInteraccion({
+      ...data,
+      contacto_id: contactoId,
+      empresa_id: empresaId,
+      mandato_id: mandatoId,
+      fecha: fecha.toISOString(),
+      fecha_siguiente_accion: fechaSiguienteAccion?.toISOString().split('T')[0],
+      duracion_minutos: data.duracion_minutos ? parseInt(data.duracion_minutos) : undefined,
+      created_by: user?.id,  // ✅ AÑADIR ESTO
+    });
+    // ...
+  }
+};
+```
 
 ---
 
-### Resultado Esperado
+### Alternativa: Mejora en el Servicio (Centralizada)
 
-Después del cambio, la UI mostrará correctamente:
+En lugar de modificar cada componente, centralizar la lógica en el servicio:
 
-**Perfil de empresa (KPIs superiores):**
-- Facturación: €4.1M (prioriza `revenue` o `facturacion`)
-- EBITDA: €0.5M
-- Empleados: 45
-- Margen EBITDA: 12.2%
+```typescript
+// src/services/interacciones.ts - Líneas 55-64
+export const createInteraccion = async (interaccion: Partial<Interaccion>) => {
+  // Obtener usuario actual si no viene en el payload
+  let created_by = interaccion.created_by;
+  if (!created_by) {
+    const { data: { user } } = await supabase.auth.getUser();
+    created_by = user?.id;
+  }
 
-**Listado `/empresas`:**
-- Columna Facturación: ya funciona ✅
-- Columna EBITDA: ya funciona ✅
-- Columna Año: ahora mostrará el año correctamente
+  const { data, error } = await supabase
+    .from('interacciones')
+    .insert({ ...interaccion, created_by } as any)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data as Interaccion;
+};
+```
+
+**Ventaja:** Todos los componentes que usen `createInteraccion` funcionarán sin modificaciones adicionales.
 
 ---
 
-### Archivos a Modificar
+### Resumen de Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/services/empresas.ts` | Completar función `transform` con todos los campos financieros |
+| Archivo | Cambio | Prioridad |
+|---------|--------|-----------|
+| `src/services/interacciones.ts` | Añadir `created_by` automático en `createInteraccion()` | ✅ Opción preferida |
+| `src/components/targets/InteraccionTimeline.tsx` | Añadir import de supabase + `created_by` | Alternativa |
+| `src/components/shared/NuevaInteraccionDialog.tsx` | Añadir import de supabase + `created_by` | Alternativa |
 
 ---
 
-### Validación Post-Cambio
+### Pruebas Post-Fix
 
-1. Abrir varias empresas → perfil carga igual que antes
-2. Empresas con datos financieros → se muestran correctamente
-3. Empresas sin datos → se muestra "—" sin errores
-4. Navegación → sigue funcionando normal
-5. Edición inline en listado → sigue funcionando
+1. Abrir mandato → Tab Targets → Empresa → Timeline
+2. Click "Nueva Interacción"
+3. Rellenar tipo (Email), título, descripción
+4. Click "Guardar Interacción"
+5. Verificar:
+   - Toast "Interacción registrada" ✅
+   - Interacción aparece en timeline ✅
+   - No hay errores en consola ✅
+6. Repetir en perfil de empresa (NuevaInteraccionDialog)
+7. Verificar que interacciones se listan correctamente
+
+---
+
+### Sección Técnica
+
+**Por qué falla:**
+- La tabla `interacciones` tiene RLS habilitado
+- La política `interacciones_insert` valida: `created_by = auth.uid()`
+- El campo `created_by` es nullable en la BD pero la policy lo requiere
+- Sin `created_by`, la comparación `null = auth.uid()` es `false`
+
+**Por qué la solución es segura:**
+- Solo añade un campo que ya existe en el schema
+- No modifica la estructura de la tabla
+- No cambia las policies RLS
+- Compatible con todos los componentes existentes
+- El usuario siempre está autenticado en esta sección
 
