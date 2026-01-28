@@ -19014,6 +19014,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          require_description: boolean
+          require_lead: boolean
+          require_mandato: boolean
           sort_order: number | null
           updated_at: string | null
         }
@@ -19027,6 +19030,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          require_description?: boolean
+          require_lead?: boolean
+          require_mandato?: boolean
           sort_order?: number | null
           updated_at?: string | null
         }
@@ -19040,6 +19046,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          require_description?: boolean
+          require_lead?: boolean
+          require_mandato?: boolean
           sort_order?: number | null
           updated_at?: string | null
         }

@@ -11,6 +11,10 @@ export interface WorkTaskType {
   context: WorkTaskTypeContext;
   created_at: string;
   updated_at: string;
+  // Dynamic validation requirements
+  require_mandato: boolean;
+  require_lead: boolean;
+  require_description: boolean;
 }
 
 export interface CreateWorkTaskTypeData {

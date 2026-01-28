@@ -33,6 +33,7 @@ import { ensureLeadInMandateLeads } from '@/services/leadActivities';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { validateByTaskType, getFieldRequirement } from '@/lib/taskTypeValidation';
 
 // UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
@@ -100,6 +101,9 @@ export function TimerAssignmentDialog() {
   
   // Context-aware filtering: show different task types based on mandate
   const { data: workTaskTypes = [], isLoading: loadingTaskTypes } = useFilteredWorkTaskTypes(mandatoId || null);
+  
+  // Get selected task type for dynamic validation
+  const selectedTaskType = workTaskTypes.find(t => t.id === watch('workTaskTypeId'));
   
   // Format time for display
   const displayTime = useMemo(() => formatTime(pendingTimeSeconds), [pendingTimeSeconds]);
@@ -175,6 +179,20 @@ export function TimerAssignmentDialog() {
     if (trimmedDescription.length > 0 && trimmedDescription.length < 10) {
       toast.error('La descripción debe tener al menos 10 caracteres');
       return;
+    }
+    
+    // Dynamic validation based on selected task type
+    if (selectedTaskType) {
+      const validation = validateByTaskType(selectedTaskType, {
+        mandatoId: data.mandatoId,
+        leadId: data.leadId,
+        description: data.description || ''
+      });
+      
+      if (!validation.isValid) {
+        toast.error(validation.errors.join('. '));
+        return;
+      }
     }
     
     setIsSubmitting(true);
@@ -286,7 +304,9 @@ export function TimerAssignmentDialog() {
           {/* 2. Lead Select (Optional, dependent on mandato) */}
           {showLeadSelector && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Lead (opcional)</Label>
+              <Label className="text-xs font-medium text-muted-foreground">
+                Lead {getFieldRequirement(selectedTaskType, 'lead').label}
+              </Label>
               <LeadByMandatoSelect
                 mandatoId={mandatoId}
                 value={leadId}
@@ -363,11 +383,10 @@ export function TimerAssignmentDialog() {
             </Select>
           </div>
           
-          {/* 4. Descripción (opcional, 1 línea) */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <Label className="text-xs font-medium text-muted-foreground">
-                Descripción <span className="opacity-50">(opcional)</span>
+                Descripción {getFieldRequirement(selectedTaskType, 'description').label}
               </Label>
               <span className={cn(
                 "text-[10px] tabular-nums",
