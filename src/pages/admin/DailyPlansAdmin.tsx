@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getPlansForDate, updatePlanStatus, addAdminTask } from "@/services/dailyPlans.service";
+import { getPlansForDate, updatePlanStatus, addAdminTask, updatePlanItem, deletePlanItem } from "@/services/dailyPlans.service";
 import { DailyPlanItemRow } from "@/components/plans/DailyPlanItemRow";
 import type { DailyPlanWithUser, DailyPlanItemPriority } from "@/types/dailyPlans";
 
@@ -49,6 +49,7 @@ export default function DailyPlansAdmin() {
   const [plans, setPlans] = useState<DailyPlanWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('all');
   
   // Dialog states
   const [selectedPlan, setSelectedPlan] = useState<DailyPlanWithUser | null>(null);
@@ -61,6 +62,11 @@ export default function DailyPlansAdmin() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskMinutes, setNewTaskMinutes] = useState(60);
   const [newTaskPriority, setNewTaskPriority] = useState<DailyPlanItemPriority>('alta');
+  
+  // Filter plans by selected user
+  const filteredPlans = selectedUserId === 'all' 
+    ? plans 
+    : plans.filter(p => p.user_id === selectedUserId);
   
   const loadData = async () => {
     try {
@@ -183,24 +189,41 @@ export default function DailyPlansAdmin() {
           </p>
         </div>
         
-        {/* Date navigation */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePrevDay}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        {/* Date navigation and filters */}
+        <div className="flex items-center gap-4">
+          {/* User filter */}
+          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todos los usuarios" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los usuarios</SelectItem>
+              {allUsers.map(user => (
+                <SelectItem key={user.user_id} value={user.user_id}>
+                  {user.full_name || user.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
-          <Button 
-            variant={isTomorrow ? "default" : "outline"} 
-            onClick={handleTomorrow}
-            className="min-w-[180px]"
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            {format(selectedDate, "EEE d MMM", { locale: es })}
-          </Button>
-          
-          <Button variant="outline" size="icon" onClick={handleNextDay}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={handlePrevDay}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant={isTomorrow ? "default" : "outline"} 
+              onClick={handleTomorrow}
+              className="min-w-[180px]"
+            >
+              <CalendarDays className="h-4 w-4 mr-2" />
+              {format(selectedDate, "EEE d MMM", { locale: es })}
+            </Button>
+            
+            <Button variant="outline" size="icon" onClick={handleNextDay}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -275,11 +298,12 @@ export default function DailyPlansAdmin() {
                   <TableHead className="text-center">Tareas</TableHead>
                   <TableHead className="text-center">Horas</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
+                  <TableHead className="text-center">Última ed.</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plans.map((plan) => {
+                {filteredPlans.map((plan) => {
                   const status = statusConfig[plan.status];
                   const StatusIcon = status.icon;
                   const planHours = plan.items.reduce((s, i) => s + i.estimated_minutes, 0) / 60;
@@ -299,6 +323,9 @@ export default function DailyPlansAdmin() {
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {status.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground">
+                        {format(new Date(plan.updated_at), "HH:mm", { locale: es })}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -326,8 +353,8 @@ export default function DailyPlansAdmin() {
                   );
                 })}
                 
-                {/* Users without plans */}
-                {usersWithoutPlan.map((user) => (
+                {/* Users without plans - only show when viewing all users */}
+                {selectedUserId === 'all' && usersWithoutPlan.map((user) => (
                   <TableRow key={user.user_id} className="bg-muted/20">
                     <TableCell>
                       <div>
@@ -342,6 +369,7 @@ export default function DailyPlansAdmin() {
                         Sin plan
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center text-muted-foreground">-</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" disabled>
                         <MessageSquare className="h-4 w-4 mr-1" />
@@ -370,16 +398,40 @@ export default function DailyPlansAdmin() {
           
           {selectedPlan && (
             <div className="space-y-4 py-4">
-              {/* Tasks list */}
+              {/* Tasks list - Admin can edit */}
               <div className="space-y-2">
-                <Label>Tareas planificadas</Label>
+                <Label>Tareas planificadas ({selectedPlan.items.length})</Label>
                 {selectedPlan.items.map((item) => (
                   <DailyPlanItemRow
                     key={item.id}
                     item={item}
-                    canEdit={false}
-                    onUpdate={() => {}}
-                    onDelete={() => {}}
+                    canEdit={true}
+                    onUpdate={async (updates) => {
+                      try {
+                        await updatePlanItem(item.id, updates);
+                        loadData();
+                        // Refresh the selectedPlan with updated items
+                        const updatedPlans = await getPlansForDate(selectedDate);
+                        const updated = updatedPlans.find(p => p.id === selectedPlan.id);
+                        if (updated) setSelectedPlan(updated);
+                        toast.success('Tarea actualizada');
+                      } catch (error) {
+                        toast.error('Error al actualizar tarea');
+                      }
+                    }}
+                    onDelete={async () => {
+                      if (item.assigned_by_admin) return; // Admin tasks can't be deleted
+                      try {
+                        await deletePlanItem(item.id);
+                        loadData();
+                        const updatedPlans = await getPlansForDate(selectedDate);
+                        const updated = updatedPlans.find(p => p.id === selectedPlan.id);
+                        if (updated) setSelectedPlan(updated);
+                        toast.success('Tarea eliminada');
+                      } catch (error) {
+                        toast.error('Error al eliminar tarea');
+                      }
+                    }}
                   />
                 ))}
               </div>
