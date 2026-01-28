@@ -1,109 +1,320 @@
 
 
-## Plan: Corregir Bloqueo de Horas sin Plan Diario Completado
+## Plan: Gestión de Vacaciones/Bajas + Leads en Planificación Diaria
 
-### Problema Detectado
+### Resumen
 
-La función `canRegisterHoursForDate` actualmente **solo bloquea registrar horas para MAÑANA** (si no hay plan enviado con 8h). Pero **permite registrar horas para HOY sin ninguna validación**.
+Este plan implementa dos mejoras solicitadas:
 
-Según el requisito original (Prompt 3):
-> "No poder registrar horas de HOY si no existe un plan enviado (8h) de ayer o de hoy mismo."
+1. **Gestión de Vacaciones y Bajas**: Permitir a los usuarios marcar días como vacaciones, baja médica u otra ausencia, lo que exime del requisito de planificación y registro de horas para esas fechas.
 
-El comportamiento correcto debería ser:
-- Para registrar horas de **HOY** → debe existir un plan enviado (8h+) para **AYER u HOY**
-- Para registrar horas de **MAÑANA** → debe existir un plan enviado (8h+) para **MAÑANA**
-- Para fechas **pasadas o futuras** → permitido (flexibilidad)
+2. **Gestión de Leads en Planificación**: Añadir la posibilidad de asociar un lead específico a cada tarea del plan diario, siguiendo el mismo patrón que ya existe en el registro de horas.
 
 ---
 
-### Cambio Requerido
+### Parte 1: Sistema de Vacaciones y Bajas
 
-**Archivo:** `src/services/dailyPlans.service.ts`
+#### 1.1 Nueva Tabla de Base de Datos
 
-Modificar la función `canRegisterHoursForDate` para añadir validación de HOY:
+Crear una tabla `user_absences` para gestionar las ausencias:
+
+```sql
+-- Tipos de ausencia
+CREATE TYPE public.absence_type AS ENUM ('vacation', 'sick_leave', 'personal', 'other');
+
+-- Tabla de ausencias
+CREATE TABLE public.user_absences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  absence_date DATE NOT NULL,
+  absence_type absence_type NOT NULL DEFAULT 'vacation',
+  notes TEXT,
+  approved_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  -- Una ausencia por usuario por fecha
+  UNIQUE(user_id, absence_date)
+);
+
+-- RLS
+ALTER TABLE public.user_absences ENABLE ROW LEVEL SECURITY;
+
+-- Usuarios pueden ver y gestionar sus propias ausencias
+CREATE POLICY "Users can manage their own absences"
+ON public.user_absences
+FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Admins pueden ver y gestionar todas
+CREATE POLICY "Admins can manage all absences"
+ON public.user_absences
+FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM admin_users 
+    WHERE user_id = auth.uid() 
+    AND role IN ('admin', 'super_admin')
+    AND is_active = true
+  )
+);
+```
+
+#### 1.2 Servicio de Ausencias
+
+Crear `src/services/absences.service.ts`:
 
 ```typescript
-// Línea 438-441: Cambiar lógica para TODAY
-// ANTES:
-if (targetDate === today) {
-  return { allowed: true };
-}
+// Funciones principales:
+- getAbsencesForMonth(userId, month, year): Obtener ausencias de un mes
+- addAbsence(userId, date, type, notes): Añadir ausencia
+- removeAbsence(userId, date): Eliminar ausencia
+- isAbsenceDate(userId, date): Verificar si es día de ausencia
+```
 
-// DESPUÉS:
-if (targetDate === today) {
-  // Para HOY, verificar que existe plan enviado de AYER o de HOY
-  const yesterday = format(addDays(new Date(), -1), 'yyyy-MM-dd');
+#### 1.3 Modificar Validación de Plan Diario
+
+Actualizar `canRegisterHoursForDate` en `src/services/dailyPlans.service.ts`:
+
+```typescript
+export async function canRegisterHoursForDate(userId, date, isAdmin) {
+  // Admin bypass
+  if (isAdmin) return { allowed: true };
   
-  // Buscar plan de hoy
-  const { data: todayPlan } = await supabase
-    .from('daily_plans')
-    .select('id, status, total_estimated_minutes')
+  // NUEVO: Verificar si es día de ausencia
+  const { data: absence } = await supabase
+    .from('user_absences')
+    .select('id, absence_type')
     .eq('user_id', userId)
-    .eq('planned_for_date', today)
+    .eq('absence_date', format(date, 'yyyy-MM-dd'))
     .maybeSingle();
   
-  // Si hay plan de hoy enviado con 8h+, permitir
-  if (todayPlan && 
-      todayPlan.status !== 'draft' && 
-      (todayPlan.total_estimated_minutes || 0) >= 480) {
-    return { allowed: true, planId: todayPlan.id };
+  if (absence) {
+    // Día de ausencia: permitir pero sin requisitos de plan
+    return { allowed: true, isAbsence: true, absenceType: absence.absence_type };
   }
   
-  // Si no, buscar plan de ayer
-  const { data: yesterdayPlan } = await supabase
-    .from('daily_plans')
-    .select('id, status, total_estimated_minutes')
-    .eq('user_id', userId)
-    .eq('planned_for_date', yesterday)
-    .maybeSingle();
-  
-  // Si hay plan de ayer enviado con 8h+, permitir
-  if (yesterdayPlan && 
-      yesterdayPlan.status !== 'draft' && 
-      (yesterdayPlan.total_estimated_minutes || 0) >= 480) {
-    return { allowed: true, planId: yesterdayPlan.id };
-  }
-  
-  // No hay plan válido
-  return {
-    allowed: false,
-    reason: 'Debes tener un plan diario enviado (mín 8h) de ayer o de hoy para registrar horas',
-    planId: todayPlan?.id
-  };
+  // ... resto de la lógica de validación existente ...
 }
+```
+
+#### 1.4 UI: Marcador de Vacaciones en Plan Diario
+
+Añadir en `src/pages/PlanDiario.tsx`:
+
+```typescript
+// Añadir botón de "Marcar como Vacaciones/Baja" 
+// cuando el usuario no quiere planificar el día
+
+{!plan?.items.length && (
+  <div className="border rounded-lg p-4">
+    <h3>¿No trabajarás este día?</h3>
+    <div className="flex gap-2">
+      <Button onClick={() => markAsAbsence('vacation')}>
+        🏖️ Vacaciones
+      </Button>
+      <Button onClick={() => markAsAbsence('sick_leave')}>
+        🤒 Baja médica
+      </Button>
+      <Button onClick={() => markAsAbsence('personal')}>
+        👤 Personal
+      </Button>
+    </div>
+  </div>
+)}
+```
+
+#### 1.5 Indicador Visual de Ausencia
+
+En el calendario de selección de fechas, mostrar días de ausencia con un color distinto:
+
+```typescript
+// Modificar Calendar para mostrar días de ausencia
+const modifiers = {
+  absence: absenceDates, // Array de fechas de ausencia
+};
+
+const modifiersStyles = {
+  absence: { backgroundColor: '#fef3c7', border: '2px solid #f59e0b' }
+};
 ```
 
 ---
 
-### Lógica Actualizada
+### Parte 2: Gestión de Leads en Planificación
 
-| Fecha Objetivo | Requisito de Plan |
-|----------------|-------------------|
-| **Pasado** | Sin restricción |
-| **HOY** | Plan de AYER o HOY (enviado, 8h+) |
-| **MAÑANA** | Plan de MAÑANA (enviado, 8h+) |
-| **Futuro (>mañana)** | Sin restricción |
-| **Admin** | Siempre permitido (bypass) |
+#### 2.1 Añadir Columna a daily_plan_items
+
+```sql
+-- Añadir referencia a mandate_leads
+ALTER TABLE public.daily_plan_items 
+ADD COLUMN IF NOT EXISTS mandate_lead_id UUID REFERENCES public.mandate_leads(id) ON DELETE SET NULL;
+
+-- Índice para búsquedas
+CREATE INDEX IF NOT EXISTS idx_daily_plan_items_mandate_lead
+ON public.daily_plan_items(mandate_lead_id);
+```
+
+#### 2.2 Actualizar Tipos
+
+En `src/types/dailyPlans.ts`:
+
+```typescript
+export interface DailyPlanItem {
+  // ... existentes ...
+  mandate_lead_id: string | null;  // NUEVO
+}
+
+export interface NewDailyPlanItem {
+  // ... existentes ...
+  mandate_lead_id?: string | null;  // NUEVO
+}
+```
+
+#### 2.3 Actualizar Servicio
+
+En `src/services/dailyPlans.service.ts`:
+
+```typescript
+// En addPlanItem()
+.insert({
+  // ... existentes ...
+  mandate_lead_id: item.mandate_lead_id || null,  // NUEVO
+})
+
+// En convertPlanItemsToTasks()
+// Transferir mandate_lead_id a la tarea creada
+```
+
+#### 2.4 Actualizar UI del Formulario
+
+En `src/components/plans/DailyPlanForm.tsx`:
+
+```typescript
+// Añadir estado para lead seleccionado
+const [newLeadId, setNewLeadId] = useState<string | null>(null);
+
+// Después del MandatoSelect, mostrar LeadByMandatoSelect
+{newMandatoId && (
+  <div className="min-w-[200px]">
+    <LeadByMandatoSelect
+      mandatoId={newMandatoId}
+      value={newLeadId}
+      onValueChange={(id) => setNewLeadId(id)}
+      placeholder="Lead (opcional)"
+    />
+  </div>
+)}
+
+// En handleAddItem():
+onAddItem({
+  // ... existentes ...
+  mandate_lead_id: newLeadId,
+});
+
+// Reset:
+setNewLeadId(null);
+```
+
+#### 2.5 Mostrar Lead en Fila de Item
+
+En `src/components/plans/DailyPlanItemRow.tsx`:
+
+```typescript
+// Mostrar badge con nombre del lead si existe
+{item.mandate_lead_id && leadName && (
+  <Badge variant="outline" className="text-xs">
+    👤 {leadName}
+  </Badge>
+)}
+```
 
 ---
 
-### Archivo a Modificar
+### Flujo de Vacaciones
+
+```text
+Usuario abre /plan-diario
+         │
+         ▼
+   ¿Tiene plan para este día?
+         │
+    ┌────┴────┐
+    │         │
+   Sí         No
+    │         │
+    ▼         ▼
+ Mostrar   Mostrar opciones:
+ plan      "¿No trabajarás este día?"
+           [Vacaciones] [Baja] [Personal]
+                    │
+                    ▼
+            Marcar como ausencia
+                    │
+                    ▼
+       No se requiere plan ni horas
+```
+
+---
+
+### Flujo de Leads en Plan
+
+```text
+Añadir tarea al plan
+         │
+         ▼
+   [Título] [Duración] [Prioridad]
+         │
+         ▼
+   [Mandato ▼] ─────────────────┐
+         │                      │
+         ▼                      ▼
+   [Lead ▼] (opcional)    Si es proyecto interno
+     │                    sin leads → ocultar
+     │
+     ▼
+   [+ Añadir]
+         │
+         ▼
+   Tarea guardada con mandato_id Y mandate_lead_id
+```
+
+---
+
+### Resumen de Archivos
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/services/dailyPlans.service.ts` | Añadir validación para `targetDate === today` |
+| **Nueva migración SQL** | Crear tabla `user_absences` + añadir `mandate_lead_id` a `daily_plan_items` |
+| **Nuevo:** `src/services/absences.service.ts` | Servicio para gestionar ausencias |
+| **Nuevo:** `src/hooks/useAbsences.ts` | Hook para cargar ausencias del usuario |
+| `src/services/dailyPlans.service.ts` | Añadir verificación de ausencias en `canRegisterHoursForDate` |
+| `src/types/dailyPlans.ts` | Añadir `mandate_lead_id` a tipos |
+| `src/pages/PlanDiario.tsx` | Añadir UI de marcado de vacaciones/bajas |
+| `src/components/plans/DailyPlanForm.tsx` | Añadir selector de leads |
+| `src/components/plans/DailyPlanItemRow.tsx` | Mostrar badge de lead |
 
 ---
 
 ### Sección Técnica
 
-**Justificación:**
-- Se mantiene la flexibilidad para fechas pasadas (correcciones retrospectivas)
-- Se requiere planificación previa para trabajo del día actual
-- El plan puede ser de ayer (planificó mañana) o de hoy (planificó el mismo día temprano)
-- Admins tienen bypass completo
+**Dependencias:** No se requieren nuevas dependencias.
 
-**Impacto:**
-- Los usuarios verán el `DailyPlanBlocker` si intentan registrar horas para HOY sin plan válido
-- El mensaje guiará al usuario a crear/enviar su plan diario
+**RLS:** 
+- Usuarios pueden gestionar sus propias ausencias
+- Admins pueden ver/gestionar todas las ausencias
+
+**Consideraciones:**
+- Las ausencias funcionan por día completo (no medio día)
+- Al marcar un día como ausencia, no se requiere plan ni registro de horas
+- Los leads son opcionales en el plan (igual que en el registro de horas)
+- Se reutiliza el componente `LeadByMandatoSelect` existente
+- La conversión a tareas también transfiere el `mandate_lead_id`
+
+**Mapeo Lead → Tarea:**
+
+| daily_plan_items | tareas |
+|------------------|--------|
+| mandate_lead_id | mandate_lead_id (nuevo campo en tareas) |
 
