@@ -40,10 +40,12 @@ export function validateByTaskType(
   // Check description requirement
   if (taskType.require_description) {
     const trimmed = values.description.trim();
+    const minLength = taskType.min_description_length ?? 10;
+    
     if (trimmed.length === 0) {
       errors.push('Descripción es obligatoria para este tipo de tarea');
-    } else if (trimmed.length < 10) {
-      errors.push('Descripción debe tener al menos 10 caracteres');
+    } else if (trimmed.length < minLength) {
+      errors.push(`Descripción debe tener al menos ${minLength} caracteres`);
     }
   }
   
@@ -51,6 +53,14 @@ export function validateByTaskType(
     isValid: errors.length === 0,
     errors
   };
+}
+
+/**
+ * Helper to get the minimum description length for a task type.
+ * Uses the configured min_description_length or falls back to 10.
+ */
+export function getMinDescriptionLength(taskType: WorkTaskType | undefined): number {
+  return taskType?.min_description_length ?? 10;
 }
 
 /**

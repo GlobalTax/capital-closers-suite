@@ -33,7 +33,7 @@ import { ensureLeadInMandateLeads } from '@/services/leadActivities';
 import { TimeEntryValueType, VALUE_TYPE_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { validateByTaskType, getFieldRequirement } from '@/lib/taskTypeValidation';
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from '@/lib/taskTypeValidation';
 
 // UUID for "Trabajo General" (matches MandatoSelect)
 const GENERAL_WORK_ID = "00000000-0000-0000-0000-000000000001";
@@ -383,30 +383,35 @@ export function TimerAssignmentDialog() {
             </Select>
           </div>
           
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-medium text-muted-foreground">
-                Descripción {getFieldRequirement(selectedTaskType, 'description').label}
-              </Label>
-              <span className={cn(
-                "text-[10px] tabular-nums",
-                descriptionLength > 0 && descriptionLength < 10 
-                  ? "text-destructive" 
-                  : "text-muted-foreground"
-              )}>
-                {descriptionLength}/10 mín
-              </span>
-            </div>
-            <Input
-              placeholder="Breve descripción del trabajo..."
-              className={cn(
-                "h-9",
-                descriptionLength > 0 && descriptionLength < 10 && "border-destructive focus-visible:ring-destructive"
-              )}
-              maxLength={100}
-              {...register('description')}
-            />
-          </div>
+          {(() => {
+            const minDescLength = getMinDescriptionLength(selectedTaskType);
+            return (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+                  </Label>
+                  <span className={cn(
+                    "text-[10px] tabular-nums",
+                    descriptionLength > 0 && descriptionLength < minDescLength 
+                      ? "text-destructive" 
+                      : "text-muted-foreground"
+                  )}>
+                    {descriptionLength}/{minDescLength} mín
+                  </span>
+                </div>
+                <Input
+                  placeholder="Breve descripción del trabajo..."
+                  className={cn(
+                    "h-9",
+                    descriptionLength > 0 && descriptionLength < minDescLength && "border-destructive focus-visible:ring-destructive"
+                  )}
+                  maxLength={100}
+                  {...register('description')}
+                />
+              </div>
+            );
+          })()}
           
           {/* 5. Facturable checkbox */}
           <div className="flex items-center space-x-2 pt-1">

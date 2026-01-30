@@ -12,7 +12,7 @@ import { createTimeEntry } from "@/services/timeTracking";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TimeEntryValueType } from "@/types";
-import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
 
 interface DayInlineAddFormProps {
   date: Date;
@@ -261,25 +261,30 @@ export function DayInlineAddForm({ date, onSuccess }: DayInlineAddFormProps) {
         </div>
 
         {/* Description */}
-        <div className="flex-1 min-w-[150px]">
-          <div className="flex justify-between">
-            <label className="text-xs text-muted-foreground">
-              Descripción {getFieldRequirement(selectedTaskType, 'description').label}
-            </label>
-            {description.trim().length > 0 && description.trim().length < 10 && (
-              <span className="text-xs text-destructive">{description.trim().length}/10</span>
-            )}
-          </div>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descripción..."
-            className={cn(
-              "h-9",
-              description.trim().length > 0 && description.trim().length < 10 && "border-destructive"
-            )}
-          />
-        </div>
+        {(() => {
+          const minDescLength = getMinDescriptionLength(selectedTaskType);
+          return (
+            <div className="flex-1 min-w-[150px]">
+              <div className="flex justify-between">
+                <label className="text-xs text-muted-foreground">
+                  Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+                </label>
+                {description.trim().length > 0 && description.trim().length < minDescLength && (
+                  <span className="text-xs text-destructive">{description.trim().length}/{minDescLength}</span>
+                )}
+              </div>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descripción..."
+                className={cn(
+                  "h-9",
+                  description.trim().length > 0 && description.trim().length < minDescLength && "border-destructive"
+                )}
+              />
+            </div>
+          );
+        })()}
 
         {/* Justification for past dates */}
         {isPastDate && (
