@@ -142,10 +142,11 @@ Deno.serve(async (req) => {
     const { error: auditError } = await supabaseClient
       .from('admin_audit_log')
       .insert({
-        action: 'user_deleted',
-        performed_by_user_id: currentUser.id,
+        action_type: 'user_deleted',
+        admin_user_id: currentUser.id,
         target_user_id: user_id,
-        details: {
+        target_user_email: targetUser.email,
+        new_values: {
           email: targetUser.email,
           full_name: targetUser.full_name,
           role: targetUser.role,

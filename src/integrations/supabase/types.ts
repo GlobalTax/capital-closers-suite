@@ -5068,78 +5068,6 @@ export type Database = {
           },
         ]
       }
-      contactos_backup_20260124: {
-        Row: {
-          apellidos: string | null
-          avatar: string | null
-          brevo_id: string | null
-          brevo_last_modified_at: string | null
-          brevo_synced_at: string | null
-          capittal_synced_at: string | null
-          cargo: string | null
-          created_at: string | null
-          email: string | null
-          empresa_principal_id: string | null
-          external_capittal_id: string | null
-          id: string | null
-          import_log_id: string | null
-          linkedin: string | null
-          merged_into_contacto_id: string | null
-          nombre: string | null
-          notas: string | null
-          source: string | null
-          telefono: string | null
-          updated_at: string | null
-          valuation_id: string | null
-        }
-        Insert: {
-          apellidos?: string | null
-          avatar?: string | null
-          brevo_id?: string | null
-          brevo_last_modified_at?: string | null
-          brevo_synced_at?: string | null
-          capittal_synced_at?: string | null
-          cargo?: string | null
-          created_at?: string | null
-          email?: string | null
-          empresa_principal_id?: string | null
-          external_capittal_id?: string | null
-          id?: string | null
-          import_log_id?: string | null
-          linkedin?: string | null
-          merged_into_contacto_id?: string | null
-          nombre?: string | null
-          notas?: string | null
-          source?: string | null
-          telefono?: string | null
-          updated_at?: string | null
-          valuation_id?: string | null
-        }
-        Update: {
-          apellidos?: string | null
-          avatar?: string | null
-          brevo_id?: string | null
-          brevo_last_modified_at?: string | null
-          brevo_synced_at?: string | null
-          capittal_synced_at?: string | null
-          cargo?: string | null
-          created_at?: string | null
-          email?: string | null
-          empresa_principal_id?: string | null
-          external_capittal_id?: string | null
-          id?: string | null
-          import_log_id?: string | null
-          linkedin?: string | null
-          merged_into_contacto_id?: string | null
-          nombre?: string | null
-          notas?: string | null
-          source?: string | null
-          telefono?: string | null
-          updated_at?: string | null
-          valuation_id?: string | null
-        }
-        Relationships: []
-      }
       content_analytics: {
         Row: {
           avg_time_on_page: number
@@ -20946,6 +20874,8 @@ export type Database = {
         | "fase0_bloqueado"
         | "mandato_propuesto"
         | "mandato_firmado"
+        | "lead_perdido_curiosidad"
+        | "ya_advisor"
       loss_reason_type:
         | "precio"
         | "competidor"
@@ -21185,6 +21115,8 @@ export const Constants = {
         "fase0_bloqueado",
         "mandato_propuesto",
         "mandato_firmado",
+        "lead_perdido_curiosidad",
+        "ya_advisor",
       ],
       loss_reason_type: [
         "precio",
