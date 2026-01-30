@@ -1,172 +1,222 @@
 
-## Plan: Aplicar Reglas Dinámicas en Formularios de Horas
+## Plan: Corrección de Errores de Seguridad
 
-### Estado Actual
+### Resumen del Análisis
 
-La validación dinámica ya está integrada en 5 de 6 formularios. El problema principal es que:
+Se detectaron **129 issues de seguridad** en el proyecto, categorizados por severidad:
 
-1. **`validateByTaskType` usa longitud mínima hardcodeada (10)** en vez de `taskType.min_description_length`
-2. **`QuickTimeEntryModal`** no usa validación dinámica
-3. Los mensajes de error no muestran la longitud mínima configurada
-
----
-
-### Cambios Requeridos
-
-#### 1. Actualizar `validateByTaskType` para usar `min_description_length`
-
-**Archivo: `src/lib/taskTypeValidation.ts`**
-
-```typescript
-// Línea 45: Cambiar hardcoded 10 → taskType.min_description_length
-if (taskType.require_description) {
-  const trimmed = values.description.trim();
-  const minLength = taskType.min_description_length ?? 10;
-  
-  if (trimmed.length === 0) {
-    errors.push('Descripción es obligatoria para este tipo de tarea');
-  } else if (trimmed.length < minLength) {
-    errors.push(`Descripción debe tener al menos ${minLength} caracteres`);
-  }
-}
-```
-
-**Añadir helper para obtener la longitud mínima:**
-
-```typescript
-export function getMinDescriptionLength(taskType: WorkTaskType | undefined): number {
-  return taskType?.min_description_length ?? 10;
-}
-```
+| Severidad | Cantidad | Tipo Principal |
+|-----------|----------|----------------|
+| CRITICAL | 3 | Datos expuestos sin RLS, tabla backup pública |
+| ERROR | 10 | Vistas con SECURITY DEFINER |
+| WARN | ~116 | Funciones sin search_path, políticas RLS permisivas |
 
 ---
 
-#### 2. Actualizar Formularios para Mostrar Longitud Mínima Dinámica
+### Fase 1: Issues Críticos (Prioridad Inmediata)
 
-Los formularios ya validan correctamente, pero los contadores muestran "/10" hardcodeado. Necesitan:
+#### 1.1 Tabla Backup sin RLS - 147,934 Registros Expuestos
 
-| Archivo | Cambio |
-|---------|--------|
-| `TimeEntryInlineForm.tsx` | Usar `getMinDescriptionLength(selectedTaskType)` en contador |
-| `TimeTrackingDialog.tsx` | Usar `getMinDescriptionLength(selectedTaskType)` en contador |
-| `TimerAssignmentDialog.tsx` | Usar `getMinDescriptionLength(selectedTaskType)` en contador |
-| `DayInlineAddForm.tsx` | Usar `getMinDescriptionLength(selectedTaskType)` en contador |
-| `EditableTimeEntryRow.tsx` | Usar `getMinDescriptionLength(selectedTaskType)` en contador |
+**Problema:** `contactos_backup_20260124` contiene 147,934 contactos con emails, teléfonos y datos personales sin ninguna protección RLS.
 
-**Ejemplo de cambio en cada formulario:**
+**Solución:** Eliminar la tabla backup (los datos ya están en `contactos` original).
 
-```typescript
-// Importar helper
-import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
+```sql
+DROP TABLE IF EXISTS public.contactos_backup_20260124;
+```
 
-// En el contador (ejemplo TimeEntryInlineForm línea 461-462):
-// ANTES:
-{description.trim().length > 0 && description.trim().length < 10 && (
-  <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
-)}
+**Alternativa (si necesita mantenerla):**
+```sql
+ALTER TABLE contactos_backup_20260124 ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Solo super_admin lee backups" ON contactos_backup_20260124
+  FOR SELECT USING (public.current_user_role() = 'super_admin');
+```
 
-// DESPUÉS:
-const minDescLength = getMinDescriptionLength(selectedTaskType);
-{description.trim().length > 0 && description.trim().length < minDescLength && (
-  <span className="text-xs text-destructive">{description.trim().length}/{minDescLength} mín</span>
-)}
+#### 1.2 Datos de Consultas de Adquisición Públicos
+
+**Problema:** `company_acquisition_inquiries` expone nombres, emails, teléfonos de interesados en comprar empresas.
+
+**Solución:** Verificar y reforzar RLS para que solo admins lean estos datos.
+
+```sql
+-- Verificar política actual y crear si no existe
+CREATE POLICY "Solo admins leen inquiries" ON company_acquisition_inquiries
+  FOR SELECT USING (public.current_user_can_read());
 ```
 
 ---
 
-#### 3. Integrar Validación en `QuickTimeEntryModal`
+### Fase 2: Vistas con SECURITY DEFINER (10 Errores)
 
-**Archivo: `src/components/leads/QuickTimeEntryModal.tsx`**
+**Problema:** Las vistas con SECURITY DEFINER usan los permisos del creador, no del usuario consultante, bypasseando RLS.
 
-Este formulario es especial (para leads), pero debe usar validación dinámica:
+**Vistas afectadas:**
+- `mandato_time_summary`
+- `task_time_summary`
+- `v_active_alerts`
+- `v_admin_users_safe`
+- `v_api_usage_monthly`
+- `v_brevo_sync_status`
+- `v_cr_portfolio_con_actividad`
+- `v_documentos_con_versiones`
+- `v_email_queue_stats`
+- `vw_mandate_pipeline`
+- (y más...)
 
+**Solución:** Recrear cada vista con `security_invoker = true`:
+
+```sql
+-- Ejemplo para v_mandatos_stuck
+DROP VIEW IF EXISTS public.v_mandatos_stuck;
+CREATE VIEW public.v_mandatos_stuck 
+WITH (security_invoker = true)
+AS
+SELECT m.id, m.tipo, ...
+FROM mandatos m
+JOIN pipeline_stages ps ON ps.stage_key = m.pipeline_stage
+WHERE m.estado NOT IN ('cerrado', 'cancelado') 
+  AND m.last_activity_at < now() - interval '30 days'
+ORDER BY EXTRACT(day FROM now() - m.last_activity_at) DESC;
+
+-- Repetir para cada vista
+```
+
+---
+
+### Fase 3: Funciones sin search_path (23 Warnings)
+
+**Problema:** Funciones sin `search_path` explícito son vulnerables a ataques de schema poisoning.
+
+**Funciones afectadas:**
+- `auto_link_valuation_to_crm`
+- `create_document_version`
+- `create_mandato_folder_structure`
+- `get_lead_ai_stats`
+- `link_valuation_to_empresa`
+- `log_campaign_cost_change`
+- `normalize_company_name`
+- Y otras...
+
+**Solución:** Agregar `SET search_path = public` a cada función:
+
+```sql
+-- Ejemplo para normalize_company_name
+CREATE OR REPLACE FUNCTION public.normalize_company_name(name text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT ... -- lógica existente
+$$;
+```
+
+---
+
+### Fase 4: Audit Log con Columnas Incorrectas
+
+**Problema:** El Edge Function `delete-admin-user` usa columnas incorrectas para insertar en `admin_audit_log`:
+
+| Columna usada | Columna correcta |
+|---------------|------------------|
+| `action` | `action_type` |
+| `performed_by_user_id` | `admin_user_id` |
+| `details` | `new_values` |
+
+**Archivo:** `supabase/functions/delete-admin-user/index.ts` (líneas 142-154)
+
+**Corrección:**
 ```typescript
-// Añadir imports
-import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
-import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
-
-// Añadir estado para workTaskTypeId seleccionado
-const [selectedWorkTaskTypeId, setSelectedWorkTaskTypeId] = useState('');
-const { data: workTaskTypes = [] } = useFilteredWorkTaskTypes(selectedMandatoId || PROSPECCION_MANDATO_ID);
-const selectedTaskType = workTaskTypes.find(t => t.id === selectedWorkTaskTypeId);
-
-// En handleSubmit, añadir validación dinámica
-if (selectedTaskType) {
-  const validation = validateByTaskType(selectedTaskType, {
-    mandatoId: selectedMandatoId || PROSPECCION_MANDATO_ID,
-    leadId: lead.id,
-    description
+const { error: auditError } = await supabaseClient
+  .from('admin_audit_log')
+  .insert({
+    action_type: 'user_deleted',           // CORREGIDO
+    admin_user_id: currentUser.id,         // CORREGIDO
+    target_user_id: user_id,
+    target_user_email: targetUser.email,   // AÑADIDO
+    new_values: {                          // CORREGIDO
+      email: targetUser.email,
+      full_name: targetUser.full_name,
+      role: targetUser.role,
+      deleted_at: new Date().toISOString(),
+    },
   });
-  
-  if (!validation.isValid) {
-    toast.error(validation.errors.join('. '));
-    return;
-  }
-}
 ```
 
 ---
 
-### Flujo de Validación
+### Fase 5: Políticas RLS Permisivas (~80 Warnings)
+
+**Problema:** Múltiples políticas usan `WITH CHECK (true)` o `USING (true)` para INSERT/UPDATE/DELETE.
+
+**Tablas afectadas (muestra):**
+- `admin_users` (service_role_policy con ALL = true)
+- `brevo_sync_log` (update con true)
+- `buyer_contacts` (update con true)
+- `campaigns` (insert/update/delete con true)
+- `email_outbox` (service role ALL con true)
+
+**Solución:** Reemplazar `true` con verificaciones de rol:
+
+```sql
+-- Ejemplo para campaigns
+DROP POLICY IF EXISTS "Authenticated users can create campaigns" ON campaigns;
+CREATE POLICY "Admins can create campaigns" ON campaigns
+  FOR INSERT WITH CHECK (public.current_user_can_write());
+
+DROP POLICY IF EXISTS "Authenticated users can update campaigns" ON campaigns;
+CREATE POLICY "Admins can update campaigns" ON campaigns
+  FOR UPDATE USING (public.current_user_can_write());
+```
+
+---
+
+### Fase 6: Endpoint de Invitación sin Rate Limiting
+
+**Problema:** `validate-invitation-token` expone email, nombre y rol sin autenticación, vulnerable a enumeración.
+
+**Mitigación recomendada:**
+1. Añadir rate limiting (máx 5 intentos/minuto por IP)
+2. No exponer el rol en la respuesta
+3. Logging de intentos fallidos
+
+---
+
+### Orden de Implementación Recomendado
 
 ```text
-Usuario selecciona tipo de tarea
-        │
-        ▼
-┌─────────────────────────────────────┐
-│ selectedTaskType = workTaskTypes    │
-│   .find(t => t.id === workTaskTypeId)│
-└─────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────┐
-│ validateByTaskType(selectedTaskType,│
-│   { mandatoId, leadId, description })│
-└─────────────────────────────────────┘
-        │
-        ▼
-┌─────────────────────────────────────────────────────┐
-│ Si require_mandato && !mandatoId → Error            │
-│ Si require_lead && !leadId → Error                  │
-│ Si require_description:                             │
-│   - Si vacío → Error                                │
-│   - Si length < min_description_length → Error      │
-└─────────────────────────────────────────────────────┘
+Día 1 - Críticos (Alto impacto, bajo esfuerzo)
+├── 1. DROP contactos_backup_20260124
+├── 2. Fix delete-admin-user audit log
+└── 3. RLS en company_acquisition_inquiries
+
+Día 2-3 - Vistas (Medio impacto, medio esfuerzo)
+└── 4. Recrear 22 vistas con security_invoker
+
+Día 4-5 - Funciones (Bajo impacto, medio esfuerzo)
+└── 5. Añadir search_path a 23 funciones
+
+Día 6+ - Políticas RLS (Variable)
+└── 6. Revisar y reforzar ~80 políticas
 ```
 
 ---
 
 ### Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/lib/taskTypeValidation.ts` | Usar `min_description_length`, añadir `getMinDescriptionLength` helper |
-| `src/components/mandatos/TimeEntryInlineForm.tsx` | Usar longitud mínima dinámica en contador |
-| `src/components/mandatos/TimeTrackingDialog.tsx` | Usar longitud mínima dinámica en contador |
-| `src/components/timer/TimerAssignmentDialog.tsx` | Usar longitud mínima dinámica en contador |
-| `src/components/mandatos/DayInlineAddForm.tsx` | Usar longitud mínima dinámica en contador |
-| `src/components/mandatos/EditableTimeEntryRow.tsx` | Usar longitud mínima dinámica en contador |
-| `src/components/leads/QuickTimeEntryModal.tsx` | Integrar validación dinámica completa |
+| Archivo | Cambio |
+|---------|--------|
+| `supabase/functions/delete-admin-user/index.ts` | Corregir nombres de columnas audit log |
+| Nueva migración SQL | DROP backup, recrear vistas, fix funciones |
 
 ---
 
-### Criterios de Aceptación
+### Notas Técnicas
 
-- La longitud mínima de descripción se lee de `taskType.min_description_length`
-- Los contadores de caracteres muestran la longitud mínima configurada
-- `QuickTimeEntryModal` valida según el tipo de tarea seleccionado
-- Los mensajes de error indican la longitud mínima correcta
-- Tipos de tarea inactivos no aparecen en selectores (ya implementado via `useFilteredWorkTaskTypes`)
+**Por qué `security_invoker = true` en vistas:**
+- Con `security_definer` (default), la vista usa permisos del creador (postgres/service_role)
+- Esto bypasea completamente RLS de las tablas subyacentes
+- Con `security_invoker`, la vista respeta RLS del usuario que consulta
 
----
-
-### Sección Técnica
-
-**Por qué centralizar en `validateByTaskType`:**
-- Evita duplicar lógica en 6 formularios
-- Cambios futuros en reglas se aplican en un solo lugar
-- Consistencia garantizada en todos los puntos de entrada
-
-**Compatibilidad:**
-- Si `min_description_length` es `null`/`undefined`, se usa fallback de 10
-- Los tipos existentes funcionan con los defaults de la migración (20 caracteres)
+**Actualización de Postgres recomendada:**
+El linter detectó que hay parches de seguridad disponibles para la versión actual de Postgres. Se recomienda actualizar desde el dashboard de Supabase: Settings > Infrastructure > Upgrade Postgres.
