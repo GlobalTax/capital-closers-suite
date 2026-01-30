@@ -575,12 +575,46 @@ export const deleteTimeEntry = async (id: string): Promise<void> => {
   console.log('[deleteTimeEntry] Eliminado correctamente');
 };
 
+// ============================================
+// WORKFLOW STATUS UPDATES (No edit_reason required)
+// These are workflow operations, NOT content edits
+// ============================================
+
+/**
+ * Internal function for workflow status updates ONLY.
+ * Does NOT require edit_reason as these are workflow operations, not content edits.
+ * Does NOT increment edit_count or modify audit fields.
+ */
+const updateTimeEntryStatus = async (
+  id: string,
+  workflowUpdates: {
+    status?: string;
+    approved_by?: string;
+    approved_at?: string;
+    rejection_reason?: string;
+    end_time?: string;
+  }
+): Promise<TimeEntry> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  const { data, error } = await supabase
+    .from('mandato_time_entries')
+    .update(workflowUpdates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as TimeEntry;
+};
+
 export const submitTimeEntry = async (id: string): Promise<TimeEntry> => {
-  return updateTimeEntry(id, { status: 'submitted' });
+  return updateTimeEntryStatus(id, { status: 'submitted' });
 };
 
 export const approveTimeEntry = async (id: string, userId: string): Promise<TimeEntry> => {
-  return updateTimeEntry(id, {
+  return updateTimeEntryStatus(id, {
     status: 'approved',
     approved_by: userId,
     approved_at: new Date().toISOString()
@@ -588,7 +622,7 @@ export const approveTimeEntry = async (id: string, userId: string): Promise<Time
 };
 
 export const rejectTimeEntry = async (id: string, reason: string): Promise<TimeEntry> => {
-  return updateTimeEntry(id, {
+  return updateTimeEntryStatus(id, {
     status: 'rejected',
     rejection_reason: reason
   });
@@ -651,9 +685,8 @@ export const startTimer = async (
 };
 
 export const stopTimer = async (id: string): Promise<TimeEntry> => {
-  const endTime = new Date().toISOString();
-  return updateTimeEntry(id, {
-    end_time: endTime
+  return updateTimeEntryStatus(id, {
+    end_time: new Date().toISOString()
   });
 };
 

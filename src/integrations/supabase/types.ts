@@ -229,6 +229,8 @@ export type Database = {
           last_campaign_name: string | null
           last_email_click_at: string | null
           lead_form: string | null
+          lead_received_at: string | null
+          lead_status_crm: string | null
           phone: string | null
           referrer: string | null
           sectors_of_interest: string | null
@@ -295,6 +297,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           phone?: string | null
           referrer?: string | null
           sectors_of_interest?: string | null
@@ -361,6 +365,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           phone?: string | null
           referrer?: string | null
           sectors_of_interest?: string | null
@@ -1129,6 +1135,15 @@ export type Database = {
       advisor_valuations: {
         Row: {
           acquisition_channel_id: string | null
+          ai_business_model_tags: string[] | null
+          ai_classification_at: string | null
+          ai_classification_confidence: number | null
+          ai_company_summary: string | null
+          ai_company_summary_at: string | null
+          ai_negative_tags: string[] | null
+          ai_sector_name: string | null
+          ai_sector_pe: string | null
+          ai_tags: string[] | null
           apollo_candidates: Json | null
           apollo_error: string | null
           apollo_last_enriched_at: string | null
@@ -1157,6 +1172,8 @@ export type Database = {
           id: string
           ip_address: string | null
           lead_form: string | null
+          lead_received_at: string | null
+          lead_status_crm: string | null
           pdf_url: string | null
           phone: string | null
           phone_e164: string | null
@@ -1172,6 +1189,15 @@ export type Database = {
         }
         Insert: {
           acquisition_channel_id?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -1200,6 +1226,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           pdf_url?: string | null
           phone?: string | null
           phone_e164?: string | null
@@ -1215,6 +1243,15 @@ export type Database = {
         }
         Update: {
           acquisition_channel_id?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -1243,6 +1280,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           pdf_url?: string | null
           phone?: string | null
           phone_e164?: string | null
@@ -3311,6 +3350,15 @@ export type Database = {
       collaborator_applications: {
         Row: {
           acquisition_channel_id: string | null
+          ai_business_model_tags: string[] | null
+          ai_classification_at: string | null
+          ai_classification_confidence: number | null
+          ai_company_summary: string | null
+          ai_company_summary_at: string | null
+          ai_negative_tags: string[] | null
+          ai_sector_name: string | null
+          ai_sector_pe: string | null
+          ai_tags: string[] | null
           apollo_candidates: Json | null
           apollo_error: string | null
           apollo_last_enriched_at: string | null
@@ -3353,7 +3401,8 @@ export type Database = {
           last_campaign_name: string | null
           last_email_click_at: string | null
           lead_form: string | null
-          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
+          lead_received_at: string | null
+          lead_status_crm: string | null
           motivation: string | null
           notes: string | null
           phone: string
@@ -3365,6 +3414,15 @@ export type Database = {
         }
         Insert: {
           acquisition_channel_id?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -3407,7 +3465,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           motivation?: string | null
           notes?: string | null
           phone: string
@@ -3419,6 +3478,15 @@ export type Database = {
         }
         Update: {
           acquisition_channel_id?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -3461,7 +3529,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           motivation?: string | null
           notes?: string | null
           phone?: string
@@ -3506,6 +3575,15 @@ export type Database = {
         Row: {
           acquisition_channel_id: string | null
           acquisition_type: string | null
+          ai_business_model_tags: string[] | null
+          ai_classification_at: string | null
+          ai_classification_confidence: number | null
+          ai_company_summary: string | null
+          ai_company_summary_at: string | null
+          ai_negative_tags: string[] | null
+          ai_sector_name: string | null
+          ai_sector_pe: string | null
+          ai_tags: string[] | null
           apollo_candidates: Json | null
           apollo_error: string | null
           apollo_last_enriched_at: string | null
@@ -3546,6 +3624,8 @@ export type Database = {
           last_campaign_name: string | null
           last_email_click_at: string | null
           lead_form: string | null
+          lead_received_at: string | null
+          lead_status_crm: string | null
           message: string | null
           notes: string | null
           page_origin: string
@@ -3569,6 +3649,15 @@ export type Database = {
         Insert: {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -3609,6 +3698,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           message?: string | null
           notes?: string | null
           page_origin?: string
@@ -3632,6 +3723,15 @@ export type Database = {
         Update: {
           acquisition_channel_id?: string | null
           acquisition_type?: string | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           apollo_candidates?: Json | null
           apollo_error?: string | null
           apollo_last_enriched_at?: string | null
@@ -3672,6 +3772,8 @@ export type Database = {
           last_campaign_name?: string | null
           last_email_click_at?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           message?: string | null
           notes?: string | null
           page_origin?: string
@@ -4080,9 +4182,10 @@ export type Database = {
           last_modified_field: string | null
           lead_entry_date: string | null
           lead_form: string | null
+          lead_received_at: string | null
           lead_source: string | null
           lead_source_detail: string | null
-          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm: string | null
           location: string | null
           net_profit_margin: number | null
           notes: string | null
@@ -4100,6 +4203,7 @@ export type Database = {
           token_hash: string | null
           token_used_at: string | null
           unique_token: string | null
+          updated_at: string | null
           user_agent: string | null
           user_id: string | null
           utm_campaign: string | null
@@ -4201,9 +4305,10 @@ export type Database = {
           last_modified_field?: string | null
           lead_entry_date?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
           lead_source?: string | null
           lead_source_detail?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm?: string | null
           location?: string | null
           net_profit_margin?: number | null
           notes?: string | null
@@ -4221,6 +4326,7 @@ export type Database = {
           token_hash?: string | null
           token_used_at?: string | null
           unique_token?: string | null
+          updated_at?: string | null
           user_agent?: string | null
           user_id?: string | null
           utm_campaign?: string | null
@@ -4322,9 +4428,10 @@ export type Database = {
           last_modified_field?: string | null
           lead_entry_date?: string | null
           lead_form?: string | null
+          lead_received_at?: string | null
           lead_source?: string | null
           lead_source_detail?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm?: string | null
           location?: string | null
           net_profit_margin?: number | null
           notes?: string | null
@@ -4342,6 +4449,7 @@ export type Database = {
           token_hash?: string | null
           token_used_at?: string | null
           unique_token?: string | null
+          updated_at?: string | null
           user_agent?: string | null
           user_id?: string | null
           utm_campaign?: string | null
@@ -4493,7 +4601,7 @@ export type Database = {
           lead_entry_date: string | null
           lead_form: string | null
           lead_received_at: string | null
-          lead_status_crm: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm: string | null
           notes: string | null
           phone: string | null
           referral: string | null
@@ -4573,7 +4681,7 @@ export type Database = {
           lead_entry_date?: string | null
           lead_form?: string | null
           lead_received_at?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm?: string | null
           notes?: string | null
           phone?: string | null
           referral?: string | null
@@ -4653,7 +4761,7 @@ export type Database = {
           lead_entry_date?: string | null
           lead_form?: string | null
           lead_received_at?: string | null
-          lead_status_crm?: Database["public"]["Enums"]["lead_status"] | null
+          lead_status_crm?: string | null
           notes?: string | null
           phone?: string | null
           referral?: string | null
@@ -8523,6 +8631,8 @@ export type Database = {
           ip_address: unknown
           is_deleted: boolean | null
           lead_form: string | null
+          lead_received_at: string | null
+          lead_status_crm: string | null
           message: string
           notes: string | null
           page_origin: string
@@ -8580,6 +8690,8 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           message: string
           notes?: string | null
           page_origin: string
@@ -8637,6 +8749,8 @@ export type Database = {
           ip_address?: unknown
           is_deleted?: boolean | null
           lead_form?: string | null
+          lead_received_at?: string | null
+          lead_status_crm?: string | null
           message?: string
           notes?: string | null
           page_origin?: string
@@ -20023,6 +20137,39 @@ export type Database = {
           revenue_multiple_median?: number | null
           revenue_multiple_min?: number | null
           sector_name?: string | null
+        }
+        Relationships: []
+      }
+      v_status_transitions: {
+        Row: {
+          change_source: string | null
+          created_at: string | null
+          created_by: string | null
+          from_status: string | null
+          id: string | null
+          lead_id: string | null
+          lead_type: string | null
+          to_status: string | null
+        }
+        Insert: {
+          change_source?: never
+          created_at?: string | null
+          created_by?: string | null
+          from_status?: never
+          id?: string | null
+          lead_id?: string | null
+          lead_type?: string | null
+          to_status?: never
+        }
+        Update: {
+          change_source?: never
+          created_at?: string | null
+          created_by?: string | null
+          from_status?: never
+          id?: string | null
+          lead_id?: string | null
+          lead_type?: string | null
+          to_status?: never
         }
         Relationships: []
       }
