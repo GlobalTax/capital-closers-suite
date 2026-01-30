@@ -65,8 +65,10 @@ export function useFilteredWorkTaskTypes(mandatoId: string | null) {
     }
     
     if (INTERNAL_PROJECT_IDS.includes(mandatoId)) {
-      // Internal projects: show only 'all' context types (no specific internal types)
-      return workTaskTypes.filter(t => t.context === 'all');
+      // Internal projects: show 'internal' + 'all' context types
+      return workTaskTypes.filter(t => 
+        t.context === 'internal' || t.context === 'all'
+      );
     }
     
     // Regular mandatos: show 'mandate' + 'all' context types

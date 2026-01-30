@@ -4934,6 +4934,7 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean
+          is_prospect_stage: boolean
           is_system: boolean
           label: string
           position: number
@@ -4946,6 +4947,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_prospect_stage?: boolean
           is_system?: boolean
           label: string
           position?: number
@@ -4958,6 +4960,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_prospect_stage?: boolean
           is_system?: boolean
           label?: string
           position?: number
