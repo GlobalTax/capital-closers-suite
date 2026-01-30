@@ -19,7 +19,7 @@ import { LeadByMandatoSelect, type SelectedLeadData, type ProspectForTimeEntry }
 import type { TimeEntryValueType } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
 import type { MandatoChecklistTask } from "@/types";
-import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
 
 interface TimeTrackingDialogProps {
   open: boolean;
@@ -459,18 +459,29 @@ export function TimeTrackingDialog({
           </div>
 
           {/* Description - Simple Input */}
-          <div>
-            <Label className="text-sm font-medium">
-              Descripción {getFieldRequirement(selectedTaskType, 'description').label}
-            </Label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Breve descripción del trabajo"
-              maxLength={100}
-              className="mt-1.5"
-            />
-          </div>
+          {(() => {
+            const minDescLength = getMinDescriptionLength(selectedTaskType);
+            const descLength = description.trim().length;
+            return (
+              <div>
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm font-medium">
+                    Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+                  </Label>
+                  {descLength > 0 && descLength < minDescLength && (
+                    <span className="text-xs text-destructive">{descLength}/{minDescLength} mín</span>
+                  )}
+                </div>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Breve descripción del trabajo"
+                  maxLength={100}
+                  className={`mt-1.5 ${descLength > 0 && descLength < minDescLength ? 'border-destructive' : ''}`}
+                />
+              </div>
+            );
+          })()}
 
           {/* Billable Checkbox */}
           <div className="flex items-center space-x-2">

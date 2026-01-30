@@ -28,7 +28,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TimeEntry } from "@/types";
-import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
 
 interface EditableTimeEntryRowProps {
   entry: TimeEntry;
@@ -380,25 +380,30 @@ export function EditableTimeEntryRow({
 
         {/* Description row */}
         <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <div className="flex justify-between">
-              <label className="text-xs text-muted-foreground">
-                Descripción {getFieldRequirement(selectedTaskType, 'description').label}
-              </label>
-              {description.trim().length > 0 && description.trim().length < 10 && (
-                <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
-              )}
-            </div>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descripción del trabajo..."
-              className={cn(
-                "h-9",
-                description.trim().length > 0 && description.trim().length < 10 && "border-destructive"
-              )}
-            />
-          </div>
+          {(() => {
+            const minDescLength = getMinDescriptionLength(selectedTaskType);
+            return (
+              <div className="flex-1">
+                <div className="flex justify-between">
+                  <label className="text-xs text-muted-foreground">
+                    Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+                  </label>
+                  {description.trim().length > 0 && description.trim().length < minDescLength && (
+                    <span className="text-xs text-destructive">{description.trim().length}/{minDescLength} mín</span>
+                  )}
+                </div>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descripción del trabajo..."
+                  className={cn(
+                    "h-9",
+                    description.trim().length > 0 && description.trim().length < minDescLength && "border-destructive"
+                  )}
+                />
+              </div>
+            );
+          })()}
 
           {/* Save/Cancel buttons */}
           <div className="flex items-center gap-2">

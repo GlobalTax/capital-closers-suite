@@ -20,7 +20,7 @@ import { useDailyPlanValidation } from "@/hooks/useDailyPlanValidation";
 import { DailyPlanBlocker } from "@/components/plans/DailyPlanBlocker";
 import type { TimeEntryValueType, MandatoChecklistTask } from "@/types";
 import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
-import { validateByTaskType, getFieldRequirement } from "@/lib/taskTypeValidation";
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
 
 interface TimeEntryInlineFormProps {
   onSuccess?: () => void;
@@ -454,26 +454,33 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
 
         {/* Description */}
         <div className="flex-1 min-w-[180px]">
-          <div className="flex justify-between items-center">
-            <Label className="text-xs text-muted-foreground">
-              Descripción {getFieldRequirement(selectedTaskType, 'description').label}
-            </Label>
-            {description.trim().length > 0 && description.trim().length < 10 && (
-              <span className="text-xs text-destructive">{description.trim().length}/10 mín</span>
-            )}
-          </div>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Breve descripción..."
-            maxLength={100}
-            className={`h-9 ${description.trim().length > 0 && description.trim().length < 10 ? 'border-destructive' : ''}`}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && isValid) {
-                handleSubmit(e);
-              }
-            }}
-          />
+          {(() => {
+            const minDescLength = getMinDescriptionLength(selectedTaskType);
+            return (
+              <>
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-muted-foreground">
+                    Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+                  </Label>
+                  {description.trim().length > 0 && description.trim().length < minDescLength && (
+                    <span className="text-xs text-destructive">{description.trim().length}/{minDescLength} mín</span>
+                  )}
+                </div>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Breve descripción..."
+                  maxLength={100}
+                  className={`h-9 ${description.trim().length > 0 && description.trim().length < minDescLength ? 'border-destructive' : ''}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && isValid) {
+                      handleSubmit(e);
+                    }
+                  }}
+                />
+              </>
+            );
+          })()}
         </div>
 
         {/* Submit Button */}

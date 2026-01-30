@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createTimeEntry } from "@/services/timeTracking";
 import { ensureLeadInMandateLeads, updateLeadLastActivity } from "@/services/leadActivities";
+import { useFilteredWorkTaskTypes } from "@/hooks/useWorkTaskTypes";
+import { validateByTaskType, getFieldRequirement, getMinDescriptionLength } from "@/lib/taskTypeValidation";
 
 interface QuickTimeEntryModalProps {
   open: boolean;
@@ -70,6 +72,10 @@ export function QuickTimeEntryModal({
   const [scheduleFollowup, setScheduleFollowup] = useState(false);
   const [followupDays, setFollowupDays] = useState('7');
   const [selectedMandatoId, setSelectedMandatoId] = useState<string>('');
+  const [selectedWorkTaskTypeId, setSelectedWorkTaskTypeId] = useState<string>('');
+
+  // Effective mandato for filtering work task types
+  const effectiveMandatoId = selectedMandatoId || PROSPECCION_MANDATO_ID;
 
   // Fetch available mandatos for selection
   const { data: mandatos = [] } = useQuery({
@@ -87,25 +93,51 @@ export function QuickTimeEntryModal({
     },
   });
 
-  // Fetch work task types
-  const { data: workTaskTypes = [] } = useQuery({
-    queryKey: ['work-task-types'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('work_task_types')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-      
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Fetch work task types filtered by mandato context
+  const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(effectiveMandatoId);
+
+  // Get selected task type for dynamic validation
+  const selectedTaskType = workTaskTypes.find(t => t.id === selectedWorkTaskTypeId);
+
+  // Get min description length
+  const minDescLength = getMinDescriptionLength(selectedTaskType);
+
+  // Reset work task type when mandato changes
+  useEffect(() => {
+    setSelectedWorkTaskTypeId('');
+  }, [selectedMandatoId]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setActivityType(preselectedType);
+      setDurationMinutes(30);
+      setCustomDuration('');
+      setDescription('');
+      setScheduleFollowup(false);
+      setFollowupDays('7');
+      setSelectedMandatoId('');
+      setSelectedWorkTaskTypeId('');
+    }
+  }, [open, preselectedType]);
 
   const mutation = useMutation({
     mutationFn: async () => {
       const mandatoId = selectedMandatoId || PROSPECCION_MANDATO_ID;
       const duration = customDuration ? parseInt(customDuration) : durationMinutes;
+
+      // Dynamic validation based on selected task type
+      if (selectedTaskType) {
+        const validation = validateByTaskType(selectedTaskType, {
+          mandatoId,
+          leadId: lead.id,
+          description
+        });
+        
+        if (!validation.isValid) {
+          throw new Error(validation.errors.join('. '));
+        }
+      }
 
       // Ensure the lead exists in mandate_leads
       const mandateLeadId = await ensureLeadInMandateLeads(
@@ -120,16 +152,6 @@ export function QuickTimeEntryModal({
         }
       );
 
-      // Find the work task type for the activity
-      const activityTypeMap: Record<string, string> = {
-        llamada: 'Llamadas',
-        videollamada: 'Reuniones',
-        reunion: 'Reuniones',
-      };
-      const workTaskType = workTaskTypes.find(
-        wtt => wtt.name.toLowerCase().includes(activityTypeMap[activityType]?.toLowerCase() || '')
-      );
-
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No hay usuario autenticado');
@@ -139,7 +161,7 @@ export function QuickTimeEntryModal({
         user_id: user.id,
         mandato_id: mandatoId,
         mandate_lead_id: mandateLeadId,
-        work_task_type_id: workTaskType?.id,
+        work_task_type_id: selectedWorkTaskTypeId || undefined,
         start_time: new Date().toISOString(),
         duration_minutes: duration,
         description: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad'}: ${description}`.substring(0, 500),
@@ -159,23 +181,12 @@ export function QuickTimeEntryModal({
       queryClient.invalidateQueries({ queryKey: ['lead-activities'] });
       toast.success('Actividad registrada correctamente');
       onOpenChange(false);
-      resetForm();
     },
     onError: (error: any) => {
       console.error('Error registering activity:', error);
       toast.error(error.message || 'Error al registrar la actividad');
     },
   });
-
-  const resetForm = () => {
-    setActivityType(preselectedType);
-    setDurationMinutes(30);
-    setCustomDuration('');
-    setDescription('');
-    setScheduleFollowup(false);
-    setFollowupDays('7');
-    setSelectedMandatoId('');
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +197,13 @@ export function QuickTimeEntryModal({
       return;
     }
 
+    // Basic description validation before dynamic validation
+    const trimmedDesc = description.trim();
+    if (selectedTaskType?.require_description && trimmedDesc.length < minDescLength) {
+      toast.error(`La descripción debe tener al menos ${minDescLength} caracteres`);
+      return;
+    }
+
     mutation.mutate();
   };
 
@@ -193,6 +211,8 @@ export function QuickTimeEntryModal({
     setDurationMinutes(minutes);
     setCustomDuration('');
   };
+
+  const descriptionLength = description.trim().length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -276,14 +296,43 @@ export function QuickTimeEntryModal({
             </Select>
           </div>
 
+          {/* Work Task Type Selection */}
+          <div className="space-y-2">
+            <Label>Tipo de tarea {selectedWorkTaskTypeId ? '' : '(opcional)'}</Label>
+            <Select 
+              value={selectedWorkTaskTypeId} 
+              onValueChange={setSelectedWorkTaskTypeId}
+              disabled={loadingWorkTaskTypes}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingWorkTaskTypes ? "Cargando..." : "Seleccionar tipo de tarea"} />
+              </SelectTrigger>
+              <SelectContent>
+                {workTaskTypes.map((taskType) => (
+                  <SelectItem key={taskType.id} value={taskType.id}>
+                    {taskType.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Description */}
           <div className="space-y-2">
-            <Label>Descripción</Label>
+            <div className="flex justify-between items-center">
+              <Label>
+                Descripción {getFieldRequirement(selectedTaskType, 'description').label}
+              </Label>
+              {descriptionLength > 0 && descriptionLength < minDescLength && (
+                <span className="text-xs text-destructive">{descriptionLength}/{minDescLength} mín</span>
+              )}
+            </div>
             <Textarea
               placeholder="Notas sobre la actividad..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              className={descriptionLength > 0 && descriptionLength < minDescLength ? 'border-destructive' : ''}
             />
           </div>
 
