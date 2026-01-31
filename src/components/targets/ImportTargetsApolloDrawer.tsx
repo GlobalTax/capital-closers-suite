@@ -17,9 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -359,71 +366,74 @@ export function ImportTargetsApolloDrawer({
                 </Button>
               </div>
 
-              {/* Lista de resultados */}
+              {/* Lista de resultados en tabla */}
               <ScrollArea className="h-[400px]">
-                <div className="space-y-2">
-                  {prospects.map((prospect, i) => {
-                    const orgName = prospect.organization?.name || `Empresa ${i + 1}`;
-                    const isSelected = selectedIds.has(orgName);
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={selectedIds.size === prospects.length && prospects.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Sector</TableHead>
+                      <TableHead>País</TableHead>
+                      <TableHead>Empleados</TableHead>
+                      <TableHead className="w-10">Web</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prospects.map((prospect, i) => {
+                      const orgName = prospect.organization?.name || `Empresa ${i + 1}`;
+                      const isSelected = selectedIds.has(orgName);
 
-                    return (
-                      <Card 
-                        key={orgName}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
-                        }`}
-                        onClick={() => toggleSelection(orgName)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-3">
-                            <Checkbox 
+                      return (
+                        <TableRow
+                          key={orgName}
+                          className={`cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                          onClick={() => toggleSelection(orgName)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => toggleSelection(orgName)}
-                              className="mt-1"
                             />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                                <span className="font-medium truncate">{orgName}</span>
-                              </div>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {prospect.organization?.industry && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {prospect.organization.industry}
-                                  </Badge>
-                                )}
-                                {prospect.organization?.country && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    {prospect.organization.country}
-                                  </span>
-                                )}
-                                {prospect.organization?.estimated_num_employees && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Users className="h-3 w-3" />
-                                    {prospect.organization.estimated_num_employees} empleados
-                                  </span>
-                                )}
-                                {prospect.organization?.primary_domain && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Globe className="h-3 w-3" />
-                                    {prospect.organization.primary_domain}
-                                  </span>
-                                )}
-                              </div>
-                              {(prospect.first_name || prospect.last_name) && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Contacto: {[prospect.first_name, prospect.last_name].filter(Boolean).join(' ')}
-                                  {prospect.title && ` - ${prospect.title}`}
-                                </p>
-                              )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="truncate max-w-[200px]">{orgName}</span>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {prospect.organization?.industry || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {prospect.organization?.country || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {prospect.organization?.estimated_num_employees || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {prospect.organization?.primary_domain && (
+                              <a
+                                href={`https://${prospect.organization.primary_domain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </ScrollArea>
 
               {prospects.length === 0 && (
