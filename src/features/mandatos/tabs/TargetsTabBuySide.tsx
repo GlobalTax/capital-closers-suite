@@ -19,9 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface TargetsTabBuySideProps {
   mandato: Mandato;
   onRefresh: () => void;
+  onEditMandato?: () => void;
 }
 
-export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps) {
+export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: TargetsTabBuySideProps) {
   const [nuevoTargetOpen, setNuevoTargetOpen] = useState(false);
   const [asociarOpen, setAsociarOpen] = useState(false);
   const [selectedFunnelStage, setSelectedFunnelStage] = useState<TargetFunnelStage | null>(null);
@@ -118,7 +119,7 @@ export function TargetsTabBuySide({ mandato, onRefresh }: TargetsTabBuySideProps
   return (
     <div className="space-y-6">
       {/* Criterios de inversión */}
-      <CriteriosInversionCard mandato={mandato} />
+      <CriteriosInversionCard mandato={mandato} onEdit={onEditMandato} />
 
       {/* Funnel visual */}
       <Card>

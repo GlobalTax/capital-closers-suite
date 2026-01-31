@@ -22,6 +22,7 @@ import type { Mandato, Contacto } from "@/types";
 interface TargetsTabProps {
   mandato: Mandato;
   onRefresh: () => void;
+  onEditMandato?: () => void;
 }
 
 interface EmpresaData {
@@ -31,10 +32,10 @@ interface EmpresaData {
   loadingContactos: boolean;
 }
 
-export function TargetsTab({ mandato, onRefresh }: TargetsTabProps) {
+export function TargetsTab({ mandato, onRefresh, onEditMandato }: TargetsTabProps) {
   // Si es mandato de compra, usar la vista Buy-Side especializada
   if (mandato.tipo === 'compra') {
-    return <TargetsTabBuySide mandato={mandato} onRefresh={onRefresh} />;
+    return <TargetsTabBuySide mandato={mandato} onRefresh={onRefresh} onEditMandato={onEditMandato} />;
   }
 
   // Vista original para mandatos de venta
