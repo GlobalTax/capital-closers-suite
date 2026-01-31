@@ -35,7 +35,7 @@ import { fetchEmpresas, createEmpresa } from "@/services/empresas";
 import { EmpresaSearchSelect } from "@/components/shared/EmpresaSearchSelect";
 import { createMandato, fetchMandatos } from "@/services/mandatos";
 import type { Empresa, Mandato } from "@/types";
-import { Loader2, Plus, Building2, Calendar, Briefcase, Search, FileText, Calculator, Users, Link } from "lucide-react";
+import { Loader2, Plus, Building2, Calendar, Briefcase, Search, FileText, Calculator, Users, Link, ShoppingCart, TrendingUp } from "lucide-react";
 import { 
   MANDATO_CATEGORIA_LABELS, 
   SERVICIO_TIPO_LABELS, 
@@ -92,6 +92,7 @@ interface NuevoMandatoDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  defaultTipo?: "compra" | "venta";
 }
 
 const categoriaIcons: Record<string, React.ReactNode> = {
@@ -106,6 +107,7 @@ export function NuevoMandatoDrawer({
   open,
   onOpenChange,
   onSuccess,
+  defaultTipo = "venta",
 }: NuevoMandatoDrawerProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]); // Solo para crear nueva empresa
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
@@ -141,8 +143,10 @@ export function NuevoMandatoDrawer({
   useEffect(() => {
     if (open) {
       cargarDatos();
+      // Pre-seleccionar tipo según el contexto de la URL
+      form.setValue('tipo', defaultTipo);
     }
-  }, [open]);
+  }, [open, defaultTipo]);
 
   const cargarDatos = async () => {
     setLoadingMandatos(true);
@@ -442,20 +446,58 @@ export function NuevoMandatoDrawer({
                           <RadioGroup
                             onValueChange={field.onChange}
                             value={field.value}
-                            className="flex gap-4"
+                            className="grid grid-cols-2 gap-3"
                           >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="venta" id="venta" />
-                              <label htmlFor="venta" className="cursor-pointer">
-                                Venta (Sell-Side)
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="compra" id="compra" />
-                              <label htmlFor="compra" className="cursor-pointer">
-                                Compra (Buy-Side)
-                              </label>
-                            </div>
+                            <label
+                              htmlFor="compra"
+                              className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                field.value === "compra"
+                                  ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
+                                  : "border-border hover:border-orange-300"
+                              }`}
+                            >
+                              <RadioGroupItem value="compra" id="compra" className="sr-only" />
+                              <div className={`p-2 rounded-full ${
+                                field.value === "compra" 
+                                  ? "bg-orange-500 text-white" 
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                <ShoppingCart className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <div className={`font-medium ${field.value === "compra" ? "text-orange-700 dark:text-orange-400" : ""}`}>
+                                  Compra (Buy-Side)
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Buscamos targets para el cliente
+                                </div>
+                              </div>
+                            </label>
+                            <label
+                              htmlFor="venta"
+                              className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                field.value === "venta"
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                                  : "border-border hover:border-blue-300"
+                              }`}
+                            >
+                              <RadioGroupItem value="venta" id="venta" className="sr-only" />
+                              <div className={`p-2 rounded-full ${
+                                field.value === "venta" 
+                                  ? "bg-blue-500 text-white" 
+                                  : "bg-muted text-muted-foreground"
+                              }`}>
+                                <TrendingUp className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <div className={`font-medium ${field.value === "venta" ? "text-blue-700 dark:text-blue-400" : ""}`}>
+                                  Venta (Sell-Side)
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Vendemos la empresa del cliente
+                                </div>
+                              </div>
+                            </label>
                           </RadioGroup>
                         </FormControl>
                         <FormMessage />
