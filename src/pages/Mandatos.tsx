@@ -1417,6 +1417,7 @@ export default function Mandatos() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={cargarMandatos}
+        defaultTipo={searchParams.get("tipo") === "compra" ? "compra" : "venta"}
       />
 
       <KanbanConfigDialog
