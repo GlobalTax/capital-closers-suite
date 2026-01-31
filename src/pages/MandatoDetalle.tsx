@@ -197,7 +197,7 @@ export default function MandatoDetalle() {
             </TabsContent>
 
             <TabsContent value="targets">
-              <TargetsTab mandato={mandato} onRefresh={refetch} />
+              <TargetsTab mandato={mandato} onRefresh={refetch} onEditMandato={() => setEditarMandatoOpen(true)} />
             </TabsContent>
 
             <TabsContent value="checklist">
