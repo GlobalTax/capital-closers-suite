@@ -2,7 +2,13 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Kanban, List } from "lucide-react";
+import { Building2, Plus, Kanban, List, Upload, FileSpreadsheet, Search, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CriteriosInversionCard } from "@/components/mandatos/buyside/CriteriosInversionCard";
 import { TargetFunnel } from "@/components/mandatos/buyside/TargetFunnel";
 import { TargetPipelineKanban } from "@/components/mandatos/buyside/TargetPipelineKanban";
@@ -13,6 +19,8 @@ import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { useTargetTags } from "@/hooks/useTargetTags";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
 import { AsociarEmpresaDialog } from "@/components/empresas/AsociarEmpresaDialog";
+import { ImportTargetsExcelDrawer } from "@/components/targets/ImportTargetsExcelDrawer";
+import { ImportTargetsApolloDrawer } from "@/components/targets/ImportTargetsApolloDrawer";
 import type { Mandato, TargetFunnelStage, MandatoEmpresaBuySide, BuyerType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,6 +33,8 @@ interface TargetsTabBuySideProps {
 export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: TargetsTabBuySideProps) {
   const [nuevoTargetOpen, setNuevoTargetOpen] = useState(false);
   const [asociarOpen, setAsociarOpen] = useState(false);
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
+  const [apolloImportOpen, setApolloImportOpen] = useState(false);
   const [selectedFunnelStage, setSelectedFunnelStage] = useState<TargetFunnelStage | null>(null);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedTarget, setSelectedTarget] = useState<MandatoEmpresaBuySide | null>(null);
@@ -168,6 +178,28 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
             isOpen={filtersOpen}
             onToggle={() => setFiltersOpen(!filtersOpen)}
           />
+          
+          {/* Menú de importación */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-1" />
+                Importar
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setExcelImportOpen(true)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Desde Excel/CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setApolloImportOpen(true)}>
+                <Search className="h-4 w-4 mr-2" />
+                Desde Apollo
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <Button variant="outline" size="sm" onClick={() => setAsociarOpen(true)}>
             <Building2 className="h-4 w-4 mr-1" />
             Buscar
@@ -246,6 +278,21 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
         mandatoId={mandato.id}
         onSuccess={handleRefresh}
         defaultRol="target"
+      />
+
+      {/* Import Drawers */}
+      <ImportTargetsExcelDrawer
+        open={excelImportOpen}
+        onOpenChange={setExcelImportOpen}
+        mandatoId={mandato.id}
+        onSuccess={handleRefresh}
+      />
+
+      <ImportTargetsApolloDrawer
+        open={apolloImportOpen}
+        onOpenChange={setApolloImportOpen}
+        mandatoId={mandato.id}
+        onSuccess={handleRefresh}
       />
     </div>
   );

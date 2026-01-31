@@ -4936,6 +4936,7 @@ export type Database = {
           is_active: boolean
           is_prospect_stage: boolean
           is_system: boolean
+          is_visible: boolean | null
           label: string
           position: number
           status_key: string
@@ -4949,6 +4950,7 @@ export type Database = {
           is_active?: boolean
           is_prospect_stage?: boolean
           is_system?: boolean
+          is_visible?: boolean | null
           label: string
           position?: number
           status_key: string
@@ -4962,6 +4964,7 @@ export type Database = {
           is_active?: boolean
           is_prospect_stage?: boolean
           is_system?: boolean
+          is_visible?: boolean | null
           label?: string
           position?: number
           status_key?: string
