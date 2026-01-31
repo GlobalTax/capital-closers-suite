@@ -105,3 +105,12 @@ verify_jwt = true
 
 [functions.access-cim-document]
 verify_jwt = false
+
+[functions.get-apollo-lists]
+verify_jwt = true
+
+[functions.get-apollo-list-contacts]
+verify_jwt = true
+
+[functions.get-apollo-people-by-ids]
+verify_jwt = true
