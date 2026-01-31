@@ -183,6 +183,7 @@ export default function MandatoDetalle() {
               refetch();
             }}
             onVincularEmpresa={() => setVincularEmpresaOpen(true)}
+            onEditMandato={() => setEditarMandatoOpen(true)}
           />
         </TabsContent>
 

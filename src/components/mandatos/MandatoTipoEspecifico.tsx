@@ -1,24 +1,57 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, TrendingUp, Target, DollarSign, Calendar, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, TrendingUp, Target, DollarSign, Calendar, Users, Edit } from "lucide-react";
 import { Mandato } from "@/types";
 import { formatCurrency } from "@/lib/mandato-utils";
 
 interface MandatoTipoEspecificoProps {
   mandato: Mandato;
+  onEdit?: () => void;
 }
 
-export function MandatoTipoEspecifico({ mandato }: MandatoTipoEspecificoProps) {
+export function MandatoTipoEspecifico({ mandato, onEdit }: MandatoTipoEspecificoProps) {
+  // Check if buy-side mandate has any investment criteria defined
+  const hasInvestmentCriteria = mandato.perfil_empresa_buscada || 
+    mandato.rango_inversion_min || 
+    mandato.rango_inversion_max || 
+    (mandato.sectores_interes && mandato.sectores_interes.length > 0) || 
+    mandato.timeline_objetivo;
+
   if (mandato.tipo === 'compra') {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Detalles del Mandato de Compra
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Detalles del Mandato de Compra
+            </CardTitle>
+            {onEdit && (
+              <Button variant="ghost" size="sm" onClick={onEdit}>
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Empty state if no investment criteria */}
+          {!hasInvestmentCriteria && (
+            <div className="text-center py-6">
+              <Target className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-muted-foreground mb-3">
+                No hay criterios de inversión definidos
+              </p>
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  <Edit className="h-4 w-4 mr-1" />
+                  Definir criterios
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Perfil Empresa Buscada */}
           {mandato.perfil_empresa_buscada && (
             <div>
