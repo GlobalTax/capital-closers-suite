@@ -1,8 +1,12 @@
 /**
- * Drawer para importar targets desde búsqueda en Apollo
+ * Drawer para importar targets desde Apollo
+ * Soporta 3 métodos:
+ * 1. Buscar por keywords (actual)
+ * 2. Importar desde Lista guardada de Apollo
+ * 3. Pegar URLs/IDs de contactos
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   DrawerClose,
@@ -19,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -34,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   Building2, 
@@ -44,7 +50,13 @@ import {
   XCircle,
   AlertTriangle,
   ExternalLink,
-  MapPin
+  MapPin,
+  List,
+  Link2,
+  RefreshCw,
+  Mail,
+  Phone,
+  User
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { importTargetsFromApollo, type ApolloProspect, type TargetImportConfig } from "@/services/importacion/importTargets";
@@ -58,7 +70,36 @@ interface ImportTargetsApolloDrawerProps {
   onSuccess: () => void;
 }
 
-type ImportStep = 'search' | 'results' | 'importing' | 'summary';
+type ImportMethod = 'search' | 'list' | 'urls';
+type ImportStep = 'select' | 'results' | 'importing' | 'summary';
+
+interface ApolloLabel {
+  id: string;
+  name: string;
+  cached_count: number;
+  created_at?: string;
+}
+
+interface ApolloContact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  name: string;
+  email: string;
+  phone_numbers?: { raw_number: string; type: string }[];
+  organization_name?: string;
+  organization?: {
+    id: string;
+    name: string;
+    industry?: string;
+    country?: string;
+    estimated_num_employees?: number;
+    primary_domain?: string;
+  };
+  title?: string;
+  linkedin_url?: string;
+  country?: string;
+}
 
 const EMPLOYEE_RANGES = [
   { value: '', label: 'Todos los tamaños' },
@@ -83,36 +124,132 @@ const COUNTRIES = [
   { value: 'Mexico', label: 'México' },
 ];
 
+// Helper to convert ApolloContact to ApolloProspect format
+function contactToProspect(contact: ApolloContact): ApolloProspect {
+  return {
+    id: contact.id,
+    first_name: contact.first_name,
+    last_name: contact.last_name,
+    email: contact.email,
+    title: contact.title,
+    linkedin_url: contact.linkedin_url,
+    organization: contact.organization ? {
+      name: contact.organization.name,
+      industry: contact.organization.industry,
+      country: contact.organization.country,
+      estimated_num_employees: contact.organization.estimated_num_employees,
+      primary_domain: contact.organization.primary_domain,
+    } : undefined,
+  };
+}
+
 export function ImportTargetsApolloDrawer({ 
   open, 
   onOpenChange, 
   mandatoId, 
   onSuccess 
 }: ImportTargetsApolloDrawerProps) {
-  const [step, setStep] = useState<ImportStep>('search');
+  // Method selection
+  const [method, setMethod] = useState<ImportMethod>('search');
+  const [step, setStep] = useState<ImportStep>('select');
+  
+  // Search method state
   const [keywords, setKeywords] = useState('');
   const [country, setCountry] = useState('');
   const [employeeRange, setEmployeeRange] = useState('');
   const [searching, setSearching] = useState(false);
   const [prospects, setProspects] = useState<ApolloProspect[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  
+  // List method state
+  const [labels, setLabels] = useState<ApolloLabel[]>([]);
+  const [loadingLabels, setLoadingLabels] = useState(false);
+  const [selectedLabelId, setSelectedLabelId] = useState<string>('');
+  const [contacts, setContacts] = useState<ApolloContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  
+  // URLs method state
+  const [urlsInput, setUrlsInput] = useState('');
+  const [extractingUrls, setExtractingUrls] = useState(false);
+  const [extractedContacts, setExtractedContacts] = useState<ApolloContact[]>([]);
+  
+  // Shared state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult[]>([]);
-  const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Load labels when opening with list method
+  useEffect(() => {
+    if (open && method === 'list' && labels.length === 0) {
+      loadLabels();
+    }
+  }, [open, method]);
 
   const resetState = () => {
-    setStep('search');
+    setMethod('search');
+    setStep('select');
     setKeywords('');
     setCountry('');
     setEmployeeRange('');
     setSearching(false);
     setProspects([]);
+    setSearchError(null);
+    setLabels([]);
+    setSelectedLabelId('');
+    setContacts([]);
+    setUrlsInput('');
+    setExtractedContacts([]);
     setSelectedIds(new Set());
     setImporting(false);
     setProgress(0);
     setResults([]);
-    setSearchError(null);
+  };
+
+  const loadLabels = async () => {
+    setLoadingLabels(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-apollo-lists');
+      if (error) throw error;
+      
+      setLabels(data?.labels || []);
+      console.log('[Apollo] Loaded labels:', data?.labels?.length);
+    } catch (error: any) {
+      console.error('[Apollo] Error loading labels:', error);
+      toast.error('Error al cargar listas de Apollo', { description: error.message });
+    } finally {
+      setLoadingLabels(false);
+    }
+  };
+
+  const loadListContacts = async () => {
+    if (!selectedLabelId) {
+      toast.error('Selecciona una lista');
+      return;
+    }
+
+    setLoadingContacts(true);
+    setContacts([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
+        body: { label_id: selectedLabelId, page: 1, per_page: 100 },
+      });
+      
+      if (error) throw error;
+      
+      setContacts(data?.contacts || []);
+      setStep('results');
+      
+      if ((data?.contacts || []).length === 0) {
+        toast.info('La lista no tiene contactos');
+      }
+    } catch (error: any) {
+      console.error('[Apollo] Error loading contacts:', error);
+      toast.error('Error al cargar contactos', { description: error.message });
+    } finally {
+      setLoadingContacts(false);
+    }
   };
 
   const handleSearch = async () => {
@@ -126,7 +263,6 @@ export function ImportTargetsApolloDrawer({
     setProspects([]);
 
     try {
-      // Preparar filtros
       const filters: Record<string, any> = {};
       
       if (country) {
@@ -151,7 +287,7 @@ export function ImportTargetsApolloDrawer({
 
       const results = data?.people || [];
       
-      // Agrupar por organización para evitar duplicados
+      // Group by organization to avoid duplicates
       const orgMap = new Map<string, ApolloProspect>();
       for (const person of results) {
         const orgName = person.organization?.name;
@@ -169,40 +305,90 @@ export function ImportTargetsApolloDrawer({
       }
 
     } catch (error: any) {
-      console.error('[ImportApollo] Search error:', error);
+      console.error('[Apollo] Search error:', error);
       setSearchError(error.message || 'Error al buscar en Apollo');
-      toast.error('Error en la búsqueda', {
-        description: error.message,
-      });
+      toast.error('Error en la búsqueda', { description: error.message });
     } finally {
       setSearching(false);
     }
   };
 
-  const toggleSelection = (id: string) => {
+  const handleExtractUrls = async () => {
+    const lines = urlsInput.split('\n').filter(line => line.trim());
+    
+    if (lines.length === 0) {
+      toast.error('Pega URLs o IDs de Apollo');
+      return;
+    }
+
+    setExtractingUrls(true);
+    setExtractedContacts([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('get-apollo-people-by-ids', {
+        body: { urls_or_ids: lines },
+      });
+
+      if (error) throw error;
+
+      const people = data?.people || [];
+      setExtractedContacts(people);
+      setStep('results');
+
+      if (people.length === 0) {
+        toast.warning('No se encontraron contactos válidos');
+      } else if (data?.errors?.length > 0) {
+        toast.warning(`${people.length} contactos encontrados, ${data.errors.length} errores`);
+      } else {
+        toast.success(`${people.length} contactos extraídos`);
+      }
+
+    } catch (error: any) {
+      console.error('[Apollo] Extract error:', error);
+      toast.error('Error al extraer contactos', { description: error.message });
+    } finally {
+      setExtractingUrls(false);
+    }
+  };
+
+  const getCurrentData = (): ApolloProspect[] => {
+    if (method === 'search') return prospects;
+    if (method === 'list') return contacts.map(contactToProspect);
+    if (method === 'urls') return extractedContacts.map(contactToProspect);
+    return [];
+  };
+
+  const getSelectionKey = (item: ApolloProspect | ApolloContact): string => {
+    if ('organization' in item && item.organization?.name) {
+      return item.organization.name;
+    }
+    return item.id;
+  };
+
+  const toggleSelection = (key: string) => {
     const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
     } else {
-      newSelected.add(id);
+      newSelected.add(key);
     }
     setSelectedIds(newSelected);
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === prospects.length) {
+    const data = getCurrentData();
+    if (selectedIds.size === data.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(prospects.map(p => p.organization?.name || '')));
+      setSelectedIds(new Set(data.map(d => getSelectionKey(d))));
     }
   };
 
   const handleImport = async () => {
-    const selectedProspects = prospects.filter(p => 
-      selectedIds.has(p.organization?.name || '')
-    );
+    const data = getCurrentData();
+    const selectedData = data.filter(d => selectedIds.has(getSelectionKey(d)));
 
-    if (selectedProspects.length === 0) {
+    if (selectedData.length === 0) {
       toast.error('Selecciona al menos un target');
       return;
     }
@@ -222,7 +408,7 @@ export function ImportTargetsApolloDrawer({
     try {
       const importResults = await importTargetsFromApollo(
         mandatoId,
-        selectedProspects,
+        selectedData,
         config,
         (current, total) => {
           setProgress(Math.round((current / total) * 100));
@@ -239,10 +425,8 @@ export function ImportTargetsApolloDrawer({
       }
 
     } catch (error: any) {
-      console.error('[ImportApollo] Import error:', error);
-      toast.error('Error durante la importación', {
-        description: error.message,
-      });
+      console.error('[Apollo] Import error:', error);
+      toast.error('Error durante la importación', { description: error.message });
       setStep('results');
     } finally {
       setImporting(false);
@@ -258,6 +442,312 @@ export function ImportTargetsApolloDrawer({
   const errorCount = results.filter(r => r.status === 'error').length;
   const skippedCount = results.filter(r => r.status === 'skipped').length;
 
+  const renderMethodSelector = () => (
+    <Tabs value={method} onValueChange={(v) => setMethod(v as ImportMethod)} className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="search" className="flex items-center gap-2">
+          <Search className="h-4 w-4" />
+          <span className="hidden sm:inline">Buscar</span>
+        </TabsTrigger>
+        <TabsTrigger value="list" className="flex items-center gap-2">
+          <List className="h-4 w-4" />
+          <span className="hidden sm:inline">Lista</span>
+        </TabsTrigger>
+        <TabsTrigger value="urls" className="flex items-center gap-2">
+          <Link2 className="h-4 w-4" />
+          <span className="hidden sm:inline">URLs/IDs</span>
+        </TabsTrigger>
+      </TabsList>
+
+      {/* Search method */}
+      <TabsContent value="search" className="space-y-4 mt-4">
+        <div className="space-y-2">
+          <Label>Palabras clave *</Label>
+          <Input
+            placeholder="Ej: software industrial, logística, alimentación..."
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <p className="text-xs text-muted-foreground">
+            Industria, sector o palabras clave para buscar empresas
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>País</Label>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los países" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map(c => (
+                  <SelectItem key={c.value} value={c.value || "all"}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tamaño de empresa</Label>
+            <Select value={employeeRange} onValueChange={setEmployeeRange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los tamaños" />
+              </SelectTrigger>
+              <SelectContent>
+                {EMPLOYEE_RANGES.map(e => (
+                  <SelectItem key={e.value} value={e.value || "all"}>
+                    {e.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {searchError && (
+          <Card className="border-destructive">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <XCircle className="h-4 w-4" />
+                <span className="text-sm">{searchError}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </TabsContent>
+
+      {/* List method */}
+      <TabsContent value="list" className="space-y-4 mt-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Selecciona una lista de Apollo</Label>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={loadLabels}
+              disabled={loadingLabels}
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingLabels ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+          
+          {loadingLabels ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : labels.length === 0 ? (
+            <Card>
+              <CardContent className="py-6 text-center">
+                <List className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No se encontraron listas en Apollo
+                </p>
+                <Button variant="link" size="sm" onClick={loadLabels} className="mt-2">
+                  Reintentar
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Select value={selectedLabelId} onValueChange={setSelectedLabelId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una lista..." />
+              </SelectTrigger>
+              <SelectContent>
+                {labels.map(label => (
+                  <SelectItem key={label.id} value={label.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{label.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({label.cached_count} contactos)
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-sm text-muted-foreground">
+              Los contactos de listas de Apollo ya están enriquecidos con email y teléfono.
+              No consume créditos adicionales.
+            </p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* URLs method */}
+      <TabsContent value="urls" className="space-y-4 mt-4">
+        <div className="space-y-2">
+          <Label>Pega URLs o IDs de Apollo (uno por línea)</Label>
+          <Textarea
+            placeholder={`https://app.apollo.io/#/contacts/abc123
+https://app.apollo.io/#/people/xyz789
+5f8a9b2c1d3e4f5a6b7c8d9e`}
+            value={urlsInput}
+            onChange={(e) => setUrlsInput(e.target.value)}
+            rows={6}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Formatos soportados: URLs de contactos, URLs de personas, o IDs directos (24 caracteres)
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-sm text-muted-foreground">
+              Copia las URLs directamente desde Apollo. Cada contacto será extraído
+              con toda su información disponible.
+            </p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  );
+
+  const renderResults = () => {
+    const data = getCurrentData();
+    const isContactMode = method === 'list' || method === 'urls';
+
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={selectedIds.size === data.length && data.length > 0}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span className="text-sm">
+              {selectedIds.size} de {data.length} seleccionados
+            </span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setStep('select')}>
+            Cambiar búsqueda
+          </Button>
+        </div>
+
+        {/* Results table */}
+        <ScrollArea className="h-[400px]">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={selectedIds.size === data.length && data.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
+                {isContactMode && <TableHead>Contacto</TableHead>}
+                <TableHead>Empresa</TableHead>
+                <TableHead>Sector</TableHead>
+                <TableHead>País</TableHead>
+                <TableHead>Empleados</TableHead>
+                {isContactMode && <TableHead>Email</TableHead>}
+                <TableHead className="w-10">Web</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((item, i) => {
+                const key = getSelectionKey(item);
+                const isSelected = selectedIds.has(key);
+                const orgName = item.organization?.name || 'Sin empresa';
+
+                return (
+                  <TableRow
+                    key={key + i}
+                    className={`cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
+                    onClick={() => toggleSelection(key)}
+                  >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(key)}
+                      />
+                    </TableCell>
+                    {isContactMode && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[150px]">
+                              {`${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Sin nombre'}
+                            </p>
+                            {item.title && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {item.title}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="truncate max-w-[150px]">{orgName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {item.organization?.industry || '-'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {item.organization?.country || '-'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {item.organization?.estimated_num_employees || '-'}
+                    </TableCell>
+                    {isContactMode && (
+                      <TableCell className="text-muted-foreground text-sm">
+                        {item.email ? (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate max-w-[120px]">{item.email}</span>
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      {item.organization?.primary_domain && (
+                        <a
+                          href={`https://${item.organization.primary_domain}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+
+        {data.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">
+                No se encontraron resultados
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Drawer open={open} onOpenChange={handleClose}>
       <DrawerContent className="max-h-[90vh]">
@@ -267,187 +757,19 @@ export function ImportTargetsApolloDrawer({
             Importar Targets desde Apollo
           </DrawerTitle>
           <DrawerDescription>
-            {step === 'search' && 'Busca empresas en la base de datos de Apollo (275M+ contactos)'}
-            {step === 'results' && `${prospects.length} empresas encontradas`}
+            {step === 'select' && 'Selecciona un método de importación'}
+            {step === 'results' && `${getCurrentData().length} resultados encontrados`}
             {step === 'importing' && 'Importando targets seleccionados...'}
             {step === 'summary' && 'Resumen de la importación'}
           </DrawerDescription>
         </DrawerHeader>
 
         <div className="px-4 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Step: Search */}
-          {step === 'search' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Palabras clave *</Label>
-                <Input
-                  placeholder="Ej: software industrial, logística, alimentación..."
-                  value={keywords}
-                  onChange={(e) => setKeywords(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Industria, sector o palabras clave para buscar empresas
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>País</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos los países" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COUNTRIES.map(c => (
-                        <SelectItem key={c.value} value={c.value || "all"}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tamaño de empresa</Label>
-                  <Select value={employeeRange} onValueChange={setEmployeeRange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos los tamaños" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EMPLOYEE_RANGES.map(e => (
-                        <SelectItem key={e.value} value={e.value || "all"}>
-                          {e.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {searchError && (
-                <Card className="border-destructive">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 text-destructive">
-                      <XCircle className="h-4 w-4" />
-                      <span className="text-sm">{searchError}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Apollo es una base de datos B2B con información de más de 275 millones de contactos 
-                    y 73 millones de empresas a nivel mundial.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* Step: Select method and configure */}
+          {step === 'select' && renderMethodSelector()}
 
           {/* Step: Results */}
-          {step === 'results' && (
-            <div className="space-y-4">
-              {/* Header con selección */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={selectedIds.size === prospects.length && prospects.length > 0}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                  <span className="text-sm">
-                    {selectedIds.size} de {prospects.length} seleccionados
-                  </span>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setStep('search')}>
-                  Nueva búsqueda
-                </Button>
-              </div>
-
-              {/* Lista de resultados en tabla */}
-              <ScrollArea className="h-[400px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={selectedIds.size === prospects.length && prospects.length > 0}
-                          onCheckedChange={toggleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Sector</TableHead>
-                      <TableHead>País</TableHead>
-                      <TableHead>Empleados</TableHead>
-                      <TableHead className="w-10">Web</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {prospects.map((prospect, i) => {
-                      const orgName = prospect.organization?.name || `Empresa ${i + 1}`;
-                      const isSelected = selectedIds.has(orgName);
-
-                      return (
-                        <TableRow
-                          key={orgName}
-                          className={`cursor-pointer ${isSelected ? 'bg-primary/5' : ''}`}
-                          onClick={() => toggleSelection(orgName)}
-                        >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSelection(orgName)}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="truncate max-w-[200px]">{orgName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {prospect.organization?.industry || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {prospect.organization?.country || '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {prospect.organization?.estimated_num_employees || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {prospect.organization?.primary_domain && (
-                              <a
-                                href={`https://${prospect.organization.primary_domain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-
-              {prospects.length === 0 && (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-sm text-muted-foreground">
-                      No se encontraron empresas con esos criterios
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+          {step === 'results' && renderResults()}
 
           {/* Step: Importing */}
           {step === 'importing' && (
@@ -490,74 +812,94 @@ export function ImportTargetsApolloDrawer({
                 </Card>
               </div>
 
-              {(errorCount > 0 || skippedCount > 0) && (
-                <Card>
-                  <CardContent className="pt-4">
-                    <p className="text-sm font-medium mb-2">Detalles:</p>
-                    <ScrollArea className="h-32">
-                      <div className="space-y-1">
-                        {results
-                          .filter(r => r.status !== 'success')
-                          .map((result, i) => (
-                            <div key={i} className="flex items-center gap-2 text-xs">
-                              {result.status === 'error' ? (
-                                <XCircle className="h-3 w-3 text-destructive shrink-0" />
-                              ) : (
-                                <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
-                              )}
-                              <span className="font-medium">{result.name}:</span>
-                              <span className="text-muted-foreground">{result.message}</span>
-                            </div>
-                          ))}
+              {results.length > 0 && (
+                <ScrollArea className="h-[200px]">
+                  <div className="space-y-1">
+                    {results.map((r, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-2 p-2 rounded text-sm ${
+                          r.status === 'success' ? 'bg-green-50 dark:bg-green-950/20' :
+                          r.status === 'skipped' ? 'bg-amber-50 dark:bg-amber-950/20' :
+                          'bg-red-50 dark:bg-red-950/20'
+                        }`}
+                      >
+                        {r.status === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
+                        {r.status === 'skipped' && <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />}
+                        {r.status === 'error' && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
+                        <span className="truncate">{r.name}</span>
+                        {r.message && (
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {r.message}
+                          </span>
+                        )}
                       </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               )}
             </div>
           )}
         </div>
 
         <DrawerFooter>
-          <div className="flex justify-end gap-2">
-            {step === 'search' && (
-              <>
-                <DrawerClose asChild>
-                  <Button variant="outline">Cancelar</Button>
-                </DrawerClose>
-                <Button onClick={handleSearch} disabled={searching || !keywords.trim()}>
-                  {searching ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Buscando...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4 mr-2" />
-                      Buscar
-                    </>
-                  )}
-                </Button>
-              </>
+          <div className="flex gap-2 w-full">
+            <DrawerClose asChild>
+              <Button variant="outline" className="flex-1">
+                {step === 'summary' ? 'Cerrar' : 'Cancelar'}
+              </Button>
+            </DrawerClose>
+            
+            {step === 'select' && method === 'search' && (
+              <Button 
+                className="flex-1" 
+                onClick={handleSearch}
+                disabled={searching || !keywords.trim()}
+              >
+                {searching ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Buscando...</>
+                ) : (
+                  <><Search className="h-4 w-4 mr-2" />Buscar</>
+                )}
+              </Button>
+            )}
+
+            {step === 'select' && method === 'list' && (
+              <Button 
+                className="flex-1" 
+                onClick={loadListContacts}
+                disabled={loadingContacts || !selectedLabelId}
+              >
+                {loadingContacts ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Cargando...</>
+                ) : (
+                  <><List className="h-4 w-4 mr-2" />Cargar contactos</>
+                )}
+              </Button>
+            )}
+
+            {step === 'select' && method === 'urls' && (
+              <Button 
+                className="flex-1" 
+                onClick={handleExtractUrls}
+                disabled={extractingUrls || !urlsInput.trim()}
+              >
+                {extractingUrls ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Extrayendo...</>
+                ) : (
+                  <><Link2 className="h-4 w-4 mr-2" />Extraer contactos</>
+                )}
+              </Button>
             )}
 
             {step === 'results' && (
-              <>
-                <Button variant="outline" onClick={() => setStep('search')}>
-                  Volver
-                </Button>
-                <Button 
-                  onClick={handleImport}
-                  disabled={selectedIds.size === 0}
-                >
-                  Importar {selectedIds.size} targets
-                </Button>
-              </>
-            )}
-
-            {step === 'summary' && (
-              <Button onClick={handleClose}>
-                Cerrar
+              <Button 
+                className="flex-1" 
+                onClick={handleImport}
+                disabled={importing || selectedIds.size === 0}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Importar {selectedIds.size} seleccionados
               </Button>
             )}
           </div>
