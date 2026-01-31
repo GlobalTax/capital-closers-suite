@@ -13,6 +13,7 @@ interface ResumenTabProps {
   onUpdateEmpresa?: (empresaId: string, field: string, value: number | null) => Promise<void>;
   onUpdateEmpresaText?: (empresaId: string, field: string, value: string | null) => Promise<void>;
   onVincularEmpresa: () => void;
+  onEditMandato?: () => void;
 }
 
 export function ResumenTab({ 
@@ -21,7 +22,8 @@ export function ResumenTab({
   onAsociarContacto, 
   onUpdateEmpresa, 
   onUpdateEmpresaText,
-  onVincularEmpresa 
+  onVincularEmpresa,
+  onEditMandato
 }: ResumenTabProps) {
   const isServicio = mandato.categoria && mandato.categoria !== "operacion_ma";
 
@@ -37,7 +39,7 @@ export function ResumenTab({
       {isServicio && <ServicioHonorariosCard mandato={mandato} />}
       
       {/* Mostrar info específica de tipo solo para M&A */}
-      {!isServicio && <MandatoTipoEspecifico mandato={mandato} />}
+      {!isServicio && <MandatoTipoEspecifico mandato={mandato} onEdit={onEditMandato} />}
       
       {/* Información identificativa de la empresa (o estado vacío) */}
       <EmpresaIdentificacionWrapper
