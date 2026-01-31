@@ -1,57 +1,120 @@
 
 
-## Plan: Cambiar desplegables de tabla a cerrados por defecto
+## Plan: Conectar edición de Criterios de Inversión
 
-### Problema
+### Problema Identificado
 
-Actualmente, cuando cargas la tabla de mandatos en la sección "Compra", todas las filas que tienen contenido expandible (targets) aparecen **abiertas por defecto**, lo que resulta visualmente abrumador.
+Los criterios de inversión (rango, perfil buscado, sectores, timeline) **no se pueden editar** desde la tarjeta de "Criterios de Inversión" en la pestaña Targets porque el botón "Editar" no está conectado.
+
+| Componente | Estado |
+|------------|--------|
+| `EditarMandatoDrawer.tsx` | ✅ Tiene los campos de inversión (líneas 390-472) |
+| `CriteriosInversionCard.tsx` | ✅ Tiene botón "Editar" pero necesita `onEdit` prop |
+| `TargetsTabBuySide.tsx` | ❌ No pasa `onEdit` al componente |
+| `MandatoDetalle.tsx` | ⚠️ Solo permite editar desde el header general |
 
 ### Solución
 
-Modificar el componente `DataTableEnhanced.tsx` para que las filas expandibles empiecen **cerradas** por defecto en lugar de abiertas.
+Conectar el botón "Editar" de la tarjeta de Criterios de Inversión para abrir el drawer de edición del mandato.
 
 ---
 
-### Cambio a realizar
+### Cambios a Realizar
 
-**Archivo:** `src/components/shared/DataTableEnhanced.tsx`
+#### 1. Modificar `TargetsTabBuySide.tsx`
 
-**Líneas 73-81 - Antes:**
+Añadir prop para manejar la edición del mandato:
+
+**Antes:**
 ```tsx
-// Expandir automáticamente todas las filas expandibles al cargar
-useEffect(() => {
-  if (expandable && isRowExpandable) {
-    const expandableIds = data
-      .filter(row => isRowExpandable(row))
-      .map(row => row.id);
-    setExpandedRows(new Set(expandableIds));
-  }
-}, [data, expandable, isRowExpandable]);
+interface TargetsTabBuySideProps {
+  mandato: Mandato;
+  onRefresh: () => void;
+}
 ```
 
 **Después:**
 ```tsx
-// Inicializar filas cerradas por defecto
-// El usuario puede expandirlas manualmente haciendo click
+interface TargetsTabBuySideProps {
+  mandato: Mandato;
+  onRefresh: () => void;
+  onEditMandato?: () => void;  // NUEVO
+}
 ```
 
-Simplemente eliminar el `useEffect` que expande automáticamente las filas. El estado inicial `expandedRows` ya es un `Set` vacío (línea 71), por lo que las filas empezarán cerradas.
+**Línea 121 - Antes:**
+```tsx
+<CriteriosInversionCard mandato={mandato} />
+```
+
+**Después:**
+```tsx
+<CriteriosInversionCard 
+  mandato={mandato} 
+  onEdit={onEditMandato}  // NUEVO
+/>
+```
+
+#### 2. Modificar `TargetsTab.tsx` (wrapper)
+
+Pasar la prop `onEditMandato` al componente Buy-Side.
+
+#### 3. Modificar `MandatoDetalle.tsx`
+
+Pasar la función que abre el drawer de edición a la pestaña Targets:
+
+**Línea 200 - Antes:**
+```tsx
+<TargetsTab mandato={mandato} onRefresh={refetch} />
+```
+
+**Después:**
+```tsx
+<TargetsTab 
+  mandato={mandato} 
+  onRefresh={refetch} 
+  onEditMandato={() => setEditarMandatoOpen(true)}  // NUEVO
+/>
+```
 
 ---
 
-### Resultado esperado
+### Flujo Resultante
 
-| Antes | Después |
-|-------|---------|
-| Todas las filas con targets abiertas automáticamente | Todas las filas cerradas por defecto |
-| Visualmente abrumador | Tabla más limpia y ordenada |
-| Usuario debe cerrar manualmente | Usuario abre solo lo que necesita |
+```text
+Usuario en pestaña "Targets" de mandato de Compra
+    ↓
+Ve tarjeta "Criterios de Inversión" (vacía o con datos)
+    ↓
+Click en "Editar" o "Definir criterios"
+    ↓
+Se abre EditarMandatoDrawer con sección "Criterios de Búsqueda"
+    ↓
+Usuario rellena: Inversión mín/máx, Perfil buscado, Timeline
+    ↓
+Guarda → Los criterios aparecen en la tarjeta ✓
+```
 
 ---
 
-### Archivo a modificar
+### Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/shared/DataTableEnhanced.tsx` | Eliminar el `useEffect` que expande filas automáticamente |
+| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Añadir prop `onEditMandato` y pasarla a `CriteriosInversionCard` |
+| `src/features/mandatos/tabs/TargetsTab.tsx` | Pasar prop `onEditMandato` al componente Buy-Side |
+| `src/pages/MandatoDetalle.tsx` | Pasar función para abrir el drawer de edición |
+
+---
+
+### Resultado Esperado
+
+Después de implementar:
+1. Ir a un mandato de **Compra**
+2. Ir a la pestaña **Targets**
+3. Ver la tarjeta "Criterios de Inversión"
+4. Click en **"Editar"** o **"Definir criterios"**
+5. Se abre el drawer con la sección "Criterios de Búsqueda"
+6. Rellenar los campos y guardar
+7. Los datos aparecen en la tarjeta
 
