@@ -1,78 +1,146 @@
 
 
-## Plan: Conectar edición de Criterios de Inversión
+## Plan: Habilitar edición de Detalles del Mandato de Compra en Resumen
 
 ### Problema Identificado
 
-Los criterios de inversión (rango, perfil buscado, sectores, timeline) **no se pueden editar** desde la tarjeta de "Criterios de Inversión" en la pestaña Targets porque el botón "Editar" no está conectado.
+La tarjeta "Detalles del Mandato de Compra" en la pestaña **Resumen** está vacía y no tiene forma de añadir o editar los criterios de inversión.
 
-| Componente | Estado |
-|------------|--------|
-| `EditarMandatoDrawer.tsx` | ✅ Tiene los campos de inversión (líneas 390-472) |
-| `CriteriosInversionCard.tsx` | ✅ Tiene botón "Editar" pero necesita `onEdit` prop |
-| `TargetsTabBuySide.tsx` | ❌ No pasa `onEdit` al componente |
-| `MandatoDetalle.tsx` | ⚠️ Solo permite editar desde el header general |
+| Componente | Ubicación | Estado |
+|------------|-----------|--------|
+| `CriteriosInversionCard` | Pestaña Targets | Tiene botón "Editar" + estado vacío + conectado al drawer |
+| `MandatoTipoEspecifico` | Pestaña Resumen | **NO tiene botón "Editar"** ni estado vacío |
 
 ### Solución
 
-Conectar el botón "Editar" de la tarjeta de Criterios de Inversión para abrir el drawer de edición del mandato.
+Añadir un botón "Editar" a la tarjeta `MandatoTipoEspecifico` y mostrar un estado vacío cuando no hay datos, similar a como funciona la `CriteriosInversionCard`.
 
 ---
 
 ### Cambios a Realizar
 
-#### 1. Modificar `TargetsTabBuySide.tsx`
+#### 1. Modificar `MandatoTipoEspecifico.tsx`
 
-Añadir prop para manejar la edición del mandato:
+Añadir prop `onEdit` y mostrar botón de edición + estado vacío:
 
 **Antes:**
 ```tsx
-interface TargetsTabBuySideProps {
+interface MandatoTipoEspecificoProps {
   mandato: Mandato;
-  onRefresh: () => void;
+}
+
+export function MandatoTipoEspecifico({ mandato }: MandatoTipoEspecificoProps) {
+```
+
+**Después:**
+```tsx
+interface MandatoTipoEspecificoProps {
+  mandato: Mandato;
+  onEdit?: () => void;  // NUEVO
+}
+
+export function MandatoTipoEspecifico({ mandato, onEdit }: MandatoTipoEspecificoProps) {
+```
+
+**Añadir en el header de la tarjeta de Compra:**
+```tsx
+<CardHeader>
+  <div className="flex items-center justify-between">
+    <CardTitle className="flex items-center gap-2">
+      <ShoppingCart className="h-5 w-5" />
+      Detalles del Mandato de Compra
+    </CardTitle>
+    {onEdit && (
+      <Button variant="ghost" size="sm" onClick={onEdit}>
+        <Edit className="h-4 w-4 mr-1" />
+        Editar
+      </Button>
+    )}
+  </div>
+</CardHeader>
+```
+
+**Añadir estado vacío al final del CardContent:**
+```tsx
+{/* Estado vacío si no hay datos */}
+{!mandato.perfil_empresa_buscada && 
+ !mandato.rango_inversion_min && 
+ !mandato.rango_inversion_max && 
+ (!mandato.sectores_interes || mandato.sectores_interes.length === 0) && 
+ !mandato.timeline_objetivo && (
+  <div className="text-center py-4">
+    <p className="text-sm text-muted-foreground mb-2">
+      No hay criterios de inversión definidos
+    </p>
+    {onEdit && (
+      <Button variant="outline" size="sm" onClick={onEdit}>
+        <Edit className="h-4 w-4 mr-1" />
+        Definir criterios
+      </Button>
+    )}
+  </div>
+)}
+```
+
+#### 2. Modificar `ResumenTab.tsx`
+
+Añadir prop para editar el mandato y pasarla al componente:
+
+**Antes:**
+```tsx
+interface ResumenTabProps {
+  mandato: Mandato;
+  onAddContacto: () => void;
+  onAsociarContacto: () => void;
+  onUpdateEmpresa?: (...) => Promise<void>;
+  onUpdateEmpresaText?: (...) => Promise<void>;
+  onVincularEmpresa: () => void;
 }
 ```
 
 **Después:**
 ```tsx
-interface TargetsTabBuySideProps {
+interface ResumenTabProps {
   mandato: Mandato;
-  onRefresh: () => void;
+  onAddContacto: () => void;
+  onAsociarContacto: () => void;
+  onUpdateEmpresa?: (...) => Promise<void>;
+  onUpdateEmpresaText?: (...) => Promise<void>;
+  onVincularEmpresa: () => void;
   onEditMandato?: () => void;  // NUEVO
 }
 ```
 
-**Línea 121 - Antes:**
+**Pasar la prop al componente:**
 ```tsx
-<CriteriosInversionCard mandato={mandato} />
+{!isServicio && <MandatoTipoEspecifico mandato={mandato} onEdit={onEditMandato} />}
 ```
-
-**Después:**
-```tsx
-<CriteriosInversionCard 
-  mandato={mandato} 
-  onEdit={onEditMandato}  // NUEVO
-/>
-```
-
-#### 2. Modificar `TargetsTab.tsx` (wrapper)
-
-Pasar la prop `onEditMandato` al componente Buy-Side.
 
 #### 3. Modificar `MandatoDetalle.tsx`
 
-Pasar la función que abre el drawer de edición a la pestaña Targets:
+Pasar la función que abre el drawer de edición:
 
-**Línea 200 - Antes:**
+**Antes:**
 ```tsx
-<TargetsTab mandato={mandato} onRefresh={refetch} />
+<ResumenTab
+  mandato={mandato}
+  onAddContacto={() => setOpenContactoDrawer(true)}
+  onAsociarContacto={() => setOpenAsociarDialog(true)}
+  onUpdateEmpresa={...}
+  onUpdateEmpresaText={...}
+  onVincularEmpresa={() => setVincularEmpresaOpen(true)}
+/>
 ```
 
 **Después:**
 ```tsx
-<TargetsTab 
-  mandato={mandato} 
-  onRefresh={refetch} 
+<ResumenTab
+  mandato={mandato}
+  onAddContacto={() => setOpenContactoDrawer(true)}
+  onAsociarContacto={() => setOpenAsociarDialog(true)}
+  onUpdateEmpresa={...}
+  onUpdateEmpresaText={...}
+  onVincularEmpresa={() => setVincularEmpresaOpen(true)}
   onEditMandato={() => setEditarMandatoOpen(true)}  // NUEVO
 />
 ```
@@ -82,17 +150,18 @@ Pasar la función que abre el drawer de edición a la pestaña Targets:
 ### Flujo Resultante
 
 ```text
-Usuario en pestaña "Targets" de mandato de Compra
+Usuario en pestaña "Resumen" de mandato de Compra
     ↓
-Ve tarjeta "Criterios de Inversión" (vacía o con datos)
+Ve tarjeta "Detalles del Mandato de Compra"
     ↓
-Click en "Editar" o "Definir criterios"
+Si está vacía: botón "Definir criterios"
+Si tiene datos: botón "Editar" en el header
     ↓
-Se abre EditarMandatoDrawer con sección "Criterios de Búsqueda"
+Click → Se abre EditarMandatoDrawer
     ↓
-Usuario rellena: Inversión mín/máx, Perfil buscado, Timeline
+Usuario rellena criterios de inversión
     ↓
-Guarda → Los criterios aparecen en la tarjeta ✓
+Guarda → Los datos aparecen en la tarjeta
 ```
 
 ---
@@ -101,8 +170,8 @@ Guarda → Los criterios aparecen en la tarjeta ✓
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Añadir prop `onEditMandato` y pasarla a `CriteriosInversionCard` |
-| `src/features/mandatos/tabs/TargetsTab.tsx` | Pasar prop `onEditMandato` al componente Buy-Side |
+| `src/components/mandatos/MandatoTipoEspecifico.tsx` | Añadir prop `onEdit`, botón de edición y estado vacío |
+| `src/features/mandatos/tabs/ResumenTab.tsx` | Añadir prop `onEditMandato` y pasarla al componente |
 | `src/pages/MandatoDetalle.tsx` | Pasar función para abrir el drawer de edición |
 
 ---
@@ -111,10 +180,8 @@ Guarda → Los criterios aparecen en la tarjeta ✓
 
 Después de implementar:
 1. Ir a un mandato de **Compra**
-2. Ir a la pestaña **Targets**
-3. Ver la tarjeta "Criterios de Inversión"
-4. Click en **"Editar"** o **"Definir criterios"**
-5. Se abre el drawer con la sección "Criterios de Búsqueda"
-6. Rellenar los campos y guardar
-7. Los datos aparecen en la tarjeta
+2. En la pestaña **Resumen** ver "Detalles del Mandato de Compra"
+3. Si está vacío: botón **"Definir criterios"** visible
+4. Si tiene datos: botón **"Editar"** en el header
+5. Click abre el drawer para editar los criterios de inversión
 
