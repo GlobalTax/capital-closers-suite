@@ -542,43 +542,33 @@ export function NuevoMandatoDrawer({
                   </div>
                 )}
 
-                {/* Valor y Probabilidad (solo para M&A) */}
+                {/* Valor Estimado (solo para M&A) */}
                 {!isServicio && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="valor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor Estimado (€)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ej: 2500000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="probabilidad"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Probabilidad (%)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0} 
-                              max={100} 
-                              placeholder="50" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="valor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Valor Estimado (€)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ej: 2.500.000"
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              const numericValue = e.target.value.replace(/[^\d]/g, '');
+                              if (!numericValue) {
+                                field.onChange('');
+                                return;
+                              }
+                              const formatted = parseInt(numericValue).toLocaleString('es-ES');
+                              field.onChange(formatted);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
 
                 <FormField
