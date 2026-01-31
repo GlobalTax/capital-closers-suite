@@ -1,73 +1,137 @@
 
-## Plan: Corregir Mandato de Compra y Mejorar UX del Formulario
+## Plan: Corregir la Pre-selección del Tipo de Mandato
 
 ### Problema Identificado
 
-El mandato que creaste hoy se guardó con `tipo: venta` en lugar de `tipo: compra`. Por eso no aparece cuando filtras por "Compra".
+El código actual tiene dos problemas que impiden que el tipo "compra" se pre-seleccione correctamente:
 
-**Datos del mandato creado:**
-| Campo | Valor |
-|-------|-------|
-| ID | 98792af6-7e2c-40a9-b7cf-608c7f77103f |
-| Tipo | **venta** (debería ser compra) |
-| Categoria | operacion_ma |
-| Estado | activo |
-| Fecha | 2026-01-31 08:41:04 |
+| Problema | Ubicación | Descripción |
+|----------|-----------|-------------|
+| 1. `defaultValues` hardcodeado | Línea 125 | `tipo: "venta"` está fijo, ignora `defaultTipo` prop |
+| 2. `form.reset()` sin parámetros | Línea 210 | Al resetear, vuelve a `tipo: "venta"` |
 
-### Solución Inmediata
+### Solución
 
-**Opción 1 - Manual:** Puedo corregir el mandato existente cambiando su tipo a "compra" directamente.
+**Archivo:** `src/components/mandatos/NuevoMandatoDrawer.tsx`
 
-**Opción 2 - Código:** Implementar mejoras para evitar este problema en el futuro.
+#### Cambio 1: Usar `defaultTipo` en los valores iniciales del form
+
+**Antes (líneas 118-137):**
+```tsx
+const form = useForm<MandatoFormValues>({
+  resolver: zodResolver(mandatoSchema),
+  defaultValues: {
+    categoria: "operacion_ma",
+    // ...
+    tipo: "venta", // PROBLEMA: hardcodeado
+    // ...
+  },
+});
+```
+
+**Después:**
+```tsx
+const form = useForm<MandatoFormValues>({
+  resolver: zodResolver(mandatoSchema),
+  defaultValues: {
+    categoria: "operacion_ma",
+    // ...
+    tipo: defaultTipo, // CORREGIDO: usa la prop
+    // ...
+  },
+});
+```
+
+#### Cambio 2: Resetear el form con los valores correctos
+
+**Antes (línea 210):**
+```tsx
+form.reset();
+```
+
+**Después:**
+```tsx
+form.reset({
+  categoria: "operacion_ma",
+  empresaId: "",
+  nuevaEmpresa: "",
+  nombre_proyecto: "",
+  tipo: defaultTipo, // Mantener el tipo del contexto
+  valor: "",
+  probabilidad: 50,
+  fechaCierreEsperada: "",
+  descripcion: "",
+  servicio_tipo: undefined,
+  cliente_externo: "",
+  honorarios_propuestos: undefined,
+  estructura_honorarios: undefined,
+  parent_mandato_id: "",
+  vincular_operacion: false,
+});
+```
+
+#### Cambio 3: Simplificar el useEffect (opcional pero recomendado)
+
+El `useEffect` actual puede causar renders innecesarios. Vamos a mantenerlo pero asegurarnos de que solo actualice cuando realmente cambie el `defaultTipo`:
+
+**Antes:**
+```tsx
+useEffect(() => {
+  if (open) {
+    cargarDatos();
+    form.setValue('tipo', defaultTipo);
+  }
+}, [open, defaultTipo]);
+```
+
+**Después:**
+```tsx
+useEffect(() => {
+  if (open) {
+    cargarDatos();
+    // Solo forzar el tipo si el form tiene un valor diferente
+    const currentTipo = form.getValues('tipo');
+    if (currentTipo !== defaultTipo) {
+      form.setValue('tipo', defaultTipo);
+    }
+  }
+}, [open, defaultTipo]);
+```
 
 ---
 
-### Mejoras de UX Propuestas
+### Corrección de Datos Existentes
 
-#### 1. Pre-seleccionar tipo según la URL actual
+También necesitamos corregir el mandato que ya se creó incorrectamente:
 
-Cuando el usuario está en `/mandatos?tipo=compra` y abre el drawer "Nuevo Mandato", pre-seleccionar automáticamente "Compra (Buy-Side)" en lugar de "Venta".
-
-**Cambios:**
-
-**Archivo:** `src/pages/Mandatos.tsx`
-- Pasar el tipo de la URL al drawer
-
-```tsx
-<NuevoMandatoDrawer
-  open={drawerOpen}
-  onOpenChange={setDrawerOpen}
-  onSuccess={cargarMandatos}
-  defaultTipo={searchParams.get("tipo") === "compra" ? "compra" : undefined}
-/>
+**SQL para ejecutar:**
+```sql
+UPDATE mandatos 
+SET tipo = 'compra' 
+WHERE id = 'd8e796f1-9a1b-451b-9e47-82c913080377';
 ```
 
-**Archivo:** `src/components/mandatos/NuevoMandatoDrawer.tsx`
-- Agregar prop `defaultTipo` y usarla en los valores por defecto del formulario
+---
 
-```tsx
-interface NuevoMandatoDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  defaultTipo?: "compra" | "venta"; // NUEVO
-}
+### Flujo Corregido
 
-// En defaultValues del formulario:
-defaultValues: {
-  categoria: "operacion_ma",
-  tipo: defaultTipo || "venta", // Usar prop si existe
-  // ...
-}
+```text
+Usuario en /mandatos?tipo=compra
+    ↓
+Click "Nuevo Mandato"
+    ↓
+Drawer abre con defaultTipo="compra"
+    ↓
+useForm se inicializa con tipo="compra" ← CORREGIDO
+    ↓
+Usuario ve "Compra" pre-seleccionado ✓
+    ↓
+Crea mandato con tipo="compra" ✓
+    ↓
+form.reset() mantiene tipo="compra" ← CORREGIDO
+    ↓
+Mandato aparece en filtro de compra ✓
 ```
-
-#### 2. Resaltar visualmente el tipo seleccionado
-
-Hacer más prominente la selección del tipo de mandato para evitar errores:
-
-- Agregar iconos distintivos (ShoppingCart para Compra, TrendingUp para Venta)
-- Usar colores diferenciados (naranja para Buy-Side, azul para Sell-Side)
-- Aumentar el tamaño del radio button
 
 ---
 
@@ -75,8 +139,7 @@ Hacer más prominente la selección del tipo de mandato para evitar errores:
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/Mandatos.tsx` | Pasar `defaultTipo` al drawer basado en el parámetro de URL |
-| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Recibir y usar `defaultTipo` prop, mejorar diseño del selector de tipo |
+| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Usar `defaultTipo` en `defaultValues` y en `form.reset()` |
 
 ---
 
@@ -84,50 +147,7 @@ Hacer más prominente la selección del tipo de mandato para evitar errores:
 
 1. Ir a `/mandatos?tipo=compra`
 2. Click en "Nuevo Mandato"
-3. Verificar que "Compra (Buy-Side)" está **pre-seleccionado**
+3. Verificar que "Compra (Buy-Side)" está **pre-seleccionado visualmente**
 4. Crear el mandato
-5. Verificar que aparece en la lista de mandatos de compra
-
----
-
-### Sección Técnica
-
-**Flujo actual:**
-```text
-Usuario en /mandatos?tipo=compra
-    ↓
-Click "Nuevo Mandato"
-    ↓
-Drawer abre con tipo="venta" (por defecto)
-    ↓
-Usuario no nota que está en "venta"
-    ↓
-Crea mandato con tipo="venta"
-    ↓
-Mandato no aparece en filtro de compra ❌
-```
-
-**Flujo corregido:**
-```text
-Usuario en /mandatos?tipo=compra
-    ↓
-Click "Nuevo Mandato"
-    ↓
-Drawer abre con tipo="compra" (heredado de URL) ← NUEVO
-    ↓
-Usuario ve "Compra" pre-seleccionado
-    ↓
-Crea mandato con tipo="compra"
-    ↓
-Mandato aparece en filtro de compra ✓
-```
-
-**Cambio en el hook useEffect para resetear el form:**
-```tsx
-// Cuando cambia defaultTipo, actualizar el form
-useEffect(() => {
-  if (open && defaultTipo) {
-    form.setValue('tipo', defaultTipo);
-  }
-}, [open, defaultTipo]);
-```
+5. Verificar que aparece inmediatamente en la lista de mandatos de compra
+6. Abrir drawer de nuevo y verificar que sigue pre-seleccionado "Compra"
