@@ -70,15 +70,8 @@ export function DataTableEnhanced<T extends TableRecord = TableRecord>({
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  // Expandir automáticamente todas las filas expandibles al cargar
-  useEffect(() => {
-    if (expandable && isRowExpandable) {
-      const expandableIds = data
-        .filter(row => isRowExpandable(row))
-        .map(row => row.id);
-      setExpandedRows(new Set(expandableIds));
-    }
-  }, [data, expandable, isRowExpandable]);
+  // Las filas expandibles empiezan cerradas por defecto
+  // El usuario puede expandirlas manualmente haciendo click
 
   const toggleExpand = (rowId: string, e: React.MouseEvent) => {
     e.stopPropagation();
