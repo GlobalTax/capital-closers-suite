@@ -1,159 +1,73 @@
 
-## Plan: Mejoras UX en Formulario Nuevo Mandato
+## Plan: Corregir Mandato de Compra y Mejorar UX del Formulario
 
-### Resumen de Cambios
+### Problema Identificado
 
-Este plan implementa tres mejoras en el formulario "Nuevo Proyecto" para mandatos M&A:
+El mandato que creaste hoy se guardó con `tipo: venta` en lugar de `tipo: compra`. Por eso no aparece cuando filtras por "Compra".
 
-| Mejora | Descripción |
-|--------|-------------|
-| 1. Eliminar campo "Probabilidad" | No es necesario al crear un mandato, se puede establecer después |
-| 2. Formatear "Valor Estimado" | Mostrar separadores de miles (1.000.000 en vez de 1000000) |
-| 3. Ancho completo del campo Valor | Al eliminar probabilidad, el valor ocupa todo el ancho |
+**Datos del mandato creado:**
+| Campo | Valor |
+|-------|-------|
+| ID | 98792af6-7e2c-40a9-b7cf-608c7f77103f |
+| Tipo | **venta** (debería ser compra) |
+| Categoria | operacion_ma |
+| Estado | activo |
+| Fecha | 2026-01-31 08:41:04 |
+
+### Solución Inmediata
+
+**Opción 1 - Manual:** Puedo corregir el mandato existente cambiando su tipo a "compra" directamente.
+
+**Opción 2 - Código:** Implementar mejoras para evitar este problema en el futuro.
 
 ---
 
-### Cambios en el Formulario
+### Mejoras de UX Propuestas
 
-**Archivo:** `src/components/mandatos/NuevoMandatoDrawer.tsx`
+#### 1. Pre-seleccionar tipo según la URL actual
 
-#### 1. Eliminar Campo Probabilidad
+Cuando el usuario está en `/mandatos?tipo=compra` y abre el drawer "Nuevo Mandato", pre-seleccionar automáticamente "Compra (Buy-Side)" en lugar de "Venta".
 
-**Estado Actual (líneas 562-580):**
+**Cambios:**
+
+**Archivo:** `src/pages/Mandatos.tsx`
+- Pasar el tipo de la URL al drawer
+
 ```tsx
-<FormField
-  control={form.control}
-  name="probabilidad"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Probabilidad (%)</FormLabel>
-      <FormControl>
-        <Input 
-          type="number" 
-          min={0} 
-          max={100} 
-          placeholder="50" 
-          {...field} 
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
+<NuevoMandatoDrawer
+  open={drawerOpen}
+  onOpenChange={setDrawerOpen}
+  onSuccess={cargarMandatos}
+  defaultTipo={searchParams.get("tipo") === "compra" ? "compra" : undefined}
 />
 ```
 
-**Cambio:** Eliminar completamente este campo del formulario. El mandato se creará con una probabilidad por defecto (50%), que el usuario puede modificar después si lo necesita.
+**Archivo:** `src/components/mandatos/NuevoMandatoDrawer.tsx`
+- Agregar prop `defaultTipo` y usarla en los valores por defecto del formulario
 
-#### 2. Campo Valor a Ancho Completo
-
-**Estado Actual (líneas 545-581):**
 ```tsx
-{/* Valor y Probabilidad (solo para M&A) */}
-{!isServicio && (
-  <div className="grid grid-cols-2 gap-4">
-    <FormField name="valor" ... />
-    <FormField name="probabilidad" ... />
-  </div>
-)}
+interface NuevoMandatoDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+  defaultTipo?: "compra" | "venta"; // NUEVO
+}
+
+// En defaultValues del formulario:
+defaultValues: {
+  categoria: "operacion_ma",
+  tipo: defaultTipo || "venta", // Usar prop si existe
+  // ...
+}
 ```
 
-**Cambio:** Cambiar de `grid-cols-2` a un solo campo sin grid.
+#### 2. Resaltar visualmente el tipo seleccionado
 
-#### 3. Formatear Valor con Separadores de Miles
+Hacer más prominente la selección del tipo de mandato para evitar errores:
 
-**Estado Actual:**
-- Input tipo texto sin formateo
-- El usuario escribe "1000000" y ve "1000000"
-
-**Cambio:**
-- Implementar formateo en vivo mientras el usuario escribe
-- "1000000" se muestra como "1.000.000"
-- Al guardar, se limpia el formato y se envía el número puro
-
-**Lógica de formateo:**
-```tsx
-// Formatear número con separadores de miles (formato español)
-const formatValue = (value: string) => {
-  const numericValue = value.replace(/[^\d]/g, '');
-  if (!numericValue) return '';
-  return parseInt(numericValue).toLocaleString('es-ES');
-};
-
-// En el onChange del input
-onChange={(e) => {
-  const formatted = formatValue(e.target.value);
-  field.onChange(formatted);
-}}
-```
-
----
-
-### Detalle Técnico
-
-**Modificaciones en `NuevoMandatoDrawer.tsx`:**
-
-1. **Línea 55:** Mantener `probabilidad` en el schema pero hacerlo opcional y con valor por defecto (no requiere cambio, ya es opcional)
-
-2. **Líneas 545-581:** Reemplazar el grid de 2 columnas por un solo campo de valor formateado
-
-3. **Nuevo código para el campo Valor:**
-```tsx
-{/* Valor Estimado (solo para M&A) */}
-{!isServicio && (
-  <FormField
-    control={form.control}
-    name="valor"
-    render={({ field }) => (
-      <FormItem>
-        <FormLabel>Valor Estimado (€)</FormLabel>
-        <FormControl>
-          <Input 
-            placeholder="Ej: 2.500.000"
-            value={field.value || ''}
-            onChange={(e) => {
-              // Extraer solo dígitos
-              const numericValue = e.target.value.replace(/[^\d]/g, '');
-              if (!numericValue) {
-                field.onChange('');
-                return;
-              }
-              // Formatear con separadores de miles
-              const formatted = parseInt(numericValue).toLocaleString('es-ES');
-              field.onChange(formatted);
-            }}
-          />
-        </FormControl>
-        <FormMessage />
-      </FormItem>
-    )}
-  />
-)}
-```
-
-4. **Línea 192:** Ya existe la lógica para limpiar el formato al guardar:
-```tsx
-valor: data.valor ? Number(data.valor.replace(/[^0-9]/g, '')) : undefined,
-```
-
----
-
-### Resultado Visual
-
-**Antes:**
-```
-┌─────────────────────────────┬─────────────────────────────┐
-│ Valor Estimado (€)          │ Probabilidad (%)            │
-│ [1000000                  ] │ [50                       ] │
-└─────────────────────────────┴─────────────────────────────┘
-```
-
-**Después:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Valor Estimado (€)                                          │
-│ [1.000.000                                                ] │
-└─────────────────────────────────────────────────────────────┘
-```
+- Agregar iconos distintivos (ShoppingCart para Compra, TrendingUp para Venta)
+- Usar colores diferenciados (naranja para Buy-Side, azul para Sell-Side)
+- Aumentar el tamaño del radio button
 
 ---
 
@@ -161,14 +75,59 @@ valor: data.valor ? Number(data.valor.replace(/[^0-9]/g, '')) : undefined,
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Eliminar campo probabilidad, reformatear campo valor |
+| `src/pages/Mandatos.tsx` | Pasar `defaultTipo` al drawer basado en el parámetro de URL |
+| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Recibir y usar `defaultTipo` prop, mejorar diseño del selector de tipo |
 
 ---
 
 ### Verificación Post-Implementación
 
-1. Abrir el formulario "Nuevo Proyecto" → seleccionar "Operación M&A"
-2. Verificar que NO aparece el campo "Probabilidad (%)"
-3. Escribir "1000000" en el campo Valor → debe mostrarse como "1.000.000"
-4. Crear el mandato → debe guardarse correctamente con el valor numérico
-5. Verificar que el mandato se crea con probabilidad por defecto (50%)
+1. Ir a `/mandatos?tipo=compra`
+2. Click en "Nuevo Mandato"
+3. Verificar que "Compra (Buy-Side)" está **pre-seleccionado**
+4. Crear el mandato
+5. Verificar que aparece en la lista de mandatos de compra
+
+---
+
+### Sección Técnica
+
+**Flujo actual:**
+```text
+Usuario en /mandatos?tipo=compra
+    ↓
+Click "Nuevo Mandato"
+    ↓
+Drawer abre con tipo="venta" (por defecto)
+    ↓
+Usuario no nota que está en "venta"
+    ↓
+Crea mandato con tipo="venta"
+    ↓
+Mandato no aparece en filtro de compra ❌
+```
+
+**Flujo corregido:**
+```text
+Usuario en /mandatos?tipo=compra
+    ↓
+Click "Nuevo Mandato"
+    ↓
+Drawer abre con tipo="compra" (heredado de URL) ← NUEVO
+    ↓
+Usuario ve "Compra" pre-seleccionado
+    ↓
+Crea mandato con tipo="compra"
+    ↓
+Mandato aparece en filtro de compra ✓
+```
+
+**Cambio en el hook useEffect para resetear el form:**
+```tsx
+// Cuando cambia defaultTipo, actualizar el form
+useEffect(() => {
+  if (open && defaultTipo) {
+    form.setValue('tipo', defaultTipo);
+  }
+}, [open, defaultTipo]);
+```
