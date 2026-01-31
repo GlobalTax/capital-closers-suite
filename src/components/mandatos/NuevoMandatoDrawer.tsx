@@ -122,7 +122,7 @@ export function NuevoMandatoDrawer({
       empresaId: "",
       nuevaEmpresa: "",
       nombre_proyecto: "",
-      tipo: "venta",
+      tipo: defaultTipo,
       valor: "",
       probabilidad: 50,
       fechaCierreEsperada: "",
@@ -143,8 +143,11 @@ export function NuevoMandatoDrawer({
   useEffect(() => {
     if (open) {
       cargarDatos();
-      // Pre-seleccionar tipo según el contexto de la URL
-      form.setValue('tipo', defaultTipo);
+      // Solo actualizar si el tipo actual es diferente
+      const currentTipo = form.getValues('tipo');
+      if (currentTipo !== defaultTipo) {
+        form.setValue('tipo', defaultTipo);
+      }
     }
   }, [open, defaultTipo]);
 
@@ -207,7 +210,23 @@ export function NuevoMandatoDrawer({
 
       const categoriaLabel = MANDATO_CATEGORIA_LABELS[data.categoria]?.label || "Proyecto";
       toast.success(`${categoriaLabel} creado exitosamente`);
-      form.reset();
+      form.reset({
+        categoria: "operacion_ma",
+        empresaId: "",
+        nuevaEmpresa: "",
+        nombre_proyecto: "",
+        tipo: defaultTipo,
+        valor: "",
+        probabilidad: 50,
+        fechaCierreEsperada: "",
+        descripcion: "",
+        servicio_tipo: undefined,
+        cliente_externo: "",
+        honorarios_propuestos: undefined,
+        estructura_honorarios: undefined,
+        parent_mandato_id: "",
+        vincular_operacion: false,
+      });
       setShowNewEmpresa(false);
       onOpenChange(false);
       onSuccess?.();
