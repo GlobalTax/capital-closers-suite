@@ -1,85 +1,180 @@
 
-## Plan: Rediseñar KPIs de Mandatos Buy-Side
+## Plan: Mejorar UI del Selector de Listas Apollo
 
-### Problema Actual
+### Estado Actual
 
-Los KPIs actuales para mandatos de compra muestran:
-- Targets Activos: 0 (no se calcula)
-- Conversión: 0% (no se calcula)
-- Score Promedio: 0 (no se calcula)
-- Ofertas: 0 (no se calcula)
-- En Búsqueda: 6 días
+El selector de listas de Apollo actualmente muestra:
+- Solo un dropdown `<Select>` con nombre y contador de contactos
+- Sin información de fechas ni preview de contactos
+- Diseño muy básico que no permite comparar listas
 
-Estos datos no se están alimentando correctamente y además no aportan valor accionable.
-
-### Solución: KPIs Accionables para Buy-Side
-
-Reemplazar los KPIs actuales por métricas que ayuden a gestionar el proceso de adquisición:
-
-| KPI Actual | Nuevo KPI | Por qué es más útil |
-|------------|-----------|---------------------|
-| Estado | **Pipeline Stage** | Muestra en qué fase del proceso está el mandato |
-| Targets Activos | **Funnel Summary** | Breakdown visual: Long List / Short List / Finalistas |
-| Conversión | **Próximo Paso** | Targets con contacto pendiente o sin actividad reciente |
-| Score Promedio | **Ofertas Activas** | Cuántas ofertas enviadas + aceptadas/rechazadas |
-| Ofertas | **Valor Estimado** | Rango de valor de las empresas target |
-| En Búsqueda | **Última Actividad** | Cuándo fue la última interacción en el proceso |
-
-### Diseño de Nuevos KPIs
-
+```text
+┌────────────────────────────────────────────────┐
+│ Selecciona una lista... ▼                      │
+├────────────────────────────────────────────────┤
+│ Lista M&A España (152 contactos)               │
+│ Targets Industriales UK (87 contactos)         │
+│ Prospectos Q4 2024 (234 contactos)             │
+└────────────────────────────────────────────────┘
 ```
-┌──────────┐ ┌──────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Estado   │ │ Pipeline         │ │ Ofertas      │ │ Siguiente    │ │ Valor Est.   │ │ Actividad    │
-│ ●activo  │ │ 15 → 5 → 2      │ │ 3 enviadas   │ │ 4 pendientes │ │ 2-8M€        │ │ hace 2 días  │
-│ Buy-Side │ │ Long→Short→Fin  │ │ 1 aceptada   │ │ de contacto  │ │ de EV        │ │ Reunión XYZ  │
-└──────────┘ └──────────────────┘ └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+
+### Nuevo Diseño: Cards Interactivas
+
+Reemplazar el dropdown por una lista de cards con toda la información relevante:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Selecciona una lista de Apollo                              [↻ Refresh] │
+├─────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ ○ Lista M&A España                                    152 contactos │ │
+│ │   Creada: 15 dic 2024  •  Actualizada: hace 2 días                  │ │
+│ │   ────────────────────────────────────────────────────────────────  │ │
+│ │   Preview: Juan García (CEO, Acme Corp) • María López (CFO, Beta)  │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ ○ Targets Industriales UK                              87 contactos │ │
+│ │   Creada: 3 ene 2025  •  Actualizada: hace 5 horas                  │ │
+│ │   ────────────────────────────────────────────────────────────────  │ │
+│ │   Preview: John Smith (Director, Acme UK) • Sarah Brown (VP, XYZ)  │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ### Cambios Técnicos
 
-#### 1. Crear hook para calcular KPIs de Buy-Side
-**Archivo nuevo:** `src/hooks/useBuySideKPIs.ts`
+#### 1. Actualizar Interface `ApolloLabel`
 
-Este hook calculará todas las métricas necesarias a partir de los targets del mandato:
-- Estadísticas del funnel (long_list, short_list, finalista)
-- Conteo de ofertas por estado
-- Targets pendientes de contacto (sin actividad > 7 días)
-- Rango de valores estimados
-- Última actividad registrada
+Añadir campo `updated_at` que ya viene de la API pero no se estaba usando:
 
-#### 2. Actualizar componente MandatoKPIs
-**Archivo:** `src/features/mandatos/components/MandatoKPIs.tsx`
+```typescript
+interface ApolloLabel {
+  id: string;
+  name: string;
+  cached_count: number;
+  created_at?: string;
+  updated_at?: string;  // Añadir este campo
+}
+```
 
-Modificar la sección de Buy-Side para mostrar:
-- **Card 1:** Estado + tipo (mantener)
-- **Card 2:** Resumen Funnel (15 → 5 → 2) con mini badges
-- **Card 3:** Ofertas (enviadas/aceptadas/rechazadas)
-- **Card 4:** Pendientes (targets sin contacto reciente)
-- **Card 5:** Valor estimado (rango min-max)
-- **Card 6:** Última actividad (hace X días + descripción breve)
+#### 2. Modificar Edge Function: `get-apollo-lists`
 
-#### 3. Pasar datos desde MandatoDetalle
-**Archivo:** `src/pages/MandatoDetalle.tsx`
+Añadir opción para obtener un preview de los primeros contactos de cada lista:
 
-Integrar el nuevo hook y pasar los KPIs calculados al componente.
+```typescript
+// Para cada lista, opcionalmente cargar los primeros 3 contactos
+// Esto requiere una llamada extra por lista, hacerlo bajo demanda
+```
 
-### Archivos a Crear
+**Nota**: Para no sobrecargar con llamadas API, el preview se cargará bajo demanda cuando el usuario haga hover o seleccione una lista.
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/hooks/useBuySideKPIs.ts` | Hook que calcula todos los KPIs de Buy-Side |
+#### 3. Rediseñar UI en `ImportTargetsApolloDrawer.tsx`
+
+Cambios en la sección `TabsContent value="list"`:
+
+| Elemento Actual | Elemento Nuevo |
+|-----------------|----------------|
+| `<Select>` dropdown | `<RadioGroup>` con cards |
+| Solo nombre + contador | Nombre + contador + fechas |
+| Sin preview | Preview lazy de primeros contactos |
+
+**Estructura de cada Card:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ○ [Radio] {Nombre de la lista}                    {N} contactos  │
+│   Creada: {fecha formateada}  •  Actualizada: {tiempo relativo}  │
+│   ───────────────────────────────────────────────────────────────│
+│   [Preview contactos - carga bajo demanda al seleccionar]        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 4. Añadir Preview de Contactos
+
+Cuando el usuario selecciona una lista, cargar automáticamente los primeros 3-5 contactos y mostrarlos como chips o avatares:
+
+```typescript
+// Cargar preview al seleccionar lista
+const loadListPreview = async (labelId: string) => {
+  const { data } = await supabase.functions.invoke('get-apollo-list-contacts', {
+    body: { label_id: labelId, page: 1, per_page: 5 },
+  });
+  // Mostrar en el card seleccionado
+};
+```
+
+---
 
 ### Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/features/mandatos/components/MandatoKPIs.tsx` | Rediseñar KPIs de Buy-Side |
-| `src/pages/MandatoDetalle.tsx` | Usar hook y pasar datos |
+| `src/components/targets/ImportTargetsApolloDrawer.tsx` | Rediseñar sección de listas con cards + fechas + preview |
+
+### Dependencias
+
+Se usarán utilidades de `date-fns` (ya instalado) para formatear fechas:
+- `format()` - Para fecha de creación
+- `formatDistanceToNow()` - Para "hace X tiempo"
+
+---
+
+### UI Final Detallada
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ← Importar Targets desde Apollo                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  [Buscar]  [Lista ✓]  [URLs/IDs]                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Selecciona una lista de Apollo                                 [↻ Actualizar]│
+│                                                                              │
+│  ┌─ ● ──────────────────────────────────────────────────────────────────────┐│
+│  │  Lista M&A España                                          152 contactos ││
+│  │  📅 Creada: 15 dic 2024   •   🔄 Actualizada: hace 2 días                ││
+│  │  ─────────────────────────────────────────────────────────────────────── ││
+│  │  👤 Juan García (CEO) @ Acme Corp                                        ││
+│  │  👤 María López (CFO) @ Beta Industries                                  ││
+│  │  👤 Carlos Ruiz (Director) @ Gamma Tech                                  ││
+│  │  +149 más...                                                             ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ┌─ ○ ──────────────────────────────────────────────────────────────────────┐│
+│  │  Targets Industriales UK                                    87 contactos ││
+│  │  📅 Creada: 3 ene 2025   •   🔄 Actualizada: hace 5 horas                ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ┌─ ○ ──────────────────────────────────────────────────────────────────────┐│
+│  │  Prospectos Q4 2024                                        234 contactos ││
+│  │  📅 Creada: 1 oct 2024   •   🔄 Actualizada: hace 1 semana               ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────────┐│
+│  │  💡 Los contactos de listas de Apollo ya están enriquecidos.             ││
+│  │     No consume créditos adicionales importarlos.                         ││
+│  └──────────────────────────────────────────────────────────────────────────┘│
+│                                                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                            [Cancelar]   [Cargar contactos]   │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Comportamiento
+
+1. **Carga inicial**: Se cargan las listas con nombre, contador y fechas
+2. **Selección**: Al seleccionar una lista, se carga el preview de los primeros 5 contactos
+3. **Expansión**: El card seleccionado se expande para mostrar el preview
+4. **Cards no seleccionados**: Muestran solo info básica (colapsados)
+5. **Scroll**: Si hay muchas listas, el contenedor tiene scroll
 
 ### Beneficios
 
-1. **Datos reales** - Todos los KPIs se calculan a partir de datos existentes
-2. **Accionables** - "4 pendientes de contacto" indica qué hacer a continuación
-3. **Contexto visual** - El mini-funnel muestra el pipeline de un vistazo
-4. **Valor del deal** - Rango de EV de los targets activos
-5. **Seguimiento** - Última actividad para detectar mandatos inactivos
+1. **Contexto visual**: Ver cuándo se creó/actualizó cada lista
+2. **Vista previa**: Ver qué tipo de contactos contiene antes de cargar
+3. **Comparación fácil**: Las cards permiten comparar listas visualmente
+4. **Mejor UX**: Más información sin sobrecargar la interfaz
