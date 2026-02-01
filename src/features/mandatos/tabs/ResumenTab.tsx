@@ -4,6 +4,7 @@ import { InformacionFinancieraEditable } from "@/components/mandatos/Informacion
 import { ContactosClaveCard } from "@/components/mandatos/ContactosClaveCard";
 import { ServicioHonorariosCard } from "@/components/mandatos/ServicioHonorariosCard";
 import { EmpresaIdentificacionWrapper } from "@/components/mandatos/EmpresaIdentificacionWrapper";
+import { DealSheetCard } from "@/features/mandatos/components/DealSheetCard";
 import type { Mandato } from "@/types";
 
 interface ResumenTabProps {
@@ -34,6 +35,14 @@ export function ResumenTab({
         fechaCierre={mandato.fecha_cierre}
         estado={mandato.estado}
       />
+      
+      {/* Deal Sheet - solo para operaciones M&A */}
+      {!isServicio && (
+        <DealSheetCard 
+          mandatoId={mandato.id} 
+          mandatoNombre={mandato.codigo}
+        />
+      )}
       
       {/* Mostrar info de honorarios para servicios */}
       {isServicio && <ServicioHonorariosCard mandato={mandato} />}
