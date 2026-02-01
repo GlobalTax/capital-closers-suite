@@ -1,163 +1,220 @@
 
+## Plan: Adaptar Finanzas para Mandatos de Compra (Buy-Side)
 
-## Plan: Corregir Integración de Listas de Apollo
+### Problema Identificado
 
-### Diagnóstico del Problema
+En los mandatos de **Compra (Buy-Side)**, el tab "Finanzas" actualmente muestra:
+- Estados financieros del **comprador** (empresa principal del mandato)
+- Calculadora de precio para el **comprador**
 
-Después de analizar los logs y el código, he identificado el problema:
+Esto no tiene sentido porque:
+- El comprador ya conoce sus propias finanzas
+- Lo relevante son los datos financieros de los **targets** que está evaluando
 
-**La API responde correctamente (HTTP 200) pero devuelve 0 labels**
+### Lógica de Negocio Correcta
 
-```
-2026-02-01T11:12:16Z INFO [Apollo Lists] Found 0 labels
-2026-02-01T11:12:16Z INFO [Apollo Lists] Fetching saved labels/lists
-```
-
-Esto puede deberse a dos causas:
-
-1. **La cuenta de Apollo no tiene "Labels" creados** - En Apollo, los "Labels" son etiquetas que se asignan manualmente a contactos. Si nunca has creado etiquetas en tu cuenta de Apollo, el endpoint devolverá un array vacío.
-
-2. **Confusión terminológica** - Apollo tiene:
-   - **Labels/Tags**: Etiquetas personalizadas para organizar contactos (lo que el endpoint actual busca)
-   - **Saved Searches**: Búsquedas guardadas con filtros específicos (diferente)
-   - **People Lists**: Listas de la base de datos de Apollo (diferentes de tus contactos)
+| Tipo de Mandato | Empresa Principal | Datos Financieros Relevantes |
+|-----------------|-------------------|------------------------------|
+| **Venta** (Sell-Side) | La empresa que se vende | Estados financieros de la empresa principal |
+| **Compra** (Buy-Side) | El comprador | Estados financieros de los **targets** |
 
 ---
 
-### Verificación Requerida
+### Solución Propuesta
 
-Antes de hacer cambios, necesito que confirmes en tu cuenta de Apollo:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Apollo.io > Contacts > Filters (Panel izquierdo)                           │
-│                                                                              │
-│  ¿Ves una sección de "Labels" o "Tags"?                                     │
-│  ¿Tienes etiquetas creadas con contactos asignados?                         │
-│                                                                              │
-│  Ejemplo:                                                                    │
-│    ● Leads Q1 2024 (45 contactos)                                           │
-│    ● M&A Targets (120 contactos)                                            │
-│    ● Qualified Buyers (30 contactos)                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Si no tienes labels creados en Apollo, necesitas crearlos primero desde la interfaz web de Apollo.io.**
-
----
-
-### Solución Propuesta: Mejorar Diagnóstico y Feedback
-
-Independientemente de si hay labels o no, mejoraremos la experiencia de usuario con mejor feedback:
-
-#### 1. Mejorar Edge Function con Logging Detallado
-
-Añadir más información de diagnóstico para entender la respuesta de Apollo:
-
-```typescript
-// Log the full response for debugging
-console.log("[Apollo Lists] Raw response:", JSON.stringify(apolloData));
-
-// Also log if the response has other fields we might be missing
-console.log("[Apollo Lists] Response keys:", Object.keys(apolloData));
-```
-
-#### 2. Añadir Estado Vacío Informativo en la UI
-
-Cuando no hay labels, mostrar un mensaje explicativo en lugar de una lista vacía:
+Adaptar el `FinanzasTab` para detectar el tipo de mandato y mostrar contenido diferente:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  📋 No se encontraron listas en Apollo                                      │
+│  MANDATO VENTA (Sell-Side) - Comportamiento actual                          │
+├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Para usar esta función:                                                    │
-│  1. Ve a tu cuenta de Apollo.io                                             │
-│  2. Selecciona contactos y asígnales una etiqueta (Label)                   │
-│  3. Las etiquetas aparecerán aquí automáticamente                          │
+│  ┌─ Estados Financieros de [Empresa Principal] ──────────────────────────┐  │
+│  │ PyG, Balance, Ratios, Evolución                                        │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
-│  [Abrir Apollo.io ↗]   [Refrescar listas ↻]                                │
+│  ┌─ Calculadora de Precio ────────────────────────────────────────────────┐  │
+│  │ Bridge: EV -> Equity Value                                             │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
-```
 
-#### 3. Verificar API Key con Endpoint de Test
-
-Añadir una verificación rápida de que la API key es válida:
-
-```typescript
-// Test API key validity
-const testResponse = await fetch("https://api.apollo.io/api/v1/auth/health", {
-  headers: { "X-Api-Key": APOLLO_API_KEY }
-});
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MANDATO COMPRA (Buy-Side) - Nuevo comportamiento                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─ Comparativa Financiera de Targets ────────────────────────────────────┐  │
+│  │ [Selector de Target]  [Target A ▾]                                     │  │
+│  │                                                                         │  │
+│  │  KPIs: Facturación | EBITDA | Margen | Empleados                       │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─ Estados Financieros del Target Seleccionado ──────────────────────────┐  │
+│  │ (Reutiliza FinancialStatementsCard con empresaId del target)           │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─ Calculadora de Precio para Target ────────────────────────────────────┐  │
+│  │ (Reutiliza PriceCalculatorCard con empresaId del target)               │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ### Cambios Técnicos
 
-#### Archivo 1: `supabase/functions/get-apollo-lists/index.ts`
+#### 1. Modificar `FinanzasTab.tsx`
 
-Mejorar logging y añadir diagnóstico:
+Añadir prop `tipoMandato` y bifurcar la lógica:
 
-| Cambio | Descripción |
-|--------|-------------|
-| Añadir log de respuesta completa | Para depuración |
-| Log de keys en la respuesta | Identificar campos disponibles |
-| Verificación de API key | Confirmar validez |
+```typescript
+interface FinanzasTabProps {
+  mandatoId: string;
+  tipoMandato: 'compra' | 'venta';  // Nueva prop
+}
 
-#### Archivo 2: `src/components/targets/ImportTargetsApolloDrawer.tsx`
-
-Mejorar UI cuando no hay labels:
-
-| Cambio | Descripción |
-|--------|-------------|
-| Empty state informativo | Explicar cómo crear labels en Apollo |
-| Botón de refresh | Permitir recargar labels |
-| Link a Apollo.io | Facilitar acceso para crear labels |
-
----
-
-### Flujo de Verificación
-
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Usuario abre   │     │  Edge Function   │     │   Apollo API     │
-│   tab "Lists"    │────▶│  get-apollo-lists│────▶│   /api/v1/labels │
-└──────────────────┘     └──────────────────┘     └──────────────────┘
-                                  │                        │
-                                  │◀───────────────────────┘
-                                  │   { labels: [] }
-                                  ▼
-                         ┌──────────────────┐
-                         │ 0 labels = UI    │
-                         │ muestra estado   │
-                         │ vacío informativo│
-                         └──────────────────┘
+export function FinanzasTab({ mandatoId, tipoMandato }: FinanzasTabProps) {
+  // Si es Buy-Side, mostrar vista de targets
+  if (tipoMandato === 'compra') {
+    return <FinanzasBuySideView mandatoId={mandatoId} />;
+  }
+  
+  // Si es Sell-Side, comportamiento actual (empresa principal)
+  return <FinanzasSellSideView mandatoId={mandatoId} />;
+}
 ```
 
+#### 2. Nuevo Componente: `FinanzasBuySideView.tsx`
+
+Vista especializada para mandatos de compra:
+
+| Elemento | Descripcion |
+|----------|-------------|
+| Selector de target | Dropdown con todos los targets del mandato |
+| Resumen comparativo | Tabla con KPIs de todos los targets |
+| Estados financieros | `FinancialStatementsCard` del target seleccionado |
+| Calculadora | `PriceCalculatorCard` del target seleccionado |
+
+#### 3. Modificar `MandatoDetalle.tsx`
+
+Pasar el tipo de mandato al FinanzasTab:
+
+```tsx
+<FinanzasTab 
+  mandatoId={id!} 
+  tipoMandato={mandato.tipo}  // Pasar tipo
+/>
+```
+
 ---
 
-### Verificación Alternativa: ¿La API Key tiene acceso correcto?
+### Componente `FinanzasBuySideView`
 
-El endpoint `/api/v1/labels` requiere que la cuenta tenga:
-- Plan con acceso API (todos los planes incluyen API)
-- Labels creados en la cuenta
-
-**Para verificar que la API key funciona**, podemos hacer una llamada de test al endpoint `/api/v1/auth/health` o intentar buscar contactos con `/api/v1/contacts/search`.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Finanzas de Targets                                      [Target A ▾]      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─ Comparativa Rápida ───────────────────────────────────────────────────┐  │
+│  │                                                                         │  │
+│  │  Target          Facturación    EBITDA    Margen    Valoración Est.    │  │
+│  │  ──────────────────────────────────────────────────────────────────    │  │
+│  │  Empresa A       €12.5M         €2.1M     16.8%     €15-18M            │  │
+│  │  Empresa B       €8.2M          €1.4M     17.1%     €10-12M            │  │
+│  │  Empresa C       €22.0M         €3.8M     17.3%     €25-30M            │  │
+│  │                                                                         │  │
+│  └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─ Estados Financieros de [Target Seleccionado] ─────────────────────────┐  │
+│  │  [Año selector]  [2024] [2023] [2022]                                  │  │
+│  │                                                                         │  │
+│  │  Ingresos: €12.5M    EBITDA: €2.1M    B.Neto: €1.2M    Activo: €8.5M  │  │
+│  │                                                                         │  │
+│  │  [PyG] [Balance] [Ratios] [Evolución]                                  │  │
+│  └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌─ Calculadora de Precio para [Target Seleccionado] ─────────────────────┐  │
+│  │  Metodología: [Locked Box ▾]                                           │  │
+│  │  Enterprise Value -> Ajustes -> Equity Value                           │  │
+│  └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### Próximos Pasos
+### Archivos a Crear
 
-1. **Confirma si tienes Labels en Apollo** - Esto determinará si el problema es de la API o de la cuenta
-2. **Si no tienes labels**: Crea algunos en Apollo.io y vuelve a probar
-3. **Si tienes labels pero no aparecen**: Implementaremos diagnóstico adicional para identificar el problema
-
----
+| Archivo | Descripcion |
+|---------|-------------|
+| `src/features/mandatos/tabs/FinanzasBuySideView.tsx` | Vista de finanzas para Buy-Side con selector de target |
+| `src/components/mandatos/buyside/TargetFinancialsComparison.tsx` | Tabla comparativa de KPIs de targets |
 
 ### Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `supabase/functions/get-apollo-lists/index.ts` | Mejorar logging y diagnóstico |
-| `src/components/targets/ImportTargetsApolloDrawer.tsx` | Añadir empty state informativo |
+| Archivo | Cambio |
+|---------|--------|
+| `src/features/mandatos/tabs/FinanzasTab.tsx` | Añadir prop `tipoMandato` y bifurcar lógica |
+| `src/pages/MandatoDetalle.tsx` | Pasar `mandato.tipo` a FinanzasTab |
 
+---
+
+### Flujo de Datos
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ MandatoDetalle   │────▶│   FinanzasTab    │────▶│ tipo === 'compra'│
+│ mandato.tipo     │     │   tipoMandato    │     │        ?         │
+└──────────────────┘     └──────────────────┘     └────────┬─────────┘
+                                                           │
+                    ┌──────────────────────────────────────┼──────────────────────────────┐
+                    │                                      │                               │
+                    ▼                                      ▼                               │
+      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
+      │  FinanzasBuySideView    │            │ FinanzasSellSideView    │                  │
+      │  (Targets del mandato)  │            │ (Empresa principal)     │                  │
+      └─────────────────────────┘            └─────────────────────────┘                  │
+                    │                                      │                               │
+                    ▼                                      ▼                               │
+      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
+      │  useTargetPipeline()    │            │  fetch empresa_principal│                  │
+      │  -> targets[].empresa   │            │  -> empresaId           │                  │
+      └─────────────────────────┘            └─────────────────────────┘                  │
+                    │                                      │                               │
+                    ▼                                      ▼                               │
+      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
+      │ FinancialStatementsCard │            │ FinancialStatementsCard │                  │
+      │ empresaId={target.id}   │            │ empresaId={principal.id}│                  │
+      └─────────────────────────┘            └─────────────────────────┘                  │
+```
+
+---
+
+### Empty State para Buy-Side sin Targets
+
+Cuando no hay targets en el mandato de compra:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│             ┌───────────────────────────────────────────────┐               │
+│             │     📊  No hay targets para analizar          │               │
+│             │                                                │               │
+│             │  Añade targets al mandato para ver sus        │               │
+│             │  estados financieros y calcular valoraciones. │               │
+│             │                                                │               │
+│             │  [Ir a pestaña Targets]                       │               │
+│             └───────────────────────────────────────────────┘               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Beneficios
+
+1. **Lógica correcta**: Los datos financieros mostrados son los relevantes para cada tipo de operación
+2. **Reutilización**: Se reutilizan `FinancialStatementsCard` y `PriceCalculatorCard` existentes
+3. **Comparativa**: Vista de comparación de targets facilita la toma de decisiones
+4. **Consistencia**: El flujo de trabajo de Buy-Side se mantiene coherente
