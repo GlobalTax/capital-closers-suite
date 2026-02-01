@@ -1,153 +1,163 @@
 
 
-## Plan: Mover Deal Sheet al Dashboard del Deal
+## Plan: Corregir Integración de Listas de Apollo
 
-### Situacion Actual
+### Diagnóstico del Problema
 
-El Deal Sheet esta ubicado en:
-```
-Mandato → Pestana "Marketing" → Sub-tab "Deal Sheet"
-```
+Después de analizar los logs y el código, he identificado el problema:
 
-Esto requiere dos clics para acceder y esta escondido dentro de Marketing.
-
-### Nueva Ubicacion Propuesta
-
-Mover el Deal Sheet directamente a la pestana **Resumen** del mandato, visible inmediatamente al abrir el deal:
+**La API responde correctamente (HTTP 200) pero devuelve 0 labels**
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ [Header: Empresa + Estado + Badges]                                          │
-├──────────────────────────────────────────────────────────────────────────────┤
-│ [KPIs del Mandato]                                                           │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  [Resumen] [Finanzas] [Targets] [Checklist] [Docs] [Marketing] [Horas]       │
-├──────────────────────────────────────────────────────────────────────────────┤
+2026-02-01T11:12:16Z INFO [Apollo Lists] Found 0 labels
+2026-02-01T11:12:16Z INFO [Apollo Lists] Fetching saved labels/lists
+```
+
+Esto puede deberse a dos causas:
+
+1. **La cuenta de Apollo no tiene "Labels" creados** - En Apollo, los "Labels" son etiquetas que se asignan manualmente a contactos. Si nunca has creado etiquetas en tu cuenta de Apollo, el endpoint devolverá un array vacío.
+
+2. **Confusión terminológica** - Apollo tiene:
+   - **Labels/Tags**: Etiquetas personalizadas para organizar contactos (lo que el endpoint actual busca)
+   - **Saved Searches**: Búsquedas guardadas con filtros específicos (diferente)
+   - **People Lists**: Listas de la base de datos de Apollo (diferentes de tus contactos)
+
+---
+
+### Verificación Requerida
+
+Antes de hacer cambios, necesito que confirmes en tu cuenta de Apollo:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Apollo.io > Contacts > Filters (Panel izquierdo)                           │
 │                                                                              │
-│  ┌─ Timeline ──────────────────────────────────────────────────────────────┐ │
-│  │ Fecha inicio / cierre / estado                                          │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
+│  ¿Ves una sección de "Labels" o "Tags"?                                     │
+│  ¿Tienes etiquetas creadas con contactos asignados?                         │
 │                                                                              │
-│  ┌─ Deal Sheet ────────────────────────────────────── [Editar] [Preview] ──┐ │
-│  │ Resumen ejecutivo, highlights, configuracion financiera                 │ │
-│  │ (Colapsado por defecto, expandible)                                     │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
+│  Ejemplo:                                                                    │
+│    ● Leads Q1 2024 (45 contactos)                                           │
+│    ● M&A Targets (120 contactos)                                            │
+│    ● Qualified Buyers (30 contactos)                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Si no tienes labels creados en Apollo, necesitas crearlos primero desde la interfaz web de Apollo.io.**
+
+---
+
+### Solución Propuesta: Mejorar Diagnóstico y Feedback
+
+Independientemente de si hay labels o no, mejoraremos la experiencia de usuario con mejor feedback:
+
+#### 1. Mejorar Edge Function con Logging Detallado
+
+Añadir más información de diagnóstico para entender la respuesta de Apollo:
+
+```typescript
+// Log the full response for debugging
+console.log("[Apollo Lists] Raw response:", JSON.stringify(apolloData));
+
+// Also log if the response has other fields we might be missing
+console.log("[Apollo Lists] Response keys:", Object.keys(apolloData));
+```
+
+#### 2. Añadir Estado Vacío Informativo en la UI
+
+Cuando no hay labels, mostrar un mensaje explicativo en lugar de una lista vacía:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  📋 No se encontraron listas en Apollo                                      │
 │                                                                              │
-│  ┌─ Informacion Especifica del Mandato ────────────────────────────────────┐ │
-│  │ Tipo Buy/Sell, parametros de busqueda, etc.                             │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
+│  Para usar esta función:                                                    │
+│  1. Ve a tu cuenta de Apollo.io                                             │
+│  2. Selecciona contactos y asígnales una etiqueta (Label)                   │
+│  3. Las etiquetas aparecerán aquí automáticamente                          │
 │                                                                              │
-│  ┌─ Empresa ───────────────────────────────────────────────────────────────┐ │
-│  │ CIF, sector, ubicacion                                                  │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│  ┌─ Financieros ───────────────────────────────────────────────────────────┐ │
-│  │ Facturacion, EBITDA, empleados                                          │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│  ┌─ Contactos Clave ───────────────────────────────────────────────────────┐ │
-│  │ CEO, CFO, etc.                                                          │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+│  [Abrir Apollo.io ↗]   [Refrescar listas ↻]                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 3. Verificar API Key con Endpoint de Test
+
+Añadir una verificación rápida de que la API key es válida:
+
+```typescript
+// Test API key validity
+const testResponse = await fetch("https://api.apollo.io/api/v1/auth/health", {
+  headers: { "X-Api-Key": APOLLO_API_KEY }
+});
 ```
 
 ---
 
-### Nuevo Componente: Deal Sheet Summary Card
+### Cambios Técnicos
 
-Crear una version compacta del Deal Sheet para el dashboard que muestre:
+#### Archivo 1: `supabase/functions/get-apollo-lists/index.ts`
 
-1. **Estado**: Draft / Publicado
-2. **Resumen rapido**: Primeras lineas del executive summary
-3. **Highlights count**: "5 highlights definidos"
-4. **Acciones**: Boton para editar (abre drawer/modal) y previsualizar
+Mejorar logging y añadir diagnóstico:
+
+| Cambio | Descripción |
+|--------|-------------|
+| Añadir log de respuesta completa | Para depuración |
+| Log de keys en la respuesta | Identificar campos disponibles |
+| Verificación de API key | Confirmar validez |
+
+#### Archivo 2: `src/components/targets/ImportTargetsApolloDrawer.tsx`
+
+Mejorar UI cuando no hay labels:
+
+| Cambio | Descripción |
+|--------|-------------|
+| Empty state informativo | Explicar cómo crear labels en Apollo |
+| Botón de refresh | Permitir recargar labels |
+| Link a Apollo.io | Facilitar acceso para crear labels |
+
+---
+
+### Flujo de Verificación
 
 ```
-┌─ Deal Sheet ────────────────────────────────── [Borrador] ─┐
-│                                                            │
-│  Empresa lider regional en el sector de tecnologia...      │
-│  (ver mas)                                                 │
-│                                                            │
-│  5 highlights de inversion  •  Financieros configurados    │
-│                                                            │
-│  [Editar Deal Sheet]              [Previsualizar]          │
-└────────────────────────────────────────────────────────────┘
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Usuario abre   │     │  Edge Function   │     │   Apollo API     │
+│   tab "Lists"    │────▶│  get-apollo-lists│────▶│   /api/v1/labels │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+                                  │                        │
+                                  │◀───────────────────────┘
+                                  │   { labels: [] }
+                                  ▼
+                         ┌──────────────────┐
+                         │ 0 labels = UI    │
+                         │ muestra estado   │
+                         │ vacío informativo│
+                         └──────────────────┘
 ```
 
 ---
 
-### Cambios Tecnicos
+### Verificación Alternativa: ¿La API Key tiene acceso correcto?
 
-#### 1. Nuevo Componente: `DealSheetCard.tsx`
+El endpoint `/api/v1/labels` requiere que la cuenta tenga:
+- Plan con acceso API (todos los planes incluyen API)
+- Labels creados en la cuenta
 
-Version compacta para el dashboard:
-
-| Elemento | Descripcion |
-|----------|-------------|
-| Badge de estado | Draft/Publicado |
-| Preview del resumen | Primeros 200 caracteres del executive summary |
-| Contadores | Numero de highlights, si hay financieros configurados |
-| Boton "Editar" | Abre drawer con el editor completo |
-| Boton "Preview" | Abre dialog de previsualizacion |
-
-#### 2. Nuevo Componente: `DealSheetDrawer.tsx`
-
-Drawer lateral que contiene el `DealSheetEditor` completo:
-- Se abre al hacer clic en "Editar Deal Sheet"
-- Mismo contenido que el editor actual
-- Permite editar sin salir del dashboard
-
-#### 3. Modificar `ResumenTab.tsx`
-
-Integrar el nuevo `DealSheetCard` despues del `MandatoTimeline`:
-
-```tsx
-<MandatoTimeline ... />
-
-{/* Deal Sheet - solo para operaciones M&A */}
-{!isServicio && (
-  <DealSheetCard mandatoId={mandato.id} />
-)}
-
-<MandatoTipoEspecifico ... />
-```
-
-#### 4. Simplificar `MarketingSubTabs.tsx`
-
-Eliminar el Deal Sheet de Marketing (ya esta en Resumen):
-- Solo queda el Teaser Manager
-- Opcionalmente mantener link/referencia al Deal Sheet
+**Para verificar que la API key funciona**, podemos hacer una llamada de test al endpoint `/api/v1/auth/health` o intentar buscar contactos con `/api/v1/contacts/search`.
 
 ---
 
-### Archivos a Crear
+### Próximos Pasos
 
-| Archivo | Descripcion |
-|---------|-------------|
-| `src/features/mandatos/components/DealSheetCard.tsx` | Card compacta para dashboard |
-| `src/features/mandatos/components/DealSheetDrawer.tsx` | Drawer con editor completo |
+1. **Confirma si tienes Labels en Apollo** - Esto determinará si el problema es de la API o de la cuenta
+2. **Si no tienes labels**: Crea algunos en Apollo.io y vuelve a probar
+3. **Si tienes labels pero no aparecen**: Implementaremos diagnóstico adicional para identificar el problema
+
+---
 
 ### Archivos a Modificar
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/features/mandatos/tabs/ResumenTab.tsx` | Integrar DealSheetCard |
-| `src/features/mandatos/components/MarketingSubTabs.tsx` | Remover Deal Sheet (opcional: mantener solo Teaser) |
-
----
-
-### Comportamiento
-
-1. **Dashboard (Resumen)**: El Deal Sheet Card muestra estado y resumen rapido
-2. **Clic en "Editar"**: Abre drawer lateral con editor completo
-3. **Clic en "Preview"**: Abre dialog de previsualizacion (igual que antes)
-4. **Auto-guardado**: Los cambios se guardan al cerrar el drawer
-
-### Beneficios
-
-1. **Acceso directo**: Deal Sheet visible inmediatamente al abrir el mandato
-2. **Contexto**: Esta junto al resto de la informacion del deal
-3. **Menos clics**: No hay que navegar a Marketing > Deal Sheet
-4. **Coherencia**: La informacion del deal esta centralizada en un solo lugar
+| Archivo | Cambios |
+|---------|---------|
+| `supabase/functions/get-apollo-lists/index.ts` | Mejorar logging y diagnóstico |
+| `src/components/targets/ImportTargetsApolloDrawer.tsx` | Añadir empty state informativo |
 
