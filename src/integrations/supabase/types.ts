@@ -6603,6 +6603,145 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_sheets: {
+        Row: {
+          created_at: string | null
+          custom_ebitda_max: number | null
+          custom_ebitda_min: number | null
+          custom_revenue_max: number | null
+          custom_revenue_min: number | null
+          executive_summary_en: string | null
+          executive_summary_es: string | null
+          expected_timeline: string | null
+          id: string
+          ideal_buyer_profile_en: string | null
+          ideal_buyer_profile_es: string | null
+          investment_highlights_en: string[] | null
+          investment_highlights_es: string[] | null
+          mandato_id: string
+          process_requirements: string[] | null
+          published_at: string | null
+          published_by: string | null
+          sale_rationale_en: string | null
+          sale_rationale_es: string | null
+          show_ebitda_margin: boolean | null
+          show_ebitda_range: boolean | null
+          show_employees: boolean | null
+          show_exact_financials: boolean | null
+          show_revenue_range: boolean | null
+          status: string | null
+          transaction_type: string | null
+          updated_at: string | null
+          valuation_multiple_max: number | null
+          valuation_multiple_min: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_ebitda_max?: number | null
+          custom_ebitda_min?: number | null
+          custom_revenue_max?: number | null
+          custom_revenue_min?: number | null
+          executive_summary_en?: string | null
+          executive_summary_es?: string | null
+          expected_timeline?: string | null
+          id?: string
+          ideal_buyer_profile_en?: string | null
+          ideal_buyer_profile_es?: string | null
+          investment_highlights_en?: string[] | null
+          investment_highlights_es?: string[] | null
+          mandato_id: string
+          process_requirements?: string[] | null
+          published_at?: string | null
+          published_by?: string | null
+          sale_rationale_en?: string | null
+          sale_rationale_es?: string | null
+          show_ebitda_margin?: boolean | null
+          show_ebitda_range?: boolean | null
+          show_employees?: boolean | null
+          show_exact_financials?: boolean | null
+          show_revenue_range?: boolean | null
+          status?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          valuation_multiple_max?: number | null
+          valuation_multiple_min?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_ebitda_max?: number | null
+          custom_ebitda_min?: number | null
+          custom_revenue_max?: number | null
+          custom_revenue_min?: number | null
+          executive_summary_en?: string | null
+          executive_summary_es?: string | null
+          expected_timeline?: string | null
+          id?: string
+          ideal_buyer_profile_en?: string | null
+          ideal_buyer_profile_es?: string | null
+          investment_highlights_en?: string[] | null
+          investment_highlights_es?: string[] | null
+          mandato_id?: string
+          process_requirements?: string[] | null
+          published_at?: string | null
+          published_by?: string | null
+          sale_rationale_en?: string | null
+          sale_rationale_es?: string | null
+          show_ebitda_margin?: boolean | null
+          show_ebitda_range?: boolean | null
+          show_employees?: boolean | null
+          show_exact_financials?: boolean | null
+          show_revenue_range?: boolean | null
+          status?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          valuation_multiple_max?: number | null
+          valuation_multiple_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_sheets_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: true
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+        ]
+      }
       document_access_logs: {
         Row: {
           access_type: string
