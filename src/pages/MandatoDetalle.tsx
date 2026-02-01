@@ -22,7 +22,7 @@ import { TimeEntriesTable } from "@/components/mandatos/TimeEntriesTable";
 import { TimeTrackingStats } from "@/components/mandatos/TimeTrackingStats";
 import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGeneratorDrawer";
-import { TeaserManager } from "@/features/mandatos/components/TeaserManager";
+import { MarketingSubTabs } from "@/features/mandatos/components/MarketingSubTabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -217,7 +217,7 @@ export default function MandatoDetalle() {
 
         {!esServicio && (
           <TabsContent value="marketing" className="space-y-6">
-            <TeaserManager 
+            <MarketingSubTabs 
               mandatoId={id!} 
               mandatoNombre={mandato.empresa_principal?.nombre || mandato.codigo}
               onRefresh={refetchDocumentos}
