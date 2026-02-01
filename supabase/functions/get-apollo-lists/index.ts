@@ -19,6 +19,23 @@ serve(async (req) => {
 
     console.log("[Apollo Lists] Fetching saved labels/lists");
 
+    // First verify the API key is valid
+    const healthCheck = await fetch("https://api.apollo.io/api/v1/auth/health", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": APOLLO_API_KEY,
+      },
+    });
+    
+    if (!healthCheck.ok) {
+      const healthError = await healthCheck.text();
+      console.error("[Apollo Lists] API key validation failed:", healthCheck.status, healthError);
+      throw new Error(`Apollo API key invalid or expired: ${healthCheck.status}`);
+    }
+    
+    console.log("[Apollo Lists] API key validated successfully");
+
     // Call Apollo Labels API
     const apolloResponse = await fetch("https://api.apollo.io/api/v1/labels", {
       method: "GET",
@@ -36,6 +53,10 @@ serve(async (req) => {
     }
 
     const apolloData = await apolloResponse.json();
+    
+    // Enhanced logging for debugging
+    console.log("[Apollo Lists] Raw response keys:", Object.keys(apolloData));
+    console.log("[Apollo Lists] Raw labels data:", JSON.stringify(apolloData.labels?.slice(0, 3) || []));
     console.log(`[Apollo Lists] Found ${apolloData.labels?.length || 0} labels`);
 
     // Transform labels to a cleaner format
@@ -48,7 +69,11 @@ serve(async (req) => {
     }));
 
     return new Response(
-      JSON.stringify({ labels }),
+      JSON.stringify({ 
+        labels,
+        api_status: "healthy",
+        labels_count: labels.length,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

@@ -235,7 +235,7 @@ export function ImportTargetsApolloDrawer({
       if (error) throw error;
       
       setLabels(data?.labels || []);
-      console.log('[Apollo] Loaded labels:', data?.labels?.length);
+      console.log('[Apollo] Loaded labels:', data?.labels?.length, 'API status:', data?.api_status);
     } catch (error: any) {
       console.error('[Apollo] Error loading labels:', error);
       toast.error('Error al cargar listas de Apollo', { description: error.message });
@@ -243,6 +243,44 @@ export function ImportTargetsApolloDrawer({
       setLoadingLabels(false);
     }
   };
+
+  // Empty state component for when no labels exist
+  const ListsEmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-8 px-4 text-center border border-dashed rounded-lg bg-muted/30">
+      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+        <List className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="font-medium text-foreground mb-2">No se encontraron listas en Apollo</h3>
+      <p className="text-sm text-muted-foreground mb-4 max-w-md">
+        Para usar esta función, necesitas crear etiquetas (Labels) en tu cuenta de Apollo y asignar contactos a ellas.
+      </p>
+      <ol className="text-sm text-muted-foreground text-left mb-4 space-y-1">
+        <li>1. Ve a tu cuenta de Apollo.io</li>
+        <li>2. Selecciona contactos en tu base de datos</li>
+        <li>3. Usa "Add to Label" para crear una etiqueta</li>
+        <li>4. Las etiquetas aparecerán aquí automáticamente</li>
+      </ol>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open('https://app.apollo.io/#/contacts', '_blank')}
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Abrir Apollo.io
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadLabels}
+          disabled={loadingLabels}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loadingLabels ? 'animate-spin' : ''}`} />
+          Refrescar
+        </Button>
+      </div>
+    </div>
+  );
 
   // Load preview contacts for a specific list (lazy loading)
   const loadListPreview = async (labelId: string) => {
@@ -641,17 +679,7 @@ export function ImportTargetsApolloDrawer({
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : labels.length === 0 ? (
-            <Card>
-              <CardContent className="py-6 text-center">
-                <List className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No se encontraron listas en Apollo
-                </p>
-                <Button variant="link" size="sm" onClick={loadLabels} className="mt-2">
-                  Reintentar
-                </Button>
-              </CardContent>
-            </Card>
+            <ListsEmptyState />
           ) : (
             <ScrollArea className="h-[280px] pr-4">
               <RadioGroup value={selectedLabelId} onValueChange={handleSelectList} className="space-y-2">
