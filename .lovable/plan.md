@@ -1,180 +1,230 @@
 
-## Plan: Mejorar UI del Selector de Listas Apollo
+## Plan: Paginación Automática para Listas Apollo
 
-### Estado Actual
+### Problema Actual
 
-El selector de listas de Apollo actualmente muestra:
-- Solo un dropdown `<Select>` con nombre y contador de contactos
-- Sin información de fechas ni preview de contactos
-- Diseño muy básico que no permite comparar listas
+La función `loadListContacts` solo carga los primeros 100 contactos de una lista Apollo:
 
-```text
-┌────────────────────────────────────────────────┐
-│ Selecciona una lista... ▼                      │
-├────────────────────────────────────────────────┤
-│ Lista M&A España (152 contactos)               │
-│ Targets Industriales UK (87 contactos)         │
-│ Prospectos Q4 2024 (234 contactos)             │
-└────────────────────────────────────────────────┘
+```typescript
+const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
+  body: { label_id: selectedLabelId, page: 1, per_page: 100 },
+});
 ```
 
-### Nuevo Diseño: Cards Interactivas
+Si una lista tiene 500 contactos, solo se importan los primeros 100.
 
-Reemplazar el dropdown por una lista de cards con toda la información relevante:
+### Solución: Carga Paginada con Progreso
+
+Implementar un loop que cargue todas las páginas automáticamente, mostrando el progreso al usuario:
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Selecciona una lista de Apollo                              [↻ Refresh] │
-├─────────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ ○ Lista M&A España                                    152 contactos │ │
-│ │   Creada: 15 dic 2024  •  Actualizada: hace 2 días                  │ │
-│ │   ────────────────────────────────────────────────────────────────  │ │
-│ │   Preview: Juan García (CEO, Acme Corp) • María López (CFO, Beta)  │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────────────────────┐ │
-│ │ ○ Targets Industriales UK                              87 contactos │ │
-│ │   Creada: 3 ene 2025  •  Actualizada: hace 5 horas                  │ │
-│ │   ────────────────────────────────────────────────────────────────  │ │
-│ │   Preview: John Smith (Director, Acme UK) • Sarah Brown (VP, XYZ)  │ │
-│ └─────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Cargando contactos de "Lista M&A España"                                    │
+│                                                                              │
+│  ████████████████████░░░░░░░░░░░░░░░░░░░░  75%                              │
+│                                                                              │
+│  Página 3 de 4  •  375 de 500 contactos cargados                            │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ### Cambios Técnicos
 
-#### 1. Actualizar Interface `ApolloLabel`
+#### 1. Añadir Estado para Progreso de Paginación
 
-Añadir campo `updated_at` que ya viene de la API pero no se estaba usando:
-
-```typescript
-interface ApolloLabel {
-  id: string;
-  name: string;
-  cached_count: number;
-  created_at?: string;
-  updated_at?: string;  // Añadir este campo
-}
-```
-
-#### 2. Modificar Edge Function: `get-apollo-lists`
-
-Añadir opción para obtener un preview de los primeros contactos de cada lista:
+Nuevas variables de estado para mostrar el progreso:
 
 ```typescript
-// Para cada lista, opcionalmente cargar los primeros 3 contactos
-// Esto requiere una llamada extra por lista, hacerlo bajo demanda
+// Pagination state for list loading
+const [listLoadingProgress, setListLoadingProgress] = useState({
+  currentPage: 0,
+  totalPages: 0,
+  loadedContacts: 0,
+  totalContacts: 0,
+});
 ```
 
-**Nota**: Para no sobrecargar con llamadas API, el preview se cargará bajo demanda cuando el usuario haga hover o seleccione una lista.
+#### 2. Modificar `loadListContacts` con Loop de Paginación
 
-#### 3. Rediseñar UI en `ImportTargetsApolloDrawer.tsx`
-
-Cambios en la sección `TabsContent value="list"`:
-
-| Elemento Actual | Elemento Nuevo |
-|-----------------|----------------|
-| `<Select>` dropdown | `<RadioGroup>` con cards |
-| Solo nombre + contador | Nombre + contador + fechas |
-| Sin preview | Preview lazy de primeros contactos |
-
-**Estructura de cada Card:**
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ ○ [Radio] {Nombre de la lista}                    {N} contactos  │
-│   Creada: {fecha formateada}  •  Actualizada: {tiempo relativo}  │
-│   ───────────────────────────────────────────────────────────────│
-│   [Preview contactos - carga bajo demanda al seleccionar]        │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### 4. Añadir Preview de Contactos
-
-Cuando el usuario selecciona una lista, cargar automáticamente los primeros 3-5 contactos y mostrarlos como chips o avatares:
+Reescribir la función para cargar todas las páginas:
 
 ```typescript
-// Cargar preview al seleccionar lista
-const loadListPreview = async (labelId: string) => {
-  const { data } = await supabase.functions.invoke('get-apollo-list-contacts', {
-    body: { label_id: labelId, page: 1, per_page: 5 },
-  });
-  // Mostrar en el card seleccionado
+const loadListContacts = async () => {
+  if (!selectedLabelId) {
+    toast.error('Selecciona una lista');
+    return;
+  }
+
+  setLoadingContacts(true);
+  setContacts([]);
+  
+  const allContacts: ApolloContact[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+  let totalEntries = 0;
+
+  try {
+    // Loop through all pages
+    while (currentPage <= totalPages) {
+      const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
+        body: { label_id: selectedLabelId, page: currentPage, per_page: 100 },
+      });
+      
+      if (error) throw error;
+      
+      const pageContacts = data?.contacts || [];
+      allContacts.push(...pageContacts);
+      
+      // Update pagination info from first request
+      if (currentPage === 1) {
+        totalPages = data?.pagination?.total_pages || 1;
+        totalEntries = data?.pagination?.total_entries || pageContacts.length;
+      }
+      
+      // Update progress state
+      setListLoadingProgress({
+        currentPage,
+        totalPages,
+        loadedContacts: allContacts.length,
+        totalContacts: totalEntries,
+      });
+      
+      currentPage++;
+    }
+    
+    setContacts(allContacts);
+    setStep('results');
+    
+    if (allContacts.length === 0) {
+      toast.info('La lista no tiene contactos');
+    } else {
+      toast.success(`${allContacts.length} contactos cargados`);
+    }
+  } catch (error: any) {
+    console.error('[Apollo] Error loading contacts:', error);
+    toast.error('Error al cargar contactos', { description: error.message });
+  } finally {
+    setLoadingContacts(false);
+    setListLoadingProgress({ currentPage: 0, totalPages: 0, loadedContacts: 0, totalContacts: 0 });
+  }
 };
 ```
 
----
+#### 3. Mostrar UI de Progreso Durante Carga
 
-### Archivos a Modificar
+En el botón y en la sección de lista, mostrar el progreso:
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/components/targets/ImportTargetsApolloDrawer.tsx` | Rediseñar sección de listas con cards + fechas + preview |
+**En el footer (botón):**
+```tsx
+{step === 'select' && method === 'list' && (
+  <Button 
+    className="flex-1" 
+    onClick={loadListContacts}
+    disabled={loadingContacts || !selectedLabelId}
+  >
+    {loadingContacts ? (
+      <>
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        {listLoadingProgress.totalPages > 1 
+          ? `Página ${listLoadingProgress.currentPage}/${listLoadingProgress.totalPages}...`
+          : 'Cargando...'
+        }
+      </>
+    ) : (
+      <><List className="h-4 w-4 mr-2" />Cargar contactos</>
+    )}
+  </Button>
+)}
+```
 
-### Dependencias
+**En el contenido de la pestaña (opcional, mostrar barra de progreso):**
+```tsx
+{loadingContacts && listLoadingProgress.totalPages > 1 && (
+  <Card>
+    <CardContent className="py-4">
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span>Cargando contactos...</span>
+          <span className="text-muted-foreground">
+            {listLoadingProgress.loadedContacts} de {listLoadingProgress.totalContacts}
+          </span>
+        </div>
+        <Progress 
+          value={(listLoadingProgress.currentPage / listLoadingProgress.totalPages) * 100} 
+        />
+        <p className="text-xs text-muted-foreground text-center">
+          Página {listLoadingProgress.currentPage} de {listLoadingProgress.totalPages}
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+)}
+```
 
-Se usarán utilidades de `date-fns` (ya instalado) para formatear fechas:
-- `format()` - Para fecha de creación
-- `formatDistanceToNow()` - Para "hace X tiempo"
+#### 4. Reset del Estado de Progreso
 
----
-
-### UI Final Detallada
-
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ ← Importar Targets desde Apollo                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  [Buscar]  [Lista ✓]  [URLs/IDs]                                             │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Selecciona una lista de Apollo                                 [↻ Actualizar]│
-│                                                                              │
-│  ┌─ ● ──────────────────────────────────────────────────────────────────────┐│
-│  │  Lista M&A España                                          152 contactos ││
-│  │  📅 Creada: 15 dic 2024   •   🔄 Actualizada: hace 2 días                ││
-│  │  ─────────────────────────────────────────────────────────────────────── ││
-│  │  👤 Juan García (CEO) @ Acme Corp                                        ││
-│  │  👤 María López (CFO) @ Beta Industries                                  ││
-│  │  👤 Carlos Ruiz (Director) @ Gamma Tech                                  ││
-│  │  +149 más...                                                             ││
-│  └──────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─ ○ ──────────────────────────────────────────────────────────────────────┐│
-│  │  Targets Industriales UK                                    87 contactos ││
-│  │  📅 Creada: 3 ene 2025   •   🔄 Actualizada: hace 5 horas                ││
-│  └──────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─ ○ ──────────────────────────────────────────────────────────────────────┐│
-│  │  Prospectos Q4 2024                                        234 contactos ││
-│  │  📅 Creada: 1 oct 2024   •   🔄 Actualizada: hace 1 semana               ││
-│  └──────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌──────────────────────────────────────────────────────────────────────────┐│
-│  │  💡 Los contactos de listas de Apollo ya están enriquecidos.             ││
-│  │     No consume créditos adicionales importarlos.                         ││
-│  └──────────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                            [Cancelar]   [Cargar contactos]   │
-└──────────────────────────────────────────────────────────────────────────────┘
+Añadir reset en `resetState`:
+```typescript
+setListLoadingProgress({ currentPage: 0, totalPages: 0, loadedContacts: 0, totalContacts: 0 });
 ```
 
 ---
 
+### Diagrama del Flujo
+
+```text
+Usuario selecciona lista (500 contactos)
+         │
+         ▼
+   [Cargar contactos]
+         │
+         ▼
+┌─────────────────────────┐
+│ Página 1: 100 contactos │ → Progress: 20%
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ Página 2: 100 contactos │ → Progress: 40%
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ Página 3: 100 contactos │ → Progress: 60%
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ Página 4: 100 contactos │ → Progress: 80%
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ Página 5: 100 contactos │ → Progress: 100%
+└─────────────────────────┘
+         │
+         ▼
+  500 contactos cargados
+    → Paso "results"
+```
+
+---
+
+### Archivo a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/targets/ImportTargetsApolloDrawer.tsx` | Añadir estado de progreso, reescribir `loadListContacts` con loop, añadir UI de progreso |
+
 ### Comportamiento
 
-1. **Carga inicial**: Se cargan las listas con nombre, contador y fechas
-2. **Selección**: Al seleccionar una lista, se carga el preview de los primeros 5 contactos
-3. **Expansión**: El card seleccionado se expande para mostrar el preview
-4. **Cards no seleccionados**: Muestran solo info básica (colapsados)
-5. **Scroll**: Si hay muchas listas, el contenedor tiene scroll
+1. **Listas pequeñas (≤100)**: Sin cambios visibles, carga en una sola petición
+2. **Listas grandes (>100)**: Muestra barra de progreso con página actual y contactos cargados
+3. **Errores**: Si falla en cualquier página, se muestra error y se mantienen los contactos ya cargados
 
 ### Beneficios
 
-1. **Contexto visual**: Ver cuándo se creó/actualizó cada lista
-2. **Vista previa**: Ver qué tipo de contactos contiene antes de cargar
-3. **Comparación fácil**: Las cards permiten comparar listas visualmente
-4. **Mejor UX**: Más información sin sobrecargar la interfaz
+- **Completitud**: Se cargan todos los contactos, sin límite de 100
+- **Transparencia**: El usuario ve el progreso en tiempo real
+- **Robustez**: La Edge Function ya soporta paginación, solo falta el loop en frontend
