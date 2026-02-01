@@ -9,9 +9,11 @@ import { Plus } from "lucide-react";
 import { FinancialStatementsCard } from "@/components/financials/FinancialStatementsCard";
 import { PriceCalculatorCard } from "@/components/pricing/PriceCalculatorCard";
 import { supabase } from "@/integrations/supabase/client";
+import { FinanzasBuySideView } from "./FinanzasBuySideView";
 
 interface FinanzasTabProps {
   mandatoId: string;
+  tipoMandato?: 'compra' | 'venta';
 }
 
 interface EmpresaInfo {
@@ -19,7 +21,18 @@ interface EmpresaInfo {
   nombre: string;
 }
 
-export function FinanzasTab({ mandatoId }: FinanzasTabProps) {
+export function FinanzasTab({ mandatoId, tipoMandato = 'venta' }: FinanzasTabProps) {
+  // Si es Buy-Side, mostrar vista especializada para targets
+  if (tipoMandato === 'compra') {
+    return <FinanzasBuySideView mandatoId={mandatoId} />;
+  }
+
+  // Sell-Side: Comportamiento original (empresa principal)
+  return <FinanzasSellSideView mandatoId={mandatoId} />;
+}
+
+// Vista para mandatos de Venta (Sell-Side)
+function FinanzasSellSideView({ mandatoId }: { mandatoId: string }) {
   const { transactions, isLoading, createTransaction, deleteTransaction } = useMandatoTransactions(mandatoId);
   const [showForm, setShowForm] = useState(false);
   const [empresaPrincipal, setEmpresaPrincipal] = useState<EmpresaInfo | null>(null);
@@ -27,7 +40,6 @@ export function FinanzasTab({ mandatoId }: FinanzasTabProps) {
   // Obtener empresa principal asociada al mandato
   useEffect(() => {
     async function fetchEmpresaPrincipal() {
-      // Obtener mandato con su empresa principal directamente
       const { data: mandato } = await supabase
         .from('mandatos')
         .select('empresa_principal_id, empresas:empresa_principal_id(id, nombre)')

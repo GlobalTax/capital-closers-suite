@@ -194,7 +194,7 @@ export default function MandatoDetalle() {
         ) : (
           <>
             <TabsContent value="finanzas">
-              <FinanzasTab mandatoId={id!} />
+              <FinanzasTab mandatoId={id!} tipoMandato={mandato.tipo as 'compra' | 'venta'} />
             </TabsContent>
 
             <TabsContent value="targets">
