@@ -1,263 +1,153 @@
 
-## Plan: Sistema de "Deal Sheet" - Información Estandarizada para Candidatos
 
-### Problema Identificado
+## Plan: Mover Deal Sheet al Dashboard del Deal
 
-Como propietario de una firma M&A, necesitas controlar y estandarizar la información que se transmite a los candidatos (potenciales compradores/inversores). Actualmente:
+### Situacion Actual
 
-- La información está dispersa en diferentes secciones (empresa, financieros, mandato)
-- No hay un "pack estándar" de información para compartir
-- No existe control sobre qué datos específicos se revelan a cada candidato
-- Cada operación transmite información de manera inconsistente
+El Deal Sheet esta ubicado en:
+```
+Mandato → Pestana "Marketing" → Sub-tab "Deal Sheet"
+```
 
-### Solución Propuesta: "Deal Sheet" 
+Esto requiere dos clics para acceder y esta escondido dentro de Marketing.
 
-Un módulo nuevo dentro de la pestaña **Marketing** que permita definir qué información se comparte de forma estandarizada:
+### Nueva Ubicacion Propuesta
+
+Mover el Deal Sheet directamente a la pestana **Resumen** del mandato, visible inmediatamente al abrir el deal:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Marketing                                                                     │
+│ [Header: Empresa + Estado + Badges]                                          │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  [Teaser Manager]   [Deal Sheet ✨NUEVO]   [Campañas]   [Data Room]          │
+│ [KPIs del Mandato]                                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│  [Resumen] [Finanzas] [Targets] [Checklist] [Docs] [Marketing] [Horas]       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─ Timeline ──────────────────────────────────────────────────────────────┐ │
+│  │ Fecha inicio / cierre / estado                                          │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌─ Deal Sheet ────────────────────────────────────── [Editar] [Preview] ──┐ │
+│  │ Resumen ejecutivo, highlights, configuracion financiera                 │ │
+│  │ (Colapsado por defecto, expandible)                                     │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌─ Informacion Especifica del Mandato ────────────────────────────────────┐ │
+│  │ Tipo Buy/Sell, parametros de busqueda, etc.                             │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌─ Empresa ───────────────────────────────────────────────────────────────┐ │
+│  │ CIF, sector, ubicacion                                                  │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌─ Financieros ───────────────────────────────────────────────────────────┐ │
+│  │ Facturacion, EBITDA, empleados                                          │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌─ Contactos Clave ───────────────────────────────────────────────────────┐ │
+│  │ CEO, CFO, etc.                                                          │ │
+│  └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Estructura del Deal Sheet
+### Nuevo Componente: Deal Sheet Summary Card
 
-El Deal Sheet será un formulario estructurado con secciones predefinidas que el equipo completa para cada mandato:
+Crear una version compacta del Deal Sheet para el dashboard que muestre:
 
-#### Sección 1: Resumen Ejecutivo (Executive Summary)
-- Descripción del negocio (1-2 párrafos)
-- Propuesta de valor única
-- Motivo de venta
-- Perfil de comprador ideal
-
-#### Sección 2: Highlights de Inversión
-- Lista de 4-6 puntos clave que hacen atractiva la oportunidad
-- Ejemplos: "Líder regional", "80% ingresos recurrentes", "CAGR 25%"
-
-#### Sección 3: Información Financiera Compartible
-- Checkbox para seleccionar qué métricas se revelan:
-  - [ ] Facturación
-  - [ ] EBITDA
-  - [ ] Margen EBITDA
-  - [ ] Crecimiento YoY
-  - [ ] Número de empleados
-- Opción de mostrar valores exactos o rangos
-
-#### Sección 4: Información Operativa
-- Sector y subsector
-- Geografía de operaciones
-- Modelo de negocio (descripción)
-- Base de clientes (tipo, concentración)
-- Ventajas competitivas
-
-#### Sección 5: Información del Proceso
-- Fase del proceso
-- Timeline esperado
-- Tipo de transacción buscada (100%, mayoría, minoría)
-- Requisitos previos (NDA, capacidad financiera demostrable)
-
----
-
-### UI del Deal Sheet
+1. **Estado**: Draft / Publicado
+2. **Resumen rapido**: Primeras lineas del executive summary
+3. **Highlights count**: "5 highlights definidos"
+4. **Acciones**: Boton para editar (abre drawer/modal) y previsualizar
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Deal Sheet                                               [Previsualizar] 👁️  │
-│ Define qué información se comparte con los candidatos                        │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│ RESUMEN EJECUTIVO                                                    [ES/EN]│
-│ ┌──────────────────────────────────────────────────────────────────────────┐ │
-│ │ Empresa líder regional en el sector de [X] con más de 20 años de        │ │
-│ │ trayectoria. Facturación superior a €10M con márgenes EBITDA del 15%.   │ │
-│ │ Los socios fundadores buscan un socio estratégico que acompañe...       │ │
-│ └──────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│ HIGHLIGHTS DE INVERSIÓN                                                      │
-│ ┌──────────────────────────────────────────────────────────────────────────┐ │
-│ │ + Líder regional con 35% de cuota de mercado                            │ │
-│ │ + 85% de ingresos recurrentes (contratos plurianuales)                  │ │
-│ │ + CAGR 15% últimos 5 años                                               │ │
-│ │ + Equipo directivo comprometido con la continuidad                      │ │
-│ │ + Pipeline comercial de €2M para 2025                                   │ │
-│ └──────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│ DATOS FINANCIEROS VISIBLES                                                   │
-│ ┌──────────────────────────────────────────────────────────────────────────┐ │
-│ │ ✓ Rango de facturación    €10M - €15M                                   │ │
-│ │ ✓ Rango de EBITDA         €1.5M - €2M                                   │ │
-│ │ ✓ Margen EBITDA           15-20%                                        │ │
-│ │ ○ Facturación exacta      (oculto hasta NDA)                            │ │
-│ │ ○ EBITDA exacto           (oculto hasta NDA)                            │ │
-│ │ ✓ Empleados               75-100                                        │ │
-│ └──────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│ INFORMACIÓN DEL PROCESO                                                      │
-│ ┌──────────────────────────────────────────────────────────────────────────┐ │
-│ │ Fase:           Marketing / Recepción de IOI                            │ │
-│ │ Tipo de Tx:     100% del capital social                                 │ │
-│ │ Valoración:     8-10x EBITDA                                            │ │
-│ │ Timeline:       Cierre estimado Q2 2025                                 │ │
-│ │ Requisitos:     NDA firmado + Carta de capacidad financiera             │ │
-│ └──────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                               [Guardar borrador]   [Publicar Deal Sheet]     │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─ Deal Sheet ────────────────────────────────── [Borrador] ─┐
+│                                                            │
+│  Empresa lider regional en el sector de tecnologia...      │
+│  (ver mas)                                                 │
+│                                                            │
+│  5 highlights de inversion  •  Financieros configurados    │
+│                                                            │
+│  [Editar Deal Sheet]              [Previsualizar]          │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Niveles de Información (Disclosure Tiers)
+### Cambios Tecnicos
 
-Sistema de 3 niveles para controlar qué se comparte en cada fase:
+#### 1. Nuevo Componente: `DealSheetCard.tsx`
 
-| Nivel | Fase | Información Disponible |
-|-------|------|----------------------|
-| **Tier 1** | Teaser | Resumen ejecutivo, highlights, rangos financieros |
-| **Tier 2** | Post-NDA | Datos financieros exactos, modelo de negocio detallado |
-| **Tier 3** | Due Diligence | Información completa (vía Data Room) |
+Version compacta para el dashboard:
 
----
+| Elemento | Descripcion |
+|----------|-------------|
+| Badge de estado | Draft/Publicado |
+| Preview del resumen | Primeros 200 caracteres del executive summary |
+| Contadores | Numero de highlights, si hay financieros configurados |
+| Boton "Editar" | Abre drawer con el editor completo |
+| Boton "Preview" | Abre dialog de previsualizacion |
 
-### Cambios Técnicos
+#### 2. Nuevo Componente: `DealSheetDrawer.tsx`
 
-#### 1. Nueva Tabla: `deal_sheets`
+Drawer lateral que contiene el `DealSheetEditor` completo:
+- Se abre al hacer clic en "Editar Deal Sheet"
+- Mismo contenido que el editor actual
+- Permite editar sin salir del dashboard
 
-```sql
-CREATE TABLE deal_sheets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mandato_id UUID REFERENCES mandatos(id) ON DELETE CASCADE,
-  
-  -- Resumen ejecutivo (multilingüe)
-  executive_summary_es TEXT,
-  executive_summary_en TEXT,
-  
-  -- Highlights (array de puntos clave)
-  investment_highlights_es TEXT[],
-  investment_highlights_en TEXT[],
-  
-  -- Motivo de venta
-  sale_rationale_es TEXT,
-  sale_rationale_en TEXT,
-  
-  -- Perfil de comprador ideal
-  ideal_buyer_profile_es TEXT,
-  ideal_buyer_profile_en TEXT,
-  
-  -- Configuración de visibilidad financiera
-  show_revenue_range BOOLEAN DEFAULT true,
-  show_ebitda_range BOOLEAN DEFAULT true,
-  show_ebitda_margin BOOLEAN DEFAULT true,
-  show_employees BOOLEAN DEFAULT true,
-  show_exact_financials BOOLEAN DEFAULT false,
-  
-  -- Rangos personalizados (si no quieren auto-calcular)
-  custom_revenue_min NUMERIC,
-  custom_revenue_max NUMERIC,
-  custom_ebitda_min NUMERIC,
-  custom_ebitda_max NUMERIC,
-  
-  -- Información del proceso
-  transaction_type TEXT, -- '100%', 'majority', 'minority'
-  valuation_multiple_min NUMERIC,
-  valuation_multiple_max NUMERIC,
-  expected_timeline TEXT,
-  process_requirements TEXT[],
-  
-  -- Estados
-  status TEXT DEFAULT 'draft', -- draft, published
-  published_at TIMESTAMPTZ,
-  published_by UUID REFERENCES auth.users(id),
-  
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  
-  UNIQUE(mandato_id)
-);
+#### 3. Modificar `ResumenTab.tsx`
+
+Integrar el nuevo `DealSheetCard` despues del `MandatoTimeline`:
+
+```tsx
+<MandatoTimeline ... />
+
+{/* Deal Sheet - solo para operaciones M&A */}
+{!isServicio && (
+  <DealSheetCard mandatoId={mandato.id} />
+)}
+
+<MandatoTipoEspecifico ... />
 ```
 
-#### 2. Nuevos Componentes
+#### 4. Simplificar `MarketingSubTabs.tsx`
 
-| Componente | Descripción |
-|------------|-------------|
-| `DealSheetEditor.tsx` | Formulario principal para editar el Deal Sheet |
-| `DealSheetPreview.tsx` | Vista previa de cómo verán los candidatos la información |
-| `HighlightsEditor.tsx` | Editor de lista de highlights con drag & drop |
-| `FinancialDisclosureConfig.tsx` | Configurador de qué datos financieros se muestran |
-
-#### 3. Modificar Pestaña Marketing
-
-Añadir sub-tabs dentro de Marketing:
-- Teaser Manager (existente)
-- Deal Sheet (nuevo)
-- Campañas (link a /campaigns)
-
----
-
-### Integración con Flujo Existente
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Deal Sheet    │     │     Teaser      │     │   Campañas      │
-│   (Contenido)   │ ──▶ │   (Documento)   │ ──▶ │   (Envío)       │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                                               │
-        │                                               ▼
-        │                                    ┌─────────────────┐
-        │                                    │  Candidatos     │
-        │                                    │  Ven Teaser     │
-        │                                    └─────────────────┘
-        │                                               │
-        ▼                                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      POST-NDA (Data Room)                        │
-│  - Deal Sheet completo con datos exactos                        │
-│  - CIM / Information Memorandum                                 │
-│  - Documentación adicional                                      │
-└─────────────────────────────────────────────────────────────────┘
-```
+Eliminar el Deal Sheet de Marketing (ya esta en Resumen):
+- Solo queda el Teaser Manager
+- Opcionalmente mantener link/referencia al Deal Sheet
 
 ---
 
 ### Archivos a Crear
 
-| Archivo | Descripción |
+| Archivo | Descripcion |
 |---------|-------------|
-| `src/features/mandatos/components/DealSheetEditor.tsx` | Editor principal del Deal Sheet |
-| `src/features/mandatos/components/DealSheetPreview.tsx` | Vista previa |
-| `src/features/mandatos/components/HighlightsEditor.tsx` | Editor de highlights |
-| `src/features/mandatos/components/FinancialDisclosureConfig.tsx` | Config de visibilidad |
-| `src/hooks/useDealSheet.ts` | Hook para CRUD del Deal Sheet |
-| `src/services/dealSheet.service.ts` | Servicio de acceso a datos |
+| `src/features/mandatos/components/DealSheetCard.tsx` | Card compacta para dashboard |
+| `src/features/mandatos/components/DealSheetDrawer.tsx` | Drawer con editor completo |
 
 ### Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/MandatoDetalle.tsx` | Añadir sub-tabs en Marketing |
-| `src/features/mandatos/tabs/MarketingTab.tsx` | Crear nuevo tab con sub-navegación |
+| `src/features/mandatos/tabs/ResumenTab.tsx` | Integrar DealSheetCard |
+| `src/features/mandatos/components/MarketingSubTabs.tsx` | Remover Deal Sheet (opcional: mantener solo Teaser) |
 
 ---
+
+### Comportamiento
+
+1. **Dashboard (Resumen)**: El Deal Sheet Card muestra estado y resumen rapido
+2. **Clic en "Editar"**: Abre drawer lateral con editor completo
+3. **Clic en "Preview"**: Abre dialog de previsualizacion (igual que antes)
+4. **Auto-guardado**: Los cambios se guardan al cerrar el drawer
 
 ### Beneficios
 
-1. **Estandarización**: Toda la información sigue el mismo formato
-2. **Control**: Decides exactamente qué se comparte en cada fase
-3. **Multilingüe**: Soporte ES/EN desde el inicio
-4. **Trazabilidad**: Historial de cambios y publicación
-5. **Integración**: Se conecta con el sistema de teasers y campañas existente
-6. **Profesionalismo**: Los candidatos reciben información estructurada y consistente
+1. **Acceso directo**: Deal Sheet visible inmediatamente al abrir el mandato
+2. **Contexto**: Esta junto al resto de la informacion del deal
+3. **Menos clics**: No hay que navegar a Marketing > Deal Sheet
+4. **Coherencia**: La informacion del deal esta centralizada en un solo lugar
 
----
-
-### Fase 2 (Futuro)
-
-- Generación automática de Teaser PDF desde Deal Sheet
-- Plantillas de Deal Sheet por sector
-- Métricas de engagement por sección
-- Comparador de Deal Sheets entre operaciones
