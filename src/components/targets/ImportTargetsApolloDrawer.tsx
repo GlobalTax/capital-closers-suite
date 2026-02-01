@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -56,12 +57,17 @@ import {
   RefreshCw,
   Mail,
   Phone,
-  User
+  User,
+  Calendar,
+  Clock,
+  Info
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { importTargetsFromApollo, type ApolloProspect, type TargetImportConfig } from "@/services/importacion/importTargets";
 import type { ImportResult } from "@/hooks/useImportacion";
 import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ImportTargetsApolloDrawerProps {
   open: boolean;
@@ -78,6 +84,13 @@ interface ApolloLabel {
   name: string;
   cached_count: number;
   created_at?: string;
+  updated_at?: string;
+}
+
+interface ApolloListPreview {
+  labelId: string;
+  contacts: ApolloContact[];
+  loading: boolean;
 }
 
 interface ApolloContact {
@@ -167,6 +180,7 @@ export function ImportTargetsApolloDrawer({
   const [selectedLabelId, setSelectedLabelId] = useState<string>('');
   const [contacts, setContacts] = useState<ApolloContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const [listPreviews, setListPreviews] = useState<Map<string, ApolloListPreview>>(new Map());
   
   // URLs method state
   const [urlsInput, setUrlsInput] = useState('');
@@ -198,6 +212,7 @@ export function ImportTargetsApolloDrawer({
     setLabels([]);
     setSelectedLabelId('');
     setContacts([]);
+    setListPreviews(new Map());
     setUrlsInput('');
     setExtractedContacts([]);
     setSelectedIds(new Set());
@@ -220,6 +235,53 @@ export function ImportTargetsApolloDrawer({
     } finally {
       setLoadingLabels(false);
     }
+  };
+
+  // Load preview contacts for a specific list (lazy loading)
+  const loadListPreview = async (labelId: string) => {
+    // Skip if already loaded or loading
+    const existing = listPreviews.get(labelId);
+    if (existing && (existing.contacts.length > 0 || existing.loading)) {
+      return;
+    }
+
+    // Set loading state
+    setListPreviews(prev => {
+      const next = new Map(prev);
+      next.set(labelId, { labelId, contacts: [], loading: true });
+      return next;
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
+        body: { label_id: labelId, page: 1, per_page: 5 },
+      });
+      
+      if (error) throw error;
+      
+      setListPreviews(prev => {
+        const next = new Map(prev);
+        next.set(labelId, { 
+          labelId, 
+          contacts: data?.contacts || [], 
+          loading: false 
+        });
+        return next;
+      });
+    } catch (error: any) {
+      console.error('[Apollo] Error loading preview:', error);
+      setListPreviews(prev => {
+        const next = new Map(prev);
+        next.set(labelId, { labelId, contacts: [], loading: false });
+        return next;
+      });
+    }
+  };
+
+  // Handle list selection and load preview
+  const handleSelectList = (labelId: string) => {
+    setSelectedLabelId(labelId);
+    loadListPreview(labelId);
   };
 
   const loadListContacts = async () => {
@@ -522,16 +584,18 @@ export function ImportTargetsApolloDrawer({
 
       {/* List method */}
       <TabsContent value="list" className="space-y-4 mt-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Selecciona una lista de Apollo</Label>
+            <Label className="text-base font-medium">Selecciona una lista de Apollo</Label>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={loadLabels}
               disabled={loadingLabels}
+              className="h-8 px-2"
             >
               <RefreshCw className={`h-4 w-4 ${loadingLabels ? 'animate-spin' : ''}`} />
+              <span className="ml-1 text-xs">Actualizar</span>
             </Button>
           </div>
           
@@ -552,32 +616,125 @@ export function ImportTargetsApolloDrawer({
               </CardContent>
             </Card>
           ) : (
-            <Select value={selectedLabelId} onValueChange={setSelectedLabelId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona una lista..." />
-              </SelectTrigger>
-              <SelectContent>
-                {labels.map(label => (
-                  <SelectItem key={label.id} value={label.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{label.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({label.cached_count} contactos)
-                      </span>
+            <ScrollArea className="h-[280px] pr-4">
+              <RadioGroup value={selectedLabelId} onValueChange={handleSelectList} className="space-y-2">
+                {labels.map(label => {
+                  const isSelected = selectedLabelId === label.id;
+                  const preview = listPreviews.get(label.id);
+                  
+                  return (
+                    <div key={label.id}>
+                      <label
+                        htmlFor={`list-${label.id}`}
+                        className={`
+                          flex flex-col cursor-pointer rounded-lg border p-3 transition-all
+                          ${isSelected 
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20' 
+                            : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                          }
+                        `}
+                      >
+                        {/* Header row */}
+                        <div className="flex items-start gap-3">
+                          <RadioGroupItem 
+                            value={label.id} 
+                            id={`list-${label.id}`}
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            {/* Name and count */}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-sm truncate">{label.name}</span>
+                              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                                {label.cached_count} contactos
+                              </span>
+                            </div>
+                            
+                            {/* Dates */}
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                              {label.created_at && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>
+                                    {format(new Date(label.created_at), 'd MMM yyyy', { locale: es })}
+                                  </span>
+                                </div>
+                              )}
+                              {label.updated_at && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {formatDistanceToNow(new Date(label.updated_at), { addSuffix: true, locale: es })}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Preview section - only shown when selected */}
+                            {isSelected && (
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                {preview?.loading ? (
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span>Cargando preview...</span>
+                                  </div>
+                                ) : preview?.contacts && preview.contacts.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {preview.contacts.slice(0, 3).map((contact, idx) => (
+                                      <div 
+                                        key={contact.id || idx} 
+                                        className="flex items-center gap-2 text-xs"
+                                      >
+                                        <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                        <span className="font-medium truncate">
+                                          {contact.first_name} {contact.last_name}
+                                        </span>
+                                        {contact.title && (
+                                          <span className="text-muted-foreground truncate hidden sm:inline">
+                                            ({contact.title})
+                                          </span>
+                                        )}
+                                        {contact.organization_name && (
+                                          <span className="text-muted-foreground truncate">
+                                            @ {contact.organization_name}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {label.cached_count > 3 && (
+                                      <p className="text-xs text-muted-foreground pl-5">
+                                        +{label.cached_count - 3} más...
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">
+                                    Sin preview disponible
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </label>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  );
+                })}
+              </RadioGroup>
+            </ScrollArea>
           )}
         </div>
 
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground">
-              Los contactos de listas de Apollo ya están enriquecidos con email y teléfono.
-              No consume créditos adicionales.
-            </p>
+        {/* Info card */}
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">
+                Los contactos de listas de Apollo ya están enriquecidos con email y teléfono.
+                <span className="font-medium text-foreground"> No consume créditos adicionales.</span>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
