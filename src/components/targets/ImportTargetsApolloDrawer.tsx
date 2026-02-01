@@ -181,6 +181,12 @@ export function ImportTargetsApolloDrawer({
   const [contacts, setContacts] = useState<ApolloContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [listPreviews, setListPreviews] = useState<Map<string, ApolloListPreview>>(new Map());
+  const [listLoadingProgress, setListLoadingProgress] = useState({
+    currentPage: 0,
+    totalPages: 0,
+    loadedContacts: 0,
+    totalContacts: 0,
+  });
   
   // URLs method state
   const [urlsInput, setUrlsInput] = useState('');
@@ -213,6 +219,7 @@ export function ImportTargetsApolloDrawer({
     setSelectedLabelId('');
     setContacts([]);
     setListPreviews(new Map());
+    setListLoadingProgress({ currentPage: 0, totalPages: 0, loadedContacts: 0, totalContacts: 0 });
     setUrlsInput('');
     setExtractedContacts([]);
     setSelectedIds(new Set());
@@ -292,25 +299,55 @@ export function ImportTargetsApolloDrawer({
 
     setLoadingContacts(true);
     setContacts([]);
+    
+    const allContacts: ApolloContact[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    let totalEntries = 0;
 
     try {
-      const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
-        body: { label_id: selectedLabelId, page: 1, per_page: 100 },
-      });
+      // Loop through all pages
+      while (currentPage <= totalPages) {
+        const { data, error } = await supabase.functions.invoke('get-apollo-list-contacts', {
+          body: { label_id: selectedLabelId, page: currentPage, per_page: 100 },
+        });
+        
+        if (error) throw error;
+        
+        const pageContacts = data?.contacts || [];
+        allContacts.push(...pageContacts);
+        
+        // Update pagination info from first request
+        if (currentPage === 1) {
+          totalPages = data?.pagination?.total_pages || 1;
+          totalEntries = data?.pagination?.total_entries || pageContacts.length;
+        }
+        
+        // Update progress state
+        setListLoadingProgress({
+          currentPage,
+          totalPages,
+          loadedContacts: allContacts.length,
+          totalContacts: totalEntries,
+        });
+        
+        currentPage++;
+      }
       
-      if (error) throw error;
-      
-      setContacts(data?.contacts || []);
+      setContacts(allContacts);
       setStep('results');
       
-      if ((data?.contacts || []).length === 0) {
+      if (allContacts.length === 0) {
         toast.info('La lista no tiene contactos');
+      } else {
+        toast.success(`${allContacts.length} contactos cargados`);
       }
     } catch (error: any) {
       console.error('[Apollo] Error loading contacts:', error);
       toast.error('Error al cargar contactos', { description: error.message });
     } finally {
       setLoadingContacts(false);
+      setListLoadingProgress({ currentPage: 0, totalPages: 0, loadedContacts: 0, totalContacts: 0 });
     }
   };
 
@@ -725,18 +762,42 @@ export function ImportTargetsApolloDrawer({
           )}
         </div>
 
+        {/* Progress bar for multi-page loading */}
+        {loadingContacts && listLoadingProgress.totalPages > 1 && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Cargando contactos...</span>
+                  <span className="text-muted-foreground">
+                    {listLoadingProgress.loadedContacts} de {listLoadingProgress.totalContacts}
+                  </span>
+                </div>
+                <Progress 
+                  value={(listLoadingProgress.currentPage / listLoadingProgress.totalPages) * 100} 
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Página {listLoadingProgress.currentPage} de {listLoadingProgress.totalPages}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Info card */}
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-sm text-muted-foreground">
-                Los contactos de listas de Apollo ya están enriquecidos con email y teléfono.
-                <span className="font-medium text-foreground"> No consume créditos adicionales.</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {!loadingContacts && (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-sm text-muted-foreground">
+                  Los contactos de listas de Apollo ya están enriquecidos con email y teléfono.
+                  <span className="font-medium text-foreground"> No consume créditos adicionales.</span>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
 
       {/* URLs method */}
@@ -1028,7 +1089,13 @@ https://app.apollo.io/#/people/xyz789
                 disabled={loadingContacts || !selectedLabelId}
               >
                 {loadingContacts ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Cargando...</>
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {listLoadingProgress.totalPages > 1 
+                      ? `Página ${listLoadingProgress.currentPage}/${listLoadingProgress.totalPages}...`
+                      : 'Cargando...'
+                    }
+                  </>
                 ) : (
                   <><List className="h-4 w-4 mr-2" />Cargar contactos</>
                 )}
