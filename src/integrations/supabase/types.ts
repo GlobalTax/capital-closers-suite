@@ -12673,11 +12673,15 @@ export type Database = {
           external_source: string | null
           external_synced_at: string | null
           fecha_cierre: string | null
+          fecha_entrega: string | null
           fecha_inicio: string | null
+          fee_facturado: number | null
           honorarios_aceptados: number | null
           honorarios_propuestos: number | null
+          horas_invertidas: number | null
           id: string
           import_log_id: string | null
+          importe_parcial: number | null
           is_favorite: boolean | null
           last_activity_at: string | null
           loss_notes: string | null
@@ -12685,6 +12689,7 @@ export type Database = {
           nombre_proyecto: string | null
           numero_ofertas_recibidas: number | null
           outcome: Database["public"]["Enums"]["mandato_outcome"] | null
+          parcialmente_facturado: boolean | null
           parent_mandato_id: string | null
           perfil_empresa_buscada: string | null
           pipeline_stage: string | null
@@ -12737,11 +12742,15 @@ export type Database = {
           external_source?: string | null
           external_synced_at?: string | null
           fecha_cierre?: string | null
+          fecha_entrega?: string | null
           fecha_inicio?: string | null
+          fee_facturado?: number | null
           honorarios_aceptados?: number | null
           honorarios_propuestos?: number | null
+          horas_invertidas?: number | null
           id?: string
           import_log_id?: string | null
+          importe_parcial?: number | null
           is_favorite?: boolean | null
           last_activity_at?: string | null
           loss_notes?: string | null
@@ -12749,6 +12758,7 @@ export type Database = {
           nombre_proyecto?: string | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
+          parcialmente_facturado?: boolean | null
           parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
@@ -12801,11 +12811,15 @@ export type Database = {
           external_source?: string | null
           external_synced_at?: string | null
           fecha_cierre?: string | null
+          fecha_entrega?: string | null
           fecha_inicio?: string | null
+          fee_facturado?: number | null
           honorarios_aceptados?: number | null
           honorarios_propuestos?: number | null
+          horas_invertidas?: number | null
           id?: string
           import_log_id?: string | null
+          importe_parcial?: number | null
           is_favorite?: boolean | null
           last_activity_at?: string | null
           loss_notes?: string | null
@@ -12813,6 +12827,7 @@ export type Database = {
           nombre_proyecto?: string | null
           numero_ofertas_recibidas?: number | null
           outcome?: Database["public"]["Enums"]["mandato_outcome"] | null
+          parcialmente_facturado?: boolean | null
           parent_mandato_id?: string | null
           perfil_empresa_buscada?: string | null
           pipeline_stage?: string | null
