@@ -135,7 +135,7 @@ export const PIPELINE_STAGE_LABELS: Record<string, string> = {
 // Mandato Outcomes (Win/Loss)
 export const MANDATO_OUTCOMES = ['open', 'won', 'lost', 'cancelled'] as const;
 
-// Loss Reasons (Top 8 + Otro)
+// Loss Reasons for M&A (Top 8 + Otro)
 export const LOSS_REASON_OPTIONS = [
   { value: 'precio', label: 'Precio/Valoración no aceptada' },
   { value: 'competidor', label: 'Perdido ante competidor' },
@@ -147,3 +147,18 @@ export const LOSS_REASON_OPTIONS = [
   { value: 'relacion_cliente', label: 'Problema en relación' },
   { value: 'otro', label: 'Otra razón' },
 ] as const;
+
+// Cancel Reasons for Services (DD, Valoración, SPA, Asesoría)
+export const SERVICE_CANCEL_REASONS = [
+  { value: 'cambio_prioridades', label: 'Cliente cambió prioridades' },
+  { value: 'presupuesto', label: 'Problemas de presupuesto' },
+  { value: 'competidor', label: 'Eligió otro proveedor' },
+  { value: 'scope_change', label: 'Cambio de alcance excesivo' },
+  { value: 'timing', label: 'Timing inadecuado' },
+  { value: 'relacion', label: 'Problema en la relación' },
+  { value: 'proyecto_cancelado', label: 'Proyecto/operación cancelada' },
+  { value: 'otro', label: 'Otra razón' },
+] as const;
+
+// Service outcomes (different from M&A win/loss)
+export const SERVICE_OUTCOMES = ['delivered', 'cancelled'] as const;

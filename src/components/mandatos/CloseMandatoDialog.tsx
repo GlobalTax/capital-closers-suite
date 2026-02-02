@@ -1,26 +1,5 @@
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Trophy, XCircle, Ban, AlertTriangle } from "lucide-react";
-import { LOSS_REASON_OPTIONS } from "@/lib/constants";
+import { CloseDealDialog, CloseDealData } from "./CloseDealDialog";
+import { CloseServiceDialog, CloseServiceData } from "./CloseServiceDialog";
 import type { Mandato, MandatoOutcome, LossReasonType } from "@/types";
 
 interface CloseMandatoDialogProps {
@@ -36,8 +15,16 @@ export interface CloseData {
   loss_reason?: LossReasonType;
   loss_notes?: string;
   won_value?: number;
+  fee_facturado?: number;
+  fecha_entrega?: string;
+  parcialmente_facturado?: boolean;
+  importe_parcial?: number;
 }
 
+/**
+ * Router component that shows the appropriate closing dialog
+ * based on the mandate category (M&A operation vs Service)
+ */
 export function CloseMandatoDialog({
   open,
   onOpenChange,
@@ -45,164 +32,50 @@ export function CloseMandatoDialog({
   initialOutcome,
   onConfirm,
 }: CloseMandatoDialogProps) {
-  const [outcome, setOutcome] = useState<"won" | "lost" | "cancelled">(initialOutcome);
-  const [lossReason, setLossReason] = useState<LossReasonType | "">("");
-  const [lossNotes, setLossNotes] = useState("");
-  const [wonValue, setWonValue] = useState<number | undefined>(mandato.valor || undefined);
+  const isMAOperation = mandato.categoria === 'operacion_ma';
 
-  // Reset form when dialog opens
-  useEffect(() => {
-    if (open) {
-      setOutcome(initialOutcome);
-      setLossReason("");
-      setLossNotes("");
-      setWonValue(mandato.valor || undefined);
-    }
-  }, [open, initialOutcome, mandato.valor]);
-
-  const isLossOrCancel = outcome === "lost" || outcome === "cancelled";
-  const canConfirm = outcome === "won" || (isLossOrCancel && lossReason !== "");
-
-  const handleConfirm = () => {
-    const data: CloseData = {
-      outcome,
-      ...(outcome === "won" && { won_value: wonValue }),
-      ...(isLossOrCancel && { 
-        loss_reason: lossReason as LossReasonType,
-        loss_notes: lossNotes || undefined,
-      }),
-    };
-    onConfirm(data);
-    onOpenChange(false);
+  const handleDealConfirm = (data: CloseDealData) => {
+    onConfirm({
+      outcome: data.outcome,
+      loss_reason: data.loss_reason,
+      loss_notes: data.loss_notes,
+      won_value: data.won_value,
+      fee_facturado: data.fee_facturado,
+    });
   };
 
+  const handleServiceConfirm = (data: CloseServiceData) => {
+    // Map service cancel_reason to loss_reason for consistency
+    onConfirm({
+      outcome: data.outcome,
+      loss_reason: data.cancel_reason as LossReasonType | undefined,
+      loss_notes: data.cancel_notes,
+      fee_facturado: data.fee_facturado,
+      fecha_entrega: data.fecha_entrega,
+      parcialmente_facturado: data.parcialmente_facturado,
+      importe_parcial: data.importe_parcial,
+    });
+  };
+
+  if (isMAOperation) {
+    return (
+      <CloseDealDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        mandato={mandato}
+        initialOutcome={initialOutcome}
+        onConfirm={handleDealConfirm}
+      />
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Cerrar Mandato</DialogTitle>
-          <DialogDescription>
-            {mandato.empresa_principal?.nombre || mandato.descripcion}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 py-4">
-          {/* Outcome Selection */}
-          <div className="space-y-3">
-            <Label>¿Cómo cerró este mandato?</Label>
-            <RadioGroup
-              value={outcome}
-              onValueChange={(v) => setOutcome(v as "won" | "lost" | "cancelled")}
-              className="grid grid-cols-3 gap-3"
-            >
-              <div>
-                <RadioGroupItem value="won" id="won" className="peer sr-only" />
-                <Label
-                  htmlFor="won"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-green-500 peer-data-[state=checked]:bg-green-500/10 cursor-pointer transition-colors"
-                >
-                  <Trophy className="mb-2 h-6 w-6 text-green-500" />
-                  <span className="text-sm font-medium">Ganado</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="lost" id="lost" className="peer sr-only" />
-                <Label
-                  htmlFor="lost"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive/10 cursor-pointer transition-colors"
-                >
-                  <XCircle className="mb-2 h-6 w-6 text-destructive" />
-                  <span className="text-sm font-medium">Perdido</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="cancelled" id="cancelled" className="peer sr-only" />
-                <Label
-                  htmlFor="cancelled"
-                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-500/10 cursor-pointer transition-colors"
-                >
-                  <Ban className="mb-2 h-6 w-6 text-orange-500" />
-                  <span className="text-sm font-medium">Cancelado</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Won Fields */}
-          {outcome === "won" && (
-            <div className="space-y-4 p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
-              <div className="space-y-2">
-                <Label htmlFor="won-value">Valor Real de Cierre (€)</Label>
-                <Input
-                  id="won-value"
-                  type="number"
-                  placeholder="1500000"
-                  value={wonValue || ""}
-                  onChange={(e) => setWonValue(e.target.value ? Number(e.target.value) : undefined)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Valor estimado: €{(mandato.valor || 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Lost/Cancelled Fields */}
-          {isLossOrCancel && (
-            <div className="space-y-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
-              <div className="space-y-2">
-                <Label htmlFor="loss-reason" className="flex items-center gap-2">
-                  ¿Por qué se {outcome === "lost" ? "perdió" : "canceló"}?
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Select value={lossReason} onValueChange={(v) => setLossReason(v as LossReasonType)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar razón..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOSS_REASON_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="loss-notes">Notas adicionales (opcional)</Label>
-                <Textarea
-                  id="loss-notes"
-                  placeholder="Detalles sobre la pérdida para aprendizaje futuro..."
-                  value={lossNotes}
-                  onChange={(e) => setLossNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              {!lossReason && (
-                <div className="flex items-center gap-2 text-sm text-amber-600">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Debes seleccionar una razón para continuar</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={!canConfirm}
-            variant={outcome === "won" ? "default" : "destructive"}
-          >
-            Confirmar Cierre
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <CloseServiceDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      mandato={mandato}
+      initialOutcome={initialOutcome}
+      onConfirm={handleServiceConfirm}
+    />
   );
 }
