@@ -1,220 +1,210 @@
 
-## Plan: Adaptar Finanzas para Mandatos de Compra (Buy-Side)
 
-### Problema Identificado
+## Entendiendo el Cierre de Proyectos: Estado Actual y Mejoras
 
-En los mandatos de **Compra (Buy-Side)**, el tab "Finanzas" actualmente muestra:
-- Estados financieros del **comprador** (empresa principal del mandato)
-- Calculadora de precio para el **comprador**
+### Lo que Ya Existe
 
-Esto no tiene sentido porque:
-- El comprador ya conoce sus propias finanzas
-- Lo relevante son los datos financieros de los **targets** que está evaluando
-
-### Lógica de Negocio Correcta
-
-| Tipo de Mandato | Empresa Principal | Datos Financieros Relevantes |
-|-----------------|-------------------|------------------------------|
-| **Venta** (Sell-Side) | La empresa que se vende | Estados financieros de la empresa principal |
-| **Compra** (Buy-Side) | El comprador | Estados financieros de los **targets** |
-
----
-
-### Solución Propuesta
-
-Adaptar el `FinanzasTab` para detectar el tipo de mandato y mostrar contenido diferente:
+El sistema ya tiene un **flujo de cierre** con el diálogo `CloseMandatoDialog` que aparece cuando cambias el estado a "Cerrado" o "Cancelado":
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  MANDATO VENTA (Sell-Side) - Comportamiento actual                          │
+│  Cerrar Mandato                                                              │
+│  [Empresa Principal]                                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  ┌─ Estados Financieros de [Empresa Principal] ──────────────────────────┐  │
-│  │ PyG, Balance, Ratios, Evolución                                        │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
+│  ¿Cómo cerró este mandato?                                                  │
 │                                                                              │
-│  ┌─ Calculadora de Precio ────────────────────────────────────────────────┐  │
-│  │ Bridge: EV -> Equity Value                                             │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │
+│  │   GANADO    │  │   PERDIDO   │  │  CANCELADO  │                          │
+│  │     🏆      │  │      ❌      │  │      ⛔      │                          │
+│  └─────────────┘  └─────────────┘  └─────────────┘                          │
 │                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  MANDATO COMPRA (Buy-Side) - Nuevo comportamiento                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─ Comparativa Financiera de Targets ────────────────────────────────────┐  │
-│  │ [Selector de Target]  [Target A ▾]                                     │  │
-│  │                                                                         │  │
-│  │  KPIs: Facturación | EBITDA | Margen | Empleados                       │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌─ Estados Financieros del Target Seleccionado ──────────────────────────┐  │
-│  │ (Reutiliza FinancialStatementsCard con empresaId del target)           │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌─ Calculadora de Precio para Target ────────────────────────────────────┐  │
-│  │ (Reutiliza PriceCalculatorCard con empresaId del target)               │  │
-│  └────────────────────────────────────────────────────────────────────────┘  │
+│  [Si ganado] → Pide valor real de cierre (€)                                │
+│  [Si perdido/cancelado] → Pide razón obligatoria + notas                    │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### El Problema que Identificas
+
+**El significado de "ganado" o "perdido" varía según el tipo de proyecto:**
+
+| Categoría | ¿Qué significa "Ganado"? | ¿Qué significa "Perdido"? |
+|-----------|-------------------------|---------------------------|
+| **Operación M&A (Venta)** | Cerramos la venta al precio acordado | El vendedor eligió otra firma/canceló |
+| **Operación M&A (Compra)** | El cliente compró un target | No encontramos target o el cliente desistió |
+| **Due Diligence** | Entregamos el informe y cobramos | El cliente canceló el encargo |
+| **Valoración** | Entregamos el informe y cobramos | El cliente canceló |
+| **SPA/Legal** | Redactamos contratos y cobramos | El cliente fue a otro despacho |
+| **Asesoría** | Servicio completado | Servicio cancelado |
+
 ---
 
-### Cambios Técnicos
+### Propuesta: Adaptar el Cierre por Categoría
 
-#### 1. Modificar `FinanzasTab.tsx`
+#### 1. Para Operaciones M&A (compra/venta)
 
-Añadir prop `tipoMandato` y bifurcar la lógica:
+Mantener el sistema actual pero mejorar la terminología:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Cierre de Operación M&A                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │  DEAL CERRADO   │  │  NO SE CERRÓ    │  │    CANCELADO    │              │
+│  │      🏆         │  │       ❌         │  │       ⛔         │              │
+│  │ (Operación OK)  │  │ (Sin transacción)│  │ (Cliente desiste)│              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                              │
+│  [Deal Cerrado]                                                              │
+│    • Valor del deal: €________                                              │
+│    • Fee cobrado: €________                                                 │
+│    • Fecha de cierre: ________                                              │
+│                                                                              │
+│  [No se cerró]                                                               │
+│    • Razón: [Precio | Competidor | DD fallida | ...]                        │
+│    • Notas de aprendizaje: ________________                                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 2. Para Servicios (DD, Valoración, SPA, Asesoría)
+
+Nueva terminología más apropiada:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Cierre de Servicio                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐                                   │
+│  │    ENTREGADO    │  │    CANCELADO    │                                   │
+│  │       ✓         │  │       ⛔         │                                   │
+│  │ (Servicio OK)   │  │ (No se presta)  │                                   │
+│  └─────────────────┘  └─────────────────┘                                   │
+│                                                                              │
+│  [Entregado]                                                                 │
+│    • Honorarios facturados: €________                                       │
+│    • Fecha de entrega: ________                                             │
+│    • Horas totales invertidas: 45h                                          │
+│                                                                              │
+│  [Cancelado]                                                                 │
+│    • Razón: [Cliente cambió prioridades | Problema relación | ...]          │
+│    • ¿Se facturó algo?: [Sí / No]  Importe: €________                       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Cambios Técnicos Propuestos
+
+#### 1. Modificar `CloseMandatoDialog.tsx`
+
+Detectar la categoría del mandato y mostrar UI apropiada:
+
+| Categoría | Opciones de Cierre | Campos |
+|-----------|-------------------|--------|
+| `operacion_ma` | Ganado / Perdido / Cancelado | Deal value, fee cobrado |
+| `due_diligence` | Entregado / Cancelado | Honorarios, horas |
+| `valoracion` | Entregado / Cancelado | Honorarios, horas |
+| `spa_legal` | Entregado / Cancelado | Honorarios, horas |
+| `asesoria` | Entregado / Cancelado | Honorarios, horas |
+
+#### 2. Añadir Nuevos Campos a la Tabla `mandatos`
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `fee_facturado` | `numeric` | Honorarios realmente facturados |
+| `horas_invertidas` | `numeric` | Total horas al cerrar (calculado de time entries) |
+| `parcialmente_facturado` | `boolean` | Si se facturó algo aunque se canceló |
+| `importe_parcial` | `numeric` | Lo que se facturó si se canceló |
+
+#### 3. Añadir Razones Específicas para Servicios
+
+En `constants.ts`:
 
 ```typescript
-interface FinanzasTabProps {
-  mandatoId: string;
-  tipoMandato: 'compra' | 'venta';  // Nueva prop
-}
-
-export function FinanzasTab({ mandatoId, tipoMandato }: FinanzasTabProps) {
-  // Si es Buy-Side, mostrar vista de targets
-  if (tipoMandato === 'compra') {
-    return <FinanzasBuySideView mandatoId={mandatoId} />;
-  }
-  
-  // Si es Sell-Side, comportamiento actual (empresa principal)
-  return <FinanzasSellSideView mandatoId={mandatoId} />;
-}
-```
-
-#### 2. Nuevo Componente: `FinanzasBuySideView.tsx`
-
-Vista especializada para mandatos de compra:
-
-| Elemento | Descripcion |
-|----------|-------------|
-| Selector de target | Dropdown con todos los targets del mandato |
-| Resumen comparativo | Tabla con KPIs de todos los targets |
-| Estados financieros | `FinancialStatementsCard` del target seleccionado |
-| Calculadora | `PriceCalculatorCard` del target seleccionado |
-
-#### 3. Modificar `MandatoDetalle.tsx`
-
-Pasar el tipo de mandato al FinanzasTab:
-
-```tsx
-<FinanzasTab 
-  mandatoId={id!} 
-  tipoMandato={mandato.tipo}  // Pasar tipo
-/>
+export const SERVICE_CANCEL_REASONS = [
+  { value: 'cambio_prioridades', label: 'Cliente cambió prioridades' },
+  { value: 'presupuesto', label: 'Problemas de presupuesto' },
+  { value: 'competidor', label: 'Eligió otro proveedor' },
+  { value: 'scope_change', label: 'Cambio de alcance excesivo' },
+  { value: 'timing', label: 'Timing inadecuado' },
+  { value: 'relacion', label: 'Problema en la relación' },
+  { value: 'otro', label: 'Otra razón' },
+] as const;
 ```
 
 ---
 
-### Componente `FinanzasBuySideView`
+### Archivos a Modificar
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Finanzas de Targets                                      [Target A ▾]      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─ Comparativa Rápida ───────────────────────────────────────────────────┐  │
-│  │                                                                         │  │
-│  │  Target          Facturación    EBITDA    Margen    Valoración Est.    │  │
-│  │  ──────────────────────────────────────────────────────────────────    │  │
-│  │  Empresa A       €12.5M         €2.1M     16.8%     €15-18M            │  │
-│  │  Empresa B       €8.2M          €1.4M     17.1%     €10-12M            │  │
-│  │  Empresa C       €22.0M         €3.8M     17.3%     €25-30M            │  │
-│  │                                                                         │  │
-│  └─────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌─ Estados Financieros de [Target Seleccionado] ─────────────────────────┐  │
-│  │  [Año selector]  [2024] [2023] [2022]                                  │  │
-│  │                                                                         │  │
-│  │  Ingresos: €12.5M    EBITDA: €2.1M    B.Neto: €1.2M    Activo: €8.5M  │  │
-│  │                                                                         │  │
-│  │  [PyG] [Balance] [Ratios] [Evolución]                                  │  │
-│  └─────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-│  ┌─ Calculadora de Precio para [Target Seleccionado] ─────────────────────┐  │
-│  │  Metodología: [Locked Box ▾]                                           │  │
-│  │  Enterprise Value -> Ajustes -> Equity Value                           │  │
-│  └─────────────────────────────────────────────────────────────────────────┘  │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Archivo | Cambios |
+|---------|---------|
+| `src/components/mandatos/CloseMandatoDialog.tsx` | Bifurcar UI según categoría |
+| `src/lib/constants.ts` | Añadir razones de cancelación para servicios |
+| `src/types/index.ts` | Añadir nuevos tipos |
+| **Migración SQL** | Añadir campos `fee_facturado`, `horas_invertidas`, etc. |
 
 ---
 
 ### Archivos a Crear
 
-| Archivo | Descripcion |
+| Archivo | Descripción |
 |---------|-------------|
-| `src/features/mandatos/tabs/FinanzasBuySideView.tsx` | Vista de finanzas para Buy-Side con selector de target |
-| `src/components/mandatos/buyside/TargetFinancialsComparison.tsx` | Tabla comparativa de KPIs de targets |
-
-### Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/features/mandatos/tabs/FinanzasTab.tsx` | Añadir prop `tipoMandato` y bifurcar lógica |
-| `src/pages/MandatoDetalle.tsx` | Pasar `mandato.tipo` a FinanzasTab |
+| `src/components/mandatos/CloseServiceDialog.tsx` | Diálogo especializado para cerrar servicios |
+| `src/components/mandatos/CloseDealDialog.tsx` | Diálogo especializado para cerrar operaciones M&A |
 
 ---
 
-### Flujo de Datos
+### Resumen Visual del Flujo
 
 ```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│ MandatoDetalle   │────▶│   FinanzasTab    │────▶│ tipo === 'compra'│
-│ mandato.tipo     │     │   tipoMandato    │     │        ?         │
-└──────────────────┘     └──────────────────┘     └────────┬─────────┘
-                                                           │
-                    ┌──────────────────────────────────────┼──────────────────────────────┐
-                    │                                      │                               │
-                    ▼                                      ▼                               │
-      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
-      │  FinanzasBuySideView    │            │ FinanzasSellSideView    │                  │
-      │  (Targets del mandato)  │            │ (Empresa principal)     │                  │
-      └─────────────────────────┘            └─────────────────────────┘                  │
-                    │                                      │                               │
-                    ▼                                      ▼                               │
-      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
-      │  useTargetPipeline()    │            │  fetch empresa_principal│                  │
-      │  -> targets[].empresa   │            │  -> empresaId           │                  │
-      └─────────────────────────┘            └─────────────────────────┘                  │
-                    │                                      │                               │
-                    ▼                                      ▼                               │
-      ┌─────────────────────────┐            ┌─────────────────────────┐                  │
-      │ FinancialStatementsCard │            │ FinancialStatementsCard │                  │
-      │ empresaId={target.id}   │            │ empresaId={principal.id}│                  │
-      └─────────────────────────┘            └─────────────────────────┘                  │
-```
-
----
-
-### Empty State para Buy-Side sin Targets
-
-Cuando no hay targets en el mandato de compra:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         FLUJO DE CIERRE ADAPTATIVO                           │
+├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│             ┌───────────────────────────────────────────────┐               │
-│             │     📊  No hay targets para analizar          │               │
-│             │                                                │               │
-│             │  Añade targets al mandato para ver sus        │               │
-│             │  estados financieros y calcular valoraciones. │               │
-│             │                                                │               │
-│             │  [Ir a pestaña Targets]                       │               │
-│             └───────────────────────────────────────────────┘               │
+│    Usuario cambia estado a "Cerrado" o "Cancelado"                          │
+│                              │                                               │
+│                              ▼                                               │
+│                   ┌──────────────────────┐                                   │
+│                   │ ¿Qué tipo de proyecto?│                                   │
+│                   └──────────┬───────────┘                                   │
+│                              │                                               │
+│          ┌───────────────────┼───────────────────┐                          │
+│          │                   │                   │                           │
+│          ▼                   ▼                   ▼                           │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                    │
+│  │ Operación M&A │  │ Due Diligence │  │   Servicio    │                    │
+│  │   (compra/    │  │  Valoración   │  │  (Asesoría)   │                    │
+│  │    venta)     │  │   SPA/Legal   │  │               │                    │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                    │
+│          │                   │                   │                           │
+│          ▼                   ▼                   ▼                           │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                    │
+│  │ CloseDeal     │  │ CloseService  │  │ CloseService  │                    │
+│  │ Dialog        │  │ Dialog        │  │ Dialog        │                    │
+│  │               │  │               │  │               │                    │
+│  │ • Ganado      │  │ • Entregado   │  │ • Entregado   │                    │
+│  │ • Perdido     │  │ • Cancelado   │  │ • Cancelado   │                    │
+│  │ • Cancelado   │  │               │  │               │                    │
+│  │               │  │ + Honorarios  │  │ + Honorarios  │                    │
+│  │ + Deal value  │  │ + Horas       │  │ + Horas       │                    │
+│  │ + Fee cobrado │  │               │  │               │                    │
+│  └───────────────┘  └───────────────┘  └───────────────┘                    │
 │                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ### Beneficios
 
-1. **Lógica correcta**: Los datos financieros mostrados son los relevantes para cada tipo de operación
-2. **Reutilización**: Se reutilizan `FinancialStatementsCard` y `PriceCalculatorCard` existentes
-3. **Comparativa**: Vista de comparación de targets facilita la toma de decisiones
-4. **Consistencia**: El flujo de trabajo de Buy-Side se mantiene coherente
+1. **Terminología correcta**: "Entregado" tiene más sentido que "Ganado" para un servicio
+2. **Métricas precisas**: Capturamos honorarios facturados y horas invertidas
+3. **Mejor análisis Win/Loss**: Podemos separar razones de pérdida en M&A vs cancelación de servicios
+4. **Facturación parcial**: Contemplamos casos donde se cancela pero se cobra algo
+5. **Consistencia**: El flujo de cierre se adapta al contexto del proyecto
+
