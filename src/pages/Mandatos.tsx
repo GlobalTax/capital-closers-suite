@@ -309,7 +309,7 @@ export default function Mandatos() {
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [sendTeasersOpen, setSendTeasersOpen] = useState(false);
   const [asignarEmpresaOpen, setAsignarEmpresaOpen] = useState(false);
-  const [pageSize, setPageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(50);
   const isMobile = useIsMobile();
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
