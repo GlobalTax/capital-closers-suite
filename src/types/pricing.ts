@@ -1,5 +1,14 @@
 export type PricingMethodology = 'locked_box' | 'completion_accounts';
 
+export type ShareholderType = 'persona_fisica' | 'sociedad' | 'holding';
+
+export interface Shareholder {
+  id: string;
+  name: string;
+  type: ShareholderType;
+  percentage: number;
+}
+
 export type BridgeOperation = 'add' | 'subtract';
 
 export interface PriceBridgeItem {
@@ -53,6 +62,9 @@ export interface PriceCalculation {
   other_current_assets: number;
   trade_payables: number;
   other_current_liabilities: number;
+  
+  // Shareholder distribution
+  shareholders: Shareholder[];
   
   // Result
   equity_value: number;

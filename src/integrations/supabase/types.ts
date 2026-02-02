@@ -10789,6 +10789,122 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_magnet_downloads: {
+        Row: {
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          lead_magnet_id: string
+          referrer: string | null
+          user_agent: string | null
+          user_company: string | null
+          user_email: string
+          user_name: string | null
+          user_phone: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          lead_magnet_id: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_company?: string | null
+          user_email: string
+          user_name?: string | null
+          user_phone?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          lead_magnet_id?: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_company?: string | null
+          user_email?: string
+          user_name?: string | null
+          user_phone?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_magnet_downloads_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_magnets: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          download_count: number | null
+          featured_image_url: string | null
+          file_url: string | null
+          id: string
+          landing_page_slug: string | null
+          lead_conversion_count: number | null
+          meta_description: string | null
+          meta_title: string | null
+          sector: string
+          status: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          download_count?: number | null
+          featured_image_url?: string | null
+          file_url?: string | null
+          id?: string
+          landing_page_slug?: string | null
+          lead_conversion_count?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          sector: string
+          status?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          download_count?: number | null
+          featured_image_url?: string | null
+          file_url?: string | null
+          id?: string
+          landing_page_slug?: string | null
+          lead_conversion_count?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          sector?: string
+          status?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       lead_pipeline_columns: {
         Row: {
           color: string

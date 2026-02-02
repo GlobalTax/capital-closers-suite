@@ -4,7 +4,8 @@ import type {
   PriceCalculation, 
   PriceBridgeItem, 
   PricingMethodology,
-  LeakageItem 
+  LeakageItem,
+  Shareholder
 } from "@/types/pricing";
 import { 
   calculateEquityValue, 
@@ -33,6 +34,7 @@ const createInitialCalculation = (): PriceCalculation => ({
   other_current_assets: 0,
   trade_payables: 0,
   other_current_liabilities: 0,
+  shareholders: [],
   equity_value: 0,
 });
 
@@ -249,6 +251,30 @@ export function usePriceCalculator(empresaId: string | undefined) {
     setCalculation(prev => ({ ...prev, completion_date: date }));
   }, []);
 
+  const addShareholder = useCallback((shareholder: Omit<Shareholder, 'id'>) => {
+    const newShareholder: Shareholder = { ...shareholder, id: generateId() };
+    setCalculation(prev => ({
+      ...prev,
+      shareholders: [...prev.shareholders, newShareholder],
+    }));
+  }, []);
+
+  const updateShareholder = useCallback((id: string, updates: Partial<Shareholder>) => {
+    setCalculation(prev => ({
+      ...prev,
+      shareholders: prev.shareholders.map(s =>
+        s.id === id ? { ...s, ...updates } : s
+      ),
+    }));
+  }, []);
+
+  const removeShareholder = useCallback((id: string) => {
+    setCalculation(prev => ({
+      ...prev,
+      shareholders: prev.shareholders.filter(s => s.id !== id),
+    }));
+  }, []);
+
   const resetCalculation = useCallback(() => {
     setCalculation(createInitialCalculation());
   }, []);
@@ -272,6 +298,9 @@ export function usePriceCalculator(empresaId: string | undefined) {
     removeLeakageItem,
     setLockedBoxDate,
     setCompletionDate,
+    addShareholder,
+    updateShareholder,
+    removeShareholder,
     resetCalculation,
   };
 }
