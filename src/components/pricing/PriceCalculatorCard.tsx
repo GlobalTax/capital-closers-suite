@@ -30,6 +30,7 @@ import { MethodologySelector } from "./MethodologySelector";
 import { PriceBridgeTable } from "./PriceBridgeTable";
 import { WorkingCapitalAdjustment } from "./WorkingCapitalAdjustment";
 import { LeakageSection } from "./LeakageSection";
+import { ShareholderDistribution } from "./ShareholderDistribution";
 import { formatCurrency, formatPriceSummary, exportPriceToCSV } from "@/lib/pricing-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -58,6 +59,9 @@ export function PriceCalculatorCard({ empresaId, mandatoId }: PriceCalculatorCar
     addLeakageItem,
     removeLeakageItem,
     setLockedBoxDate,
+    addShareholder,
+    updateShareholder,
+    removeShareholder,
     resetCalculation,
   } = usePriceCalculator(empresaId);
 
@@ -212,6 +216,15 @@ export function PriceCalculatorCard({ empresaId, mandatoId }: PriceCalculatorCar
               onRemoveItem={removeLeakageItem}
             />
           )}
+
+          {/* Shareholder Distribution */}
+          <ShareholderDistribution
+            equityValue={calculation.equity_value}
+            shareholders={calculation.shareholders}
+            onAddShareholder={addShareholder}
+            onUpdateShareholder={updateShareholder}
+            onRemoveShareholder={removeShareholder}
+          />
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
