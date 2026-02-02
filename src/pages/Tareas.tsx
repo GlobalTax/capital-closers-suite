@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Lock, Share2, Clock, CheckCircle2, TrendingUp } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Clock, CheckCircle2, TrendingUp } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
-import type { Tarea, TareaEstado, TareaTipo } from "@/types";
+import type { Tarea, TareaEstado } from "@/types";
 import { startOfWeek, endOfWeek, isToday, isBefore, startOfDay } from "date-fns";
 import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
 import {
@@ -22,13 +24,14 @@ import {
   DragOverlay,
   useDroppable,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { NuevaTareaDrawer } from "@/components/tareas/NuevaTareaDrawer";
 import { EditarTareaDrawer } from "@/components/tareas/EditarTareaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { TaskCommandBar } from "@/components/tasks/TaskCommandBar";
+import { QuickAssignDropdown } from "@/components/tareas/QuickAssignDropdown";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,9 +62,11 @@ interface TareaCardProps {
   isDragging?: boolean;
   onClick?: () => void;
   getUserName?: (userId: string | null | undefined) => string | null;
+  showAssignee?: boolean;
+  onQuickAssign?: (userId: string | null) => Promise<void>;
 }
 
-function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCardProps) {
+function TareaCard({ tarea, isDragging = false, onClick, getUserName, showAssignee = false, onQuickAssign }: TareaCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: tarea.id,
   });
@@ -126,19 +131,7 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
       )}
     >
       <div className="flex items-center gap-2 mb-2">
-        {/* Visibility indicator */}
-        {tarea.tipo === 'individual' ? (
-          <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
-        ) : (
-          <Users className="h-3 w-3 text-muted-foreground shrink-0" />
-        )}
         <h4 className="font-medium text-sm flex-1">{tarea.titulo}</h4>
-        {tarea.compartido_con && tarea.compartido_con.length > 0 && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            <Share2 className="h-2.5 w-2.5 mr-0.5" />
-            {tarea.compartido_con.length}
-          </Badge>
-        )}
         {tarea.ai_generated && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
             <Sparkles className="h-2.5 w-2.5 mr-0.5" />
@@ -170,7 +163,16 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
             <span>{format(new Date(tarea.fecha_vencimiento), "dd MMM", { locale: es })}</span>
           </div>
         )}
-        {tarea.asignado_a && (
+        
+        {/* Show assignee - either quick-assign dropdown or simple avatar */}
+        {showAssignee && onQuickAssign ? (
+          <div className="ml-auto">
+            <QuickAssignDropdown
+              currentAssignee={tarea.asignado_a}
+              onAssign={onQuickAssign}
+            />
+          </div>
+        ) : tarea.asignado_a ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Avatar className={cn("h-6 w-6 border-2 border-background shadow-sm", getAvatarColor(getUserName?.(tarea.asignado_a)))}>
@@ -183,7 +185,7 @@ function TareaCard({ tarea, isDragging = false, onClick, getUserName }: TareaCar
               {getUserName?.(tarea.asignado_a) || "Sin asignar"}
             </TooltipContent>
           </Tooltip>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -198,6 +200,8 @@ interface KanbanColumnProps {
   onQuickAdd: () => void;
   onTareaClick: (tarea: Tarea) => void;
   getUserName?: (userId: string | null | undefined) => string | null;
+  showAssignee?: boolean;
+  onQuickAssign?: (tareaId: string, userId: string | null) => Promise<void>;
 }
 
 function KanbanColumn({ 
@@ -208,7 +212,9 @@ function KanbanColumn({
   onQuickAddChange, 
   onQuickAdd,
   onTareaClick,
-  getUserName
+  getUserName,
+  showAssignee = false,
+  onQuickAssign
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -253,6 +259,8 @@ function KanbanColumn({
               tarea={tarea} 
               onClick={() => onTareaClick(tarea)}
               getUserName={getUserName}
+              showAssignee={showAssignee}
+              onQuickAssign={onQuickAssign ? (userId) => onQuickAssign(tarea.id, userId) : undefined}
             />
           ))}
           {tareas.length === 0 && (
@@ -272,6 +280,8 @@ const COLUMN_CONFIG: { id: TareaEstado; label: string }[] = [
   { id: "en_progreso", label: "En Progreso" },
   { id: "completada", label: "Completada" },
 ];
+
+type VistaTab = "team" | "mine";
 
 export default function Tareas() {
   const { data: tareas = [], isLoading, refetch } = useTareas();
@@ -293,7 +303,12 @@ export default function Tareas() {
     if (!userId) return null;
     return userNamesMap?.get(userId) || null;
   };
-  const [filtroTipo, setFiltroTipo] = useState<"mis_tareas" | "equipo" | "compartidas">("mis_tareas");
+  
+  // Simplified view state: team or mine
+  const [vistaActiva, setVistaActiva] = useState<VistaTab>("team");
+  const [soloPendientes, setSoloPendientes] = useState(false);
+  const [soloVencenHoy, setSoloVencenHoy] = useState(false);
+  
   const [filtroResponsable, setFiltroResponsable] = useState<string>("");
   const [filtroEstado, setFiltroEstado] = useState<TareaEstado | "">("");
   const [filtroPrioridad, setFiltroPrioridad] = useState<string>("");
@@ -401,6 +416,8 @@ export default function Tareas() {
         order_index: 0,
         creado_por: currentUser.id,
         tipo: 'individual',
+        // In team view, auto-assign to self
+        asignado_a: currentUser.id,
       });
       setNuevasTareas((prev) => ({ ...prev, [estado]: "" }));
       refetch();
@@ -414,32 +431,50 @@ export default function Tareas() {
     setEditDrawerOpen(true);
   };
 
-  // Filter tasks by visibility type first
+  const handleQuickAssign = async (tareaId: string, userId: string | null) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: tareaId,
+        data: { asignado_a: userId },
+      });
+      refetch();
+    } catch (error) {
+      console.error("Error al asignar tarea:", error);
+    }
+  };
+
+  // Simplified filtering: team = all, mine = only assigned to me
   const tareasPorVisibilidad = useMemo(() => {
     if (!currentUser) return tareas;
     
     return tareas.filter((tarea) => {
-      if (filtroTipo === "mis_tareas") {
-        // Individual tasks I created OR assigned to me
-        return (
-          tarea.creado_por === currentUser.id ||
-          tarea.asignado_a === currentUser.id
-        );
-      } else if (filtroTipo === "equipo") {
-        // Group tasks visible to everyone
-        return tarea.tipo === "grupal";
-      } else if (filtroTipo === "compartidas") {
-        // Individual tasks shared with me
-        return (
-          tarea.tipo === "individual" &&
-          tarea.compartido_con?.includes(currentUser.id)
-        );
+      if (vistaActiva === "mine") {
+        // Only tasks assigned to me
+        return tarea.asignado_a === currentUser.id;
+      }
+      // Team view = all tasks (no filter)
+      return true;
+    });
+  }, [tareas, vistaActiva, currentUser]);
+
+  // Apply quick filters
+  const tareasConQuickFilters = useMemo(() => {
+    return tareasPorVisibilidad.filter((tarea) => {
+      // Solo pendientes filter
+      if (soloPendientes && tarea.estado === 'completada') {
+        return false;
+      }
+      // Solo vencen hoy filter
+      if (soloVencenHoy) {
+        if (!tarea.fecha_vencimiento) return false;
+        if (!isToday(new Date(tarea.fecha_vencimiento))) return false;
+        if (tarea.estado === 'completada') return false;
       }
       return true;
     });
-  }, [tareas, filtroTipo, currentUser]);
+  }, [tareasPorVisibilidad, soloPendientes, soloVencenHoy]);
 
-  const tareasFiltradas = tareasPorVisibilidad.filter((tarea) => {
+  const tareasFiltradas = tareasConQuickFilters.filter((tarea) => {
     if (filtroResponsable && tarea.asignado_a !== filtroResponsable) return false;
     if (filtroEstado && tarea.estado !== filtroEstado) return false;
     if (filtroPrioridad && tarea.prioridad !== filtroPrioridad) return false;
@@ -460,6 +495,10 @@ export default function Tareas() {
       .filter((t) => t.estado === "completada")
       .sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
   };
+
+  // Counts for tabs
+  const equipoCount = tareas.length;
+  const misTareasCount = tareas.filter(t => t.asignado_a === currentUser?.id).length;
 
   const columnasTabla = [
     {
@@ -501,7 +540,12 @@ export default function Tareas() {
     {
       key: "asignado_a",
       label: "Responsable",
-      render: (value: string) => getUserName(value) || "Sin asignar",
+      render: (value: string, row: Tarea) => (
+        <QuickAssignDropdown
+          currentAssignee={value}
+          onAssign={(userId) => handleQuickAssign(row.id, userId)}
+        />
+      ),
     },
     {
       key: "fecha_vencimiento",
@@ -669,32 +713,54 @@ export default function Tareas() {
       {/* AI Command Bar */}
       <TaskCommandBar onSuccess={() => refetch()} />
 
-      {/* Tabs de Visibilidad */}
-      <Tabs value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-          <TabsTrigger value="mis_tareas" className="gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Mis Tareas</span>
-            <span className="sm:hidden">Mías</span>
-          </TabsTrigger>
-          <TabsTrigger value="equipo" className="gap-2">
-            <Users className="h-4 w-4" />
-            Equipo
-          </TabsTrigger>
-          <TabsTrigger value="compartidas" className="gap-2">
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Compartidas</span>
-            <span className="sm:hidden">Comp.</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Tabs: Equipo / Mis Tareas */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs value={vistaActiva} onValueChange={(v) => setVistaActiva(v as VistaTab)} className="w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:w-[300px]">
+            <TabsTrigger value="team" className="gap-2">
+              <Users className="h-4 w-4" />
+              Equipo
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{equipoCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="mine" className="gap-2">
+              <User className="h-4 w-4" />
+              Mis Tareas
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{misTareasCount}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Quick Filters */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="solo-pendientes"
+              checked={soloPendientes}
+              onCheckedChange={setSoloPendientes}
+            />
+            <Label htmlFor="solo-pendientes" className="text-xs cursor-pointer">
+              Solo pendientes
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="solo-hoy"
+              checked={soloVencenHoy}
+              onCheckedChange={setSoloVencenHoy}
+            />
+            <Label htmlFor="solo-hoy" className="text-xs cursor-pointer">
+              Vencen hoy
+            </Label>
+          </div>
+        </div>
+      </div>
 
       {/* Filtros y Vista Toggle */}
       <Card className="p-3 md:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            {/* Filtro Responsable - hide label on mobile */}
-            {responsablesUnicos.length > 0 && (
+            {/* Filtro Responsable - only show in team view */}
+            {vistaActiva === "team" && responsablesUnicos.length > 0 && (
               <div className="flex gap-2 items-center overflow-x-auto">
                 <span className="text-xs md:text-sm text-muted-foreground shrink-0 hidden sm:inline">Responsable:</span>
                 <div className="flex gap-1">
@@ -705,14 +771,14 @@ export default function Tareas() {
                   >
                     Todos
                   </Badge>
-                  {responsablesUnicos.slice(0, 3).map((responsable) => (
+                  {responsablesUnicos.slice(0, 4).map((responsable) => (
                     <Badge
                       key={responsable}
                       variant={filtroResponsable === responsable ? "default" : "outline"}
                       className="cursor-pointer text-xs shrink-0"
                       onClick={() => setFiltroResponsable(responsable!)}
                     >
-                      {getUserName(responsable) || responsable}
+                      {getUserName(responsable)?.split(' ')[0] || responsable}
                     </Badge>
                   ))}
                 </div>
@@ -834,6 +900,8 @@ export default function Tareas() {
                     onQuickAdd={() => handleQuickAdd(col.id)}
                     onTareaClick={handleTareaClick}
                     getUserName={getUserName}
+                    showAssignee={vistaActiva === "team"}
+                    onQuickAssign={handleQuickAssign}
                   />
                 </div>
               ))}
@@ -841,7 +909,14 @@ export default function Tareas() {
           </div>
 
           <DragOverlay>
-            {activeDragId ? <TareaCard tarea={tareas.find((t) => t.id === activeDragId)!} isDragging getUserName={getUserName} /> : null}
+            {activeDragId ? (
+              <TareaCard 
+                tarea={tareas.find((t) => t.id === activeDragId)!} 
+                isDragging 
+                getUserName={getUserName}
+                showAssignee={vistaActiva === "team"}
+              />
+            ) : null}
           </DragOverlay>
         </DndContext>
       )}
