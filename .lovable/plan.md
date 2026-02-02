@@ -1,141 +1,133 @@
 
+## Plan: Vistas de Tareas "Equipo" y "Mis Tareas"
 
-## Entendiendo el Cierre de Proyectos: Estado Actual y Mejoras
+### Objetivo
 
-### Lo que Ya Existe
+Actualizar el módulo de tareas (`/tareas`) para tener dos vistas claras y conmutables:
 
-El sistema ya tiene un **flujo de cierre** con el diálogo `CloseMandatoDialog` que aparece cuando cambias el estado a "Cerrado" o "Cancelado":
+| Vista | Descripción | Filtro |
+|-------|-------------|--------|
+| **Equipo** | Todas las tareas de todos los miembros del equipo | Sin filtro por usuario |
+| **Mis Tareas** | Solo tareas asignadas a mí | `asignado_a = auth.uid()` |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Cerrar Mandato                                                              │
-│  [Empresa Principal]                                                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ¿Cómo cerró este mandato?                                                  │
-│                                                                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │
-│  │   GANADO    │  │   PERDIDO   │  │  CANCELADO  │                          │
-│  │     🏆      │  │      ❌      │  │      ⛔      │                          │
-│  └─────────────┘  └─────────────┘  └─────────────┘                          │
-│                                                                              │
-│  [Si ganado] → Pide valor real de cierre (€)                                │
-│  [Si perdido/cancelado] → Pide razón obligatoria + notas                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### Estado Actual Identificado
 
-### El Problema que Identificas
+1. **Esquema de BD**: La tabla `tareas` NO tiene `workspace_id`. El concepto de "equipo" está definido implícitamente por los usuarios en `admin_users` con `is_active = true`.
 
-**El significado de "ganado" o "perdido" varía según el tipo de proyecto:**
+2. **RLS Actual**: Política `tareas_select_visibility` que permite:
+   - Tareas `grupal`: visibles si `current_user_can_read()` (usuario activo en admin_users)
+   - Tareas `individual`: solo visibles si eres creador, asignado, compartido, o `es_visible_equipo = true`
 
-| Categoría | ¿Qué significa "Ganado"? | ¿Qué significa "Perdido"? |
-|-----------|-------------------------|---------------------------|
-| **Operación M&A (Venta)** | Cerramos la venta al precio acordado | El vendedor eligió otra firma/canceló |
-| **Operación M&A (Compra)** | El cliente compró un target | No encontramos target o el cliente desistió |
-| **Due Diligence** | Entregamos el informe y cobramos | El cliente canceló el encargo |
-| **Valoración** | Entregamos el informe y cobramos | El cliente canceló |
-| **SPA/Legal** | Redactamos contratos y cobramos | El cliente fue a otro despacho |
-| **Asesoría** | Servicio completado | Servicio cancelado |
+3. **UI Actual**: Existe un sistema de 3 tabs ("Mis Tareas", "Equipo", "Compartidas") pero con lógica de filtrado incorrecta basada en `tipo` de tarea.
+
+4. **Datos existentes**: 34 tareas (33 individuales, 1 grupal) - la mayoría son individuales.
+
+### Problema Principal
+
+El modelo actual distingue "privacidad" de la tarea (`tipo: individual/grupal`), pero el usuario quiere que **todas las tareas del equipo sean visibles** para cualquier miembro, simplificando a:
+
+- **Vista Equipo**: VER todas las tareas (independiente del tipo)
+- **Vista Mis Tareas**: Solo las asignadas a mí
+
+### Solución Propuesta
 
 ---
 
-### Propuesta: Adaptar el Cierre por Categoría
+### Cambio 1: Actualizar RLS Policy
 
-#### 1. Para Operaciones M&A (compra/venta)
+Simplificar la política SELECT para que todos los usuarios activos vean TODAS las tareas del equipo:
 
-Mantener el sistema actual pero mejorar la terminología:
+```sql
+DROP POLICY IF EXISTS "tareas_select_visibility" ON tareas;
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Cierre de Operación M&A                                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │  DEAL CERRADO   │  │  NO SE CERRÓ    │  │    CANCELADO    │              │
-│  │      🏆         │  │       ❌         │  │       ⛔         │              │
-│  │ (Operación OK)  │  │ (Sin transacción)│  │ (Cliente desiste)│              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                              │
-│  [Deal Cerrado]                                                              │
-│    • Valor del deal: €________                                              │
-│    • Fee cobrado: €________                                                 │
-│    • Fecha de cierre: ________                                              │
-│                                                                              │
-│  [No se cerró]                                                               │
-│    • Razón: [Precio | Competidor | DD fallida | ...]                        │
-│    • Notas de aprendizaje: ________________                                 │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+CREATE POLICY "Usuarios activos ven todas las tareas"
+  ON tareas FOR SELECT
+  TO authenticated
+  USING (current_user_can_read());
 ```
 
-#### 2. Para Servicios (DD, Valoración, SPA, Asesoría)
+Esto permite que cualquier usuario en `admin_users` con rol activo (viewer, admin, super_admin) vea todas las tareas. Las políticas de UPDATE/DELETE existentes ya controlan quién puede modificar.
 
-Nueva terminología más apropiada:
+---
+
+### Cambio 2: Simplificar Tabs en UI
+
+Reducir de 3 tabs a 2 tabs principales:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Cierre de Servicio                                                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐                                   │
-│  │    ENTREGADO    │  │    CANCELADO    │                                   │
-│  │       ✓         │  │       ⛔         │                                   │
-│  │ (Servicio OK)   │  │ (No se presta)  │                                   │
-│  └─────────────────┘  └─────────────────┘                                   │
-│                                                                              │
-│  [Entregado]                                                                 │
-│    • Honorarios facturados: €________                                       │
-│    • Fecha de entrega: ________                                             │
-│    • Horas totales invertidas: 45h                                          │
-│                                                                              │
-│  [Cancelado]                                                                 │
-│    • Razón: [Cliente cambió prioridades | Problema relación | ...]          │
-│    • ¿Se facturó algo?: [Sí / No]  Importe: €________                       │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│  [Equipo (34)]    [Mis Tareas (8)]                             │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  [ ] Solo pendientes    [ ] Vencen hoy                         │
+│                                                                │
+│  [Filtros: Estado | Prioridad | Responsable]                   │
+│                                                                │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ KANBAN / TABLA                                          │   │
+│  │ (con columna Responsable visible en vista Equipo)       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Cambios Técnicos Propuestos
+### Cambio 3: Nueva Lógica de Filtrado Frontend
 
-#### 1. Modificar `CloseMandatoDialog.tsx`
-
-Detectar la categoría del mandato y mostrar UI apropiada:
-
-| Categoría | Opciones de Cierre | Campos |
-|-----------|-------------------|--------|
-| `operacion_ma` | Ganado / Perdido / Cancelado | Deal value, fee cobrado |
-| `due_diligence` | Entregado / Cancelado | Honorarios, horas |
-| `valoracion` | Entregado / Cancelado | Honorarios, horas |
-| `spa_legal` | Entregado / Cancelado | Honorarios, horas |
-| `asesoria` | Entregado / Cancelado | Honorarios, horas |
-
-#### 2. Añadir Nuevos Campos a la Tabla `mandatos`
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `fee_facturado` | `numeric` | Honorarios realmente facturados |
-| `horas_invertidas` | `numeric` | Total horas al cerrar (calculado de time entries) |
-| `parcialmente_facturado` | `boolean` | Si se facturó algo aunque se canceló |
-| `importe_parcial` | `numeric` | Lo que se facturó si se canceló |
-
-#### 3. Añadir Razones Específicas para Servicios
-
-En `constants.ts`:
+En `Tareas.tsx`, simplificar el filtro `tareasPorVisibilidad`:
 
 ```typescript
-export const SERVICE_CANCEL_REASONS = [
-  { value: 'cambio_prioridades', label: 'Cliente cambió prioridades' },
-  { value: 'presupuesto', label: 'Problemas de presupuesto' },
-  { value: 'competidor', label: 'Eligió otro proveedor' },
-  { value: 'scope_change', label: 'Cambio de alcance excesivo' },
-  { value: 'timing', label: 'Timing inadecuado' },
-  { value: 'relacion', label: 'Problema en la relación' },
-  { value: 'otro', label: 'Otra razón' },
-] as const;
+// ANTES (lógica compleja basada en tipo)
+const tareasPorVisibilidad = tareas.filter((tarea) => {
+  if (filtroTipo === "mis_tareas") {
+    return tarea.creado_por === currentUser.id || tarea.asignado_a === currentUser.id;
+  } else if (filtroTipo === "equipo") {
+    return tarea.tipo === "grupal"; // ❌ Solo grupales
+  } else if (filtroTipo === "compartidas") {
+    return tarea.compartido_con?.includes(currentUser.id);
+  }
+});
+
+// DESPUÉS (lógica simplificada)
+const tareasPorVisibilidad = tareas.filter((tarea) => {
+  if (vistaActiva === "mine") {
+    return tarea.asignado_a === currentUser?.id;
+  }
+  // vista "team" = todas las tareas (sin filtro adicional)
+  return true;
+});
 ```
+
+---
+
+### Cambio 4: Quick-Assign en Vista Equipo
+
+Añadir dropdown para asignar rápidamente desde las tarjetas/filas:
+
+```
+┌─────────────────────────────────────────────┐
+│ 📋 Preparar teaser Empresa X               │
+│ 🔴 Alta  |  📅 15 Feb                       │
+│ ┌─────────────────────────────────────────┐│
+│ │ Responsable: [Juan García ▾]            ││
+│ │              ├─ María López             ││
+│ │              ├─ Carlos Ruiz             ││
+│ │              └─ Sin asignar             ││
+│ └─────────────────────────────────────────┘│
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### Cambio 5: Switches Adicionales
+
+Añadir filtros rápidos opcionales:
+
+| Switch | Descripción |
+|--------|-------------|
+| Solo pendientes | `estado IN ('pendiente', 'en_progreso')` |
+| Vencen hoy | `fecha_vencimiento = today AND estado != 'completada'` |
 
 ---
 
@@ -143,68 +135,92 @@ export const SERVICE_CANCEL_REASONS = [
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/components/mandatos/CloseMandatoDialog.tsx` | Bifurcar UI según categoría |
-| `src/lib/constants.ts` | Añadir razones de cancelación para servicios |
-| `src/types/index.ts` | Añadir nuevos tipos |
-| **Migración SQL** | Añadir campos `fee_facturado`, `horas_invertidas`, etc. |
+| `src/pages/Tareas.tsx` | Simplificar tabs (2 en vez de 3), nueva lógica de filtrado, añadir switches |
+| `src/components/tareas/TareaCard.tsx` (inline) | Añadir quick-assign dropdown |
+| **Migración SQL** | Actualizar RLS policy para SELECT |
+
+### Archivos SIN Modificar
+
+| Archivo | Razón |
+|---------|-------|
+| `src/services/tareas.service.ts` | No cambia - RLS filtra en BD |
+| `src/hooks/queries/useTareas.ts` | No cambia - cache keys pueden mantenerse igual |
+| `src/components/tareas/*.tsx` | Drawers de crear/editar no cambian |
 
 ---
 
-### Archivos a Crear
+### Migración SQL
 
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/mandatos/CloseServiceDialog.tsx` | Diálogo especializado para cerrar servicios |
-| `src/components/mandatos/CloseDealDialog.tsx` | Diálogo especializado para cerrar operaciones M&A |
+```sql
+-- Actualizar política SELECT para que todos los usuarios activos vean todas las tareas
+DROP POLICY IF EXISTS "tareas_select_visibility" ON tareas;
+
+CREATE POLICY "Usuarios activos ven todas las tareas del equipo"
+  ON tareas FOR SELECT
+  TO authenticated
+  USING (current_user_can_read());
+```
 
 ---
 
-### Resumen Visual del Flujo
+### Flujo de Datos
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                         FLUJO DE CIERRE ADAPTATIVO                           │
+│                           FLUJO DE VISTAS                                    │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│    Usuario cambia estado a "Cerrado" o "Cancelado"                          │
-│                              │                                               │
-│                              ▼                                               │
-│                   ┌──────────────────────┐                                   │
-│                   │ ¿Qué tipo de proyecto?│                                   │
-│                   └──────────┬───────────┘                                   │
-│                              │                                               │
-│          ┌───────────────────┼───────────────────┐                          │
-│          │                   │                   │                           │
-│          ▼                   ▼                   ▼                           │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                    │
-│  │ Operación M&A │  │ Due Diligence │  │   Servicio    │                    │
-│  │   (compra/    │  │  Valoración   │  │  (Asesoría)   │                    │
-│  │    venta)     │  │   SPA/Legal   │  │               │                    │
-│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘                    │
-│          │                   │                   │                           │
-│          ▼                   ▼                   ▼                           │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐                    │
-│  │ CloseDeal     │  │ CloseService  │  │ CloseService  │                    │
-│  │ Dialog        │  │ Dialog        │  │ Dialog        │                    │
-│  │               │  │               │  │               │                    │
-│  │ • Ganado      │  │ • Entregado   │  │ • Entregado   │                    │
-│  │ • Perdido     │  │ • Cancelado   │  │ • Cancelado   │                    │
-│  │ • Cancelado   │  │               │  │               │                    │
-│  │               │  │ + Honorarios  │  │ + Honorarios  │                    │
-│  │ + Deal value  │  │ + Horas       │  │ + Horas       │                    │
-│  │ + Fee cobrado │  │               │  │               │                    │
-│  └───────────────┘  └───────────────┘  └───────────────┘                    │
+│  1. Usuario abre /tareas                                                     │
+│     └─► useTareas() → SELECT * FROM tareas (RLS: current_user_can_read())   │
+│         └─► Devuelve TODAS las tareas del equipo                            │
+│                                                                              │
+│  2. Usuario selecciona tab                                                   │
+│     ├─► "Equipo": muestra todas (sin filtro adicional)                      │
+│     └─► "Mis Tareas": filtra en frontend por asignado_a = user.id           │
+│                                                                              │
+│  3. Usuario edita/completa tarea                                            │
+│     └─► useUpdateTarea() → invalidateQueries(['tareas'])                    │
+│         └─► Ambas vistas se actualizan automáticamente                      │
+│                                                                              │
+│  4. Usuario cambia asignación                                                │
+│     └─► Si me asigno a mí → aparece en "Mis Tareas"                         │
+│     └─► Si asigno a otro → sale de "Mis Tareas" (si estaba ahí)             │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
+### Casos de Prueba (QA)
+
+| Escenario | Esperado |
+|-----------|----------|
+| Usuario A crea tarea asignada a Usuario B | Visible en "Equipo" para ambos. Solo en "Mis Tareas" para B |
+| Usuario A crea tarea sin asignar | Visible en "Equipo" para todos. No aparece en "Mis Tareas" de nadie |
+| Usuario cambia asignación de sí mismo a otro | Sale de su "Mis Tareas", entra en la del otro |
+| Usuario de otro workspace (no en admin_users) | No ve ninguna tarea (RLS bloquea) |
+| Cambiar estado a completada | Se refleja en ambas vistas inmediatamente |
+
+---
+
+### Contadores en Tabs
+
+```typescript
+const equipoCount = tareas.length;
+const misTareasCount = tareas.filter(t => t.asignado_a === currentUser?.id).length;
+
+// UI
+<TabsTrigger value="team">Equipo ({equipoCount})</TabsTrigger>
+<TabsTrigger value="mine">Mis Tareas ({misTareasCount})</TabsTrigger>
+```
+
+---
+
 ### Beneficios
 
-1. **Terminología correcta**: "Entregado" tiene más sentido que "Ganado" para un servicio
-2. **Métricas precisas**: Capturamos honorarios facturados y horas invertidas
-3. **Mejor análisis Win/Loss**: Podemos separar razones de pérdida en M&A vs cancelación de servicios
-4. **Facturación parcial**: Contemplamos casos donde se cancela pero se cobra algo
-5. **Consistencia**: El flujo de cierre se adapta al contexto del proyecto
-
+1. **Simplificación**: 2 vistas claras en vez de 3 confusas
+2. **Visibilidad completa**: Todo el equipo ve todas las tareas (transparencia)
+3. **Quick-assign**: Asignación rápida sin abrir drawer
+4. **RLS seguro**: Solo usuarios activos en admin_users ven tareas
+5. **Sin duplicación**: Una sola query, filtro en frontend
+6. **Consistencia**: Ediciones se reflejan en ambas vistas automáticamente
