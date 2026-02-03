@@ -141,9 +141,9 @@ export function useTargetPipeline(mandatoId: string | undefined) {
   // Mutation: Archivar target
   const archiveMutation = useMutation({
     mutationFn: (targetId: string) => archiveTarget(targetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
-      queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
       toast({ title: "Target archivado", description: "El target ha sido excluido de los KPIs activos" });
     },
     onError: (error) => handleError(error, 'Archivar target'),
@@ -152,9 +152,9 @@ export function useTargetPipeline(mandatoId: string | undefined) {
   // Mutation: Restaurar target
   const unarchiveMutation = useMutation({
     mutationFn: (targetId: string) => unarchiveTarget(targetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
-      queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
       toast({ title: "Target restaurado", description: "El target vuelve a aparecer en los KPIs activos" });
     },
     onError: (error) => handleError(error, 'Restaurar target'),
