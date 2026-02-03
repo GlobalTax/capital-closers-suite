@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Kanban, List, Upload, FileSpreadsheet, Search, ChevronDown } from "lucide-react";
+import { Building2, Plus, Kanban, List, Upload, FileSpreadsheet, Search, ChevronDown, Archive } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +18,7 @@ import { TargetPipelineKanban } from "@/components/mandatos/buyside/TargetPipeli
 import { TargetListView } from "@/components/mandatos/buyside/TargetListView";
 import { TargetFiltersPanel, defaultFilters, type TargetFilters } from "@/components/mandatos/buyside/TargetFiltersPanel";
 import { TargetDetailDrawer } from "@/components/mandatos/buyside/TargetDetailDrawer";
+import { ArchivedTargetsView } from "@/components/mandatos/buyside/ArchivedTargetsView";
 import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { useTargetTags } from "@/hooks/useTargetTags";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
@@ -75,14 +77,23 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
     setDetailDrawerOpen(true);
   };
 
+  // Conteo de archivados
+  const archivedCount = useMemo(
+    () => targets.filter((t) => t.is_archived).length,
+    [targets]
+  );
+
   // Filtrar targets
   const filteredTargets = useMemo(() => {
     let result = targets;
 
-    // Filtrar archivados por defecto (solo mostrar si toggle está activo)
-    if (!showArchived) {
-      result = result.filter(t => !t.is_archived);
+    // Cuando showArchived está activo, mostrar SOLO archivados
+    if (showArchived) {
+      return result.filter((t) => t.is_archived);
     }
+
+    // Por defecto, excluir archivados
+    result = result.filter((t) => !t.is_archived);
 
     // Filtrar por funnel stage seleccionado
     if (selectedFunnelStage) {
@@ -142,17 +153,19 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
       {/* Criterios de inversión */}
       <CriteriosInversionCard mandato={mandato} onEdit={onEditMandato} />
 
-      {/* Funnel visual */}
-      <Card>
-        <CardContent className="pt-4">
-          <TargetFunnel
-            stats={stats?.byFunnelStage || { long_list: 0, short_list: 0, finalista: 0, descartado: 0 }}
-            total={stats?.total ?? filteredTargets.length}
-            selectedStage={selectedFunnelStage}
-            onSelectStage={setSelectedFunnelStage}
-          />
-        </CardContent>
-      </Card>
+      {/* Funnel visual - ocultar cuando se ven archivados */}
+      {!showArchived && (
+        <Card>
+          <CardContent className="pt-4">
+            <TargetFunnel
+              stats={stats?.byFunnelStage || { long_list: 0, short_list: 0, finalista: 0, descartado: 0 }}
+              total={stats?.total ?? filteredTargets.length}
+              selectedStage={selectedFunnelStage}
+              onSelectStage={setSelectedFunnelStage}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Header con controles */}
       <div className="flex items-center justify-between">
@@ -191,16 +204,22 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
           />
           
           {/* Toggle para mostrar archivados */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border transition-colors ${showArchived ? 'bg-primary/10 border-primary/30' : 'bg-muted/30'}`}>
+            <Archive className={`h-3.5 w-3.5 ${showArchived ? 'text-primary' : 'text-muted-foreground'}`} />
             <Switch 
               checked={showArchived} 
               onCheckedChange={setShowArchived}
               id="show-archived"
               className="h-4 w-7"
             />
-            <Label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">
+            <Label htmlFor="show-archived" className={`text-xs cursor-pointer ${showArchived ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
               Archivados
             </Label>
+            {archivedCount > 0 && (
+              <Badge variant={showArchived ? "default" : "secondary"} className="h-5 px-1.5 text-[10px]">
+                {archivedCount}
+              </Badge>
+            )}
           </div>
           
           {/* Menú de importación */}
@@ -236,7 +255,16 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
       </div>
 
       {/* Vista principal */}
-      {viewMode === 'kanban' ? (
+      {showArchived ? (
+        <ArchivedTargetsView
+          targets={targets as MandatoEmpresaBuySide[]}
+          onUnarchive={(targetId) => {
+            unarchiveTarget(targetId);
+          }}
+          onTargetClick={handleTargetClick}
+          isUnarchiving={isArchiving}
+        />
+      ) : viewMode === 'kanban' ? (
         <TargetPipelineKanban
           targets={filteredTargets as MandatoEmpresaBuySide[]}
           onMoveTarget={(targetId, stage) => moveToPipeline({ targetId, stage })}
@@ -256,8 +284,8 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
         />
       )}
 
-      {/* Empty state */}
-      {targets.length === 0 && (
+      {/* Empty state - solo para vista normal */}
+      {!showArchived && targets.filter(t => !t.is_archived).length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
