@@ -898,6 +898,10 @@ export interface MandatoEmpresaBuySide extends MandatoEmpresa {
   conflicto_descripcion?: string;
   geografia?: string;
   notas_internas?: string;
+  // Campos de archivado
+  is_archived?: boolean;
+  archived_at?: string;
+  archived_by?: string;
 }
 
 // Estadísticas del pipeline de targets

@@ -23,7 +23,8 @@ import {
   DollarSign,
   Target,
   ArrowRight,
-  Trash2,
+  Archive,
+  ArchiveRestore,
   Ban,
   AlertTriangle,
 } from "lucide-react";
@@ -59,10 +60,12 @@ interface TargetDetailDrawerProps {
   onMoveToPipeline: (targetId: string, stage: TargetPipelineStage) => void;
   onUpdateScoring: (targetId: string, scoring: Partial<TargetScoring>) => void;
   onCreateOferta: (targetId: string, oferta: { tipo: OfertaTipo; monto: number; condiciones?: string }) => void;
-  onDeleteTarget?: (targetId: string) => void;
+  onArchiveTarget?: (targetId: string) => void;
+  onUnarchiveTarget?: (targetId: string) => void;
   isMoving?: boolean;
   isSavingScoring?: boolean;
   isSavingOferta?: boolean;
+  isArchiving?: boolean;
   onRefresh: () => void;
 }
 
@@ -75,10 +78,12 @@ export function TargetDetailDrawer({
   onMoveToPipeline,
   onUpdateScoring,
   onCreateOferta,
-  onDeleteTarget,
+  onArchiveTarget,
+  onUnarchiveTarget,
   isMoving = false,
   isSavingScoring = false,
   isSavingOferta = false,
+  isArchiving = false,
   onRefresh,
 }: TargetDetailDrawerProps) {
   const navigate = useNavigate();
@@ -240,6 +245,12 @@ export function TargetDetailDrawer({
                 <Badge variant="outline" className="text-xs gap-0.5 border-amber-500 text-amber-600">
                   <AlertTriangle className="h-2.5 w-2.5" />
                   Conflicto
+                </Badge>
+              )}
+              {target.is_archived && (
+                <Badge variant="secondary" className="text-xs gap-0.5 opacity-70">
+                  <Archive className="h-2.5 w-2.5" />
+                  Archivado
                 </Badge>
               )}
             </div>
@@ -421,11 +432,27 @@ export function TargetDetailDrawer({
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => onDeleteTarget?.(target.id)}
+              className={target.is_archived ? "text-green-600 hover:text-green-700" : "text-amber-600 hover:text-amber-700"}
+              onClick={() => {
+                if (target.is_archived) {
+                  onUnarchiveTarget?.(target.id);
+                } else {
+                  onArchiveTarget?.(target.id);
+                }
+              }}
+              disabled={isArchiving}
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Descartar
+              {target.is_archived ? (
+                <>
+                  <ArchiveRestore className="h-4 w-4 mr-1" />
+                  Restaurar
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4 mr-1" />
+                  Archivar
+                </>
+              )}
             </Button>
             <Button
               variant="outline"

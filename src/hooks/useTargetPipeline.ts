@@ -14,6 +14,7 @@ import {
   getOfertasByTarget,
   cambiarEstadoOferta,
 } from "@/services/targetOfertas.service";
+import { archiveTarget, unarchiveTarget } from "@/services/targetArchive.service";
 import type { 
   TargetFunnelStage, 
   TargetPipelineStage, 
@@ -137,6 +138,28 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     onError: (error) => handleError(error, 'Eliminar oferta'),
   });
 
+  // Mutation: Archivar target
+  const archiveMutation = useMutation({
+    mutationFn: (targetId: string) => archiveTarget(targetId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+      toast({ title: "Target archivado", description: "El target ha sido excluido de los KPIs activos" });
+    },
+    onError: (error) => handleError(error, 'Archivar target'),
+  });
+
+  // Mutation: Restaurar target
+  const unarchiveMutation = useMutation({
+    mutationFn: (targetId: string) => unarchiveTarget(targetId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+      toast({ title: "Target restaurado", description: "El target vuelve a aparecer en los KPIs activos" });
+    },
+    onError: (error) => handleError(error, 'Restaurar target'),
+  });
+
   return {
     // Data
     targets: targetsQuery.data || [],
@@ -152,11 +175,14 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     createOferta: createOfertaMutation.mutate,
     updateOfertaEstado: updateOfertaEstadoMutation.mutate,
     deleteOferta: deleteOfertaMutation.mutate,
+    archiveTarget: archiveMutation.mutate,
+    unarchiveTarget: unarchiveMutation.mutate,
 
     // Loading states
     isMoving: moveFunnelMutation.isPending || movePipelineMutation.isPending,
     isSavingScoring: updateScoringMutation.isPending,
     isSavingOferta: createOfertaMutation.isPending || updateOfertaEstadoMutation.isPending,
+    isArchiving: archiveMutation.isPending || unarchiveMutation.isPending,
 
     // Refetch
     refetch: () => {
