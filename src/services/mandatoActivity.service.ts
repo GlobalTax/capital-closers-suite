@@ -1,16 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { MandatoActivity, MandatoWithInactivity } from "@/types";
+import type { MandatoActivity, MandatoActivityWithUser, MandatoWithInactivity } from "@/types";
 
-export async function fetchMandatoActivity(mandatoId: string): Promise<MandatoActivity[]> {
-  const { data, error } = await supabase
+export async function fetchMandatoActivity(mandatoId: string): Promise<MandatoActivityWithUser[]> {
+  // First fetch activities
+  const { data: activities, error: activitiesError } = await supabase
     .from('mandato_activity')
     .select('*')
     .eq('mandato_id', mandatoId)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) throw error;
-  return (data || []) as MandatoActivity[];
+  if (activitiesError) throw activitiesError;
+  if (!activities || activities.length === 0) return [];
+
+  // Get unique user IDs
+  const userIds = [...new Set(activities.map(a => a.created_by).filter(Boolean))];
+  
+  // Fetch user names
+  let userMap: Record<string, string> = {};
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from('admin_users')
+      .select('user_id, full_name')
+      .in('user_id', userIds);
+    
+    if (users) {
+      userMap = Object.fromEntries(users.map(u => [u.user_id, u.full_name || 'Usuario']));
+    }
+  }
+
+  // Merge data
+  return activities.map(activity => ({
+    ...activity,
+    created_by_user: activity.created_by 
+      ? { user_id: activity.created_by, full_name: userMap[activity.created_by] || 'Usuario' }
+      : null
+  })) as MandatoActivityWithUser[];
 }
 
 export async function fetchInactiveMandatos(minDays: number = 14): Promise<MandatoWithInactivity[]> {

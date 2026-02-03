@@ -657,6 +657,13 @@ export interface MandatoActivity {
   created_at: string;
 }
 
+export interface MandatoActivityWithUser extends MandatoActivity {
+  created_by_user?: {
+    user_id: string;
+    full_name: string;
+  } | null;
+}
+
 export interface MandatoWithInactivity extends Mandato {
   dias_sin_actividad: number;
   ultima_actividad_tipo?: string;
