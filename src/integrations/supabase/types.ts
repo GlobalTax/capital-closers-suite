@@ -6742,6 +6742,72 @@ export type Database = {
           },
         ]
       }
+      dealsuite_deals: {
+        Row: {
+          advisor: string | null
+          country: string | null
+          created_at: string | null
+          deal_id: string
+          deal_type: string | null
+          description: string | null
+          detail_url: string | null
+          ebitda_max: number | null
+          ebitda_min: number | null
+          id: string
+          published_at: string | null
+          raw_data: Json | null
+          revenue_max: number | null
+          revenue_min: number | null
+          scraped_at: string | null
+          sector: string | null
+          source_url: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          advisor?: string | null
+          country?: string | null
+          created_at?: string | null
+          deal_id: string
+          deal_type?: string | null
+          description?: string | null
+          detail_url?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          id?: string
+          published_at?: string | null
+          raw_data?: Json | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          scraped_at?: string | null
+          sector?: string | null
+          source_url?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          advisor?: string | null
+          country?: string | null
+          created_at?: string | null
+          deal_id?: string
+          deal_type?: string | null
+          description?: string | null
+          detail_url?: string | null
+          ebitda_max?: number | null
+          ebitda_min?: number | null
+          id?: string
+          published_at?: string | null
+          raw_data?: Json | null
+          revenue_max?: number | null
+          revenue_min?: number | null
+          scraped_at?: string | null
+          sector?: string | null
+          source_url?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       document_access_logs: {
         Row: {
           access_type: string
