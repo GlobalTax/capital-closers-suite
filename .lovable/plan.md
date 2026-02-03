@@ -1,272 +1,82 @@
 
+## Plan: Depurar /mis-horas (Sin Añadir Nada)
 
-## Plan: Añadir Funcionalidad de Archivar Targets
+### Diagnóstico Realizado
 
-### Objetivo
-Implementar la capacidad de archivar targets de manera que:
-- Los targets archivados se excluyan del KPI "Targets Activos"
-- Los targets archivados puedan visualizarse/recuperarse si es necesario
-- El conteo del funnel y pipeline solo muestre targets activos (no archivados)
+He analizado exhaustivamente el código y la base de datos. A continuación presento los bugs reales identificados y sus correcciones exactas.
 
 ---
 
-### Cambios en Base de Datos
+### Bug 1: TimeEntryEditDialog NO envía editReason (CRÍTICO)
 
-#### Migración SQL
+**Archivo**: `src/components/mandatos/TimeEntryEditDialog.tsx`
+
+**Problema**: El componente llama a `updateTimeEntry(entry.id, {...})` sin proporcionar el tercer parámetro `editReason`. La función `updateTimeEntry` valida que `editReason` tenga mínimo 5 caracteres (línea 518-519 de timeTracking.ts), causando el error:
+
+```
+"Debes proporcionar un motivo de edición (mínimo 5 caracteres)"
+```
+
+**Causa Raíz**: Este dialog fue creado antes de implementar la trazabilidad obligatoria de ediciones.
+
+**Corrección**: Añadir un campo de `editReason` al formulario y pasarlo como tercer parámetro a `updateTimeEntry`. Seguir el mismo patrón ya implementado en `EditableTimeEntryRow.tsx`.
+
+---
+
+### Bug 2: QuickTimeEntryModal genera descripciones de menos de 10 caracteres
+
+**Archivo**: `src/components/leads/QuickTimeEntryModal.tsx`
+
+**Problema**: Línea 167 construye la descripción así:
+```typescript
+description: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad'}: ${description}`
+```
+
+Si el usuario NO escribe descripción, el resultado es:
+- "Llamada: " = 9 caracteres
+- "Videollamada: " = 14 caracteres ✓
+- "Reunión: " = 9 caracteres
+
+Esto viola el CHECK constraint de la BD:
 ```sql
--- Añadir columna is_archived a mandato_empresas
-ALTER TABLE public.mandato_empresas 
-ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS archived_at timestamptz,
-ADD COLUMN IF NOT EXISTS archived_by uuid REFERENCES auth.users(id);
+CHECK ((length(TRIM(BOTH FROM description)) >= 10))
+```
 
--- Índice para queries eficientes
-CREATE INDEX IF NOT EXISTS idx_mandato_empresas_archived 
-ON public.mandato_empresas(mandato_id, rol, is_archived) 
-WHERE rol = 'target';
-
--- Comentarios para documentación
-COMMENT ON COLUMN public.mandato_empresas.is_archived IS 'Target archivado - excluido de KPIs activos';
-COMMENT ON COLUMN public.mandato_empresas.archived_at IS 'Fecha de archivado';
-COMMENT ON COLUMN public.mandato_empresas.archived_by IS 'Usuario que archivó el target';
+**Corrección**: Garantizar que la descripción final SIEMPRE tenga al menos 10 caracteres. Por ejemplo:
+```typescript
+const activityLabel = ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad';
+const baseDesc = description.trim() || `con ${lead.nombre}`;
+const finalDescription = `${activityLabel}: ${baseDesc}`;
 ```
 
 ---
 
-### Cambios en Tipos TypeScript
+### Bug 3: QuickTimeEntryModal NO envía work_type (campo NOT NULL)
 
-#### Actualizar MandatoEmpresaBuySide (src/types/index.ts)
-Añadir campos de archivado al tipo:
-```typescript
-export interface MandatoEmpresaBuySide extends MandatoEmpresa {
-  // ... campos existentes ...
-  
-  // Nuevos campos de archivado
-  is_archived?: boolean;
-  archived_at?: string;
-  archived_by?: string;
-}
+**Archivo**: `src/components/leads/QuickTimeEntryModal.tsx`
+
+**Problema**: El payload de `createTimeEntry` (líneas 160-169) NO incluye el campo `work_type`, que es NOT NULL en la BD:
+
+```sql
+column_name: work_type, is_nullable: NO
 ```
+
+**Corrección**: Añadir `work_type: 'Otro'` al payload, igual que hacen los demás formularios.
 
 ---
 
-### Cambios en Servicios
+### Bug 4: RLS Policy excesivamente restrictiva para ediciones de workflow
 
-#### 1. targetScoring.service.ts - Filtrar archivados en stats
+**Tabla**: `mandato_time_entries`  
+**Policy**: `Users can edit own entries with tracking`
 
-**getTargetPipelineStats()** - Excluir archivados del conteo:
-```typescript
-const { data: targets, error } = await supabase
-  .from("mandato_empresas")
-  .select(`id, funnel_stage, pipeline_stage_target, match_score, is_archived`)
-  .eq("mandato_id", mandatoId)
-  .eq("rol", "target")
-  .eq("is_archived", false);  // NUEVO: Solo activos
-```
+**Problema**: La política actual requiere `edit_reason IS NOT NULL AND length(edit_reason) >= 5` para CUALQUIER UPDATE, incluyendo operaciones de workflow (stopTimer, approveEntry) que ya usan `updateTimeEntryStatus`.
 
-**getTargetsWithScoring()** - Añadir campo is_archived:
-```typescript
-// Ya retorna todos los targets, pero incluir is_archived para filtrado en UI
-const { data: targets, error } = await supabase
-  .from("mandato_empresas")
-  .select(`
-    *,
-    empresa:empresas(*),
-    scoring:mandato_empresa_scoring(*),
-    ofertas:target_ofertas(*)
-  `)
-  .eq("mandato_id", mandatoId)
-  .eq("rol", "target")
-  .order("is_archived", { ascending: true }) // Activos primero
-  .order("created_at", { ascending: false });
-```
+**Situación actual**: El código ya separa correctamente `updateTimeEntry` (requiere razón) de `updateTimeEntryStatus` (no requiere razón). Pero si un admin intenta usar `updateTimeEntry` para un status change, fallará.
 
-#### 2. Nuevo servicio de archivado (src/services/targetArchive.service.ts)
-```typescript
-export async function archiveTarget(mandatoEmpresaId: string): Promise<void> {
-  const { data: user } = await supabase.auth.getUser();
-  
-  const { error } = await supabase
-    .from("mandato_empresas")
-    .update({ 
-      is_archived: true,
-      archived_at: new Date().toISOString(),
-      archived_by: user?.user?.id
-    })
-    .eq("id", mandatoEmpresaId);
+**Verificación**: Este bug NO afecta el flujo normal porque `stopTimer`, `approveTimeEntry`, etc. usan `updateTimeEntryStatus`. Solo afectaría si alguien intenta usar la función incorrecta.
 
-  if (error) throw error;
-}
-
-export async function unarchiveTarget(mandatoEmpresaId: string): Promise<void> {
-  const { error } = await supabase
-    .from("mandato_empresas")
-    .update({ 
-      is_archived: false,
-      archived_at: null,
-      archived_by: null
-    })
-    .eq("id", mandatoEmpresaId);
-
-  if (error) throw error;
-}
-```
-
----
-
-### Cambios en Hook useTargetPipeline
-
-#### Añadir mutation para archivar/desarchivar
-```typescript
-// Nueva mutation: Archivar target
-const archiveMutation = useMutation({
-  mutationFn: (targetId: string) => archiveTarget(targetId),
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
-    queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
-    toast({ title: "Target archivado" });
-  },
-  onError: (error) => handleError(error, 'Archivar target'),
-});
-
-// Nueva mutation: Desarchivar target
-const unarchiveMutation = useMutation({
-  mutationFn: (targetId: string) => unarchiveTarget(targetId),
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
-    queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
-    toast({ title: "Target restaurado" });
-  },
-  onError: (error) => handleError(error, 'Restaurar target'),
-});
-
-return {
-  // ... existente ...
-  archiveTarget: archiveMutation.mutate,
-  unarchiveTarget: unarchiveMutation.mutate,
-  isArchiving: archiveMutation.isPending || unarchiveMutation.isPending,
-};
-```
-
----
-
-### Cambios en UI
-
-#### 1. TargetsTabBuySide.tsx - Filtro de archivados
-
-Añadir toggle para mostrar/ocultar archivados:
-```typescript
-const [showArchived, setShowArchived] = useState(false);
-
-// Filtrar archivados en la lista
-const filteredTargets = useMemo(() => {
-  let result = targets;
-  
-  // Filtro de archivados (por defecto ocultos)
-  if (!showArchived) {
-    result = result.filter(t => !t.is_archived);
-  }
-  
-  // ... resto de filtros existentes ...
-}, [targets, showArchived, ...]);
-```
-
-Añadir UI toggle:
-```tsx
-<div className="flex items-center gap-2">
-  <Switch 
-    checked={showArchived} 
-    onCheckedChange={setShowArchived}
-    id="show-archived"
-  />
-  <Label htmlFor="show-archived" className="text-xs text-muted-foreground">
-    Mostrar archivados
-  </Label>
-</div>
-```
-
-#### 2. TargetDetailDrawer.tsx - Boton de archivar
-
-Cambiar el botón "Descartar" por "Archivar":
-```tsx
-<Button
-  variant="ghost"
-  size="sm"
-  className={target.is_archived ? "text-green-600" : "text-amber-600"}
-  onClick={() => {
-    if (target.is_archived) {
-      onUnarchiveTarget?.(target.id);
-    } else {
-      onArchiveTarget?.(target.id);
-    }
-  }}
->
-  {target.is_archived ? (
-    <>
-      <ArchiveRestore className="h-4 w-4 mr-1" />
-      Restaurar
-    </>
-  ) : (
-    <>
-      <Archive className="h-4 w-4 mr-1" />
-      Archivar
-    </>
-  )}
-</Button>
-```
-
-#### 3. TargetPipelineCard.tsx - Indicador visual
-
-Mostrar badge de archivado:
-```tsx
-{target.is_archived && (
-  <Badge variant="outline" className="text-xs opacity-60">
-    <Archive className="h-2.5 w-2.5 mr-0.5" />
-    Archivado
-  </Badge>
-)}
-```
-
-#### 4. TargetListView.tsx - Fila atenuada
-
-Añadir estilo para targets archivados:
-```tsx
-<TableRow
-  className={cn(
-    "cursor-pointer",
-    selectedIds.includes(target.id) && "bg-muted/50",
-    target.is_archived && "opacity-50 bg-muted/30",  // NUEVO
-    target.no_contactar && "opacity-60"
-  )}
->
-```
-
----
-
-### Flujo de Datos Actualizado
-
-```text
-getTargetPipelineStats()
-      |
-      v
-SELECT ... WHERE is_archived = false
-      |
-      v
-stats.total = solo targets activos (no archivados)
-      |
-      v
-MandatoKPIs: "Targets Activos" = stats.total (correcto)
-```
-
----
-
-### Definición de Estados
-
-| Estado | is_archived | funnel_stage | Visible en KPI | Visible en UI |
-|--------|-------------|--------------|----------------|---------------|
-| **Activo** | false | cualquiera | Sí | Sí |
-| **Descartado** | false | descartado | Sí (es un stage) | Sí |
-| **Archivado** | true | cualquiera | No | Solo con toggle |
+**Acción**: No tocar - el código ya está correctamente separado. Solo documentar.
 
 ---
 
@@ -274,26 +84,82 @@ MandatoKPIs: "Targets Activos" = stats.total (correcto)
 
 | Archivo | Cambio |
 |---------|--------|
-| **SQL Migration** | Añadir columnas is_archived, archived_at, archived_by |
-| `src/types/index.ts` | Añadir campos al tipo MandatoEmpresaBuySide |
-| `src/services/targetScoring.service.ts` | Filtrar is_archived=false en stats |
-| `src/services/targetArchive.service.ts` | NUEVO: funciones archive/unarchive |
-| `src/hooks/useTargetPipeline.ts` | Añadir mutations de archivado |
-| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Toggle mostrar archivados |
-| `src/components/mandatos/buyside/TargetDetailDrawer.tsx` | Boton archivar/restaurar |
-| `src/components/mandatos/buyside/TargetPipelineCard.tsx` | Badge archivado |
-| `src/components/mandatos/buyside/TargetListView.tsx` | Estilo fila archivada |
+| `src/components/mandatos/TimeEntryEditDialog.tsx` | Añadir campo editReason y pasarlo a updateTimeEntry |
+| `src/components/leads/QuickTimeEntryModal.tsx` | Asegurar descripción ≥10 chars + añadir work_type |
 
 ---
 
-### Casos de Prueba
+### Detalles Técnicos de Correcciones
 
-| Escenario | Resultado Esperado |
-|-----------|-------------------|
-| 5 targets, 0 archivados | Targets Activos = 5 |
-| 5 targets, 1 archivado | Targets Activos = 4 |
-| Archivar target | KPI baja, target desaparece de vista principal |
-| Toggle "Mostrar archivados" | Targets archivados visibles con estilo atenuado |
-| Restaurar target archivado | KPI sube, target visible normalmente |
-| Kanban con archivados ocultos | Solo muestra targets activos en columnas |
+#### TimeEntryEditDialog.tsx
 
+```typescript
+// AÑADIR estado para editReason
+const [editReason, setEditReason] = useState('');
+
+// AÑADIR validación antes del submit
+if (editReason.trim().length < 5) {
+  toast.error("Debes proporcionar un motivo de edición (mínimo 5 caracteres)");
+  return;
+}
+
+// MODIFICAR llamada a updateTimeEntry
+await updateTimeEntry(entry.id, {
+  start_time: startDateTime.toISOString(),
+  end_time: endDateTime.toISOString(),
+  duration_minutes: durationMinutes,
+  description: trimmedDescription || 'Trabajo registrado manualmente',
+  value_type: valueType,
+  work_task_type_id: workTaskTypeId || undefined,
+  is_billable: isBillable,
+  notes: notes.trim() || undefined,
+}, editReason.trim()); // <-- AÑADIR tercer parámetro
+
+// AÑADIR campo UI para editReason (similar a EditableTimeEntryRow)
+```
+
+#### QuickTimeEntryModal.tsx
+
+```typescript
+// MODIFICAR construcción de descripción (línea ~167)
+const activityLabel = ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad';
+const userDescription = description.trim() || `con ${lead.nombre}`;
+const finalDescription = `${activityLabel}: ${userDescription}`.substring(0, 500);
+
+// MODIFICAR payload de createTimeEntry
+await createTimeEntry({
+  user_id: user.id,
+  mandato_id: mandatoId,
+  mandate_lead_id: mandateLeadId,
+  work_task_type_id: selectedWorkTaskTypeId || undefined,
+  start_time: new Date().toISOString(),
+  duration_minutes: duration,
+  description: finalDescription,
+  work_type: 'Otro', // <-- AÑADIR campo obligatorio
+  status: 'approved',
+} as any);
+```
+
+---
+
+### Casos de Prueba Post-Corrección
+
+| Caso | Resultado Esperado |
+|------|-------------------|
+| Registrar horas desde TimeEntryInlineForm | Funciona sin errores |
+| Registrar horas desde QuickTimeEntryModal sin descripción | Funciona (descripción = "Llamada: con NombreLead") |
+| Editar entrada desde TimeEntryEditDialog | Muestra campo de motivo, guarda correctamente |
+| Editar entrada desde EditableTimeEntryRow | Funciona (ya implementado correctamente) |
+| Timer global → asignar tiempo | Funciona sin errores |
+| Añadir entrada para fecha pasada (DayInlineAddForm) | Funciona con justificación |
+
+---
+
+### Lo que NO se toca
+
+- ❌ No cambiar UX
+- ❌ No añadir features
+- ❌ No modificar flujos
+- ❌ No tocar componentes que ya funcionan
+- ❌ No modificar RLS policies (están correctas)
+- ❌ No cambiar schema de BD
