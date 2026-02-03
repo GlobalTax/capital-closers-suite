@@ -1,115 +1,151 @@
 
-## Plan: Mostrar Quién da de Alta en el Registro de Actividad
+## Plan: Arreglar KPI "Targets Activos" en Mandatos Buy-Side
 
-### Problema Identificado
+### Resumen del Problema
 
-El timeline de actividad muestra "Usuario" genérico en **10 registros** (todos de tipo `tarea`) porque el trigger `log_checklist_activity` no está guardando quién hizo el cambio:
+El KPI "Targets Activos" muestra 0 porque los datos del pipeline de targets no se pasan al componente `MandatoKPIs`. La información ya existe en el hook `useTargetPipeline`, pero no se conecta a la pagina principal del mandato.
 
-```sql
--- Trigger ACTUAL (sin created_by)
-INSERT INTO mandato_activity (mandato_id, activity_type, activity_description, entity_id)
-VALUES (...);
-
--- Debería ser:
-INSERT INTO mandato_activity (mandato_id, activity_type, activity_description, entity_id, created_by)
-VALUES (..., auth.uid());
-```
-
-| Trigger | ¿Guarda `created_by`? | Origen |
-|---------|----------------------|--------|
-| `log_time_entry_activity` | Si | `NEW.user_id` |
-| `log_interaccion_activity` | Si | `NEW.created_by` |
-| `log_documento_activity` | Si | `NEW.uploaded_by` |
-| `log_checklist_activity` | **NO** | Falta `auth.uid()` |
+| Elemento | Fuente Actual | Valor | Estado |
+|----------|---------------|-------|--------|
+| "Targets (5)" badge | `mandato.empresas.length` | 5 | Correcto |
+| "Long List = 5" | `useTargetPipeline().stats` | 5 | Correcto |
+| "Targets Activos" | `activeTargets` (default: 0) | 0 | **ROTO** - No se pasa el prop |
 
 ---
 
-### Solución
+### Solucion
 
-#### 1. Actualizar Trigger de Checklist
+Conectar el hook `useTargetPipeline` en `MandatoDetalle.tsx` y pasar las stats a `MandatoKPIs`.
 
-Modificar la función `log_checklist_activity` para capturar el usuario que hizo el cambio:
+---
 
-```sql
-CREATE OR REPLACE FUNCTION public.log_checklist_activity()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
-    INSERT INTO public.mandato_activity 
-      (mandato_id, activity_type, activity_description, entity_id, created_by)
-    VALUES 
-      (NEW.mandato_id, 'tarea', NEW.tarea || ' → ' || NEW.estado, NEW.id, auth.uid());
-    
-    UPDATE public.mandatos SET last_activity_at = now() WHERE id = NEW.mandato_id;
-  END IF;
-  RETURN NEW;
-END;
-$$;
+### Cambios Necesarios
+
+#### 1. Actualizar MandatoDetalle.tsx
+
+Importar y usar el hook para mandatos Buy-Side:
+
+```typescript
+import { useTargetPipeline } from "@/hooks/useTargetPipeline";
+
+// Dentro del componente:
+const isBuySide = mandato?.tipo === "compra";
+
+const { 
+  stats: targetStats, 
+  targets,
+  isLoading: isLoadingTargets 
+} = useTargetPipeline(isBuySide ? mandato?.id : undefined);
+
+// Pasar los datos al componente KPIs:
+<MandatoKPIs 
+  mandato={mandato} 
+  checklistProgress={totalProgress}
+  overdueTasks={overdueTasks.length}
+  // Nuevos props para Buy-Side:
+  activeTargets={targetStats?.total || 0}
+  conversionRate={targetStats?.conversionRate || 0}
+  avgScore={targetStats?.averageScore || 0}
+  offersSent={targetStats?.totalOfertas || 0}
+/>
 ```
 
-#### 2. Backfill de Datos Históricos (Opcional)
+**Notas importantes:**
+- Solo se activa el hook si el mandato es Buy-Side (`tipo === "compra"`)
+- Evita doble carga: el hook ya se usa en TargetsTabBuySide, pero React Query cachea los datos
+- Los queryKeys son iguales, asi que no hay requests duplicados
 
-Para las 10 tareas sin `created_by`, podemos intentar inferirlo desde el audit log:
+---
+
+### Definicion de "Target Activo"
+
+Basado en el codigo existente en `getTargetPipelineStats()`:
 
 ```sql
--- Ver si hay datos en audit_log que nos ayuden
-SELECT DISTINCT al.user_id, au.full_name
-FROM audit_log al
-JOIN admin_users au ON al.user_id = au.user_id
-WHERE al.table_name = 'mandato_checklist_tasks'
-LIMIT 10;
+-- Un target es "activo" si:
+SELECT * FROM mandato_empresas
+WHERE mandato_id = :mandatoId
+  AND rol = 'target'
+-- No hay filtro de archived/deleted porque no existen esas columnas
+```
+
+Por tanto, `stats.total` = todos los targets del mandato = "activos" en el contexto actual.
+
+Si en el futuro se anade logica de archivado:
+- Se deberia anadir columna `is_archived` o `deleted_at` a `mandato_empresas`
+- Actualizar la query para excluirlos: `WHERE deleted_at IS NULL AND is_archived = false`
+- El funnel stage `descartado` NO significa inactivo (sigue siendo un target, solo que descartado del proceso)
+
+---
+
+### Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| `src/pages/MandatoDetalle.tsx` | Importar `useTargetPipeline`, pasar props a `MandatoKPIs` |
+
+---
+
+### Flujo de Datos Corregido
+
+```
+MandatoDetalle.tsx
+      |
+      v
+useTargetPipeline(mandato.id)  -- Solo si tipo === "compra"
+      |
+      +-- stats.total -----------> activeTargets
+      +-- stats.conversionRate --> conversionRate  
+      +-- stats.averageScore ----> avgScore
+      +-- stats.totalOfertas ----> offersSent
+      |
+      v
+<MandatoKPIs {...props} />
+      |
+      v
+Muestra: "Targets Activos: 5"
 ```
 
 ---
 
-### Cambios a Realizar
+### Consistencia Garantizada
 
-| Tipo | Descripción |
-|------|-------------|
-| SQL Migration | Modificar función `log_checklist_activity` para incluir `auth.uid()` |
-| Backfill (opcional) | Actualizar registros históricos sin `created_by` |
+Con este cambio:
 
-### Beneficios
+| Elemento | Fuente | Consistente |
+|----------|--------|-------------|
+| "Targets (N)" badge | `targetsCount` (mandato.empresas.length) | Si |
+| "Targets Activos" KPI | `targetStats.total` | Si |
+| Long List / Short List / Finalistas | `targetStats.byFunnelStage` | Si |
+| Vista Kanban/Lista | `useTargetPipeline().targets` | Si |
 
-1. **Trazabilidad completa**: Todas las actividades futuras tendrán el nombre del usuario
-2. **Consistencia**: Los 4 tipos de actividad (hora, interaccion, documento, tarea) funcionarán igual
-3. **Sin cambios en frontend**: El componente `MandatoActivityTimeline` ya maneja correctamente `created_by_user`
+Todos usan el mismo origen de datos (React Query con key `['target-pipeline-stats', mandatoId]`).
 
 ---
 
-### Detalles Técnicos
+### Casos de Prueba
 
-**Migración SQL:**
+| Escenario | Resultado Esperado |
+|-----------|-------------------|
+| Mandato Buy-Side con 5 targets | Targets Activos = 5, Long List = 5 |
+| Mover target a Short List | Targets Activos sigue igual (5), Long List baja, Short List sube |
+| Descartar target | Targets Activos sigue igual (target descartado sigue existiendo) |
+| Crear nuevo target | Targets Activos sube a 6 (cache invalidado) |
+| Mandato Sell-Side | KPIs de Sell-Side (no muestra Targets Activos) |
 
-```sql
--- Actualizar el trigger para capturar el usuario
-CREATE OR REPLACE FUNCTION public.log_checklist_activity()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
-    INSERT INTO public.mandato_activity 
-      (mandato_id, activity_type, activity_description, entity_id, created_by)
-    VALUES 
-      (NEW.mandato_id, 'tarea', NEW.tarea || ' → ' || NEW.estado, NEW.id, auth.uid());
-    
-    UPDATE public.mandatos 
-    SET last_activity_at = now() 
-    WHERE id = NEW.mandato_id;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-```
+---
 
-**A partir de ahora:**
-- Cuando un usuario cambie el estado de una tarea del checklist
-- El registro de actividad incluirá su ID en `created_by`
-- El timeline mostrará su nombre en lugar de "Usuario"
+### Seccion Tecnica
+
+**React Query caching:**
+- El hook `useTargetPipeline` usa `staleTime: 2 * 60 * 1000` (2 minutos)
+- Cuando se usa en `MandatoDetalle.tsx` Y en `TargetsTabBuySide.tsx`, React Query devuelve datos cacheados
+- No hay requests duplicados porque comparten el mismo `queryKey`
+
+**Invalidacion de cache:**
+- Las mutations en `useTargetPipeline` ya invalidan `['target-pipeline-stats', mandatoId]`
+- Cuando el usuario mueve un target o crea una oferta, el KPI se actualiza automaticamente
+
+**Performance:**
+- Condicionalmente activo: `enabled: !!mandatoId && isBuySide`
+- Para mandatos Sell-Side no se ejecuta la query de targets
