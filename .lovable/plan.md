@@ -1,90 +1,126 @@
 
+## Plan: Botón "Crear Mandato" en Ficha de Empresa
 
-## Plan: Arreglar Sistema de Interacciones en Targets
-
-### Resumen del Problema
-
-He confirmado el bug analizando los datos:
-
-| Empresa | En Mandatos | Interacciones Totales | Problema |
-|---------|-------------|----------------------|----------|
-| Vergara Industrial | 2 mandatos diferentes | 4 (3 en uno, 1 en otro) | Se mezclan porque la query solo filtra por empresa_id |
-
-**Causa raiz**: En `TargetsTab.tsx` linea 98 se usa `fetchInteraccionesByEmpresa(empresaId)` que ejecuta:
-
-```sql
-SELECT * FROM interacciones WHERE empresa_id = :empresaId
-```
-
-Esto ignora `mandato_id` y mezcla interacciones de diferentes mandatos.
+### Objetivo
+Añadir un botón "Crear Mandato" en el panel de acciones de la ficha de empresa que permita iniciar rápidamente un mandato de compra o venta con la empresa pre-seleccionada.
 
 ---
 
-### Solucion
+### Diseño de UX
 
-La buena noticia es que **la tabla ya tiene `mandato_id`** correctamente guardado. Solo hay que:
+```
++------------------------------------------+
+|  Acciones                                |
++------------------------------------------+
+|  [Contactar]                             |
+|  [Llamar]                                |
+|  [Visitar Website]                       |
+|  ────────────────────                    |
+|  [+ Crear Mandato ▾]  <-- NUEVO          |
+|     ├─ 🛒 Compra (Buy-Side)              |
+|     └─ 📈 Venta (Sell-Side)              |
+|  [Agendar Reunión]                       |
+|  [Crear Tarea]                           |
+|  ...                                     |
++------------------------------------------+
+```
 
-1. Cambiar la query para filtrar por AMBOS campos
-2. Anadir botones de editar/eliminar en el timeline
+Al hacer clic en una opción:
+1. Se abre el `NuevoMandatoDrawer`
+2. La empresa ya está pre-seleccionada (no hay que buscarla)
+3. El tipo (compra/venta) ya está seleccionado
+4. El usuario solo completa descripción y campos opcionales
 
 ---
 
 ### Cambios Necesarios
 
-#### 1. Nueva Funcion en Service (interacciones.ts)
+#### 1. Extender NuevoMandatoDrawer con `defaultEmpresaId`
 
-Crear funcion que filtre por mandato_id + empresa_id:
+Añadir nuevo prop que pre-seleccione la empresa:
 
 ```typescript
-export const fetchInteraccionesByMandatoTarget = async (
-  mandatoId: string, 
-  empresaId: string
-): Promise<Interaccion[]> => {
-  const { data, error } = await supabase
-    .from('interacciones')
-    .select('*')
-    .eq('mandato_id', mandatoId)
-    .eq('empresa_id', empresaId)
-    .order('fecha', { ascending: false });
-  
-  if (error) throw error;
-  return (data || []) as Interaccion[];
+interface NuevoMandatoDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+  defaultTipo?: "compra" | "venta";
+  defaultEmpresaId?: string;  // NUEVO
+}
+```
+
+Comportamiento:
+- Si `defaultEmpresaId` está presente, establecer `empresaId` en el form
+- Ocultar o deshabilitar el selector de empresa (ya está elegida)
+- Mostrar el nombre de la empresa seleccionada como badge informativo
+
+#### 2. Actualizar EmpresaActionsPanel
+
+Añadir props para manejar la creación de mandatos:
+
+```typescript
+interface EmpresaActionsPanelProps {
+  onEdit: () => void;
+  onDelete: () => void;
+  onCreateMandato?: (tipo: "compra" | "venta") => void;  // NUEVO
+}
+```
+
+Añadir botón con dropdown:
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline" className="w-full justify-start gap-2">
+      <Briefcase className="h-4 w-4" />
+      Crear Mandato
+      <ChevronDown className="h-3 w-3 ml-auto" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent align="start" className="w-48">
+    <DropdownMenuItem onClick={() => onCreateMandato?.("compra")}>
+      <ShoppingCart className="h-4 w-4 mr-2 text-orange-500" />
+      Compra (Buy-Side)
+    </DropdownMenuItem>
+    <DropdownMenuItem onClick={() => onCreateMandato?.("venta")}>
+      <TrendingUp className="h-4 w-4 mr-2 text-blue-500" />
+      Venta (Sell-Side)
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+#### 3. Conectar en EmpresaDetalle
+
+Añadir estado y handlers:
+
+```tsx
+const [mandatoDrawerOpen, setMandatoDrawerOpen] = useState(false);
+const [mandatoTipo, setMandatoTipo] = useState<"compra" | "venta">("venta");
+
+const handleCreateMandato = (tipo: "compra" | "venta") => {
+  setMandatoTipo(tipo);
+  setMandatoDrawerOpen(true);
 };
+
+// En el JSX:
+<EmpresaActionsPanel
+  onEdit={() => setEditDrawerOpen(true)}
+  onDelete={() => setDeleteDialogOpen(true)}
+  onCreateMandato={handleCreateMandato}
+/>
+
+<NuevoMandatoDrawer
+  open={mandatoDrawerOpen}
+  onOpenChange={setMandatoDrawerOpen}
+  defaultTipo={mandatoTipo}
+  defaultEmpresaId={empresa.id}
+  onSuccess={() => {
+    setMandatoDrawerOpen(false);
+    // Refrescar mandatos de la empresa
+  }}
+/>
 ```
-
-#### 2. Actualizar TargetsTab.tsx
-
-Cambiar de:
-```typescript
-const interacciones = await fetchInteraccionesByEmpresa(empresaId);
-```
-
-A:
-```typescript
-const interacciones = await fetchInteraccionesByMandatoTarget(mandato.id, empresaId);
-```
-
-#### 3. CRUD Completo en InteraccionTimeline.tsx
-
-Anadir a cada item del timeline:
-
-```
-+---------------------------------------+
-| [Email] Envio Teaser          [···]  |
-| 20 enero 2026                 Editar |
-|                               Eliminar
-+---------------------------------------+
-```
-
-**Nuevo estado y handlers:**
-- `editingId`: ID de interaccion en edicion
-- `deletingId`: ID de interaccion pendiente de confirmar borrado
-- Dialog de confirmacion para eliminar
-- Modal o inline editor para editar
-
-**Funcionalidad:**
-- Editar: abre drawer con datos precargados, al guardar llama `updateInteraccion(id, data)`
-- Eliminar: confirm dialog, llama `deleteInteraccion(id)`, elimina de lista sin refresh
 
 ---
 
@@ -92,101 +128,76 @@ Anadir a cada item del timeline:
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/services/interacciones.ts` | Anadir `fetchInteraccionesByMandatoTarget(mandatoId, empresaId)` |
-| `src/features/mandatos/tabs/TargetsTab.tsx` | Usar nueva funcion con mandato.id + empresa.id |
-| `src/components/targets/InteraccionTimeline.tsx` | Anadir menu editar/eliminar, drawer edicion, dialog confirmacion |
-| `src/hooks/queries/useInteracciones.ts` | Anadir hook `useMandatoTargetInteracciones(mandatoId, empresaId)` |
+| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Añadir prop `defaultEmpresaId`, pre-seleccionar empresa, mostrar indicador visual |
+| `src/components/empresas/EmpresaActionsPanel.tsx` | Añadir botón dropdown "Crear Mandato" con opciones Compra/Venta |
+| `src/pages/EmpresaDetalle.tsx` | Conectar el drawer con estado, pasar empresa ID y tipo |
 
 ---
 
-### UI del Timeline Mejorado
+### Flujo de Usuario
 
 ```
-+------------------------------------------------------------------+
-| Timeline de Interacciones                    [+ Nueva Interaccion]|
-+------------------------------------------------------------------+
-|                                                                  |
-|  [Email icon]  Envio Datapack Inicial                     [···] |
-|      |         13 enero 2026, 16:12                   ├─ Editar  |
-|      |                                                └─ Eliminar|
-|      |                                                           |
-|  [Email icon]  Envio NDA firmado                          [···] |
-|      |         19 diciembre 2025, 16:12                         |
-|      |                                                           |
-|  [Email icon]  Interes inicial i envio NDA                [···] |
-|               16 diciembre 2025, 16:12                          |
-|                                                                  |
-+------------------------------------------------------------------+
-```
-
----
-
-### Drawer de Edicion
-
-Reutilizar el mismo formulario del drawer de crear, pero:
-- Titulo: "Editar Interaccion"
-- Campos precargados con datos existentes
-- Al guardar: `PATCH` con `updateInteraccion(id, data)`
-
----
-
-### Dialog de Confirmacion Eliminar
-
-```
-+------------------------------------------+
-|  Eliminar Interaccion                    |
-+------------------------------------------+
-|  Estas seguro de que quieres eliminar   |
-|  esta interaccion? Esta accion no se    |
-|  puede deshacer.                         |
-|                                          |
-|        [Cancelar]    [Eliminar]          |
-+------------------------------------------+
-```
-
----
-
-### Flujo de Datos Corregido
-
-```
-1. Usuario abre /mandatos/:mandatoId tab Targets
+1. Usuario navega a /empresas/:id
    |
    v
-2. Para cada empresa target:
-   fetchInteraccionesByMandatoTarget(mandatoId, empresaId)
+2. En el sidebar "Acciones", hace clic en "Crear Mandato"
    |
    v
-3. Query ejecuta:
-   SELECT * FROM interacciones 
-   WHERE mandato_id = :mandatoId 
-     AND empresa_id = :empresaId
-   ORDER BY fecha DESC
+3. Dropdown muestra:
+   - 🛒 Compra (Buy-Side)
+   - 📈 Venta (Sell-Side)
    |
    v
-4. Solo se muestran interacciones de ESE mandato
-   (no se mezclan con otros mandatos)
+4. Usuario selecciona tipo
+   |
+   v
+5. Se abre NuevoMandatoDrawer con:
+   - Empresa pre-seleccionada (visible pero no editable)
+   - Tipo pre-seleccionado
+   - Categoría en "Operación M&A"
+   |
+   v
+6. Usuario completa descripción y guarda
+   |
+   v
+7. Mandato creado, se cierra drawer
+   Lista de mandatos de la empresa se actualiza
 ```
 
 ---
 
-### Casos de Prueba
+### Detalles de Implementación
 
-| Escenario | Resultado Esperado |
-|-----------|-------------------|
-| Vergara Industrial en Mandato A | Muestra solo 3 interacciones de A |
-| Vergara Industrial en Mandato B | Muestra solo 1 interaccion de B |
-| Crear interaccion en A | Aparece solo en A, no en B |
-| Editar interaccion | Campos actualizados visibles inmediatamente |
-| Eliminar interaccion | Desaparece de la lista sin refresh |
-| Doble-click en eliminar | Solo ejecuta una vez (bloqueo UI) |
+**En NuevoMandatoDrawer:**
+
+```tsx
+// Efecto para establecer empresa por defecto
+useEffect(() => {
+  if (open && defaultEmpresaId) {
+    form.setValue('empresaId', defaultEmpresaId);
+  }
+}, [open, defaultEmpresaId, form]);
+
+// Mostrar badge informativo si empresa está pre-seleccionada
+{defaultEmpresaId && (
+  <div className="p-3 bg-muted rounded-lg flex items-center gap-2">
+    <Building2 className="h-4 w-4 text-muted-foreground" />
+    <span className="text-sm">Empresa seleccionada</span>
+    <Badge variant="secondary">{empresaNombre}</Badge>
+  </div>
+)}
+```
+
+**Colores del dropdown:**
+- Compra: icono naranja (coherente con el sistema)
+- Venta: icono azul (coherente con el sistema)
 
 ---
 
 ### Beneficios
 
-1. **Aislamiento total**: Cada mandato ve SOLO sus interacciones
-2. **CRUD completo**: Crear, ver, editar, eliminar
-3. **Sin cambios en BD**: Aprovecha columna mandato_id existente
-4. **RLS existente funciona**: Las policies ya permiten update/delete por created_by
-5. **UX robusta**: Estados de carga, confirmaciones, feedback claro
-
+1. **Rapidez**: Un clic para iniciar mandato desde empresa
+2. **Contexto**: No hay que buscar la empresa manualmente
+3. **Coherencia**: Usa el mismo drawer y flujo existente
+4. **Mínimo impacto**: Solo 3 archivos modificados
+5. **UX clara**: El tipo se elige antes de abrir el drawer
