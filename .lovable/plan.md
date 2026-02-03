@@ -1,226 +1,254 @@
 
-## Plan: Vistas de Tareas "Equipo" y "Mis Tareas"
+## Plan: Logs de Actividades de Usuarios en Mandatos
 
 ### Objetivo
 
-Actualizar el módulo de tareas (`/tareas`) para tener dos vistas claras y conmutables:
+Mostrar un timeline visual de todas las actividades realizadas por los usuarios en cada mandato, aprovechando los datos ya existentes en la tabla `mandato_activity`.
 
-| Vista | Descripción | Filtro |
-|-------|-------------|--------|
-| **Equipo** | Todas las tareas de todos los miembros del equipo | Sin filtro por usuario |
-| **Mis Tareas** | Solo tareas asignadas a mí | `asignado_a = auth.uid()` |
+### Estado Actual
 
-### Estado Actual Identificado
+| Elemento | Estado |
+|----------|--------|
+| Tabla `mandato_activity` | Existe y tiene datos (457+ registros) |
+| Hook `useMandatoActivity()` | Existe pero NO se usa en MandatoDetalle |
+| Service `fetchMandatoActivity()` | Existe pero NO incluye nombre del usuario |
+| Componente de visualizacion | NO existe para mandatos |
 
-1. **Esquema de BD**: La tabla `tareas` NO tiene `workspace_id`. El concepto de "equipo" está definido implícitamente por los usuarios en `admin_users` con `is_active = true`.
+### Tipos de Actividad Registrados
 
-2. **RLS Actual**: Política `tareas_select_visibility` que permite:
-   - Tareas `grupal`: visibles si `current_user_can_read()` (usuario activo en admin_users)
-   - Tareas `individual`: solo visibles si eres creador, asignado, compartido, o `es_visible_equipo = true`
-
-3. **UI Actual**: Existe un sistema de 3 tabs ("Mis Tareas", "Equipo", "Compartidas") pero con lógica de filtrado incorrecta basada en `tipo` de tarea.
-
-4. **Datos existentes**: 34 tareas (33 individuales, 1 grupal) - la mayoría son individuales.
-
-### Problema Principal
-
-El modelo actual distingue "privacidad" de la tarea (`tipo: individual/grupal`), pero el usuario quiere que **todas las tareas del equipo sean visibles** para cualquier miembro, simplificando a:
-
-- **Vista Equipo**: VER todas las tareas (independiente del tipo)
-- **Vista Mis Tareas**: Solo las asignadas a mí
-
-### Solución Propuesta
+| Tipo | Cantidad | Descripcion |
+|------|----------|-------------|
+| `hora` | 283 | Registro de tiempo |
+| `interaccion` | 118 | Llamadas, emails, reuniones |
+| `documento` | 46 | Subida de archivos |
+| `tarea` | 10 | Creacion/completar tareas |
 
 ---
 
-### Cambio 1: Actualizar RLS Policy
+### Cambios Propuestos
 
-Simplificar la política SELECT para que todos los usuarios activos vean TODAS las tareas del equipo:
+#### 1. Actualizar el Service para Incluir Usuario
 
-```sql
-DROP POLICY IF EXISTS "tareas_select_visibility" ON tareas;
-
-CREATE POLICY "Usuarios activos ven todas las tareas"
-  ON tareas FOR SELECT
-  TO authenticated
-  USING (current_user_can_read());
-```
-
-Esto permite que cualquier usuario en `admin_users` con rol activo (viewer, admin, super_admin) vea todas las tareas. Las políticas de UPDATE/DELETE existentes ya controlan quién puede modificar.
-
----
-
-### Cambio 2: Simplificar Tabs en UI
-
-Reducir de 3 tabs a 2 tabs principales:
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│  [Equipo (34)]    [Mis Tareas (8)]                             │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  [ ] Solo pendientes    [ ] Vencen hoy                         │
-│                                                                │
-│  [Filtros: Estado | Prioridad | Responsable]                   │
-│                                                                │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ KANBAN / TABLA                                          │   │
-│  │ (con columna Responsable visible en vista Equipo)       │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Cambio 3: Nueva Lógica de Filtrado Frontend
-
-En `Tareas.tsx`, simplificar el filtro `tareasPorVisibilidad`:
+Modificar `fetchMandatoActivity()` para hacer JOIN con `admin_users` y obtener el nombre del creador:
 
 ```typescript
-// ANTES (lógica compleja basada en tipo)
-const tareasPorVisibilidad = tareas.filter((tarea) => {
-  if (filtroTipo === "mis_tareas") {
-    return tarea.creado_por === currentUser.id || tarea.asignado_a === currentUser.id;
-  } else if (filtroTipo === "equipo") {
-    return tarea.tipo === "grupal"; // ❌ Solo grupales
-  } else if (filtroTipo === "compartidas") {
-    return tarea.compartido_con?.includes(currentUser.id);
-  }
-});
-
-// DESPUÉS (lógica simplificada)
-const tareasPorVisibilidad = tareas.filter((tarea) => {
-  if (vistaActiva === "mine") {
-    return tarea.asignado_a === currentUser?.id;
-  }
-  // vista "team" = todas las tareas (sin filtro adicional)
-  return true;
-});
+// src/services/mandatoActivity.service.ts
+export async function fetchMandatoActivity(mandatoId: string): Promise<MandatoActivityWithUser[]> {
+  const { data, error } = await supabase
+    .from('mandato_activity')
+    .select(`
+      *,
+      created_by_user:admin_users!mandato_activity_created_by_fkey(user_id, full_name)
+    `)
+    .eq('mandato_id', mandatoId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  // ...
+}
 ```
+
+#### 2. Extender el Tipo MandatoActivity
+
+```typescript
+// src/types/index.ts
+export interface MandatoActivityWithUser extends MandatoActivity {
+  created_by_user?: {
+    user_id: string;
+    full_name: string;
+  };
+}
+```
+
+#### 3. Crear Componente de Timeline
+
+Nuevo componente `MandatoActivityTimeline.tsx` que muestre:
+
+```
++------------------------------------------------------------------+
+|  [Clock icon] Registro de Actividad                         [50] |
++------------------------------------------------------------------+
+|                                                                  |
+|  [hora]  Marc - Preparar teaser, pendiente revision              |
+|  |       hace 15 dias                                            |
+|  |                                                               |
+|  [hora]  Lluis Montanya - Revision paquete de info...            |
+|  |       hace 16 dias                                            |
+|  |                                                               |
+|  [doc]   Oriol - Subio documento NDA firmado                     |
+|  |       hace 18 dias                                            |
+|  |                                                               |
+|  [interaccion] Marc - Llamada con cliente                        |
+|          hace 20 dias                                            |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+**Elementos del timeline:**
+- Icono por tipo de actividad (Clock=hora, FileText=documento, MessageSquare=interaccion, CheckSquare=tarea)
+- Color por tipo
+- Avatar/iniciales del usuario
+- Descripcion de la actividad
+- Tiempo relativo (hace X dias/horas)
+- Posibilidad de ver mas (paginacion o "Ver todos")
+
+#### 4. Integrar en MandatoDetalle
+
+Anadir nueva tab "Actividad" o seccion en "Resumen":
+
+**Opcion A: Nueva Tab "Actividad"**
+```tsx
+<TabsTrigger value="actividad">
+  <History className="w-4 h-4 mr-2" />
+  Actividad
+</TabsTrigger>
+
+<TabsContent value="actividad">
+  <MandatoActivityTimeline mandatoId={id!} />
+</TabsContent>
+```
+
+**Opcion B: Seccion Colapsable en Resumen** (mas accesible)
+```tsx
+<ResumenTab mandato={mandato} ... />
+
+<Collapsible defaultOpen={false}>
+  <Card>
+    <CardHeader>
+      <CollapsibleTrigger>
+        <CardTitle>Registro de Actividad</CardTitle>
+      </CollapsibleTrigger>
+    </CardHeader>
+    <CollapsibleContent>
+      <MandatoActivityTimeline mandatoId={id!} />
+    </CollapsibleContent>
+  </Card>
+</Collapsible>
+```
+
+Recomiendo **Opcion A (nueva tab)** para mantener el detalle del mandato organizado.
 
 ---
 
-### Cambio 4: Quick-Assign en Vista Equipo
+### Archivos a Crear
 
-Añadir dropdown para asignar rápidamente desde las tarjetas/filas:
-
-```
-┌─────────────────────────────────────────────┐
-│ 📋 Preparar teaser Empresa X               │
-│ 🔴 Alta  |  📅 15 Feb                       │
-│ ┌─────────────────────────────────────────┐│
-│ │ Responsable: [Juan García ▾]            ││
-│ │              ├─ María López             ││
-│ │              ├─ Carlos Ruiz             ││
-│ │              └─ Sin asignar             ││
-│ └─────────────────────────────────────────┘│
-└─────────────────────────────────────────────┘
-```
-
----
-
-### Cambio 5: Switches Adicionales
-
-Añadir filtros rápidos opcionales:
-
-| Switch | Descripción |
-|--------|-------------|
-| Solo pendientes | `estado IN ('pendiente', 'en_progreso')` |
-| Vencen hoy | `fecha_vencimiento = today AND estado != 'completada'` |
-
----
+| Archivo | Descripcion |
+|---------|-------------|
+| `src/components/mandatos/MandatoActivityTimeline.tsx` | Componente visual del timeline |
 
 ### Archivos a Modificar
 
 | Archivo | Cambios |
 |---------|---------|
-| `src/pages/Tareas.tsx` | Simplificar tabs (2 en vez de 3), nueva lógica de filtrado, añadir switches |
-| `src/components/tareas/TareaCard.tsx` (inline) | Añadir quick-assign dropdown |
-| **Migración SQL** | Actualizar RLS policy para SELECT |
-
-### Archivos SIN Modificar
-
-| Archivo | Razón |
-|---------|-------|
-| `src/services/tareas.service.ts` | No cambia - RLS filtra en BD |
-| `src/hooks/queries/useTareas.ts` | No cambia - cache keys pueden mantenerse igual |
-| `src/components/tareas/*.tsx` | Drawers de crear/editar no cambian |
+| `src/services/mandatoActivity.service.ts` | Anadir JOIN con admin_users para nombre |
+| `src/types/index.ts` | Anadir tipo `MandatoActivityWithUser` |
+| `src/pages/MandatoDetalle.tsx` | Anadir nueva tab "Actividad" |
 
 ---
 
-### Migración SQL
+### Diseno Visual del Componente
 
-```sql
--- Actualizar política SELECT para que todos los usuarios activos vean todas las tareas
-DROP POLICY IF EXISTS "tareas_select_visibility" ON tareas;
-
-CREATE POLICY "Usuarios activos ven todas las tareas del equipo"
-  ON tareas FOR SELECT
-  TO authenticated
-  USING (current_user_can_read());
 ```
++------------------------------------------------------------------+
+|  TIMELINE DE ACTIVIDAD                                           |
++------------------------------------------------------------------+
+|                                                                  |
+|   [Clock]  Marc registro 1 hora                                  |
+|      |     "Preparar teaser, pendiente revision"                 |
+|      |     hace 15 dias                                          |
+|      |                                                           |
+|   [Clock]  Lluis Montanya registro 2.5 horas                     |
+|      |     "Revision paquete de info recibido..."                |
+|      |     hace 16 dias                                          |
+|      |                                                           |
+|   [File]   Oriol subio documento                                 |
+|      |     "NDA firmado"                                         |
+|      |     hace 18 dias                                          |
+|      |                                                           |
+|   [Message] Marc registro interaccion                            |
+|            "Llamada con cliente - revision del deal"             |
+|            hace 20 dias                                          |
+|                                                                  |
++------------------------------------------------------------------+
+```
+
+### Iconos y Colores por Tipo
+
+| Tipo | Icono | Color |
+|------|-------|-------|
+| `hora` | Clock | blue-500 |
+| `interaccion` | MessageSquare | green-500 |
+| `documento` | FileText | purple-500 |
+| `tarea` | CheckSquare | orange-500 |
+| `nota` | StickyNote | gray-500 |
+| `estado_cambio` | RefreshCw | red-500 |
 
 ---
 
 ### Flujo de Datos
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           FLUJO DE VISTAS                                    │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  1. Usuario abre /tareas                                                     │
-│     └─► useTareas() → SELECT * FROM tareas (RLS: current_user_can_read())   │
-│         └─► Devuelve TODAS las tareas del equipo                            │
-│                                                                              │
-│  2. Usuario selecciona tab                                                   │
-│     ├─► "Equipo": muestra todas (sin filtro adicional)                      │
-│     └─► "Mis Tareas": filtra en frontend por asignado_a = user.id           │
-│                                                                              │
-│  3. Usuario edita/completa tarea                                            │
-│     └─► useUpdateTarea() → invalidateQueries(['tareas'])                    │
-│         └─► Ambas vistas se actualizan automáticamente                      │
-│                                                                              │
-│  4. Usuario cambia asignación                                                │
-│     └─► Si me asigno a mí → aparece en "Mis Tareas"                         │
-│     └─► Si asigno a otro → sale de "Mis Tareas" (si estaba ahí)             │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Casos de Prueba (QA)
-
-| Escenario | Esperado |
-|-----------|----------|
-| Usuario A crea tarea asignada a Usuario B | Visible en "Equipo" para ambos. Solo en "Mis Tareas" para B |
-| Usuario A crea tarea sin asignar | Visible en "Equipo" para todos. No aparece en "Mis Tareas" de nadie |
-| Usuario cambia asignación de sí mismo a otro | Sale de su "Mis Tareas", entra en la del otro |
-| Usuario de otro workspace (no en admin_users) | No ve ninguna tarea (RLS bloquea) |
-| Cambiar estado a completada | Se refleja en ambas vistas inmediatamente |
-
----
-
-### Contadores en Tabs
-
-```typescript
-const equipoCount = tareas.length;
-const misTareasCount = tareas.filter(t => t.asignado_a === currentUser?.id).length;
-
-// UI
-<TabsTrigger value="team">Equipo ({equipoCount})</TabsTrigger>
-<TabsTrigger value="mine">Mis Tareas ({misTareasCount})</TabsTrigger>
+1. Usuario abre /mandatos/:id
+   |
+   v
+2. MandatoDetalle carga con tabs existentes
+   |
+   v
+3. Usuario hace clic en tab "Actividad"
+   |
+   v
+4. useMandatoActivity(id) ejecuta query
+   |
+   v
+5. fetchMandatoActivity() hace:
+   SELECT *, admin_users.full_name
+   FROM mandato_activity
+   JOIN admin_users ON created_by = user_id
+   WHERE mandato_id = :id
+   ORDER BY created_at DESC
+   LIMIT 50
+   |
+   v
+6. MandatoActivityTimeline renderiza el timeline
 ```
 
 ---
 
 ### Beneficios
 
-1. **Simplificación**: 2 vistas claras en vez de 3 confusas
-2. **Visibilidad completa**: Todo el equipo ve todas las tareas (transparencia)
-3. **Quick-assign**: Asignación rápida sin abrir drawer
-4. **RLS seguro**: Solo usuarios activos en admin_users ven tareas
-5. **Sin duplicación**: Una sola query, filtro en frontend
-6. **Consistencia**: Ediciones se reflejan en ambas vistas automáticamente
+1. **Visibilidad completa**: Todo el equipo ve quien hizo que en cada mandato
+2. **Accountability**: Queda registro de quien trabajo en que
+3. **Contexto rapido**: Al abrir un mandato, puedes ver la actividad reciente
+4. **Sin cambios en DB**: Usa datos que ya existen y se generan automaticamente
+5. **Performance**: Lazy loading (solo carga cuando se abre la tab)
+
+---
+
+### Detalles Tecnicos
+
+**Query optimizada:**
+```sql
+SELECT 
+  ma.id,
+  ma.activity_type,
+  ma.activity_description,
+  ma.entity_id,
+  ma.created_at,
+  au.full_name as created_by_name
+FROM mandato_activity ma
+LEFT JOIN admin_users au ON ma.created_by = au.user_id
+WHERE ma.mandato_id = $1
+ORDER BY ma.created_at DESC
+LIMIT 50;
+```
+
+**Tiempo relativo con date-fns:**
+```typescript
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+formatDistanceToNow(new Date(activity.created_at), { 
+  addSuffix: true, 
+  locale: es 
+})
+// "hace 15 dias", "hace 2 horas"
+```
