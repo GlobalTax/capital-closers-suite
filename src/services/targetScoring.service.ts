@@ -153,6 +153,7 @@ export function calculateMatchScore(
 
 /**
  * Obtener estadísticas del pipeline de targets para un mandato
+ * Solo incluye targets NO archivados en los KPIs
  */
 export async function getTargetPipelineStats(mandatoId: string): Promise<TargetPipelineStats> {
   const { data: targets, error } = await supabase
@@ -164,7 +165,8 @@ export async function getTargetPipelineStats(mandatoId: string): Promise<TargetP
       match_score
     `)
     .eq("mandato_id", mandatoId)
-    .eq("rol", "target");
+    .eq("rol", "target")
+    .or("is_archived.is.null,is_archived.eq.false");
 
   if (error) throw error;
 
@@ -227,6 +229,7 @@ export async function getTargetPipelineStats(mandatoId: string): Promise<TargetP
 
 /**
  * Obtener todos los targets de un mandato con scoring y ofertas
+ * Incluye is_archived para filtrado en UI
  */
 export async function getTargetsWithScoring(mandatoId: string) {
   const { data: targets, error } = await supabase
@@ -239,6 +242,7 @@ export async function getTargetsWithScoring(mandatoId: string) {
     `)
     .eq("mandato_id", mandatoId)
     .eq("rol", "target")
+    .order("is_archived", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: false });
 
   if (error) throw error;

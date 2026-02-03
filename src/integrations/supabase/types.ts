@@ -12299,6 +12299,8 @@ export type Database = {
       }
       mandato_empresas: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           buyer_type: string | null
           conflicto_descripcion: string | null
           created_at: string | null
@@ -12306,6 +12308,7 @@ export type Database = {
           funnel_stage: string | null
           geografia: string | null
           id: string
+          is_archived: boolean | null
           mandato_id: string
           match_score: number | null
           no_contactar: boolean | null
@@ -12319,6 +12322,8 @@ export type Database = {
           tiene_conflicto: boolean | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           buyer_type?: string | null
           conflicto_descripcion?: string | null
           created_at?: string | null
@@ -12326,6 +12331,7 @@ export type Database = {
           funnel_stage?: string | null
           geografia?: string | null
           id?: string
+          is_archived?: boolean | null
           mandato_id: string
           match_score?: number | null
           no_contactar?: boolean | null
@@ -12339,6 +12345,8 @@ export type Database = {
           tiene_conflicto?: boolean | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           buyer_type?: string | null
           conflicto_descripcion?: string | null
           created_at?: string | null
@@ -12346,6 +12354,7 @@ export type Database = {
           funnel_stage?: string | null
           geografia?: string | null
           id?: string
+          is_archived?: boolean | null
           mandato_id?: string
           match_score?: number | null
           no_contactar?: boolean | null

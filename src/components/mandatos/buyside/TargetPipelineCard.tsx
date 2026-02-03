@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, GripVertical, TrendingUp, FileText } from "lucide-react";
+import { Building2, GripVertical, TrendingUp, FileText, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TARGET_FUNNEL_CONFIG, MandatoEmpresaBuySide } from "@/types";
 
@@ -54,6 +54,7 @@ export function TargetPipelineCard({ target, onClick, isDragging = false }: Targ
       className={cn(
         "p-2 cursor-pointer transition-all hover:shadow-md",
         (isDragging || isSortableDragging) && "opacity-50 shadow-lg ring-2 ring-primary",
+        target.is_archived && "opacity-50 bg-muted/30",
       )}
       onClick={onClick}
     >
@@ -115,6 +116,14 @@ export function TargetPipelineCard({ target, onClick, isDragging = false }: Targ
             <Badge variant="outline" className="text-xs gap-0.5">
               <FileText className="h-2.5 w-2.5" />
               {ofertas.length}
+            </Badge>
+          )}
+
+          {/* Archived badge */}
+          {target.is_archived && (
+            <Badge variant="secondary" className="text-xs gap-0.5 opacity-70">
+              <Archive className="h-2.5 w-2.5" />
+              Archivado
             </Badge>
           )}
         </div>

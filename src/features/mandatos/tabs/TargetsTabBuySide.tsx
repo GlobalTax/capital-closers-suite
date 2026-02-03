@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Plus, Kanban, List, Upload, FileSpreadsheet, Search, ChevronDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +44,7 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<TargetFilters>(defaultFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const {
     targets,
@@ -51,9 +54,12 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
     moveToFunnel,
     updateScoring,
     createOferta,
+    archiveTarget,
+    unarchiveTarget,
     isMoving,
     isSavingScoring,
     isSavingOferta,
+    isArchiving,
     refetch,
   } = useTargetPipeline(mandato.id);
 
@@ -72,6 +78,11 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
   // Filtrar targets
   const filteredTargets = useMemo(() => {
     let result = targets;
+
+    // Filtrar archivados por defecto (solo mostrar si toggle está activo)
+    if (!showArchived) {
+      result = result.filter(t => !t.is_archived);
+    }
 
     // Filtrar por funnel stage seleccionado
     if (selectedFunnelStage) {
@@ -114,7 +125,7 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
     }
 
     return result;
-  }, [targets, selectedFunnelStage, filters]);
+  }, [targets, selectedFunnelStage, filters, showArchived]);
 
   if (isLoading) {
     return (
@@ -178,6 +189,19 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
             isOpen={filtersOpen}
             onToggle={() => setFiltersOpen(!filtersOpen)}
           />
+          
+          {/* Toggle para mostrar archivados */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30">
+            <Switch 
+              checked={showArchived} 
+              onCheckedChange={setShowArchived}
+              id="show-archived"
+              className="h-4 w-7"
+            />
+            <Label htmlFor="show-archived" className="text-xs text-muted-foreground cursor-pointer">
+              Archivados
+            </Label>
+          </div>
           
           {/* Menú de importación */}
           <DropdownMenu>
@@ -258,9 +282,12 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
         onMoveToPipeline={(targetId, stage) => moveToPipeline({ targetId, stage })}
         onUpdateScoring={(targetId, scoring) => updateScoring({ targetId, scoring })}
         onCreateOferta={(targetId, oferta) => createOferta({ targetId, oferta })}
+        onArchiveTarget={(targetId) => archiveTarget(targetId)}
+        onUnarchiveTarget={(targetId) => unarchiveTarget(targetId)}
         isMoving={isMoving}
         isSavingScoring={isSavingScoring}
         isSavingOferta={isSavingOferta}
+        isArchiving={isArchiving}
         onRefresh={handleRefresh}
       />
 

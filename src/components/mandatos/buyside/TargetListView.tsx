@@ -26,6 +26,7 @@ import {
   ArrowUp,
   ArrowDown,
   MapPin,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TargetQuickTags } from "./TargetQuickTags";
@@ -202,16 +203,17 @@ export function TargetListView({
                 const funnelConfig = TARGET_FUNNEL_CONFIG[target.funnel_stage || "long_list"];
                 const pipelineConfig = TARGET_PIPELINE_CONFIG[target.pipeline_stage_target || "identificada"];
 
-                return (
-                  <TableRow
-                    key={target.id}
-                    className={cn(
-                      "cursor-pointer",
-                      selectedIds.includes(target.id) && "bg-muted/50",
-                      target.no_contactar && "opacity-60"
-                    )}
-                    onClick={() => onTargetClick(target)}
-                  >
+                  return (
+                    <TableRow
+                      key={target.id}
+                      className={cn(
+                        "cursor-pointer",
+                        selectedIds.includes(target.id) && "bg-muted/50",
+                        target.is_archived && "opacity-50 bg-muted/30",
+                        target.no_contactar && !target.is_archived && "opacity-60"
+                      )}
+                      onClick={() => onTargetClick(target)}
+                    >
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedIds.includes(target.id)}
@@ -253,6 +255,16 @@ export function TargetListView({
                               {target.conflicto_descripcion && (
                                 <p className="text-xs text-muted-foreground">{target.conflicto_descripcion}</p>
                               )}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {target.is_archived && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Archive className="h-3.5 w-3.5 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Archivado</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
