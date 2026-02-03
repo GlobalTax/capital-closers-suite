@@ -1,117 +1,128 @@
 
-# Plan de Corrección: Archivado de Targets
+# Implementación: Vista de Targets Archivados
 
-## Resumen del Problema
-Al archivar un target desde el drawer de detalle, se detectaron 3 problemas que impiden que la UI se actualice correctamente:
-
-1. El **Funnel visual** usa `targets.length` en vez de `stats.total`, mostrando el conteo incorrecto
-2. El **Drawer no se cierra** automáticamente después de archivar
-3. El **target seleccionado** mantiene datos obsoletos hasta que se refrescan las queries
+## Resumen
+Crear una vista dedicada para visualizar y gestionar targets archivados, accesible desde el tab de Targets en mandatos Buy-Side, con opciones de restauración y gestión.
 
 ---
 
-## Solución Técnica
+## Diseño de la Solución
 
-### Cambio 1: Corregir el conteo del Funnel
-**Archivo:** `src/features/mandatos/tabs/TargetsTabBuySide.tsx`
+### Comportamiento Actual
+- El toggle "Archivados" en `TargetsTabBuySide.tsx` activa `showArchived` que incluye targets archivados en la lista general
+- Los targets archivados se muestran mezclados con los activos cuando el toggle está activo
+- No hay una vista dedicada ni forma fácil de ver solo los archivados
 
-Cambiar el prop `total` del componente `TargetFunnel` para usar `stats?.total` en lugar de `targets.length`:
+### Comportamiento Propuesto
+- Al activar el toggle "Archivados", mostrar **únicamente** los targets archivados en una vista especializada
+- Incluir información de cuándo y por quién fue archivado
+- Añadir acciones masivas de restauración
+- Mantener la posibilidad de ver el detalle del target para restaurar individualmente
+
+---
+
+## Cambios Técnicos
+
+### 1. Nuevo Componente: `ArchivedTargetsView`
+**Archivo:** `src/components/mandatos/buyside/ArchivedTargetsView.tsx`
+
+Vista de tabla para targets archivados con:
+- Columnas: Empresa, Sector, Fecha Archivado, Archivado Por, Acciones
+- Botón de restauración por fila
+- Empty state cuando no hay archivados
+- Badge con conteo de archivados en el toggle
 
 ```text
-Antes (línea ~150):
-total={targets.length}
-
-Después:
-total={stats?.total || filteredTargets.length}
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ☐ │ Empresa          │ Sector    │ Archivado     │ Por      │ Acciones  │
+├──────────────────────────────────────────────────────────────────────────┤
+│ ☐ │ Target Corp      │ Tech      │ Hace 3 días   │ A.García │ Restaurar │
+│ ☐ │ Another Inc      │ Finanzas  │ Hace 1 semana │ M.López  │ Restaurar │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-Esto asegura que el Funnel use el conteo calculado desde la base de datos, que excluye targets archivados.
-
----
-
-### Cambio 2: Cerrar el Drawer después de archivar
-**Archivo:** `src/features/mandatos/tabs/TargetsTabBuySide.tsx`
-
-Modificar el callback `onArchiveTarget` para cerrar el drawer automáticamente:
+### 2. Modificar `TargetsTabBuySide.tsx`
+**Cambios:**
+- Importar nuevo componente `ArchivedTargetsView`
+- Mejorar el toggle para mostrar conteo de archivados
+- Cuando `showArchived === true`, mostrar solo `ArchivedTargetsView` en lugar del Kanban/Lista
+- Ocultar el Funnel cuando se ven archivados (no aplica)
+- Añadir lógica para filtrar solo archivados
 
 ```typescript
-onArchiveTarget={(targetId) => {
-  archiveTarget(targetId);
-  setDetailDrawerOpen(false);  // Cerrar drawer
-  setSelectedTarget(null);     // Limpiar selección
-}}
+// Conteo de archivados
+const archivedCount = useMemo(() => 
+  targets.filter(t => t.is_archived).length, 
+[targets]);
+
+// Cuando showArchived está activo, filtrar SOLO archivados
+const filteredTargets = useMemo(() => {
+  if (showArchived) {
+    return targets.filter(t => t.is_archived);
+  }
+  // ... resto de filtros existentes
+}, [targets, showArchived, ...]);
 ```
 
-Lo mismo para `onUnarchiveTarget`:
-```typescript
-onUnarchiveTarget={(targetId) => {
-  unarchiveTarget(targetId);
-  setDetailDrawerOpen(false);
-  setSelectedTarget(null);
-}}
-```
-
----
-
-### Cambio 3: Forzar refetch después de archivar (opcional pero recomendado)
-**Archivo:** `src/hooks/useTargetPipeline.ts`
-
-Añadir `await` a las invalidaciones para asegurar que se completen antes de continuar:
-
-```typescript
-// Mutation: Archivar target
-const archiveMutation = useMutation({
-  mutationFn: (targetId: string) => archiveTarget(targetId),
-  onSuccess: async () => {
-    await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
-    await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
-    toast({ title: "Target archivado", description: "El target ha sido excluido de los KPIs activos" });
-  },
-  onError: (error) => handleError(error, 'Archivar target'),
-});
-```
-
----
-
-## Flujo Esperado Después de la Corrección
+### 3. Actualizar Toggle UI
+Mostrar badge con conteo en el toggle de archivados:
 
 ```text
-Usuario clicks "Archivar"
-         ↓
-1. archiveMutation ejecuta PATCH (is_archived: true)
-         ↓
-2. onSuccess invalida queries
-         ↓
-3. Drawer se cierra automáticamente
-         ↓
-4. React Query refetches targets y stats
-         ↓
-5. UI se actualiza:
-   - Target desaparece del Kanban
-   - KPI "Targets Activos" decrementa en 1
-   - Funnel muestra conteo correcto
+┌─────────────────────────┐
+│ [🔘] Archivados (3)     │
+└─────────────────────────┘
+```
+
+### 4. Servicio: Obtener Usuario que Archivó
+**Archivo:** `src/services/targetArchive.service.ts`
+
+Añadir función para obtener información del usuario que archivó (para mostrar nombre en la tabla).
+
+---
+
+## Estructura de Archivos
+
+| Archivo | Acción | Descripción |
+|---------|--------|-------------|
+| `src/components/mandatos/buyside/ArchivedTargetsView.tsx` | Crear | Nuevo componente de vista de archivados |
+| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Modificar | Integrar vista de archivados y mejorar toggle |
+| `src/types/index.ts` | Verificar | Asegurar que `MandatoEmpresaBuySide` incluye `archived_at` y `archived_by` |
+
+---
+
+## Flujo de Usuario
+
+```text
+1. Usuario navega a Targets de un mandato Buy-Side
+2. Ve el toggle "Archivados" en la barra de herramientas
+3. Activa el toggle:
+   - Funnel se oculta (no aplica a archivados)
+   - Kanban/Lista se reemplaza por ArchivedTargetsView
+   - Ve tabla con todos los targets archivados
+4. Click en "Restaurar" en una fila:
+   - Target vuelve al pipeline activo
+   - Desaparece de la vista de archivados
+   - KPI "Targets Activos" incrementa en 1
+5. Desactiva toggle para volver a vista normal
 ```
 
 ---
 
-## Archivos a Modificar
+## Consideraciones
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Corregir `total` en Funnel + cerrar drawer al archivar |
-| `src/hooks/useTargetPipeline.ts` | (Opcional) Añadir `await` a invalidaciones |
+- **Performance**: La query actual ya trae todos los targets (archivados y no archivados), solo se filtra en frontend
+- **Permisos**: Mantener consistencia con permisos existentes de archivado
+- **UX**: Hacer clara la distinción visual entre vista de activos y vista de archivados
+- **Información de auditoría**: Mostrar `archived_at` formateado y nombre del usuario `archived_by`
 
 ---
 
 ## Verificación Post-Implementación
 
-1. Abrir un mandato Buy-Side con targets
-2. Click en un target para abrir el drawer
-3. Click en "Archivar"
-4. **Verificar:**
-   - Toast de confirmación aparece
-   - Drawer se cierra automáticamente
-   - Target desaparece del Kanban
-   - KPI "Targets Activos" baja en 1
-   - Funnel muestra conteo correcto
-5. Activar toggle "Archivados" y confirmar que el target aparece
+1. Activar toggle "Archivados"
+2. Verificar que solo se muestran targets archivados
+3. Verificar que el Funnel se oculta
+4. Click en "Restaurar" en un target
+5. Confirmar que desaparece de la vista de archivados
+6. Desactivar toggle y verificar que el target aparece en Kanban
+7. Confirmar que KPI "Targets Activos" se incrementó
