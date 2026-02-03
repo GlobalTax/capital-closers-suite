@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FileText, Target, ListTodo, Clock, Receipt, FilePlus, Megaphone, History } from "lucide-react";
+import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
@@ -62,6 +63,10 @@ export default function MandatoDetalle() {
   // Obtener progreso del checklist
   const { totalProgress, overdueTasks } = useChecklistDynamic(id || '', mandato?.tipo || 'venta');
 
+  // Obtener stats de targets para mandatos Buy-Side
+  const isBuySide = mandato?.tipo === "compra";
+  const { stats: targetStats } = useTargetPipeline(isBuySide ? mandato?.id : undefined);
+
   useEffect(() => {
     loadTimeEntries();
   }, [id]);
@@ -100,6 +105,10 @@ export default function MandatoDetalle() {
         mandato={mandato} 
         checklistProgress={totalProgress}
         overdueTasks={overdueTasks.length}
+        activeTargets={targetStats?.total || 0}
+        conversionRate={targetStats?.conversionRate || 0}
+        avgScore={targetStats?.averageScore || 0}
+        offersSent={targetStats?.totalOfertas || 0}
       />
 
       <Tabs defaultValue="resumen" className="w-full">
