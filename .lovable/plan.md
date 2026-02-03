@@ -1,165 +1,117 @@
 
-## Plan: Depurar /mis-horas (Sin Añadir Nada)
+# Plan de Corrección: Archivado de Targets
 
-### Diagnóstico Realizado
+## Resumen del Problema
+Al archivar un target desde el drawer de detalle, se detectaron 3 problemas que impiden que la UI se actualice correctamente:
 
-He analizado exhaustivamente el código y la base de datos. A continuación presento los bugs reales identificados y sus correcciones exactas.
-
----
-
-### Bug 1: TimeEntryEditDialog NO envía editReason (CRÍTICO)
-
-**Archivo**: `src/components/mandatos/TimeEntryEditDialog.tsx`
-
-**Problema**: El componente llama a `updateTimeEntry(entry.id, {...})` sin proporcionar el tercer parámetro `editReason`. La función `updateTimeEntry` valida que `editReason` tenga mínimo 5 caracteres (línea 518-519 de timeTracking.ts), causando el error:
-
-```
-"Debes proporcionar un motivo de edición (mínimo 5 caracteres)"
-```
-
-**Causa Raíz**: Este dialog fue creado antes de implementar la trazabilidad obligatoria de ediciones.
-
-**Corrección**: Añadir un campo de `editReason` al formulario y pasarlo como tercer parámetro a `updateTimeEntry`. Seguir el mismo patrón ya implementado en `EditableTimeEntryRow.tsx`.
+1. El **Funnel visual** usa `targets.length` en vez de `stats.total`, mostrando el conteo incorrecto
+2. El **Drawer no se cierra** automáticamente después de archivar
+3. El **target seleccionado** mantiene datos obsoletos hasta que se refrescan las queries
 
 ---
 
-### Bug 2: QuickTimeEntryModal genera descripciones de menos de 10 caracteres
+## Solución Técnica
 
-**Archivo**: `src/components/leads/QuickTimeEntryModal.tsx`
+### Cambio 1: Corregir el conteo del Funnel
+**Archivo:** `src/features/mandatos/tabs/TargetsTabBuySide.tsx`
 
-**Problema**: Línea 167 construye la descripción así:
+Cambiar el prop `total` del componente `TargetFunnel` para usar `stats?.total` en lugar de `targets.length`:
+
+```text
+Antes (línea ~150):
+total={targets.length}
+
+Después:
+total={stats?.total || filteredTargets.length}
+```
+
+Esto asegura que el Funnel use el conteo calculado desde la base de datos, que excluye targets archivados.
+
+---
+
+### Cambio 2: Cerrar el Drawer después de archivar
+**Archivo:** `src/features/mandatos/tabs/TargetsTabBuySide.tsx`
+
+Modificar el callback `onArchiveTarget` para cerrar el drawer automáticamente:
+
 ```typescript
-description: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad'}: ${description}`
+onArchiveTarget={(targetId) => {
+  archiveTarget(targetId);
+  setDetailDrawerOpen(false);  // Cerrar drawer
+  setSelectedTarget(null);     // Limpiar selección
+}}
 ```
 
-Si el usuario NO escribe descripción, el resultado es:
-- "Llamada: " = 9 caracteres
-- "Videollamada: " = 14 caracteres ✓
-- "Reunión: " = 9 caracteres
-
-Esto viola el CHECK constraint de la BD:
-```sql
-CHECK ((length(TRIM(BOTH FROM description)) >= 10))
-```
-
-**Corrección**: Garantizar que la descripción final SIEMPRE tenga al menos 10 caracteres. Por ejemplo:
+Lo mismo para `onUnarchiveTarget`:
 ```typescript
-const activityLabel = ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad';
-const baseDesc = description.trim() || `con ${lead.nombre}`;
-const finalDescription = `${activityLabel}: ${baseDesc}`;
+onUnarchiveTarget={(targetId) => {
+  unarchiveTarget(targetId);
+  setDetailDrawerOpen(false);
+  setSelectedTarget(null);
+}}
 ```
 
 ---
 
-### Bug 3: QuickTimeEntryModal NO envía work_type (campo NOT NULL)
+### Cambio 3: Forzar refetch después de archivar (opcional pero recomendado)
+**Archivo:** `src/hooks/useTargetPipeline.ts`
 
-**Archivo**: `src/components/leads/QuickTimeEntryModal.tsx`
+Añadir `await` a las invalidaciones para asegurar que se completen antes de continuar:
 
-**Problema**: El payload de `createTimeEntry` (líneas 160-169) NO incluye el campo `work_type`, que es NOT NULL en la BD:
-
-```sql
-column_name: work_type, is_nullable: NO
+```typescript
+// Mutation: Archivar target
+const archiveMutation = useMutation({
+  mutationFn: (targetId: string) => archiveTarget(targetId),
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+    await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+    toast({ title: "Target archivado", description: "El target ha sido excluido de los KPIs activos" });
+  },
+  onError: (error) => handleError(error, 'Archivar target'),
+});
 ```
 
-**Corrección**: Añadir `work_type: 'Otro'` al payload, igual que hacen los demás formularios.
+---
+
+## Flujo Esperado Después de la Corrección
+
+```text
+Usuario clicks "Archivar"
+         ↓
+1. archiveMutation ejecuta PATCH (is_archived: true)
+         ↓
+2. onSuccess invalida queries
+         ↓
+3. Drawer se cierra automáticamente
+         ↓
+4. React Query refetches targets y stats
+         ↓
+5. UI se actualiza:
+   - Target desaparece del Kanban
+   - KPI "Targets Activos" decrementa en 1
+   - Funnel muestra conteo correcto
+```
 
 ---
 
-### Bug 4: RLS Policy excesivamente restrictiva para ediciones de workflow
-
-**Tabla**: `mandato_time_entries`  
-**Policy**: `Users can edit own entries with tracking`
-
-**Problema**: La política actual requiere `edit_reason IS NOT NULL AND length(edit_reason) >= 5` para CUALQUIER UPDATE, incluyendo operaciones de workflow (stopTimer, approveEntry) que ya usan `updateTimeEntryStatus`.
-
-**Situación actual**: El código ya separa correctamente `updateTimeEntry` (requiere razón) de `updateTimeEntryStatus` (no requiere razón). Pero si un admin intenta usar `updateTimeEntry` para un status change, fallará.
-
-**Verificación**: Este bug NO afecta el flujo normal porque `stopTimer`, `approveTimeEntry`, etc. usan `updateTimeEntryStatus`. Solo afectaría si alguien intenta usar la función incorrecta.
-
-**Acción**: No tocar - el código ya está correctamente separado. Solo documentar.
-
----
-
-### Archivos a Modificar
+## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/mandatos/TimeEntryEditDialog.tsx` | Añadir campo editReason y pasarlo a updateTimeEntry |
-| `src/components/leads/QuickTimeEntryModal.tsx` | Asegurar descripción ≥10 chars + añadir work_type |
+| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Corregir `total` en Funnel + cerrar drawer al archivar |
+| `src/hooks/useTargetPipeline.ts` | (Opcional) Añadir `await` a invalidaciones |
 
 ---
 
-### Detalles Técnicos de Correcciones
+## Verificación Post-Implementación
 
-#### TimeEntryEditDialog.tsx
-
-```typescript
-// AÑADIR estado para editReason
-const [editReason, setEditReason] = useState('');
-
-// AÑADIR validación antes del submit
-if (editReason.trim().length < 5) {
-  toast.error("Debes proporcionar un motivo de edición (mínimo 5 caracteres)");
-  return;
-}
-
-// MODIFICAR llamada a updateTimeEntry
-await updateTimeEntry(entry.id, {
-  start_time: startDateTime.toISOString(),
-  end_time: endDateTime.toISOString(),
-  duration_minutes: durationMinutes,
-  description: trimmedDescription || 'Trabajo registrado manualmente',
-  value_type: valueType,
-  work_task_type_id: workTaskTypeId || undefined,
-  is_billable: isBillable,
-  notes: notes.trim() || undefined,
-}, editReason.trim()); // <-- AÑADIR tercer parámetro
-
-// AÑADIR campo UI para editReason (similar a EditableTimeEntryRow)
-```
-
-#### QuickTimeEntryModal.tsx
-
-```typescript
-// MODIFICAR construcción de descripción (línea ~167)
-const activityLabel = ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad';
-const userDescription = description.trim() || `con ${lead.nombre}`;
-const finalDescription = `${activityLabel}: ${userDescription}`.substring(0, 500);
-
-// MODIFICAR payload de createTimeEntry
-await createTimeEntry({
-  user_id: user.id,
-  mandato_id: mandatoId,
-  mandate_lead_id: mandateLeadId,
-  work_task_type_id: selectedWorkTaskTypeId || undefined,
-  start_time: new Date().toISOString(),
-  duration_minutes: duration,
-  description: finalDescription,
-  work_type: 'Otro', // <-- AÑADIR campo obligatorio
-  status: 'approved',
-} as any);
-```
-
----
-
-### Casos de Prueba Post-Corrección
-
-| Caso | Resultado Esperado |
-|------|-------------------|
-| Registrar horas desde TimeEntryInlineForm | Funciona sin errores |
-| Registrar horas desde QuickTimeEntryModal sin descripción | Funciona (descripción = "Llamada: con NombreLead") |
-| Editar entrada desde TimeEntryEditDialog | Muestra campo de motivo, guarda correctamente |
-| Editar entrada desde EditableTimeEntryRow | Funciona (ya implementado correctamente) |
-| Timer global → asignar tiempo | Funciona sin errores |
-| Añadir entrada para fecha pasada (DayInlineAddForm) | Funciona con justificación |
-
----
-
-### Lo que NO se toca
-
-- ❌ No cambiar UX
-- ❌ No añadir features
-- ❌ No modificar flujos
-- ❌ No tocar componentes que ya funcionan
-- ❌ No modificar RLS policies (están correctas)
-- ❌ No cambiar schema de BD
+1. Abrir un mandato Buy-Side con targets
+2. Click en un target para abrir el drawer
+3. Click en "Archivar"
+4. **Verificar:**
+   - Toast de confirmación aparece
+   - Drawer se cierra automáticamente
+   - Target desaparece del Kanban
+   - KPI "Targets Activos" baja en 1
+   - Funnel muestra conteo correcto
+5. Activar toggle "Archivados" y confirmar que el target aparece
