@@ -28,6 +28,7 @@ import { EmpresaBadge } from "@/components/empresas/EmpresaBadges";
 import { FinancialAnalysisSection } from "@/components/empresas/FinancialAnalysisSection";
 import { ValuationTab } from "@/components/empresas/ValuationTab";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
 
 export default function EmpresaDetalle() {
   const { id } = useParams<{ id: string }>();
@@ -44,8 +45,15 @@ export default function EmpresaDetalle() {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [mandatoDrawerOpen, setMandatoDrawerOpen] = useState(false);
+  const [mandatoTipo, setMandatoTipo] = useState<"compra" | "venta">("venta");
   
   const loading = loadingEmpresa || loadingMandatos || loadingContactos;
+
+  const handleCreateMandato = (tipo: "compra" | "venta") => {
+    setMandatoTipo(tipo);
+    setMandatoDrawerOpen(true);
+  };
 
   const handleDelete = () => {
     if (!id) return;
@@ -557,6 +565,7 @@ export default function EmpresaDetalle() {
           <EmpresaActionsPanel
             onEdit={() => setEditDrawerOpen(true)}
             onDelete={() => setDeleteDialogOpen(true)}
+            onCreateMandato={handleCreateMandato}
           />
         </div>
       </div>
@@ -578,6 +587,19 @@ export default function EmpresaDetalle() {
           onOpenChange={setEditDrawerOpen}
           empresa={empresa}
           onEmpresaActualizada={handleEmpresaActualizada}
+        />
+      )}
+
+      {empresa && (
+        <NuevoMandatoDrawer
+          open={mandatoDrawerOpen}
+          onOpenChange={setMandatoDrawerOpen}
+          defaultTipo={mandatoTipo}
+          defaultEmpresaId={empresa.id}
+          defaultEmpresaNombre={empresa.nombre}
+          onSuccess={() => {
+            setMandatoDrawerOpen(false);
+          }}
         />
       )}
     </div>
