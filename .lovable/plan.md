@@ -1,125 +1,288 @@
 
-## Plan: Arreglar KPI "Targets Activos" en Mandatos Buy-Side
 
-### Resumen del Problema
+## Plan: Añadir Funcionalidad de Archivar Targets
 
-El KPI "Targets Activos" muestra 0 porque los datos del pipeline de targets no se pasan al componente `MandatoKPIs`. La información ya existe en el hook `useTargetPipeline`, pero no se conecta a la pagina principal del mandato.
-
-| Elemento | Fuente Actual | Valor | Estado |
-|----------|---------------|-------|--------|
-| "Targets (5)" badge | `mandato.empresas.length` | 5 | Correcto |
-| "Long List = 5" | `useTargetPipeline().stats` | 5 | Correcto |
-| "Targets Activos" | `activeTargets` (default: 0) | 0 | **ROTO** - No se pasa el prop |
+### Objetivo
+Implementar la capacidad de archivar targets de manera que:
+- Los targets archivados se excluyan del KPI "Targets Activos"
+- Los targets archivados puedan visualizarse/recuperarse si es necesario
+- El conteo del funnel y pipeline solo muestre targets activos (no archivados)
 
 ---
 
-### Solucion
+### Cambios en Base de Datos
 
-Conectar el hook `useTargetPipeline` en `MandatoDetalle.tsx` y pasar las stats a `MandatoKPIs`.
-
----
-
-### Cambios Necesarios
-
-#### 1. Actualizar MandatoDetalle.tsx
-
-Importar y usar el hook para mandatos Buy-Side:
-
-```typescript
-import { useTargetPipeline } from "@/hooks/useTargetPipeline";
-
-// Dentro del componente:
-const isBuySide = mandato?.tipo === "compra";
-
-const { 
-  stats: targetStats, 
-  targets,
-  isLoading: isLoadingTargets 
-} = useTargetPipeline(isBuySide ? mandato?.id : undefined);
-
-// Pasar los datos al componente KPIs:
-<MandatoKPIs 
-  mandato={mandato} 
-  checklistProgress={totalProgress}
-  overdueTasks={overdueTasks.length}
-  // Nuevos props para Buy-Side:
-  activeTargets={targetStats?.total || 0}
-  conversionRate={targetStats?.conversionRate || 0}
-  avgScore={targetStats?.averageScore || 0}
-  offersSent={targetStats?.totalOfertas || 0}
-/>
-```
-
-**Notas importantes:**
-- Solo se activa el hook si el mandato es Buy-Side (`tipo === "compra"`)
-- Evita doble carga: el hook ya se usa en TargetsTabBuySide, pero React Query cachea los datos
-- Los queryKeys son iguales, asi que no hay requests duplicados
-
----
-
-### Definicion de "Target Activo"
-
-Basado en el codigo existente en `getTargetPipelineStats()`:
-
+#### Migración SQL
 ```sql
--- Un target es "activo" si:
-SELECT * FROM mandato_empresas
-WHERE mandato_id = :mandatoId
-  AND rol = 'target'
--- No hay filtro de archived/deleted porque no existen esas columnas
+-- Añadir columna is_archived a mandato_empresas
+ALTER TABLE public.mandato_empresas 
+ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS archived_at timestamptz,
+ADD COLUMN IF NOT EXISTS archived_by uuid REFERENCES auth.users(id);
+
+-- Índice para queries eficientes
+CREATE INDEX IF NOT EXISTS idx_mandato_empresas_archived 
+ON public.mandato_empresas(mandato_id, rol, is_archived) 
+WHERE rol = 'target';
+
+-- Comentarios para documentación
+COMMENT ON COLUMN public.mandato_empresas.is_archived IS 'Target archivado - excluido de KPIs activos';
+COMMENT ON COLUMN public.mandato_empresas.archived_at IS 'Fecha de archivado';
+COMMENT ON COLUMN public.mandato_empresas.archived_by IS 'Usuario que archivó el target';
 ```
 
-Por tanto, `stats.total` = todos los targets del mandato = "activos" en el contexto actual.
+---
 
-Si en el futuro se anade logica de archivado:
-- Se deberia anadir columna `is_archived` o `deleted_at` a `mandato_empresas`
-- Actualizar la query para excluirlos: `WHERE deleted_at IS NULL AND is_archived = false`
-- El funnel stage `descartado` NO significa inactivo (sigue siendo un target, solo que descartado del proceso)
+### Cambios en Tipos TypeScript
+
+#### Actualizar MandatoEmpresaBuySide (src/types/index.ts)
+Añadir campos de archivado al tipo:
+```typescript
+export interface MandatoEmpresaBuySide extends MandatoEmpresa {
+  // ... campos existentes ...
+  
+  // Nuevos campos de archivado
+  is_archived?: boolean;
+  archived_at?: string;
+  archived_by?: string;
+}
+```
+
+---
+
+### Cambios en Servicios
+
+#### 1. targetScoring.service.ts - Filtrar archivados en stats
+
+**getTargetPipelineStats()** - Excluir archivados del conteo:
+```typescript
+const { data: targets, error } = await supabase
+  .from("mandato_empresas")
+  .select(`id, funnel_stage, pipeline_stage_target, match_score, is_archived`)
+  .eq("mandato_id", mandatoId)
+  .eq("rol", "target")
+  .eq("is_archived", false);  // NUEVO: Solo activos
+```
+
+**getTargetsWithScoring()** - Añadir campo is_archived:
+```typescript
+// Ya retorna todos los targets, pero incluir is_archived para filtrado en UI
+const { data: targets, error } = await supabase
+  .from("mandato_empresas")
+  .select(`
+    *,
+    empresa:empresas(*),
+    scoring:mandato_empresa_scoring(*),
+    ofertas:target_ofertas(*)
+  `)
+  .eq("mandato_id", mandatoId)
+  .eq("rol", "target")
+  .order("is_archived", { ascending: true }) // Activos primero
+  .order("created_at", { ascending: false });
+```
+
+#### 2. Nuevo servicio de archivado (src/services/targetArchive.service.ts)
+```typescript
+export async function archiveTarget(mandatoEmpresaId: string): Promise<void> {
+  const { data: user } = await supabase.auth.getUser();
+  
+  const { error } = await supabase
+    .from("mandato_empresas")
+    .update({ 
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by: user?.user?.id
+    })
+    .eq("id", mandatoEmpresaId);
+
+  if (error) throw error;
+}
+
+export async function unarchiveTarget(mandatoEmpresaId: string): Promise<void> {
+  const { error } = await supabase
+    .from("mandato_empresas")
+    .update({ 
+      is_archived: false,
+      archived_at: null,
+      archived_by: null
+    })
+    .eq("id", mandatoEmpresaId);
+
+  if (error) throw error;
+}
+```
+
+---
+
+### Cambios en Hook useTargetPipeline
+
+#### Añadir mutation para archivar/desarchivar
+```typescript
+// Nueva mutation: Archivar target
+const archiveMutation = useMutation({
+  mutationFn: (targetId: string) => archiveTarget(targetId),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+    queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+    toast({ title: "Target archivado" });
+  },
+  onError: (error) => handleError(error, 'Archivar target'),
+});
+
+// Nueva mutation: Desarchivar target
+const unarchiveMutation = useMutation({
+  mutationFn: (targetId: string) => unarchiveTarget(targetId),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+    queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+    toast({ title: "Target restaurado" });
+  },
+  onError: (error) => handleError(error, 'Restaurar target'),
+});
+
+return {
+  // ... existente ...
+  archiveTarget: archiveMutation.mutate,
+  unarchiveTarget: unarchiveMutation.mutate,
+  isArchiving: archiveMutation.isPending || unarchiveMutation.isPending,
+};
+```
+
+---
+
+### Cambios en UI
+
+#### 1. TargetsTabBuySide.tsx - Filtro de archivados
+
+Añadir toggle para mostrar/ocultar archivados:
+```typescript
+const [showArchived, setShowArchived] = useState(false);
+
+// Filtrar archivados en la lista
+const filteredTargets = useMemo(() => {
+  let result = targets;
+  
+  // Filtro de archivados (por defecto ocultos)
+  if (!showArchived) {
+    result = result.filter(t => !t.is_archived);
+  }
+  
+  // ... resto de filtros existentes ...
+}, [targets, showArchived, ...]);
+```
+
+Añadir UI toggle:
+```tsx
+<div className="flex items-center gap-2">
+  <Switch 
+    checked={showArchived} 
+    onCheckedChange={setShowArchived}
+    id="show-archived"
+  />
+  <Label htmlFor="show-archived" className="text-xs text-muted-foreground">
+    Mostrar archivados
+  </Label>
+</div>
+```
+
+#### 2. TargetDetailDrawer.tsx - Boton de archivar
+
+Cambiar el botón "Descartar" por "Archivar":
+```tsx
+<Button
+  variant="ghost"
+  size="sm"
+  className={target.is_archived ? "text-green-600" : "text-amber-600"}
+  onClick={() => {
+    if (target.is_archived) {
+      onUnarchiveTarget?.(target.id);
+    } else {
+      onArchiveTarget?.(target.id);
+    }
+  }}
+>
+  {target.is_archived ? (
+    <>
+      <ArchiveRestore className="h-4 w-4 mr-1" />
+      Restaurar
+    </>
+  ) : (
+    <>
+      <Archive className="h-4 w-4 mr-1" />
+      Archivar
+    </>
+  )}
+</Button>
+```
+
+#### 3. TargetPipelineCard.tsx - Indicador visual
+
+Mostrar badge de archivado:
+```tsx
+{target.is_archived && (
+  <Badge variant="outline" className="text-xs opacity-60">
+    <Archive className="h-2.5 w-2.5 mr-0.5" />
+    Archivado
+  </Badge>
+)}
+```
+
+#### 4. TargetListView.tsx - Fila atenuada
+
+Añadir estilo para targets archivados:
+```tsx
+<TableRow
+  className={cn(
+    "cursor-pointer",
+    selectedIds.includes(target.id) && "bg-muted/50",
+    target.is_archived && "opacity-50 bg-muted/30",  // NUEVO
+    target.no_contactar && "opacity-60"
+  )}
+>
+```
+
+---
+
+### Flujo de Datos Actualizado
+
+```text
+getTargetPipelineStats()
+      |
+      v
+SELECT ... WHERE is_archived = false
+      |
+      v
+stats.total = solo targets activos (no archivados)
+      |
+      v
+MandatoKPIs: "Targets Activos" = stats.total (correcto)
+```
+
+---
+
+### Definición de Estados
+
+| Estado | is_archived | funnel_stage | Visible en KPI | Visible en UI |
+|--------|-------------|--------------|----------------|---------------|
+| **Activo** | false | cualquiera | Sí | Sí |
+| **Descartado** | false | descartado | Sí (es un stage) | Sí |
+| **Archivado** | true | cualquiera | No | Solo con toggle |
 
 ---
 
 ### Archivos a Modificar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/pages/MandatoDetalle.tsx` | Importar `useTargetPipeline`, pasar props a `MandatoKPIs` |
-
----
-
-### Flujo de Datos Corregido
-
-```
-MandatoDetalle.tsx
-      |
-      v
-useTargetPipeline(mandato.id)  -- Solo si tipo === "compra"
-      |
-      +-- stats.total -----------> activeTargets
-      +-- stats.conversionRate --> conversionRate  
-      +-- stats.averageScore ----> avgScore
-      +-- stats.totalOfertas ----> offersSent
-      |
-      v
-<MandatoKPIs {...props} />
-      |
-      v
-Muestra: "Targets Activos: 5"
-```
-
----
-
-### Consistencia Garantizada
-
-Con este cambio:
-
-| Elemento | Fuente | Consistente |
-|----------|--------|-------------|
-| "Targets (N)" badge | `targetsCount` (mandato.empresas.length) | Si |
-| "Targets Activos" KPI | `targetStats.total` | Si |
-| Long List / Short List / Finalistas | `targetStats.byFunnelStage` | Si |
-| Vista Kanban/Lista | `useTargetPipeline().targets` | Si |
-
-Todos usan el mismo origen de datos (React Query con key `['target-pipeline-stats', mandatoId]`).
+| Archivo | Cambio |
+|---------|--------|
+| **SQL Migration** | Añadir columnas is_archived, archived_at, archived_by |
+| `src/types/index.ts` | Añadir campos al tipo MandatoEmpresaBuySide |
+| `src/services/targetScoring.service.ts` | Filtrar is_archived=false en stats |
+| `src/services/targetArchive.service.ts` | NUEVO: funciones archive/unarchive |
+| `src/hooks/useTargetPipeline.ts` | Añadir mutations de archivado |
+| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Toggle mostrar archivados |
+| `src/components/mandatos/buyside/TargetDetailDrawer.tsx` | Boton archivar/restaurar |
+| `src/components/mandatos/buyside/TargetPipelineCard.tsx` | Badge archivado |
+| `src/components/mandatos/buyside/TargetListView.tsx` | Estilo fila archivada |
 
 ---
 
@@ -127,25 +290,10 @@ Todos usan el mismo origen de datos (React Query con key `['target-pipeline-stat
 
 | Escenario | Resultado Esperado |
 |-----------|-------------------|
-| Mandato Buy-Side con 5 targets | Targets Activos = 5, Long List = 5 |
-| Mover target a Short List | Targets Activos sigue igual (5), Long List baja, Short List sube |
-| Descartar target | Targets Activos sigue igual (target descartado sigue existiendo) |
-| Crear nuevo target | Targets Activos sube a 6 (cache invalidado) |
-| Mandato Sell-Side | KPIs de Sell-Side (no muestra Targets Activos) |
+| 5 targets, 0 archivados | Targets Activos = 5 |
+| 5 targets, 1 archivado | Targets Activos = 4 |
+| Archivar target | KPI baja, target desaparece de vista principal |
+| Toggle "Mostrar archivados" | Targets archivados visibles con estilo atenuado |
+| Restaurar target archivado | KPI sube, target visible normalmente |
+| Kanban con archivados ocultos | Solo muestra targets activos en columnas |
 
----
-
-### Seccion Tecnica
-
-**React Query caching:**
-- El hook `useTargetPipeline` usa `staleTime: 2 * 60 * 1000` (2 minutos)
-- Cuando se usa en `MandatoDetalle.tsx` Y en `TargetsTabBuySide.tsx`, React Query devuelve datos cacheados
-- No hay requests duplicados porque comparten el mismo `queryKey`
-
-**Invalidacion de cache:**
-- Las mutations en `useTargetPipeline` ya invalidan `['target-pipeline-stats', mandatoId]`
-- Cuando el usuario mueve un target o crea una oferta, el KPI se actualiza automaticamente
-
-**Performance:**
-- Condicionalmente activo: `enabled: !!mandatoId && isBuySide`
-- Para mandatos Sell-Side no se ejecuta la query de targets
