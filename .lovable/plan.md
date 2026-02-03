@@ -1,203 +1,115 @@
 
-## Plan: Botón "Crear Mandato" en Ficha de Empresa
+## Plan: Mostrar Quién da de Alta en el Registro de Actividad
 
-### Objetivo
-Añadir un botón "Crear Mandato" en el panel de acciones de la ficha de empresa que permita iniciar rápidamente un mandato de compra o venta con la empresa pre-seleccionada.
+### Problema Identificado
+
+El timeline de actividad muestra "Usuario" genérico en **10 registros** (todos de tipo `tarea`) porque el trigger `log_checklist_activity` no está guardando quién hizo el cambio:
+
+```sql
+-- Trigger ACTUAL (sin created_by)
+INSERT INTO mandato_activity (mandato_id, activity_type, activity_description, entity_id)
+VALUES (...);
+
+-- Debería ser:
+INSERT INTO mandato_activity (mandato_id, activity_type, activity_description, entity_id, created_by)
+VALUES (..., auth.uid());
+```
+
+| Trigger | ¿Guarda `created_by`? | Origen |
+|---------|----------------------|--------|
+| `log_time_entry_activity` | Si | `NEW.user_id` |
+| `log_interaccion_activity` | Si | `NEW.created_by` |
+| `log_documento_activity` | Si | `NEW.uploaded_by` |
+| `log_checklist_activity` | **NO** | Falta `auth.uid()` |
 
 ---
 
-### Diseño de UX
+### Solución
 
-```
-+------------------------------------------+
-|  Acciones                                |
-+------------------------------------------+
-|  [Contactar]                             |
-|  [Llamar]                                |
-|  [Visitar Website]                       |
-|  ────────────────────                    |
-|  [+ Crear Mandato ▾]  <-- NUEVO          |
-|     ├─ 🛒 Compra (Buy-Side)              |
-|     └─ 📈 Venta (Sell-Side)              |
-|  [Agendar Reunión]                       |
-|  [Crear Tarea]                           |
-|  ...                                     |
-+------------------------------------------+
-```
+#### 1. Actualizar Trigger de Checklist
 
-Al hacer clic en una opción:
-1. Se abre el `NuevoMandatoDrawer`
-2. La empresa ya está pre-seleccionada (no hay que buscarla)
-3. El tipo (compra/venta) ya está seleccionado
-4. El usuario solo completa descripción y campos opcionales
+Modificar la función `log_checklist_activity` para capturar el usuario que hizo el cambio:
 
----
-
-### Cambios Necesarios
-
-#### 1. Extender NuevoMandatoDrawer con `defaultEmpresaId`
-
-Añadir nuevo prop que pre-seleccione la empresa:
-
-```typescript
-interface NuevoMandatoDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  defaultTipo?: "compra" | "venta";
-  defaultEmpresaId?: string;  // NUEVO
-}
+```sql
+CREATE OR REPLACE FUNCTION public.log_checklist_activity()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+    INSERT INTO public.mandato_activity 
+      (mandato_id, activity_type, activity_description, entity_id, created_by)
+    VALUES 
+      (NEW.mandato_id, 'tarea', NEW.tarea || ' → ' || NEW.estado, NEW.id, auth.uid());
+    
+    UPDATE public.mandatos SET last_activity_at = now() WHERE id = NEW.mandato_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
 ```
 
-Comportamiento:
-- Si `defaultEmpresaId` está presente, establecer `empresaId` en el form
-- Ocultar o deshabilitar el selector de empresa (ya está elegida)
-- Mostrar el nombre de la empresa seleccionada como badge informativo
+#### 2. Backfill de Datos Históricos (Opcional)
 
-#### 2. Actualizar EmpresaActionsPanel
+Para las 10 tareas sin `created_by`, podemos intentar inferirlo desde el audit log:
 
-Añadir props para manejar la creación de mandatos:
-
-```typescript
-interface EmpresaActionsPanelProps {
-  onEdit: () => void;
-  onDelete: () => void;
-  onCreateMandato?: (tipo: "compra" | "venta") => void;  // NUEVO
-}
-```
-
-Añadir botón con dropdown:
-
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline" className="w-full justify-start gap-2">
-      <Briefcase className="h-4 w-4" />
-      Crear Mandato
-      <ChevronDown className="h-3 w-3 ml-auto" />
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent align="start" className="w-48">
-    <DropdownMenuItem onClick={() => onCreateMandato?.("compra")}>
-      <ShoppingCart className="h-4 w-4 mr-2 text-orange-500" />
-      Compra (Buy-Side)
-    </DropdownMenuItem>
-    <DropdownMenuItem onClick={() => onCreateMandato?.("venta")}>
-      <TrendingUp className="h-4 w-4 mr-2 text-blue-500" />
-      Venta (Sell-Side)
-    </DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-#### 3. Conectar en EmpresaDetalle
-
-Añadir estado y handlers:
-
-```tsx
-const [mandatoDrawerOpen, setMandatoDrawerOpen] = useState(false);
-const [mandatoTipo, setMandatoTipo] = useState<"compra" | "venta">("venta");
-
-const handleCreateMandato = (tipo: "compra" | "venta") => {
-  setMandatoTipo(tipo);
-  setMandatoDrawerOpen(true);
-};
-
-// En el JSX:
-<EmpresaActionsPanel
-  onEdit={() => setEditDrawerOpen(true)}
-  onDelete={() => setDeleteDialogOpen(true)}
-  onCreateMandato={handleCreateMandato}
-/>
-
-<NuevoMandatoDrawer
-  open={mandatoDrawerOpen}
-  onOpenChange={setMandatoDrawerOpen}
-  defaultTipo={mandatoTipo}
-  defaultEmpresaId={empresa.id}
-  onSuccess={() => {
-    setMandatoDrawerOpen(false);
-    // Refrescar mandatos de la empresa
-  }}
-/>
+```sql
+-- Ver si hay datos en audit_log que nos ayuden
+SELECT DISTINCT al.user_id, au.full_name
+FROM audit_log al
+JOIN admin_users au ON al.user_id = au.user_id
+WHERE al.table_name = 'mandato_checklist_tasks'
+LIMIT 10;
 ```
 
 ---
 
-### Archivos a Modificar
+### Cambios a Realizar
 
-| Archivo | Cambios |
-|---------|---------|
-| `src/components/mandatos/NuevoMandatoDrawer.tsx` | Añadir prop `defaultEmpresaId`, pre-seleccionar empresa, mostrar indicador visual |
-| `src/components/empresas/EmpresaActionsPanel.tsx` | Añadir botón dropdown "Crear Mandato" con opciones Compra/Venta |
-| `src/pages/EmpresaDetalle.tsx` | Conectar el drawer con estado, pasar empresa ID y tipo |
-
----
-
-### Flujo de Usuario
-
-```
-1. Usuario navega a /empresas/:id
-   |
-   v
-2. En el sidebar "Acciones", hace clic en "Crear Mandato"
-   |
-   v
-3. Dropdown muestra:
-   - 🛒 Compra (Buy-Side)
-   - 📈 Venta (Sell-Side)
-   |
-   v
-4. Usuario selecciona tipo
-   |
-   v
-5. Se abre NuevoMandatoDrawer con:
-   - Empresa pre-seleccionada (visible pero no editable)
-   - Tipo pre-seleccionado
-   - Categoría en "Operación M&A"
-   |
-   v
-6. Usuario completa descripción y guarda
-   |
-   v
-7. Mandato creado, se cierra drawer
-   Lista de mandatos de la empresa se actualiza
-```
-
----
-
-### Detalles de Implementación
-
-**En NuevoMandatoDrawer:**
-
-```tsx
-// Efecto para establecer empresa por defecto
-useEffect(() => {
-  if (open && defaultEmpresaId) {
-    form.setValue('empresaId', defaultEmpresaId);
-  }
-}, [open, defaultEmpresaId, form]);
-
-// Mostrar badge informativo si empresa está pre-seleccionada
-{defaultEmpresaId && (
-  <div className="p-3 bg-muted rounded-lg flex items-center gap-2">
-    <Building2 className="h-4 w-4 text-muted-foreground" />
-    <span className="text-sm">Empresa seleccionada</span>
-    <Badge variant="secondary">{empresaNombre}</Badge>
-  </div>
-)}
-```
-
-**Colores del dropdown:**
-- Compra: icono naranja (coherente con el sistema)
-- Venta: icono azul (coherente con el sistema)
-
----
+| Tipo | Descripción |
+|------|-------------|
+| SQL Migration | Modificar función `log_checklist_activity` para incluir `auth.uid()` |
+| Backfill (opcional) | Actualizar registros históricos sin `created_by` |
 
 ### Beneficios
 
-1. **Rapidez**: Un clic para iniciar mandato desde empresa
-2. **Contexto**: No hay que buscar la empresa manualmente
-3. **Coherencia**: Usa el mismo drawer y flujo existente
-4. **Mínimo impacto**: Solo 3 archivos modificados
-5. **UX clara**: El tipo se elige antes de abrir el drawer
+1. **Trazabilidad completa**: Todas las actividades futuras tendrán el nombre del usuario
+2. **Consistencia**: Los 4 tipos de actividad (hora, interaccion, documento, tarea) funcionarán igual
+3. **Sin cambios en frontend**: El componente `MandatoActivityTimeline` ya maneja correctamente `created_by_user`
+
+---
+
+### Detalles Técnicos
+
+**Migración SQL:**
+
+```sql
+-- Actualizar el trigger para capturar el usuario
+CREATE OR REPLACE FUNCTION public.log_checklist_activity()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+    INSERT INTO public.mandato_activity 
+      (mandato_id, activity_type, activity_description, entity_id, created_by)
+    VALUES 
+      (NEW.mandato_id, 'tarea', NEW.tarea || ' → ' || NEW.estado, NEW.id, auth.uid());
+    
+    UPDATE public.mandatos 
+    SET last_activity_at = now() 
+    WHERE id = NEW.mandato_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
+
+**A partir de ahora:**
+- Cuando un usuario cambie el estado de una tarea del checklist
+- El registro de actividad incluirá su ID en `created_by`
+- El timeline mostrará su nombre en lugar de "Usuario"
