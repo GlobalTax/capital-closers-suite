@@ -7691,6 +7691,7 @@ export type Database = {
       }
       empresa_documentos: {
         Row: {
+          category: string
           compartido_por: string | null
           created_at: string | null
           documento_id: string
@@ -7700,6 +7701,7 @@ export type Database = {
           notas: string | null
         }
         Insert: {
+          category?: string
           compartido_por?: string | null
           created_at?: string | null
           documento_id: string
@@ -7709,6 +7711,7 @@ export type Database = {
           notas?: string | null
         }
         Update: {
+          category?: string
           compartido_por?: string | null
           created_at?: string | null
           documento_id?: string

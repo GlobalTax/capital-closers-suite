@@ -12,7 +12,7 @@ import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { useEmpresa, useDeleteEmpresa } from "@/hooks/queries/useEmpresas";
 import { useEmpresaMandatos, useEmpresaContactos } from "@/hooks/queries/useEmpresaMandatos";
 import { useEmpresaInteracciones } from "@/hooks/queries/useInteracciones";
-import { useEmpresaDocumentos } from "@/hooks/queries/useDocumentos";
+import { useCompanyDocumentsCount } from "@/hooks/queries/useCompanyDocuments";
 import type { Mandato, Contacto } from "@/types";
 import { Building2, MapPin, Users, DollarSign, TrendingUp, Globe, Trash2, Edit, FileText, User, Phone, Mail, Linkedin, Target, Clock, Briefcase, Activity, UserPlus, BarChart3, Percent, Calculator, CalendarDays } from "lucide-react";
 import { CompanyMeetingsTab } from "@/components/empresas/CompanyMeetingsTab";
@@ -27,6 +27,7 @@ import { EmpresaActionsPanel } from "@/components/empresas/EmpresaActionsPanel";
 import { EmpresaBadge } from "@/components/empresas/EmpresaBadges";
 import { FinancialAnalysisSection } from "@/components/empresas/FinancialAnalysisSection";
 import { ValuationTab } from "@/components/empresas/ValuationTab";
+import { CompanyDocumentsTab } from "@/components/empresas/CompanyDocumentsTab";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { NuevoMandatoDrawer } from "@/components/mandatos/NuevoMandatoDrawer";
 
@@ -39,7 +40,7 @@ export default function EmpresaDetalle() {
   const { data: mandatos = [], isLoading: loadingMandatos } = useEmpresaMandatos(id);
   const { data: contactos = [], isLoading: loadingContactos } = useEmpresaContactos(id);
   const { data: interacciones = [], isLoading: loadingInteracciones } = useEmpresaInteracciones(id);
-  const { data: documentos = [], isLoading: loadingDocumentos } = useEmpresaDocumentos(id);
+  const { data: documentsCount = 0 } = useCompanyDocumentsCount(id);
   const { data: meetings = [], isLoading: loadingMeetings } = useCompanyMeetings(id);
   const { mutate: deleteEmpresaMutation } = useDeleteEmpresa();
   
@@ -269,7 +270,7 @@ export default function EmpresaDetalle() {
                 className="data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-purple-600"
               >
                 <FileText className="h-5 w-5 mr-2" />
-                Documentos ({documentos.length})
+                Documentos ({documentsCount})
               </TabsTrigger>
               <TabsTrigger 
                 value="reuniones"
@@ -522,35 +523,7 @@ export default function EmpresaDetalle() {
 
         {/* Tab Documentos */}
         <TabsContent value="documentos">
-          <Card>
-            <CardHeader>
-              <CardTitle>Documentos Compartidos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {documentos.length > 0 ? (
-                <div className="space-y-2">
-                  {documentos.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{doc.documento?.file_name || 'Documento'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Compartido {format(new Date(doc.fecha_compartido), "d MMM yyyy", { locale: es })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No hay documentos compartidos</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CompanyDocumentsTab empresaId={id!} />
         </TabsContent>
 
         {/* Tab Reuniones */}
