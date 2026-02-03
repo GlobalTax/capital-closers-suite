@@ -2,6 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Mail,
   Phone,
   Globe,
@@ -10,14 +16,19 @@ import {
   Search,
   Edit,
   Trash2,
+  Briefcase,
+  ChevronDown,
+  ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 
 interface EmpresaActionsPanelProps {
   onEdit: () => void;
   onDelete: () => void;
+  onCreateMandato?: (tipo: "compra" | "venta") => void;
 }
 
-export function EmpresaActionsPanel({ onEdit, onDelete }: EmpresaActionsPanelProps) {
+export function EmpresaActionsPanel({ onEdit, onDelete, onCreateMandato }: EmpresaActionsPanelProps) {
   return (
     <Card className="sticky top-6">
       <CardHeader className="pb-3">
@@ -40,6 +51,27 @@ export function EmpresaActionsPanel({ onEdit, onDelete }: EmpresaActionsPanelPro
         </Button>
 
         <Separator className="my-2" />
+
+        {/* Crear Mandato Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full justify-start gap-2">
+              <Briefcase className="h-4 w-4" />
+              Crear Mandato
+              <ChevronDown className="h-3 w-3 ml-auto" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuItem onClick={() => onCreateMandato?.("compra")}>
+              <ShoppingCart className="h-4 w-4 mr-2 text-orange-500" />
+              Compra (Buy-Side)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateMandato?.("venta")}>
+              <TrendingUp className="h-4 w-4 mr-2 text-blue-500" />
+              Venta (Sell-Side)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
         <Button variant="outline" className="w-full justify-start gap-2">
           <Calendar className="h-4 w-4" />

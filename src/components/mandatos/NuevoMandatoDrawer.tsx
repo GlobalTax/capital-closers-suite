@@ -93,6 +93,8 @@ interface NuevoMandatoDrawerProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   defaultTipo?: "compra" | "venta";
+  defaultEmpresaId?: string;
+  defaultEmpresaNombre?: string;
 }
 
 const categoriaIcons: Record<string, React.ReactNode> = {
@@ -108,6 +110,8 @@ export function NuevoMandatoDrawer({
   onOpenChange,
   onSuccess,
   defaultTipo = "venta",
+  defaultEmpresaId,
+  defaultEmpresaNombre,
 }: NuevoMandatoDrawerProps) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]); // Solo para crear nueva empresa
   const [mandatos, setMandatos] = useState<Mandato[]>([]);
@@ -148,8 +152,12 @@ export function NuevoMandatoDrawer({
       if (currentTipo !== defaultTipo) {
         form.setValue('tipo', defaultTipo);
       }
+      // Pre-seleccionar empresa si viene por defecto
+      if (defaultEmpresaId) {
+        form.setValue('empresaId', defaultEmpresaId);
+      }
     }
-  }, [open, defaultTipo]);
+  }, [open, defaultTipo, defaultEmpresaId]);
 
   const cargarDatos = async () => {
     setLoadingMandatos(true);
@@ -345,89 +353,100 @@ export function NuevoMandatoDrawer({
                 {/* Empresa o Cliente */}
                 {!vincularOperacion && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>{isServicio ? "Empresa / Cliente" : "Empresa Principal *"}</FormLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setShowNewEmpresa(!showNewEmpresa);
-                          if (!showNewEmpresa) {
-                            form.setValue("empresaId", "");
-                          } else {
-                            form.setValue("nuevaEmpresa", "");
-                          }
-                        }}
-                      >
-                        {showNewEmpresa ? (
-                          <>Seleccionar existente</>
-                        ) : (
-                          <><Plus className="w-3 h-3 mr-1" />Nueva empresa</>
-                        )}
-                      </Button>
-                    </div>
-
-                    {showNewEmpresa ? (
-                      <FormField
-                        control={form.control}
-                        name="nuevaEmpresa"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="relative">
-                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                                <Input 
-                                  placeholder="Nombre de la nueva empresa" 
-                                  className="pl-9" 
-                                  {...field} 
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    {/* Mostrar badge si empresa está pre-seleccionada */}
+                    {defaultEmpresaId && defaultEmpresaNombre ? (
+                      <div className="p-3 bg-muted rounded-lg flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Empresa:</span>
+                        <span className="text-sm font-medium">{defaultEmpresaNombre}</span>
+                      </div>
                     ) : (
-                      <FormField
-                        control={form.control}
-                        name="empresaId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <EmpresaSearchSelect
-                                value={field.value}
-                                onValueChange={(id) => field.onChange(id)}
-                                placeholder="Buscar empresa por nombre o CIF..."
-                                onCreateNew={() => {
-                                  setShowNewEmpresa(true);
-                                  form.setValue("empresaId", "");
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
+                      <>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>{isServicio ? "Empresa / Cliente" : "Empresa Principal *"}</FormLabel>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setShowNewEmpresa(!showNewEmpresa);
+                              if (!showNewEmpresa) {
+                                form.setValue("empresaId", "");
+                              } else {
+                                form.setValue("nuevaEmpresa", "");
+                              }
+                            }}
+                          >
+                            {showNewEmpresa ? (
+                              <>Seleccionar existente</>
+                            ) : (
+                              <><Plus className="w-3 h-3 mr-1" />Nueva empresa</>
+                            )}
+                          </Button>
+                        </div>
 
-                    {/* Cliente externo (solo para servicios) */}
-                    {isServicio && !showNewEmpresa && (
-                      <FormField
-                        control={form.control}
-                        name="cliente_externo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                placeholder="O introduce el nombre del cliente externo" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                        {showNewEmpresa ? (
+                          <FormField
+                            control={form.control}
+                            name="nuevaEmpresa"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                                    <Input 
+                                      placeholder="Nombre de la nueva empresa" 
+                                      className="pl-9" 
+                                      {...field} 
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ) : (
+                          <FormField
+                            control={form.control}
+                            name="empresaId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <EmpresaSearchSelect
+                                    value={field.value}
+                                    onValueChange={(id) => field.onChange(id)}
+                                    placeholder="Buscar empresa por nombre o CIF..."
+                                    onCreateNew={() => {
+                                      setShowNewEmpresa(true);
+                                      form.setValue("empresaId", "");
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
-                      />
+
+                        {/* Cliente externo (solo para servicios) */}
+                        {isServicio && !showNewEmpresa && (
+                          <FormField
+                            control={form.control}
+                            name="cliente_externo"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="O introduce el nombre del cliente externo" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 )}
