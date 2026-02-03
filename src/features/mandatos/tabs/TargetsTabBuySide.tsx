@@ -147,7 +147,7 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
         <CardContent className="pt-4">
           <TargetFunnel
             stats={stats?.byFunnelStage || { long_list: 0, short_list: 0, finalista: 0, descartado: 0 }}
-            total={targets.length}
+            total={stats?.total ?? filteredTargets.length}
             selectedStage={selectedFunnelStage}
             onSelectStage={setSelectedFunnelStage}
           />
@@ -282,8 +282,16 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
         onMoveToPipeline={(targetId, stage) => moveToPipeline({ targetId, stage })}
         onUpdateScoring={(targetId, scoring) => updateScoring({ targetId, scoring })}
         onCreateOferta={(targetId, oferta) => createOferta({ targetId, oferta })}
-        onArchiveTarget={(targetId) => archiveTarget(targetId)}
-        onUnarchiveTarget={(targetId) => unarchiveTarget(targetId)}
+        onArchiveTarget={(targetId) => {
+          archiveTarget(targetId);
+          setDetailDrawerOpen(false);
+          setSelectedTarget(null);
+        }}
+        onUnarchiveTarget={(targetId) => {
+          unarchiveTarget(targetId);
+          setDetailDrawerOpen(false);
+          setSelectedTarget(null);
+        }}
         isMoving={isMoving}
         isSavingScoring={isSavingScoring}
         isSavingOferta={isSavingOferta}
