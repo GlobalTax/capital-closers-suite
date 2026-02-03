@@ -34,6 +34,7 @@ export function TimeEntryEditDialog({ entry, open, onOpenChange, onSuccess }: Ti
   const [workTaskTypeId, setWorkTaskTypeId] = useState('');
   const [isBillable, setIsBillable] = useState(true);
   const [notes, setNotes] = useState('');
+  const [editReason, setEditReason] = useState('');
 
   const mandatoId = entry?.mandato_id || '';
   const { data: workTaskTypes = [], isLoading: loadingWorkTaskTypes } = useFilteredWorkTaskTypes(mandatoId);
@@ -75,6 +76,13 @@ export function TimeEntryEditDialog({ entry, open, onOpenChange, onSuccess }: Ti
         return;
       }
 
+      // Validate edit reason (required for traceability)
+      const trimmedEditReason = editReason.trim();
+      if (trimmedEditReason.length < 5) {
+        toast.error("Debes proporcionar un motivo de edición (mínimo 5 caracteres)");
+        return;
+      }
+
       const startDateTime = new Date(`${date}T${startTime}`);
       const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
 
@@ -87,7 +95,7 @@ export function TimeEntryEditDialog({ entry, open, onOpenChange, onSuccess }: Ti
         work_task_type_id: workTaskTypeId || undefined,
         is_billable: isBillable,
         notes: notes.trim() || undefined,
-      });
+      }, trimmedEditReason);
 
       toast.success("Entrada actualizada ✓");
       onSuccess();
@@ -257,6 +265,25 @@ export function TimeEntryEditDialog({ entry, open, onOpenChange, onSuccess }: Ti
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Notas adicionales..."
               rows={2}
+            />
+          </div>
+
+          {/* Edit Reason (required for traceability) */}
+          <div>
+            <div className="flex justify-between items-center">
+              <Label className="text-xs text-muted-foreground">
+                Motivo de edición <span className="text-destructive">*</span>
+              </Label>
+              {editReason.trim().length > 0 && editReason.trim().length < 5 && (
+                <span className="text-xs text-destructive">{editReason.trim().length}/5 mín</span>
+              )}
+            </div>
+            <Input
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+              placeholder="Ej: Corrección de duración, cambio de fecha..."
+              maxLength={200}
+              className={editReason.trim().length > 0 && editReason.trim().length < 5 ? 'border-destructive' : ''}
             />
           </div>
 

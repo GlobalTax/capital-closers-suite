@@ -156,6 +156,11 @@ export function QuickTimeEntryModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No hay usuario autenticado');
 
+      // Build description ensuring minimum 10 chars (DB CHECK constraint)
+      const activityLabel = ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad';
+      const userDescription = description.trim() || `con ${lead.nombre}`;
+      const finalDescription = `${activityLabel}: ${userDescription}`.substring(0, 500);
+
       // Create time entry
       await createTimeEntry({
         user_id: user.id,
@@ -164,7 +169,8 @@ export function QuickTimeEntryModal({
         work_task_type_id: selectedWorkTaskTypeId || undefined,
         start_time: new Date().toISOString(),
         duration_minutes: duration,
-        description: `${ACTIVITY_TYPES.find(t => t.value === activityType)?.label || 'Actividad'}: ${description}`.substring(0, 500),
+        description: finalDescription,
+        work_type: 'Otro', // Required NOT NULL field
         status: 'approved',
       } as any);
 
