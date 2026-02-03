@@ -14,7 +14,7 @@ import { SearchFundsSection } from "@/components/targets/SearchFundsSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
-import { fetchInteraccionesByEmpresa, getContactosByEmpresa } from "@/services/interacciones";
+import { fetchInteraccionesByMandatoTarget, getContactosByEmpresa } from "@/services/interacciones";
 import { addEmpresaToMandato } from "@/services/mandatos";
 import type { Interaccion } from "@/services/interacciones";
 import type { Mandato, Contacto } from "@/types";
@@ -93,9 +93,9 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
           }
         }));
 
-        // Load interacciones
+        // Load interacciones (FILTRADO por mandato + empresa para aislamiento)
         try {
-          const interacciones = await fetchInteraccionesByEmpresa(empresaId);
+          const interacciones = await fetchInteraccionesByMandatoTarget(mandato.id, empresaId);
           setEmpresaData(prev => ({
             ...prev,
             [empresaId]: {
@@ -215,7 +215,7 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
       }
     }));
 
-    fetchInteraccionesByEmpresa(empresaId)
+    fetchInteraccionesByMandatoTarget(mandato.id, empresaId)
       .then(interacciones => {
         setEmpresaData(prev => ({
           ...prev,

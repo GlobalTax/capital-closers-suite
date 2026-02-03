@@ -52,6 +52,22 @@ export const fetchInteraccionesByMandato = async (mandatoId: string): Promise<In
   return (data || []) as Interaccion[];
 };
 
+// NUEVA: Fetch interacciones por mandato + empresa (aislamiento correcto)
+export const fetchInteraccionesByMandatoTarget = async (
+  mandatoId: string,
+  empresaId: string
+): Promise<Interaccion[]> => {
+  const { data, error } = await supabase
+    .from('interacciones')
+    .select('*')
+    .eq('mandato_id', mandatoId)
+    .eq('empresa_id', empresaId)
+    .order('fecha', { ascending: false });
+  
+  if (error) throw error;
+  return (data || []) as Interaccion[];
+};
+
 export const createInteraccion = async (interaccion: Partial<Interaccion>) => {
   // Obtener usuario actual si no viene en el payload (requerido por RLS)
   let created_by = interaccion.created_by;
