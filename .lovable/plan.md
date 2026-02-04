@@ -1,219 +1,142 @@
 
-# Sistema de Control de Time Reports del Equipo
+# Mejora del Reporte Diario de Horas
 
-## Resumen Ejecutivo
-Ampliar el sistema actual de gestión de planes diarios para proporcionar a los supervisores herramientas robustas de control, incluyendo aprobación masiva, dashboard de cumplimiento, y funcionalidades de gestión de tareas asignadas.
+## Problemas Identificados en la Captura
 
----
+1. **Decimales flotantes descontrolados**: Se muestran números como `9.99999999999886m` en lugar de `10m` debido a errores de precisión en JavaScript al dividir minutos entre 60.
 
-## Arquitectura Actual vs. Propuesta
+2. **Información insuficiente para un supervisor**: El email actual solo muestra totales por usuario y "tipos de trabajo" genéricos (siempre "Otro"), sin contexto de qué proyectos/mandatos se trabajaron ni descripciones.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  ACTUAL: /admin/planes-diarios                                              │
-│  - Ver planes por fecha                                                     │
-│  - Aprobar/rechazar individualmente                                         │
-│  - Añadir tareas a planes existentes                                        │
-│  - Filtrar por usuario                                                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  PROPUESTO: Sistema Completo de Supervisión                                 │
-│                                                                             │
-│  1. APROBACION MASIVA                                                       │
-│     - Selección múltiple de planes pendientes                               │
-│     - Botón "Aprobar seleccionados" con confirmación                        │
-│     - Badge contador de pendientes                                          │
-│                                                                             │
-│  2. DASHBOARD DE CUMPLIMIENTO                                               │
-│     - Vista semanal: quién planificó / quién no                             │
-│     - Indicadores visuales de cumplimiento por usuario                      │
-│     - Exportación de datos de cumplimiento                                  │
-│                                                                             │
-│  3. ASIGNACION PROACTIVA DE TAREAS                                          │
-│     - Crear planes vacíos para usuarios sin plan                            │
-│     - Asignar tareas directamente a cualquier usuario                       │
-│     - Notificación al usuario de tareas asignadas                           │
-│                                                                             │
-│  4. HISTORIAL Y TRAZABILIDAD                                                │
-│     - Ver historial de planes por usuario                                   │
-│     - Comparar planificado vs ejecutado                                     │
-│     - Métricas de productividad                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+## Solución Propuesta
 
----
+### 1. Corrección de Decimales
 
-## Componentes a Implementar
-
-### 1. Mejoras en DailyPlansAdmin.tsx
-
-**Aprobación Masiva:**
-- Añadir checkboxes para seleccionar múltiples planes
-- Estado `selectedPlanIds: string[]`
-- Barra de acciones flotante cuando hay planes seleccionados
-- Función `approveBulkPlans(ids: string[])` en el servicio
-
-**Usuarios Sin Plan:**
-- Botón "Crear plan y asignar tarea" junto a cada usuario sin plan
-- Permite al supervisor crear un plan vacío y añadir tareas directamente
-
-### 2. Nuevo Componente: ComplianceDashboard.tsx
-
-Dashboard visual mostrando:
-- Matriz semanal: filas = usuarios, columnas = días
-- Celdas coloreadas según estado: verde (aprobado), azul (enviado), amarillo (borrador), gris (sin plan)
-- Click en celda abre el detalle del plan
-- KPIs: % cumplimiento global, usuarios con 100% cumplimiento, usuarios sin planificar
-
-### 3. Nueva Pestaña en HorasEquipo.tsx
-
-Añadir una tercera pestaña "Control Planes" que integre:
-- Vista de cumplimiento semanal
-- Acceso rápido a planes pendientes de aprobar
-- Acciones masivas
-
----
-
-## Cambios en Base de Datos
-
-No se requieren cambios de esquema. Las tablas existentes son suficientes:
-
-| Tabla | Uso |
-|-------|-----|
-| `daily_plans` | Almacena planes con status, fechas, usuario |
-| `daily_plan_items` | Items de cada plan con `assigned_by_admin` flag |
-| `admin_users` | Lista de usuarios activos |
-
----
-
-## Archivos a Crear
-
-| Archivo | Descripcion |
-|---------|-------------|
-| `src/components/plans/BulkApprovalBar.tsx` | Barra flotante para acciones masivas |
-| `src/components/plans/ComplianceDashboard.tsx` | Dashboard de cumplimiento semanal |
-| `src/components/plans/WeeklyComplianceGrid.tsx` | Grid visual semana x usuarios |
-| `src/hooks/usePlanCompliance.ts` | Hook para calcular metricas de cumplimiento |
-
----
-
-## Archivos a Modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/admin/DailyPlansAdmin.tsx` | Añadir seleccion multiple y aprobacion masiva |
-| `src/services/dailyPlans.service.ts` | Añadir `approveBulkPlans()`, `createPlanForUser()` |
-| `src/pages/HorasEquipo.tsx` | Añadir tercera pestaña "Control Planes" |
-
----
-
-## Flujo de Usuario: Supervisor
-
-```text
-1. Supervisor accede a /horas-equipo
-2. Click en tab "Control Planes"
-3. Ve dashboard semanal de cumplimiento
-   ├─ Usuarios con planes aprobados → verde
-   ├─ Usuarios con planes pendientes → azul (clic para aprobar)
-   ├─ Usuarios sin plan → gris (clic para crear y asignar)
-   └─ Alerta: "3 planes pendientes de revisar"
-
-4. Click en "Ver pendientes" 
-   → Lista de planes status='submitted'
-   → Checkbox para seleccionar varios
-   → Botón "Aprobar X seleccionados"
-
-5. Para usuario sin plan:
-   → Click "Asignar tareas"
-   → Se crea plan vacío automáticamente
-   → Se abre diálogo para añadir tareas
-   → Usuario recibe notificación (opcional)
-```
-
----
-
-## Detalles Tecnicos
-
-### Servicio: approveBulkPlans
+Cambiar la lógica para trabajar siempre en **minutos enteros** y redondear antes de formatear:
 
 ```typescript
-export async function approveBulkPlans(
-  planIds: string[]
-): Promise<{ approved: number; failed: number }> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  const { data, error } = await supabase
-    .from('daily_plans')
-    .update({
-      status: 'approved',
-      approved_at: new Date().toISOString(),
-      approved_by: user?.id
-    })
-    .in('id', planIds)
-    .eq('status', 'submitted') // Solo planes enviados
-    .select();
-  
-  if (error) throw error;
-  
-  return {
-    approved: data?.length || 0,
-    failed: planIds.length - (data?.length || 0)
-  };
-}
+// ANTES (problema)
+existing.totalHours += minutes / 60; // Genera 9.9999999...
+
+// DESPUÉS (solución)
+existing.totalMinutes += Math.round(minutes); // Mantener en minutos enteros
+// Formatear al final con Math.floor y Math.round
 ```
 
-### Hook: usePlanCompliance
+### 2. Contenido Ampliado del Email
+
+**Nuevo diseño del email incluye:**
+
+**Por cada usuario:**
+- Nombre
+- Horas totales (sin decimales: "9h 40m")
+- Horas facturables
+- **Desglose por mandato/proyecto** con horas dedicadas
+- **Tipos de tarea** realizados (IM, Teaser, Reuniones, etc.)
+- Número de entradas registradas
+
+**Nueva sección detallada por usuario:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ MARC - 9h 40m (6h 15m facturables)                          │
+├─────────────────────────────────────────────────────────────┤
+│ Proyectos trabajados:                                       │
+│   • Laboratorio Protésico Lleida: 3h 30m                    │
+│   • Proyecto FB Intec: 2h 15m                               │
+│   • Tareas Administrativas: 2h 30m                          │
+│   • Prospección Comercial: 1h 25m                           │
+│                                                             │
+│ Tipos de tarea: Reunión, IM, Material Interno               │
+│ Entradas registradas: 8                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Sección de resumen mejorada:**
+- Total horas equipo
+- Horas facturables (con %)
+- Usuarios activos
+- **Usuarios sin registrar** (si hay)
+- **Top 3 proyectos más trabajados**
+
+---
+
+## Cambios Técnicos
+
+### Archivo a Modificar
+`supabase/functions/daily-hours-report/index.ts`
+
+### Cambios en Query SQL
+Añadir JOINs para obtener:
+- `mandatos.descripcion` - nombre del proyecto
+- `work_task_types.name` - tipo de tarea
+
+### Nueva Estructura de Datos
 
 ```typescript
-interface ComplianceData {
-  userId: string;
+interface UserDetailedHours {
   userName: string;
-  days: {
-    date: string;
-    status: 'approved' | 'submitted' | 'draft' | 'none';
-    planId?: string;
-    totalMinutes: number;
+  totalMinutes: number;      // En minutos enteros
+  billableMinutes: number;   // En minutos enteros
+  entryCount: number;
+  mandatos: {                // Desglose por proyecto
+    name: string;
+    minutes: number;
   }[];
-  complianceRate: number; // % de días con plan aprobado
-}
-
-export function usePlanCompliance(weekStart: Date) {
-  // Retorna datos de cumplimiento para la semana
+  taskTypes: string[];       // Tipos de tarea únicos
 }
 ```
 
-### Componente: WeeklyComplianceGrid
+### Función formatHours Mejorada
 
-Muestra una matriz visual:
-- Eje Y: usuarios (ordenados por nombre)
-- Eje X: días de la semana (Lun-Dom)
-- Cada celda es clickeable y muestra el estado
+```typescript
+function formatHours(minutes: number): string {
+  const totalMins = Math.round(minutes);  // Redondear a entero
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+```
 
----
+### Nuevo Template HTML
 
-## Consideraciones de Permisos
-
-- Solo usuarios con rol `admin` o `super_admin` pueden:
-  - Aprobar/rechazar planes
-  - Asignar tareas a otros usuarios
-  - Ver el dashboard de cumplimiento
-- Los usuarios normales solo ven su propio plan en `/plan-diario`
-
----
-
-## Orden de Implementacion
-
-1. **Fase 1**: Aprobación masiva en DailyPlansAdmin (quick win)
-2. **Fase 2**: Dashboard de cumplimiento semanal
-3. **Fase 3**: Creación de planes y asignación proactiva
-4. **Fase 4**: Integración en HorasEquipo como tercera pestaña
+El email incluirá:
+1. **Cabecera** con fecha y KPIs globales (igual que ahora pero sin decimales)
+2. **Tabla resumen** por usuario con columnas: Usuario | Total | Facturable | Proyectos | Tareas
+3. **Sección expandida** con detalle por usuario mostrando los proyectos trabajados
+4. **Footer** con alertas si hay usuarios sin registrar
 
 ---
 
-## Metricas de Exito
+## Resultado Esperado
 
-- Reducir tiempo de aprobación de planes de X minutos a <1 minuto
-- Visibilidad inmediata de usuarios sin planificar
-- Capacidad de asignar trabajo antes de que el día comience
+**Antes:**
+```
+| Usuario    | Total                    | Facturable                 | Trabajo Principal |
+|------------|--------------------------|----------------------------|-------------------|
+| Oriol      | 9h 19.99999999999886m    | 4h 4.999999999999972m      | Otro              |
+```
+
+**Después:**
+```
+| Usuario | Total   | Fact.   | Proyectos trabajados                           |
+|---------|---------|---------|------------------------------------------------|
+| Oriol   | 9h 20m  | 5h      | Lab. Protésico (4h), Proyecto X (3h), Admin (2h) |
+
+Detalle Oriol:
+• Laboratorio Protésico Lleida: 4h (Reuniones, IM)
+• Proyecto X Industrial: 3h 20m (Teaser, Potenciales)  
+• Tareas Administrativas: 2h (Material Interno)
+Total entradas: 12
+```
+
+---
+
+## Orden de Implementación
+
+1. Corregir `formatHours()` para redondear a enteros
+2. Modificar query para incluir `mandato` y `work_task_type`
+3. Reestructurar agregación por usuario + por mandato
+4. Actualizar template HTML con diseño expandido
+5. Redesplegar Edge Function
+6. Enviar email de prueba para verificar
