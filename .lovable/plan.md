@@ -1,259 +1,355 @@
 
-# Notificación por Email cuando Supervisores Modifican Plan Diario
+# Plan: Apartado "Modelos" en Gestión
 
-## Resumen
-Implementar un sistema de notificación simple y robusto que envíe un email al propietario de un plan diario cuando ciertos supervisores (Lluis, Samuel) modifican sus tareas.
+## Resumen Ejecutivo
 
----
-
-## Análisis del Modelo Actual
-
-### Tablas Identificadas
-| Tabla | Propósito | Campos Clave |
-|-------|-----------|--------------|
-| `daily_plans` | Plan por usuario/fecha | `id`, `user_id` (propietario), `planned_for_date` |
-| `daily_plan_items` | Tareas del plan | `id`, `plan_id`, `title`, `created_by` (vacío actualmente) |
-| `admin_users` | Usuarios del sistema | `user_id`, `email`, `full_name` |
-
-### Emails de Supervisores Autorizados
-Basado en los datos reales de la base de datos:
-- `lluis@capittal.es` ✓ (confirmado)
-- `samuel@capittal.es` → No existe. Alternativas: `s.navarro@nrro.es` o `s.navarro@obn.es`
-
-**Decisión**: Crear tabla configurable para emails autorizados en lugar de hardcodear.
+Crear un nuevo apartado **Gestión → Modelos** que sirva como repositorio central de plantillas Word reutilizables para mandatos y NDAs, **reutilizando al 100%** la infraestructura existente de `document_templates`.
 
 ---
 
-## Arquitectura de la Solución
+## Arquitectura Existente a Reutilizar
+
+| Componente | Estado | Uso |
+|------------|--------|-----|
+| Tabla `document_templates` | ✅ Ya existe | Almacenar metadatos de modelos |
+| Bucket `document-templates` | ✅ Ya existe | Almacenar archivos Word |
+| Servicio `documentTemplates.service.ts` | ✅ Ya existe | CRUD de plantillas |
+| RLS policies | ✅ Ya existen | Admin puede gestionar, todos pueden ver |
+| Edge Function `download-document` | ✅ Ya existe | Descargas firmadas |
+
+---
+
+## Cambios en Base de Datos
+
+### No se crean tablas nuevas
+
+Se reutiliza `document_templates` agregando nuevas categorías:
+
+| Campo | Uso para Modelos |
+|-------|------------------|
+| `name` | Título descriptivo del modelo (obligatorio) |
+| `category` | `'Mandato_Compra'` / `'Mandato_Venta'` / `'NDA_Modelo'` |
+| `tipo_operacion` | `'compra'` / `'venta'` / `null` |
+| `template_url` | Ruta en Storage del archivo Word |
+| `file_name` | Nombre original del archivo |
+| `file_size_bytes` | Tamaño en bytes |
+| `mime_type` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `is_active` | Soft delete |
+
+### Migración SQL
+
+```sql
+-- Añadir nuevas categorías al sistema (solo documentación, no hay constraint)
+-- Las categorías son strings libres en document_templates
+
+-- Actualizar tipo TemplateCategory en código para incluir:
+-- 'Mandato_Compra' | 'Mandato_Venta' | 'NDA_Modelo'
+```
+
+---
+
+## Estructura de Archivos a Crear
+
+```text
+src/
+├── pages/
+│   └── admin/
+│       └── Modelos.tsx                    # Nueva página principal
+├── components/
+│   └── modelos/
+│       ├── ModelosPage.tsx                # Componente contenedor con tabs
+│       ├── ModeloCategorySection.tsx      # Sección por categoría
+│       └── ModeloUploadDialog.tsx         # Dialog para subir modelo
+├── services/
+│   └── modelos.service.ts                 # Reutiliza documentTemplates.service
+└── hooks/
+    └── queries/
+        └── useModelos.ts                  # Hooks React Query
+```
+
+---
+
+## Detalle de Implementación
+
+### 1. Página Principal: `src/pages/admin/Modelos.tsx`
+
+Ruta: `/admin/modelos`
+
+Contenido:
+- Layout con AppLayout
+- Tabs para las 3 secciones:
+  - **Mandatos de Compra** (category = 'Mandato_Compra')
+  - **Mandatos de Venta** (category = 'Mandato_Venta')
+  - **NDA** (category = 'NDA_Modelo')
+
+Permisos:
+- Solo accesible para `admin` y `super_admin`
+- Usar `ProtectedRoute` con `requiredRole="admin"`
+
+### 2. Componente por Sección: `ModeloCategorySection.tsx`
+
+Similar a `CompanyDocumentCategorySection.tsx` pero para modelos globales:
+
+Funcionalidades:
+- Listado de modelos de la categoría
+- Botón "Subir modelo" que abre dialog
+- Cada modelo muestra:
+  - Título descriptivo
+  - Nombre del archivo
+  - Fecha de subida
+  - Botón descargar
+  - Botón eliminar (soft delete)
+- Estado vacío: "No hay modelos en esta categoría"
+
+### 3. Dialog de Subida: `ModeloUploadDialog.tsx`
+
+Campos:
+- **Título** (obligatorio) - Input de texto
+- **Archivo Word** (obligatorio) - Solo .doc/.docx
+- Botón "Subir"
+
+Validaciones:
+- Título no vacío
+- Archivo debe ser .doc o .docx
+- Tamaño máximo 50MB
+
+### 4. Servicio: `modelos.service.ts`
+
+Funciones:
+```typescript
+// Obtener modelos por categoría
+getModelosByCategory(category: ModeloCategory): Promise<DocumentTemplate[]>
+
+// Subir nuevo modelo
+uploadModelo(file: File, title: string, category: ModeloCategory): Promise<DocumentTemplate>
+
+// Eliminar modelo (soft delete)
+deleteModelo(id: string): Promise<void>
+
+// Descargar modelo
+downloadModelo(templateUrl: string, fileName: string): Promise<void>
+```
+
+### 5. Hook: `useModelos.ts`
+
+```typescript
+useModelosByCategory(category: ModeloCategory)
+useUploadModelo()
+useDeleteModelo()
+useDownloadModelo()
+```
+
+---
+
+## Cambios en Sidebar
+
+Añadir nuevo item en el grupo "Gestión":
+
+```typescript
+// En menuGroups, grupo "gestion":
+{ id: "modelos", title: "Modelos", url: "/admin/modelos", icon: FileSignature },
+```
+
+---
+
+## Cambios en Routing
+
+En `App.tsx`:
+
+```typescript
+const Modelos = lazy(() => import("./pages/admin/Modelos"));
+
+// En rutas protegidas:
+<Route 
+  path="/admin/modelos" 
+  element={
+    <ProtectedRoute requiredRole="admin">
+      <AppLayout><Modelos /></AppLayout>
+    </ProtectedRoute>
+  } 
+/>
+```
+
+---
+
+## Tipos TypeScript
+
+Actualizar `src/types/documents.ts`:
+
+```typescript
+export type TemplateCategory = 
+  | 'NDA' 
+  | 'LOI' 
+  | 'Teaser' 
+  | 'SPA' 
+  | 'DD_Checklist' 
+  | 'Contrato' 
+  | 'Mandato_Compra'    // NUEVO
+  | 'Mandato_Venta'     // NUEVO
+  | 'NDA_Modelo'        // NUEVO
+  | 'Otro';
+
+export type ModeloCategory = 'Mandato_Compra' | 'Mandato_Venta' | 'NDA_Modelo';
+```
+
+---
+
+## Flujo de Subida de Modelo
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Usuario modifica daily_plan_items (INSERT/UPDATE/DELETE)                   │
+│  Admin hace clic en "Subir modelo" en sección Mandatos de Venta             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  TRIGGER: notify_plan_modification_trigger                                  │
-│  Condiciones:                                                               │
-│   - editor_email está en daily_plan_authorized_editors                      │
-│   - plan.user_id != auth.uid() (no es el propietario)                       │
-│                                                                             │
-│  Acción: Insertar registro en daily_plan_notifications (outbox)             │
+│  Se abre ModeloUploadDialog                                                 │
+│  - Input: Título del modelo (ej: "Mandato Venta Estándar v2")               │
+│  - Input: Archivo Word (.docx)                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Edge Function: send-plan-modification-email                                │
-│  - Lee notificaciones pendientes (processed_at IS NULL)                     │
-│  - Resuelve email del propietario desde admin_users                         │
-│  - Envía email via send-email existente                                     │
-│  - Marca como procesado                                                     │
+│  Validación:                                                                │
+│  - Título no vacío                                                          │
+│  - Archivo es .doc o .docx                                                  │
+│  - Tamaño < 50MB                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Propietario del plan recibe email:                                         │
-│  "Tu plan diario para 2026-02-05 ha sido modificado por Lluis"              │
+│  Storage: Subir a bucket 'document-templates'                               │
+│  Ruta: modelos/{category}/{uuid}-{filename}                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DB: Insert en document_templates                                           │
+│  - name: título descriptivo                                                 │
+│  - category: 'Mandato_Venta'                                                │
+│  - template_url: ruta en storage                                            │
+│  - file_name, file_size_bytes, mime_type                                    │
+│  - created_by: auth.uid()                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Refrescar listado - modelo aparece en la sección                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Componentes a Crear
+## Diseño Visual
 
-### 1. Tabla: `daily_plan_authorized_editors`
-Almacena los emails autorizados para disparar notificaciones.
+### Vista General de la Página
 
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | uuid | PK |
-| email | text | Email del editor autorizado |
-| name | text | Nombre para mostrar |
-| is_active | boolean | Si está activo |
-| created_at | timestamptz | Fecha creación |
-
-**Datos iniciales:**
-- lluis@capittal.es → "Lluis Montanya"
-- s.navarro@nrro.es → "Samuel Navarro" (ajustar si es otro email)
-
-### 2. Tabla: `daily_plan_notifications` (outbox)
-Cola de notificaciones pendientes de enviar.
-
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | uuid | PK |
-| plan_id | uuid | FK a daily_plans |
-| plan_owner_id | uuid | Usuario propietario del plan |
-| editor_id | uuid | Usuario que hizo el cambio |
-| editor_email | text | Email del editor |
-| planned_for_date | date | Fecha del plan |
-| operation | text | INSERT/UPDATE/DELETE |
-| item_title | text | Título de la tarea afectada |
-| created_at | timestamptz | Momento del cambio |
-| processed_at | timestamptz | Cuándo se envió el email (NULL = pendiente) |
-| error | text | Error si falló el envío |
-
-### 3. Trigger Function: `notify_plan_modification()`
-
-Lógica:
-1. Obtener `plan_id` del item (NEW o OLD)
-2. Obtener `user_id` del plan (propietario)
-3. Obtener email del editor actual via `auth.uid()`
-4. Verificar si editor está en `daily_plan_authorized_editors`
-5. Verificar que `plan.user_id != auth.uid()` (no es auto-modificación)
-6. Si cumple condiciones → INSERT en `daily_plan_notifications`
-
-### 4. Edge Function: `send-plan-modification-email`
-
-Proceso:
-1. Query notificaciones donde `processed_at IS NULL`
-2. Para cada notificación:
-   - Resolver email del propietario desde `admin_users`
-   - Generar email simple
-   - Llamar a `send-email` existente
-   - Marcar como `processed_at = now()`
-3. Manejo de errores con retry
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  [Sidebar]  │  Modelos de Documentos                                        │
+│             │                                                               │
+│             │  ┌─────────────────────────────────────────────────────────┐  │
+│             │  │ [Mandatos de Compra] [Mandatos de Venta] [NDA]          │  │
+│             │  └─────────────────────────────────────────────────────────┘  │
+│             │                                                               │
+│             │  ┌─────────────────────────────────────────────────────────┐  │
+│             │  │  📄 Mandatos de Venta (3)            [+ Subir modelo]   │  │
+│             │  ├─────────────────────────────────────────────────────────┤  │
+│             │  │                                                         │  │
+│             │  │  ┌───────────────────────────────────────────────────┐  │  │
+│             │  │  │ 📄 Mandato Venta Estándar v2                      │  │  │
+│             │  │  │    mandato_venta_estandar.docx • 245 KB           │  │  │
+│             │  │  │    Subido 4 feb 2026                [⬇️] [🗑️]      │  │  │
+│             │  │  └───────────────────────────────────────────────────┘  │  │
+│             │  │                                                         │  │
+│             │  │  ┌───────────────────────────────────────────────────┐  │  │
+│             │  │  │ 📄 Mandato Venta Industrial                       │  │  │
+│             │  │  │    mandato_industrial_2026.docx • 312 KB          │  │  │
+│             │  │  │    Subido 1 feb 2026                [⬇️] [🗑️]      │  │  │
+│             │  │  └───────────────────────────────────────────────────┘  │  │
+│             │  │                                                         │  │
+│             │  └─────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Archivos a Crear
+## Archivos a Crear/Modificar
+
+### Archivos Nuevos
 
 | Archivo | Descripción |
 |---------|-------------|
-| Migración SQL | Crear tablas + trigger + función |
-| `supabase/functions/send-plan-modification-email/index.ts` | Edge function para enviar emails |
+| `src/pages/admin/Modelos.tsx` | Página principal |
+| `src/components/modelos/ModeloCategorySection.tsx` | Sección por categoría |
+| `src/components/modelos/ModeloUploadDialog.tsx` | Dialog de subida |
+| `src/services/modelos.service.ts` | Servicio de modelos |
+| `src/hooks/queries/useModelos.ts` | Hooks React Query |
+
+### Archivos a Modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/App.tsx` | Añadir ruta `/admin/modelos` |
+| `src/components/layout/AppSidebar.tsx` | Añadir item "Modelos" en Gestión |
+| `src/types/documents.ts` | Añadir nuevas categorías de template |
 
 ---
 
-## Archivos a Modificar
+## Validaciones de Archivo
 
-Ninguno. La implementación es 100% server-side (trigger + edge function).
+```typescript
+const ALLOWED_EXTENSIONS = ['.doc', '.docx'];
+const ALLOWED_MIME_TYPES = [
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+```
 
 ---
 
-## Detalles Técnicos
-
-### SQL del Trigger Function
-
-```sql
-CREATE OR REPLACE FUNCTION public.notify_plan_modification()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_plan_id UUID;
-  v_plan_owner_id UUID;
-  v_planned_for_date DATE;
-  v_editor_id UUID;
-  v_editor_email TEXT;
-  v_item_title TEXT;
-  v_is_authorized BOOLEAN;
-BEGIN
-  -- Get plan_id from the affected row
-  v_plan_id := COALESCE(NEW.plan_id, OLD.plan_id);
-  v_item_title := COALESCE(NEW.title, OLD.title);
-  
-  -- Get plan owner and date
-  SELECT user_id, planned_for_date 
-  INTO v_plan_owner_id, v_planned_for_date
-  FROM daily_plans 
-  WHERE id = v_plan_id;
-  
-  -- Get current user (editor)
-  v_editor_id := auth.uid();
-  
-  -- Skip if editor is the plan owner (self-modification)
-  IF v_editor_id = v_plan_owner_id THEN
-    RETURN COALESCE(NEW, OLD);
-  END IF;
-  
-  -- Get editor email
-  SELECT email INTO v_editor_email
-  FROM auth.users WHERE id = v_editor_id;
-  
-  -- Check if editor is authorized to trigger notifications
-  SELECT EXISTS(
-    SELECT 1 FROM daily_plan_authorized_editors 
-    WHERE email = v_editor_email AND is_active = true
-  ) INTO v_is_authorized;
-  
-  -- Only queue notification if editor is authorized
-  IF v_is_authorized THEN
-    INSERT INTO daily_plan_notifications (
-      plan_id, plan_owner_id, editor_id, editor_email,
-      planned_for_date, operation, item_title
-    ) VALUES (
-      v_plan_id, v_plan_owner_id, v_editor_id, v_editor_email,
-      v_planned_for_date, TG_OP, v_item_title
-    );
-  END IF;
-  
-  RETURN COALESCE(NEW, OLD);
-END;
-$$;
-```
-
-### Contenido del Email
-
-**Asunto:** `Aviso: cambio en tu plan diario`
-
-**Cuerpo (HTML simple):**
-```html
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2>Aviso: cambio en tu plan diario</h2>
-  <p>Tu plan diario para <strong>{fecha}</strong> ha sido modificado.</p>
-  <p>Modificado por: <strong>{nombre_editor}</strong></p>
-  <p style="margin-top: 20px;">
-    <a href="https://crm-capittal.lovable.app/plan-diario">Ver mi plan</a>
-  </p>
-</div>
-```
-
-### Invocación del Edge Function
-
-Dos opciones (implementaré ambas):
-
-**Opción A - Cron cada 1 minuto (recomendada):**
-```sql
-SELECT cron.schedule(
-  'process-plan-notifications',
-  '* * * * *', -- cada minuto
-  $$ SELECT net.http_post(...) $$
-);
-```
-
-**Opción B - Invocación desde el trigger (alternativa):**
-Usar `pg_net` directamente desde el trigger para invocar la edge function inmediatamente.
-
----
-
-## Flujo de Pruebas
+## Casos de Prueba
 
 | Caso | Acción | Resultado Esperado |
 |------|--------|-------------------|
-| A | Lluis añade tarea al plan de Oriol | Oriol recibe email |
-| B | Samuel elimina tarea del plan de Marc | Marc recibe email |
-| C | Oriol modifica su propio plan | NO se envía email |
-| D | Marc (no autorizado) modifica plan de otro | NO se envía email |
-| E | Múltiples cambios rápidos | Se procesan todos, sin duplicados |
-
----
-
-## Consideraciones de Seguridad
-
-1. **RLS en tablas nuevas**: Solo super_admin puede gestionar editors autorizados
-2. **SECURITY DEFINER**: El trigger accede a auth.users con privilegios elevados
-3. **No datos sensibles**: El email solo contiene fecha y nombre del editor
-4. **Idempotencia**: `processed_at` previene reenvíos
+| A | Subir modelo Word en "Mandatos de Venta" con título | Aparece en listado, se puede descargar |
+| B | Subir 2 modelos distintos en "NDA" | Ambos aparecen correctamente |
+| C | Subir archivo no Word (.pdf) | Error: "Solo se permiten archivos .doc/.docx" |
+| D | Subir sin título | Error: "El título es obligatorio" |
+| E | Refresh de página | Todos los modelos persisten |
+| F | Usuario viewer intenta acceder a /admin/modelos | Redirigido a dashboard |
+| G | Descargar modelo | Se descarga archivo Word correctamente |
+| H | Eliminar modelo | Desaparece del listado (soft delete) |
 
 ---
 
 ## Orden de Implementación
 
-1. Crear migración con tablas + trigger + función
-2. Insertar datos iniciales (editors autorizados)
-3. Crear Edge Function send-plan-modification-email
-4. Configurar cron job para procesar cola
-5. Probar con cambio real de Lluis en plan de otro usuario
+1. Actualizar tipos en `src/types/documents.ts`
+2. Crear servicio `src/services/modelos.service.ts`
+3. Crear hooks `src/hooks/queries/useModelos.ts`
+4. Crear componentes UI:
+   - `ModeloUploadDialog.tsx`
+   - `ModeloCategorySection.tsx`
+5. Crear página `src/pages/admin/Modelos.tsx`
+6. Añadir ruta en `App.tsx`
+7. Añadir item en sidebar `AppSidebar.tsx`
+8. Probar flujo completo
+
+---
+
+## Resumen para Usuario No Técnico
+
+Se creará un nuevo apartado **"Modelos"** dentro del menú **Gestión** del CRM. Este apartado tendrá 3 secciones:
+
+1. **Mandatos de Compra** - Para plantillas de contratos de compra
+2. **Mandatos de Venta** - Para plantillas de contratos de venta  
+3. **NDA** - Para plantillas de acuerdos de confidencialidad
+
+En cada sección podrás:
+- **Subir** documentos Word (.doc o .docx) con un título descriptivo
+- **Descargar** los modelos cuando los necesites
+- **Eliminar** modelos que ya no sean necesarios
+
+Solo los usuarios con permisos de administrador podrán ver y gestionar este apartado.
