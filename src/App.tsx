@@ -69,6 +69,7 @@ const CampaignContacts = lazy(() => import("./pages/admin/CampaignContacts"));
 const PlanDiario = lazy(() => import("./pages/PlanDiario"));
 const DailyPlansAdmin = lazy(() => import("./pages/admin/DailyPlansAdmin"));
 const ReportesEmail = lazy(() => import("./pages/admin/ReportesEmail"));
+const Modelos = lazy(() => import("./pages/admin/Modelos"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -124,6 +125,7 @@ function AppContent() {
             <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/modelos" element={<ProtectedRoute requiredRole="admin"><AppLayout><Modelos /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
             <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
             

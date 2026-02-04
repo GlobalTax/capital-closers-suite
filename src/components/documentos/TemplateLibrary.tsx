@@ -19,6 +19,9 @@ const categoryConfig: Record<TemplateCategory, { icon: React.ReactNode; color: s
   SPA: { icon: <ScrollText className="w-4 h-4" />, color: 'text-purple-500', label: 'SPA' },
   DD_Checklist: { icon: <ListChecks className="w-4 h-4" />, color: 'text-orange-500', label: 'DD Checklist' },
   Contrato: { icon: <FileText className="w-4 h-4" />, color: 'text-amber-500', label: 'Contrato' },
+  Mandato_Compra: { icon: <FileSignature className="w-4 h-4" />, color: 'text-emerald-500', label: 'Mandato Compra' },
+  Mandato_Venta: { icon: <FileSignature className="w-4 h-4" />, color: 'text-teal-500', label: 'Mandato Venta' },
+  NDA_Modelo: { icon: <Shield className="w-4 h-4" />, color: 'text-rose-500', label: 'NDA Modelo' },
   Otro: { icon: <FileText className="w-4 h-4" />, color: 'text-muted-foreground', label: 'Otro' },
 };
 
