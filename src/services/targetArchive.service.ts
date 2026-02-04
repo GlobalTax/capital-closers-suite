@@ -19,6 +19,26 @@ export async function archiveTarget(mandatoEmpresaId: string): Promise<void> {
 }
 
 /**
+ * Archivar múltiples targets a la vez
+ */
+export async function archiveTargetsBulk(mandatoEmpresaIds: string[]): Promise<void> {
+  if (mandatoEmpresaIds.length === 0) return;
+  
+  const { data: user } = await supabase.auth.getUser();
+  
+  const { error } = await supabase
+    .from("mandato_empresas")
+    .update({ 
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by: user?.user?.id
+    })
+    .in("id", mandatoEmpresaIds);
+
+  if (error) throw error;
+}
+
+/**
  * Restaurar un target archivado
  */
 export async function unarchiveTarget(mandatoEmpresaId: string): Promise<void> {

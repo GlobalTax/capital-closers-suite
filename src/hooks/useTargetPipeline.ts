@@ -14,7 +14,7 @@ import {
   getOfertasByTarget,
   cambiarEstadoOferta,
 } from "@/services/targetOfertas.service";
-import { archiveTarget, unarchiveTarget } from "@/services/targetArchive.service";
+import { archiveTarget, archiveTargetsBulk, unarchiveTarget } from "@/services/targetArchive.service";
 import type { 
   TargetFunnelStage, 
   TargetPipelineStage, 
@@ -149,6 +149,20 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     onError: (error) => handleError(error, 'Archivar target'),
   });
 
+  // Mutation: Archivar múltiples targets
+  const archiveBulkMutation = useMutation({
+    mutationFn: (targetIds: string[]) => archiveTargetsBulk(targetIds),
+    onSuccess: async (_data, targetIds) => {
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+      toast({ 
+        title: `${targetIds.length} target${targetIds.length > 1 ? 's' : ''} archivado${targetIds.length > 1 ? 's' : ''}`, 
+        description: "Los targets han sido excluidos de los KPIs activos" 
+      });
+    },
+    onError: (error) => handleError(error, 'Archivar targets'),
+  });
+
   // Mutation: Restaurar target
   const unarchiveMutation = useMutation({
     mutationFn: (targetId: string) => unarchiveTarget(targetId),
@@ -176,6 +190,7 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     updateOfertaEstado: updateOfertaEstadoMutation.mutate,
     deleteOferta: deleteOfertaMutation.mutate,
     archiveTarget: archiveMutation.mutate,
+    archiveTargetsBulk: archiveBulkMutation.mutate,
     unarchiveTarget: unarchiveMutation.mutate,
 
     // Loading states
@@ -183,6 +198,7 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     isSavingScoring: updateScoringMutation.isPending,
     isSavingOferta: createOfertaMutation.isPending || updateOfertaEstadoMutation.isPending,
     isArchiving: archiveMutation.isPending || unarchiveMutation.isPending,
+    isArchivingBulk: archiveBulkMutation.isPending,
 
     // Refetch
     refetch: () => {
