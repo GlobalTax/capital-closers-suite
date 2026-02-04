@@ -202,28 +202,36 @@ export function TimerAssignmentDialog() {
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (pendingTimeSeconds * 1000));
       
-      // Transform lead ID for Prospección project
+      // Transform lead ID for time entry
+      // Handle different lead sources appropriately
       let finalMandateLeadId: string | null = null;
       
-      if (data.leadId && isProspeccionProject && selectedLeadData) {
-        // The leadId is from admin_leads, need to create/get mandate_leads entry
-        const prospect = selectedLeadData as ProspectForTimeEntry;
-        const leadType = getLeadTypeFromSourceTable(prospect.source_table);
+      if (data.leadId && selectedLeadData) {
+        // Check if the lead already comes from mandate_leads (via GlobalLeadSearch)
+        const sourceTable = (selectedLeadData as any).source_table as string;
         
-        finalMandateLeadId = await ensureLeadInMandateLeads(
-          data.leadId,
-          leadType,
-          data.mandatoId,
-          {
-            companyName: prospect.company_name || 'Sin nombre',
-            contactName: prospect.contact_name || undefined,
-            contactEmail: prospect.contact_email || undefined,
-            sector: prospect.sector || undefined,
-          }
-        );
-      } else if (data.leadId && !isProspeccionProject) {
-        // For regular mandatos, leadId is already from mandate_leads
-        finalMandateLeadId = data.leadId;
+        if (sourceTable === 'mandate_leads') {
+          // Lead already exists in mandate_leads, use it directly
+          finalMandateLeadId = data.leadId;
+        } else if (isProspeccionProject) {
+          // For Prospección project with leads from form tables, create/get mandate_leads entry
+          const leadType = getLeadTypeFromSourceTable(sourceTable);
+          
+          finalMandateLeadId = await ensureLeadInMandateLeads(
+            data.leadId,
+            leadType,
+            data.mandatoId,
+            {
+              companyName: (selectedLeadData as any).company_name || 'Sin nombre',
+              contactName: (selectedLeadData as any).contact_name || undefined,
+              contactEmail: (selectedLeadData as any).contact_email || undefined,
+              sector: (selectedLeadData as any).sector || undefined,
+            }
+          );
+        } else {
+          // For regular mandatos with LeadByMandatoSelect, leadId is already from mandate_leads
+          finalMandateLeadId = data.leadId;
+        }
       }
       
       // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)

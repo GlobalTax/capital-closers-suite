@@ -37,10 +37,14 @@ const INTERNAL_PROJECT_IDS_NO_LEADS = [
 ];
 
 // Map source_table from prospects to leadType for ensureLeadInMandateLeads
+// Uses the 3 tables from /gestion-leads: contact_leads, company_valuations, collaborator_applications
 function getLeadTypeFromSourceTable(sourceTable: string): 'contact' | 'valuation' | 'collaborator' {
   switch (sourceTable) {
-    case 'sell_leads':
+    case 'company_valuations':
       return 'valuation';
+    case 'collaborator_applications':
+      return 'collaborator';
+    case 'contact_leads':
     default:
       return 'contact';
   }
@@ -274,29 +278,36 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Transform lead ID for Prospección project
-      // For Prospección, leadId comes from admin_leads but we need mandate_leads.id
+      // Transform lead ID for time entry
+      // Handle different lead sources appropriately
       let finalMandateLeadId: string | null = null;
       
-      if (leadId && isProspeccionProject && selectedLeadData) {
-        // The leadId is from admin_leads, need to create/get mandate_leads entry
-        const prospect = selectedLeadData as ProspectForTimeEntry;
-        const leadType = getLeadTypeFromSourceTable(prospect.source_table);
+      if (leadId && selectedLeadData) {
+        // Check if the lead already comes from mandate_leads (via GlobalLeadSearch)
+        const sourceTable = (selectedLeadData as any).source_table as string;
         
-        finalMandateLeadId = await ensureLeadInMandateLeads(
-          leadId,
-          leadType,
-          mandatoId,
-          {
-            companyName: prospect.company_name || 'Sin nombre',
-            contactName: prospect.contact_name || undefined,
-            contactEmail: prospect.contact_email || undefined,
-            sector: prospect.sector || undefined,
-          }
-        );
-      } else if (leadId && !isProspeccionProject) {
-        // For regular mandatos, leadId is already from mandate_leads
-        finalMandateLeadId = leadId;
+        if (sourceTable === 'mandate_leads') {
+          // Lead already exists in mandate_leads, use it directly
+          finalMandateLeadId = leadId;
+        } else if (isProspeccionProject) {
+          // For Prospección project with leads from form tables, create/get mandate_leads entry
+          const leadType = getLeadTypeFromSourceTable(sourceTable);
+          
+          finalMandateLeadId = await ensureLeadInMandateLeads(
+            leadId,
+            leadType,
+            mandatoId,
+            {
+              companyName: (selectedLeadData as any).company_name || 'Sin nombre',
+              contactName: (selectedLeadData as any).contact_name || undefined,
+              contactEmail: (selectedLeadData as any).contact_email || undefined,
+              sector: (selectedLeadData as any).sector || undefined,
+            }
+          );
+        } else {
+          // For regular mandatos with LeadByMandatoSelect, leadId is already from mandate_leads
+          finalMandateLeadId = leadId;
+        }
       }
 
       // Prepare entry with tiered selection: mandato_id (required) + mandate_lead_id (optional)
