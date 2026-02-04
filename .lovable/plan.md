@@ -1,128 +1,84 @@
 
-# Implementación: Vista de Targets Archivados
+# Añadir Confirmación antes de Archivar un Target
 
 ## Resumen
-Crear una vista dedicada para visualizar y gestionar targets archivados, accesible desde el tab de Targets en mandatos Buy-Side, con opciones de restauración y gestión.
+Agregar un diálogo de confirmación cuando el usuario hace click en "Archivar" para prevenir acciones accidentales.
 
 ---
 
-## Diseño de la Solución
+## Cambio Propuesto
 
-### Comportamiento Actual
-- El toggle "Archivados" en `TargetsTabBuySide.tsx` activa `showArchived` que incluye targets archivados en la lista general
-- Los targets archivados se muestran mezclados con los activos cuando el toggle está activo
-- No hay una vista dedicada ni forma fácil de ver solo los archivados
+### Modificar `TargetDetailDrawer.tsx`
 
-### Comportamiento Propuesto
-- Al activar el toggle "Archivados", mostrar **únicamente** los targets archivados en una vista especializada
-- Incluir información de cuándo y por quién fue archivado
-- Añadir acciones masivas de restauración
-- Mantener la posibilidad de ver el detalle del target para restaurar individualmente
-
----
-
-## Cambios Técnicos
-
-### 1. Nuevo Componente: `ArchivedTargetsView`
-**Archivo:** `src/components/mandatos/buyside/ArchivedTargetsView.tsx`
-
-Vista de tabla para targets archivados con:
-- Columnas: Empresa, Sector, Fecha Archivado, Archivado Por, Acciones
-- Botón de restauración por fila
-- Empty state cuando no hay archivados
-- Badge con conteo de archivados en el toggle
-
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│ ☐ │ Empresa          │ Sector    │ Archivado     │ Por      │ Acciones  │
-├──────────────────────────────────────────────────────────────────────────┤
-│ ☐ │ Target Corp      │ Tech      │ Hace 3 días   │ A.García │ Restaurar │
-│ ☐ │ Another Inc      │ Finanzas  │ Hace 1 semana │ M.López  │ Restaurar │
-└──────────────────────────────────────────────────────────────────────────┘
+**1. Añadir estado para controlar el diálogo:**
+```typescript
+const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 ```
 
-### 2. Modificar `TargetsTabBuySide.tsx`
-**Cambios:**
-- Importar nuevo componente `ArchivedTargetsView`
-- Mejorar el toggle para mostrar conteo de archivados
-- Cuando `showArchived === true`, mostrar solo `ArchivedTargetsView` en lugar del Kanban/Lista
-- Ocultar el Funnel cuando se ven archivados (no aplica)
-- Añadir lógica para filtrar solo archivados
+**2. Importar el componente `ConfirmDialog`:**
+```typescript
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+```
+
+**3. Modificar el botón "Archivar":**
+En lugar de llamar directamente a `onArchiveTarget`, abrir el diálogo de confirmación:
 
 ```typescript
-// Conteo de archivados
-const archivedCount = useMemo(() => 
-  targets.filter(t => t.is_archived).length, 
-[targets]);
-
-// Cuando showArchived está activo, filtrar SOLO archivados
-const filteredTargets = useMemo(() => {
-  if (showArchived) {
-    return targets.filter(t => t.is_archived);
+onClick={() => {
+  if (target.is_archived) {
+    // Restaurar no necesita confirmación
+    onUnarchiveTarget?.(target.id);
+  } else {
+    // Archivar requiere confirmación
+    setConfirmArchiveOpen(true);
   }
-  // ... resto de filtros existentes
-}, [targets, showArchived, ...]);
+}}
 ```
 
-### 3. Actualizar Toggle UI
-Mostrar badge con conteo en el toggle de archivados:
-
-```text
-┌─────────────────────────┐
-│ [🔘] Archivados (3)     │
-└─────────────────────────┘
+**4. Añadir el diálogo de confirmación:**
+```typescript
+<ConfirmDialog
+  open={confirmArchiveOpen}
+  onOpenChange={setConfirmArchiveOpen}
+  titulo="¿Archivar este target?"
+  descripcion={`El target "${empresa.nombre}" será excluido de los KPIs activos y del Kanban. Podrás restaurarlo más tarde desde la vista de archivados.`}
+  onConfirmar={() => {
+    onArchiveTarget?.(target.id);
+    setConfirmArchiveOpen(false);
+  }}
+  textoConfirmar="Archivar"
+  textoCancelar="Cancelar"
+/>
 ```
-
-### 4. Servicio: Obtener Usuario que Archivó
-**Archivo:** `src/services/targetArchive.service.ts`
-
-Añadir función para obtener información del usuario que archivó (para mostrar nombre en la tabla).
-
----
-
-## Estructura de Archivos
-
-| Archivo | Acción | Descripción |
-|---------|--------|-------------|
-| `src/components/mandatos/buyside/ArchivedTargetsView.tsx` | Crear | Nuevo componente de vista de archivados |
-| `src/features/mandatos/tabs/TargetsTabBuySide.tsx` | Modificar | Integrar vista de archivados y mejorar toggle |
-| `src/types/index.ts` | Verificar | Asegurar que `MandatoEmpresaBuySide` incluye `archived_at` y `archived_by` |
 
 ---
 
 ## Flujo de Usuario
 
 ```text
-1. Usuario navega a Targets de un mandato Buy-Side
-2. Ve el toggle "Archivados" en la barra de herramientas
-3. Activa el toggle:
-   - Funnel se oculta (no aplica a archivados)
-   - Kanban/Lista se reemplaza por ArchivedTargetsView
-   - Ve tabla con todos los targets archivados
-4. Click en "Restaurar" en una fila:
-   - Target vuelve al pipeline activo
-   - Desaparece de la vista de archivados
-   - KPI "Targets Activos" incrementa en 1
-5. Desactiva toggle para volver a vista normal
+1. Usuario click en botón "Archivar"
+         ↓
+2. Se abre diálogo: "¿Archivar este target?"
+   - Descripción explica consecuencias
+         ↓
+3a. Click "Cancelar" → Diálogo se cierra, sin cambios
+3b. Click "Archivar" → Se ejecuta la acción, drawer se cierra
 ```
 
 ---
 
-## Consideraciones
+## Archivo a Modificar
 
-- **Performance**: La query actual ya trae todos los targets (archivados y no archivados), solo se filtra en frontend
-- **Permisos**: Mantener consistencia con permisos existentes de archivado
-- **UX**: Hacer clara la distinción visual entre vista de activos y vista de archivados
-- **Información de auditoría**: Mostrar `archived_at` formateado y nombre del usuario `archived_by`
+| Archivo | Cambio |
+|---------|--------|
+| `src/components/mandatos/buyside/TargetDetailDrawer.tsx` | Añadir estado, importar ConfirmDialog, mostrar diálogo antes de archivar |
 
 ---
 
-## Verificación Post-Implementación
+## Verificación
 
-1. Activar toggle "Archivados"
-2. Verificar que solo se muestran targets archivados
-3. Verificar que el Funnel se oculta
-4. Click en "Restaurar" en un target
-5. Confirmar que desaparece de la vista de archivados
-6. Desactivar toggle y verificar que el target aparece en Kanban
-7. Confirmar que KPI "Targets Activos" se incrementó
+1. Abrir drawer de un target
+2. Click en "Archivar"
+3. Verificar que aparece el diálogo de confirmación
+4. Click "Cancelar" y verificar que no pasa nada
+5. Click "Archivar" nuevamente → Confirmar → Verificar que se archiva correctamente
