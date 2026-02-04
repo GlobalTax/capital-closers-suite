@@ -70,6 +70,8 @@ const PlanDiario = lazy(() => import("./pages/PlanDiario"));
 const DailyPlansAdmin = lazy(() => import("./pages/admin/DailyPlansAdmin"));
 const ReportesEmail = lazy(() => import("./pages/admin/ReportesEmail"));
 const Modelos = lazy(() => import("./pages/admin/Modelos"));
+const CorporateBuyers = lazy(() => import("./pages/admin/CorporateBuyers"));
+const BuyerSourceTags = lazy(() => import("./pages/admin/BuyerSourceTags"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -126,6 +128,8 @@ function AppContent() {
             <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/modelos" element={<ProtectedRoute requiredRole="admin"><AppLayout><Modelos /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/corporate-buyers" element={<ProtectedRoute requiredRole="admin"><AppLayout><CorporateBuyers /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/buyer-source-tags" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><BuyerSourceTags /></AppLayout></ProtectedRoute>} />
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
             <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
             

@@ -41,6 +41,7 @@ import {
   Star,
   Mail,
   HelpCircle,
+  Tag,
 } from "lucide-react";
 import {
   Sidebar,
@@ -182,6 +183,8 @@ const superAdminGroup: MenuGroup = {
     { id: "importar-datos", title: "Importar Datos", url: "/importar-datos", icon: Upload },
     { id: "horas-equipo", title: "Horas Equipo", url: "/horas-equipo", icon: Users },
     { id: "audit-logs", title: "Audit Logs", url: "/audit-logs", icon: Shield },
+    { id: "corporate-buyers", title: "Directorio Corporativo", url: "/admin/corporate-buyers", icon: Building2 },
+    { id: "buyer-source-tags", title: "Etiquetas Origen", url: "/admin/buyer-source-tags", icon: Tag },
   ],
 };
 
