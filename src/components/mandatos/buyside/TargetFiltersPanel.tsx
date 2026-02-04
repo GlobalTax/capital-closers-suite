@@ -11,12 +11,20 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronDown,
   ChevronRight,
   X,
   Filter,
   AlertTriangle,
   Ban,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +36,8 @@ import {
   type TargetPipelineStage,
 } from "@/types";
 
+export type ActivityFilter = "all" | "7d" | "30d" | "60d" | "inactive_30d" | "inactive_60d";
+
 export interface TargetFilters {
   buyerTypes: BuyerType[];
   funnelStages: TargetFunnelStage[];
@@ -38,6 +48,7 @@ export interface TargetFilters {
   hideNoContactar: boolean;
   hideConflictos: boolean;
   onlyConflictos: boolean;
+  activityFilter: ActivityFilter;
 }
 
 export const defaultFilters: TargetFilters = {
@@ -50,7 +61,17 @@ export const defaultFilters: TargetFilters = {
   hideNoContactar: false,
   hideConflictos: false,
   onlyConflictos: false,
+  activityFilter: "all",
 };
+
+const ACTIVITY_OPTIONS: { value: ActivityFilter; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "7d", label: "Últimos 7 días" },
+  { value: "30d", label: "Últimos 30 días" },
+  { value: "60d", label: "Últimos 60 días" },
+  { value: "inactive_30d", label: "Inactivos +30 días" },
+  { value: "inactive_60d", label: "Inactivos +60 días" },
+];
 
 interface TargetFiltersPanelProps {
   filters: TargetFilters;
@@ -73,6 +94,7 @@ export function TargetFiltersPanel({
     pipeline: false,
     tags: false,
     scores: false,
+    activity: false,
     alerts: true,
   });
 
@@ -90,6 +112,7 @@ export function TargetFiltersPanel({
     filters.hideNoContactar,
     filters.hideConflictos,
     filters.onlyConflictos,
+    filters.activityFilter !== "all",
   ].filter(Boolean).length;
 
   const clearFilters = () => onChange(defaultFilters);
@@ -319,6 +342,36 @@ export function TargetFiltersPanel({
               step={5}
               className="mt-2"
             />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Activity Section */}
+      <Collapsible open={openSections.activity} onOpenChange={() => toggleSection("activity")}>
+        <CollapsibleTrigger className="flex items-center gap-1 w-full text-sm font-medium hover:text-foreground text-muted-foreground">
+          {openSections.activity ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          Actividad
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select
+              value={filters.activityFilter}
+              onValueChange={(value) =>
+                onChange({ ...filters, activityFilter: value as ActivityFilter })
+              }
+            >
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue placeholder="Filtrar por actividad" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CollapsibleContent>
       </Collapsible>

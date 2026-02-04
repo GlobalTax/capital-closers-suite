@@ -144,6 +144,34 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
       result = result.filter(t => t.tiene_conflicto);
     }
 
+    // Filtrar por actividad (usamos pipeline_stage_changed_at como indicador de actividad)
+    if (filters.activityFilter !== "all") {
+      const now = new Date();
+      result = result.filter(t => {
+        // Usamos pipeline_stage_changed_at o archived_at o created_at como fecha de referencia
+        const activityDate = t.pipeline_stage_changed_at || t.archived_at || t.created_at;
+        const dateToCheck = activityDate ? new Date(activityDate) : null;
+        if (!dateToCheck) return filters.activityFilter.startsWith("inactive");
+        
+        const diffDays = Math.floor((now.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (filters.activityFilter) {
+          case "7d":
+            return diffDays <= 7;
+          case "30d":
+            return diffDays <= 30;
+          case "60d":
+            return diffDays <= 60;
+          case "inactive_30d":
+            return diffDays > 30;
+          case "inactive_60d":
+            return diffDays > 60;
+          default:
+            return true;
+        }
+      });
+    }
+
     return result;
   }, [targets, selectedFunnelStage, filters, showArchived]);
 
