@@ -149,21 +149,37 @@ export async function ensureLeadInMandateLeads(
     sector?: string;
   }
 ): Promise<string> {
-  // Check if already exists
-  const fieldName = leadType === 'valuation' ? 'valuation_id' : 'admin_lead_id';
-  
-  const { data: existing } = await supabase
+  // Check if already exists using source + source_id (the correct unique identifier)
+  // This avoids the FK issue where leadId might not exist in admin_leads
+  const { data: existingBySource } = await supabase
     .from('mandate_leads')
     .select('id')
-    .eq(fieldName, leadId)
+    .eq('source', leadType)
+    .eq('source_id', leadId)
     .eq('mandato_id', mandatoId)
     .maybeSingle();
 
-  if (existing) {
-    return existing.id;
+  if (existingBySource) {
+    return existingBySource.id;
+  }
+
+  // Also check by valuation_id if it's a valuation type (legacy support)
+  if (leadType === 'valuation') {
+    const { data: existingByValuation } = await supabase
+      .from('mandate_leads')
+      .select('id')
+      .eq('valuation_id', leadId)
+      .eq('mandato_id', mandatoId)
+      .maybeSingle();
+
+    if (existingByValuation) {
+      return existingByValuation.id;
+    }
   }
 
   // Create new mandate_lead entry
+  // IMPORTANT: Only set admin_lead_id if the leadId actually exists in admin_leads
+  // For contact_leads, company_valuations, collaborator_applications, we use source + source_id
   const insertData: any = {
     mandato_id: mandatoId,
     company_name: leadData.companyName,
@@ -173,12 +189,13 @@ export async function ensureLeadInMandateLeads(
     stage: 'contactado',
     source: leadType,
     source_id: leadId,
+    // DO NOT set admin_lead_id - that FK references admin_leads table
+    // and the leadId here comes from contact_leads/company_valuations/collaborator_applications
   };
 
+  // Only set valuation_id for valuation type (if the FK exists for advisor_valuations)
   if (leadType === 'valuation') {
     insertData.valuation_id = leadId;
-  } else {
-    insertData.admin_lead_id = leadId;
   }
 
   const { data, error } = await supabase
