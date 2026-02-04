@@ -1,142 +1,259 @@
 
-# Mejora del Reporte Diario de Horas
+# Notificación por Email cuando Supervisores Modifican Plan Diario
 
-## Problemas Identificados en la Captura
-
-1. **Decimales flotantes descontrolados**: Se muestran números como `9.99999999999886m` en lugar de `10m` debido a errores de precisión en JavaScript al dividir minutos entre 60.
-
-2. **Información insuficiente para un supervisor**: El email actual solo muestra totales por usuario y "tipos de trabajo" genéricos (siempre "Otro"), sin contexto de qué proyectos/mandatos se trabajaron ni descripciones.
-
-## Solución Propuesta
-
-### 1. Corrección de Decimales
-
-Cambiar la lógica para trabajar siempre en **minutos enteros** y redondear antes de formatear:
-
-```typescript
-// ANTES (problema)
-existing.totalHours += minutes / 60; // Genera 9.9999999...
-
-// DESPUÉS (solución)
-existing.totalMinutes += Math.round(minutes); // Mantener en minutos enteros
-// Formatear al final con Math.floor y Math.round
-```
-
-### 2. Contenido Ampliado del Email
-
-**Nuevo diseño del email incluye:**
-
-**Por cada usuario:**
-- Nombre
-- Horas totales (sin decimales: "9h 40m")
-- Horas facturables
-- **Desglose por mandato/proyecto** con horas dedicadas
-- **Tipos de tarea** realizados (IM, Teaser, Reuniones, etc.)
-- Número de entradas registradas
-
-**Nueva sección detallada por usuario:**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ MARC - 9h 40m (6h 15m facturables)                          │
-├─────────────────────────────────────────────────────────────┤
-│ Proyectos trabajados:                                       │
-│   • Laboratorio Protésico Lleida: 3h 30m                    │
-│   • Proyecto FB Intec: 2h 15m                               │
-│   • Tareas Administrativas: 2h 30m                          │
-│   • Prospección Comercial: 1h 25m                           │
-│                                                             │
-│ Tipos de tarea: Reunión, IM, Material Interno               │
-│ Entradas registradas: 8                                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Sección de resumen mejorada:**
-- Total horas equipo
-- Horas facturables (con %)
-- Usuarios activos
-- **Usuarios sin registrar** (si hay)
-- **Top 3 proyectos más trabajados**
+## Resumen
+Implementar un sistema de notificación simple y robusto que envíe un email al propietario de un plan diario cuando ciertos supervisores (Lluis, Samuel) modifican sus tareas.
 
 ---
 
-## Cambios Técnicos
+## Análisis del Modelo Actual
 
-### Archivo a Modificar
-`supabase/functions/daily-hours-report/index.ts`
+### Tablas Identificadas
+| Tabla | Propósito | Campos Clave |
+|-------|-----------|--------------|
+| `daily_plans` | Plan por usuario/fecha | `id`, `user_id` (propietario), `planned_for_date` |
+| `daily_plan_items` | Tareas del plan | `id`, `plan_id`, `title`, `created_by` (vacío actualmente) |
+| `admin_users` | Usuarios del sistema | `user_id`, `email`, `full_name` |
 
-### Cambios en Query SQL
-Añadir JOINs para obtener:
-- `mandatos.descripcion` - nombre del proyecto
-- `work_task_types.name` - tipo de tarea
+### Emails de Supervisores Autorizados
+Basado en los datos reales de la base de datos:
+- `lluis@capittal.es` ✓ (confirmado)
+- `samuel@capittal.es` → No existe. Alternativas: `s.navarro@nrro.es` o `s.navarro@obn.es`
 
-### Nueva Estructura de Datos
-
-```typescript
-interface UserDetailedHours {
-  userName: string;
-  totalMinutes: number;      // En minutos enteros
-  billableMinutes: number;   // En minutos enteros
-  entryCount: number;
-  mandatos: {                // Desglose por proyecto
-    name: string;
-    minutes: number;
-  }[];
-  taskTypes: string[];       // Tipos de tarea únicos
-}
-```
-
-### Función formatHours Mejorada
-
-```typescript
-function formatHours(minutes: number): string {
-  const totalMins = Math.round(minutes);  // Redondear a entero
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
-  if (hours === 0) return `${mins}m`;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}m`;
-}
-```
-
-### Nuevo Template HTML
-
-El email incluirá:
-1. **Cabecera** con fecha y KPIs globales (igual que ahora pero sin decimales)
-2. **Tabla resumen** por usuario con columnas: Usuario | Total | Facturable | Proyectos | Tareas
-3. **Sección expandida** con detalle por usuario mostrando los proyectos trabajados
-4. **Footer** con alertas si hay usuarios sin registrar
+**Decisión**: Crear tabla configurable para emails autorizados en lugar de hardcodear.
 
 ---
 
-## Resultado Esperado
+## Arquitectura de la Solución
 
-**Antes:**
-```
-| Usuario    | Total                    | Facturable                 | Trabajo Principal |
-|------------|--------------------------|----------------------------|-------------------|
-| Oriol      | 9h 19.99999999999886m    | 4h 4.999999999999972m      | Otro              |
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Usuario modifica daily_plan_items (INSERT/UPDATE/DELETE)                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TRIGGER: notify_plan_modification_trigger                                  │
+│  Condiciones:                                                               │
+│   - editor_email está en daily_plan_authorized_editors                      │
+│   - plan.user_id != auth.uid() (no es el propietario)                       │
+│                                                                             │
+│  Acción: Insertar registro en daily_plan_notifications (outbox)             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Edge Function: send-plan-modification-email                                │
+│  - Lee notificaciones pendientes (processed_at IS NULL)                     │
+│  - Resuelve email del propietario desde admin_users                         │
+│  - Envía email via send-email existente                                     │
+│  - Marca como procesado                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Propietario del plan recibe email:                                         │
+│  "Tu plan diario para 2026-02-05 ha sido modificado por Lluis"              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Después:**
-```
-| Usuario | Total   | Fact.   | Proyectos trabajados                           |
-|---------|---------|---------|------------------------------------------------|
-| Oriol   | 9h 20m  | 5h      | Lab. Protésico (4h), Proyecto X (3h), Admin (2h) |
+---
 
-Detalle Oriol:
-• Laboratorio Protésico Lleida: 4h (Reuniones, IM)
-• Proyecto X Industrial: 3h 20m (Teaser, Potenciales)  
-• Tareas Administrativas: 2h (Material Interno)
-Total entradas: 12
+## Componentes a Crear
+
+### 1. Tabla: `daily_plan_authorized_editors`
+Almacena los emails autorizados para disparar notificaciones.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| id | uuid | PK |
+| email | text | Email del editor autorizado |
+| name | text | Nombre para mostrar |
+| is_active | boolean | Si está activo |
+| created_at | timestamptz | Fecha creación |
+
+**Datos iniciales:**
+- lluis@capittal.es → "Lluis Montanya"
+- s.navarro@nrro.es → "Samuel Navarro" (ajustar si es otro email)
+
+### 2. Tabla: `daily_plan_notifications` (outbox)
+Cola de notificaciones pendientes de enviar.
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| id | uuid | PK |
+| plan_id | uuid | FK a daily_plans |
+| plan_owner_id | uuid | Usuario propietario del plan |
+| editor_id | uuid | Usuario que hizo el cambio |
+| editor_email | text | Email del editor |
+| planned_for_date | date | Fecha del plan |
+| operation | text | INSERT/UPDATE/DELETE |
+| item_title | text | Título de la tarea afectada |
+| created_at | timestamptz | Momento del cambio |
+| processed_at | timestamptz | Cuándo se envió el email (NULL = pendiente) |
+| error | text | Error si falló el envío |
+
+### 3. Trigger Function: `notify_plan_modification()`
+
+Lógica:
+1. Obtener `plan_id` del item (NEW o OLD)
+2. Obtener `user_id` del plan (propietario)
+3. Obtener email del editor actual via `auth.uid()`
+4. Verificar si editor está en `daily_plan_authorized_editors`
+5. Verificar que `plan.user_id != auth.uid()` (no es auto-modificación)
+6. Si cumple condiciones → INSERT en `daily_plan_notifications`
+
+### 4. Edge Function: `send-plan-modification-email`
+
+Proceso:
+1. Query notificaciones donde `processed_at IS NULL`
+2. Para cada notificación:
+   - Resolver email del propietario desde `admin_users`
+   - Generar email simple
+   - Llamar a `send-email` existente
+   - Marcar como `processed_at = now()`
+3. Manejo de errores con retry
+
+---
+
+## Archivos a Crear
+
+| Archivo | Descripción |
+|---------|-------------|
+| Migración SQL | Crear tablas + trigger + función |
+| `supabase/functions/send-plan-modification-email/index.ts` | Edge function para enviar emails |
+
+---
+
+## Archivos a Modificar
+
+Ninguno. La implementación es 100% server-side (trigger + edge function).
+
+---
+
+## Detalles Técnicos
+
+### SQL del Trigger Function
+
+```sql
+CREATE OR REPLACE FUNCTION public.notify_plan_modification()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_plan_id UUID;
+  v_plan_owner_id UUID;
+  v_planned_for_date DATE;
+  v_editor_id UUID;
+  v_editor_email TEXT;
+  v_item_title TEXT;
+  v_is_authorized BOOLEAN;
+BEGIN
+  -- Get plan_id from the affected row
+  v_plan_id := COALESCE(NEW.plan_id, OLD.plan_id);
+  v_item_title := COALESCE(NEW.title, OLD.title);
+  
+  -- Get plan owner and date
+  SELECT user_id, planned_for_date 
+  INTO v_plan_owner_id, v_planned_for_date
+  FROM daily_plans 
+  WHERE id = v_plan_id;
+  
+  -- Get current user (editor)
+  v_editor_id := auth.uid();
+  
+  -- Skip if editor is the plan owner (self-modification)
+  IF v_editor_id = v_plan_owner_id THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+  
+  -- Get editor email
+  SELECT email INTO v_editor_email
+  FROM auth.users WHERE id = v_editor_id;
+  
+  -- Check if editor is authorized to trigger notifications
+  SELECT EXISTS(
+    SELECT 1 FROM daily_plan_authorized_editors 
+    WHERE email = v_editor_email AND is_active = true
+  ) INTO v_is_authorized;
+  
+  -- Only queue notification if editor is authorized
+  IF v_is_authorized THEN
+    INSERT INTO daily_plan_notifications (
+      plan_id, plan_owner_id, editor_id, editor_email,
+      planned_for_date, operation, item_title
+    ) VALUES (
+      v_plan_id, v_plan_owner_id, v_editor_id, v_editor_email,
+      v_planned_for_date, TG_OP, v_item_title
+    );
+  END IF;
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
 ```
+
+### Contenido del Email
+
+**Asunto:** `Aviso: cambio en tu plan diario`
+
+**Cuerpo (HTML simple):**
+```html
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2>Aviso: cambio en tu plan diario</h2>
+  <p>Tu plan diario para <strong>{fecha}</strong> ha sido modificado.</p>
+  <p>Modificado por: <strong>{nombre_editor}</strong></p>
+  <p style="margin-top: 20px;">
+    <a href="https://crm-capittal.lovable.app/plan-diario">Ver mi plan</a>
+  </p>
+</div>
+```
+
+### Invocación del Edge Function
+
+Dos opciones (implementaré ambas):
+
+**Opción A - Cron cada 1 minuto (recomendada):**
+```sql
+SELECT cron.schedule(
+  'process-plan-notifications',
+  '* * * * *', -- cada minuto
+  $$ SELECT net.http_post(...) $$
+);
+```
+
+**Opción B - Invocación desde el trigger (alternativa):**
+Usar `pg_net` directamente desde el trigger para invocar la edge function inmediatamente.
+
+---
+
+## Flujo de Pruebas
+
+| Caso | Acción | Resultado Esperado |
+|------|--------|-------------------|
+| A | Lluis añade tarea al plan de Oriol | Oriol recibe email |
+| B | Samuel elimina tarea del plan de Marc | Marc recibe email |
+| C | Oriol modifica su propio plan | NO se envía email |
+| D | Marc (no autorizado) modifica plan de otro | NO se envía email |
+| E | Múltiples cambios rápidos | Se procesan todos, sin duplicados |
+
+---
+
+## Consideraciones de Seguridad
+
+1. **RLS en tablas nuevas**: Solo super_admin puede gestionar editors autorizados
+2. **SECURITY DEFINER**: El trigger accede a auth.users con privilegios elevados
+3. **No datos sensibles**: El email solo contiene fecha y nombre del editor
+4. **Idempotencia**: `processed_at` previene reenvíos
 
 ---
 
 ## Orden de Implementación
 
-1. Corregir `formatHours()` para redondear a enteros
-2. Modificar query para incluir `mandato` y `work_task_type`
-3. Reestructurar agregación por usuario + por mandato
-4. Actualizar template HTML con diseño expandido
-5. Redesplegar Edge Function
-6. Enviar email de prueba para verificar
+1. Crear migración con tablas + trigger + función
+2. Insertar datos iniciales (editors autorizados)
+3. Crear Edge Function send-plan-modification-email
+4. Configurar cron job para procesar cola
+5. Probar con cambio real de Lluis en plan de otro usuario
