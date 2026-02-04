@@ -2634,6 +2634,33 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_source_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          label: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          label: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          label?: string
+        }
+        Relationships: []
+      }
       buyer_testimonials: {
         Row: {
           avatar_initials: string
@@ -5336,6 +5363,7 @@ export type Database = {
           search_keywords: string[] | null
           sector_exclusions: string[] | null
           sector_focus: string[] | null
+          source_tag_id: string | null
           source_url: string | null
           updated_at: string | null
           website: string | null
@@ -5366,6 +5394,7 @@ export type Database = {
           search_keywords?: string[] | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
+          source_tag_id?: string | null
           source_url?: string | null
           updated_at?: string | null
           website?: string | null
@@ -5396,11 +5425,20 @@ export type Database = {
           search_keywords?: string[] | null
           sector_exclusions?: string[] | null
           sector_focus?: string[] | null
+          source_tag_id?: string | null
           source_url?: string | null
           updated_at?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "corporate_buyers_source_tag_id_fkey"
+            columns: ["source_tag_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_source_tags"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       corporate_contacts: {
         Row: {
