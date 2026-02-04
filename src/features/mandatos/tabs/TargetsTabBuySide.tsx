@@ -19,6 +19,7 @@ import { TargetListView } from "@/components/mandatos/buyside/TargetListView";
 import { TargetFiltersPanel, defaultFilters, type TargetFilters } from "@/components/mandatos/buyside/TargetFiltersPanel";
 import { TargetDetailDrawer } from "@/components/mandatos/buyside/TargetDetailDrawer";
 import { ArchivedTargetsView } from "@/components/mandatos/buyside/ArchivedTargetsView";
+import { BulkActionsBar } from "@/components/mandatos/buyside/BulkActionsBar";
 import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { useTargetTags } from "@/hooks/useTargetTags";
 import { NuevoTargetDrawer } from "@/components/targets/NuevoTargetDrawer";
@@ -57,11 +58,13 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
     updateScoring,
     createOferta,
     archiveTarget,
+    archiveTargetsBulk,
     unarchiveTarget,
     isMoving,
     isSavingScoring,
     isSavingOferta,
     isArchiving,
+    isArchivingBulk,
     refetch,
   } = useTargetPipeline(mandato.id);
 
@@ -75,6 +78,12 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
   const handleTargetClick = (target: MandatoEmpresaBuySide) => {
     setSelectedTarget(target);
     setDetailDrawerOpen(true);
+  };
+
+  const handleBulkArchive = () => {
+    if (selectedIds.length === 0) return;
+    archiveTargetsBulk(selectedIds);
+    setSelectedIds([]);
   };
 
   // Conteo de archivados
@@ -253,6 +262,16 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
           </Button>
         </div>
       </div>
+
+      {/* Barra de acciones masivas */}
+      {viewMode === 'list' && !showArchived && (
+        <BulkActionsBar
+          selectedCount={selectedIds.length}
+          onClearSelection={() => setSelectedIds([])}
+          onArchive={handleBulkArchive}
+          isArchiving={isArchivingBulk}
+        />
+      )}
 
       {/* Vista principal */}
       {showArchived ? (
