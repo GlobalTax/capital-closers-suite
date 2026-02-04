@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,6 +93,7 @@ export function TargetDetailDrawer({
   const [importLinkOpen, setImportLinkOpen] = useState(false);
   const [asociarContactoOpen, setAsociarContactoOpen] = useState(false);
   const [nuevaInteraccionOpen, setNuevaInteraccionOpen] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
   const empresa = target?.empresa;
   const empresaId = empresa?.id;
@@ -437,7 +439,7 @@ export function TargetDetailDrawer({
                 if (target.is_archived) {
                   onUnarchiveTarget?.(target.id);
                 } else {
-                  onArchiveTarget?.(target.id);
+                  setConfirmArchiveOpen(true);
                 }
               }}
               disabled={isArchiving}
@@ -512,6 +514,19 @@ export function TargetDetailDrawer({
           trigger={<span />}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmArchiveOpen}
+        onOpenChange={setConfirmArchiveOpen}
+        titulo="¿Archivar este target?"
+        descripcion={`El target "${empresa.nombre}" será excluido de los KPIs activos y del Kanban. Podrás restaurarlo más tarde desde la vista de archivados.`}
+        onConfirmar={() => {
+          onArchiveTarget?.(target.id);
+          setConfirmArchiveOpen(false);
+        }}
+        textoConfirmar="Archivar"
+        textoCancelar="Cancelar"
+      />
     </>
   );
 }
