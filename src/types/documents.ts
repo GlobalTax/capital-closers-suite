@@ -18,7 +18,19 @@ export type TemplateCategory =
   | 'SPA' 
   | 'DD_Checklist' 
   | 'Contrato' 
+  | 'Mandato_Compra'
+  | 'Mandato_Venta'
+  | 'NDA_Modelo'
   | 'Otro';
+
+// Categorías específicas para el apartado Modelos
+export type ModeloCategory = 'Mandato_Compra' | 'Mandato_Venta' | 'NDA_Modelo';
+
+export const MODELO_CATEGORY_LABELS: Record<ModeloCategory, string> = {
+  Mandato_Compra: 'Mandatos de Compra',
+  Mandato_Venta: 'Mandatos de Venta',
+  NDA_Modelo: 'NDA',
+};
 
 export interface DocumentFolder {
   id: string;
