@@ -540,3 +540,64 @@ export async function canRegisterHoursForDate(
   // Encourage planning but don't block
   return { allowed: true };
 }
+
+// Admin: Bulk approve multiple plans at once
+export async function approveBulkPlans(
+  planIds: string[]
+): Promise<{ approved: number; failed: number }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error('No authenticated user');
+  
+  const { data, error } = await supabase
+    .from('daily_plans')
+    .update({
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+      approved_by: user.id
+    })
+    .in('id', planIds)
+    .eq('status', 'submitted')
+    .select();
+  
+  if (error) throw error;
+  
+  return {
+    approved: data?.length || 0,
+    failed: planIds.length - (data?.length || 0)
+  };
+}
+
+// Admin: Create an empty plan for a user (for proactive task assignment)
+export async function createPlanForUser(
+  userId: string,
+  date: Date
+): Promise<DailyPlan> {
+  const dateStr = format(date, 'yyyy-MM-dd');
+  
+  // Check if plan already exists
+  const { data: existing } = await supabase
+    .from('daily_plans')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('planned_for_date', dateStr)
+    .maybeSingle();
+  
+  if (existing) {
+    throw new Error('Ya existe un plan para este usuario en esta fecha');
+  }
+  
+  const { data, error } = await supabase
+    .from('daily_plans')
+    .insert({
+      user_id: userId,
+      planned_for_date: dateStr,
+      status: 'draft'
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  return data as DailyPlan;
+}

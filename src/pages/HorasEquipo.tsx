@@ -19,7 +19,8 @@ import { startOfWeek, endOfWeek } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, BarChart3, UserCheck } from "lucide-react";
+import { ChevronDown, BarChart3, UserCheck, ClipboardList } from "lucide-react";
+import { ComplianceDashboard } from "@/components/plans/ComplianceDashboard";
 
 export default function HorasEquipo() {
   const { user, adminUser } = useAuth();
@@ -120,7 +121,7 @@ export default function HorasEquipo() {
       />
 
       <Tabs defaultValue="resumen" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="resumen" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Resumen
@@ -128,6 +129,10 @@ export default function HorasEquipo() {
           <TabsTrigger value="responsable" className="flex items-center gap-2">
             <UserCheck className="h-4 w-4" />
             Panel Responsable
+          </TabsTrigger>
+          <TabsTrigger value="control-planes" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Control Planes
           </TabsTrigger>
         </TabsList>
 
@@ -210,7 +215,7 @@ export default function HorasEquipo() {
           </div>
         </TabsContent>
 
-        {/* Tab: Panel Responsable (new) */}
+        {/* Tab: Panel Responsable */}
         <TabsContent value="responsable">
           <ResponsablePanel
             entries={timeEntries}
@@ -218,6 +223,11 @@ export default function HorasEquipo() {
             mandatos={mandatos}
             loading={loading}
           />
+        </TabsContent>
+
+        {/* Tab: Control Planes */}
+        <TabsContent value="control-planes">
+          <ComplianceDashboard />
         </TabsContent>
       </Tabs>
     </div>
