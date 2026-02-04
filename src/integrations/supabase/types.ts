@@ -16010,6 +16010,39 @@ export type Database = {
         }
         Relationships: []
       }
+      report_email_recipients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          is_active: boolean
+          name: string | null
+          report_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          report_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          report_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rh_departamentos: {
         Row: {
           codigo: string
