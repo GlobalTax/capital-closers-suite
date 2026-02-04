@@ -40,8 +40,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getPlansForDate, updatePlanStatus, addAdminTask, updatePlanItem, deletePlanItem, convertPlanItemsToTasks } from "@/services/dailyPlans.service";
+import { getPlansForDate, updatePlanStatus, addAdminTask, updatePlanItem, deletePlanItem, convertPlanItemsToTasks, approveBulkPlans, createPlanForUser } from "@/services/dailyPlans.service";
 import { DailyPlanItemRow } from "@/components/plans/DailyPlanItemRow";
+import { BulkApprovalBar } from "@/components/plans/BulkApprovalBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { DailyPlanWithUser, DailyPlanItemPriority } from "@/types/dailyPlans";
 
 export default function DailyPlansAdmin() {
@@ -51,6 +53,9 @@ export default function DailyPlansAdmin() {
   const [allUsers, setAllUsers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('all');
   
+  // Bulk selection state
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
   // Dialog states
   const [selectedPlan, setSelectedPlan] = useState<DailyPlanWithUser | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
@@ -67,7 +72,9 @@ export default function DailyPlansAdmin() {
   const filteredPlans = selectedUserId === 'all' 
     ? plans 
     : plans.filter(p => p.user_id === selectedUserId);
-  
+
+  // Plans that can be selected for bulk approval (only submitted)
+  const selectablePlans = filteredPlans.filter(p => p.status === 'submitted');
   const loadData = async () => {
     try {
       setLoading(true);
@@ -89,6 +96,11 @@ export default function DailyPlansAdmin() {
   useEffect(() => {
     loadData();
   }, [selectedDate]);
+
+  // Clear selection when date or filters change
+  useEffect(() => {
+    setSelectedPlanIds(new Set());
+  }, [selectedDate, selectedUserId]);
   
   const handlePrevDay = () => setSelectedDate(subDays(selectedDate, 1));
   const handleNextDay = () => setSelectedDate(addDays(selectedDate, 1));
@@ -105,6 +117,59 @@ export default function DailyPlansAdmin() {
     setSelectedPlan(plan);
     setAdminNotes(plan.admin_notes || '');
     setShowDetailDialog(true);
+  };
+
+  // Toggle single plan selection
+  const togglePlanSelection = (planId: string) => {
+    setSelectedPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) {
+        next.delete(planId);
+      } else {
+        next.add(planId);
+      }
+      return next;
+    });
+  };
+
+  // Toggle all selectable plans
+  const toggleAllSelection = () => {
+    if (selectedPlanIds.size === selectablePlans.length) {
+      setSelectedPlanIds(new Set());
+    } else {
+      setSelectedPlanIds(new Set(selectablePlans.map(p => p.id)));
+    }
+  };
+
+  // Handle bulk approval
+  const handleBulkApprove = async () => {
+    if (selectedPlanIds.size === 0) return;
+    
+    try {
+      setBulkApproving(true);
+      const result = await approveBulkPlans(Array.from(selectedPlanIds));
+      toast.success(`${result.approved} plan${result.approved > 1 ? 'es' : ''} aprobado${result.approved > 1 ? 's' : ''}`);
+      if (result.failed > 0) {
+        toast.warning(`${result.failed} plan${result.failed > 1 ? 'es' : ''} no se pudieron aprobar`);
+      }
+      setSelectedPlanIds(new Set());
+      loadData();
+    } catch (error) {
+      toast.error('Error al aprobar planes');
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
+  // Handle creating plan for user without one
+  const handleCreatePlanForUser = async (userId: string) => {
+    try {
+      await createPlanForUser(userId, selectedDate);
+      toast.success('Plan creado. Ahora puedes añadir tareas.');
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al crear plan');
+    }
   };
   
   const handleApprove = async (plan: DailyPlanWithUser) => {
@@ -294,6 +359,15 @@ export default function DailyPlansAdmin() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    {selectablePlans.length > 0 && (
+                      <Checkbox
+                        checked={selectedPlanIds.size === selectablePlans.length && selectablePlans.length > 0}
+                        onCheckedChange={toggleAllSelection}
+                        aria-label="Seleccionar todos"
+                      />
+                    )}
+                  </TableHead>
                   <TableHead>Usuario</TableHead>
                   <TableHead className="text-center">Tareas</TableHead>
                   <TableHead className="text-center">Horas</TableHead>
@@ -308,9 +382,20 @@ export default function DailyPlansAdmin() {
                   const StatusIcon = status.icon;
                   const planHours = plan.items.reduce((s, i) => s + i.estimated_minutes, 0) / 60;
                   
-                  return (
-                    <TableRow key={plan.id}>
-                      <TableCell>
+                    return (
+                      <TableRow key={plan.id}>
+                        <TableCell>
+                          {plan.status === 'submitted' ? (
+                            <Checkbox
+                              checked={selectedPlanIds.has(plan.id)}
+                              onCheckedChange={() => togglePlanSelection(plan.id)}
+                              aria-label={`Seleccionar plan de ${plan.user_name}`}
+                            />
+                          ) : (
+                            <div className="w-4" />
+                          )}
+                        </TableCell>
+                        <TableCell>
                         <div>
                           <p className="font-medium">{plan.user_name || 'Usuario'}</p>
                           <p className="text-xs text-muted-foreground">{plan.user_email}</p>
@@ -356,6 +441,7 @@ export default function DailyPlansAdmin() {
                 {/* Users without plans - only show when viewing all users */}
                 {selectedUserId === 'all' && usersWithoutPlan.map((user) => (
                   <TableRow key={user.user_id} className="bg-muted/20">
+                    <TableCell />
                     <TableCell>
                       <div>
                         <p className="font-medium text-muted-foreground">{user.full_name}</p>
@@ -371,9 +457,13 @@ export default function DailyPlansAdmin() {
                     </TableCell>
                     <TableCell className="text-center text-muted-foreground">-</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled>
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Recordar
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleCreatePlanForUser(user.user_id)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Crear plan
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -579,6 +669,14 @@ export default function DailyPlansAdmin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Approval Bar */}
+      <BulkApprovalBar
+        selectedCount={selectedPlanIds.size}
+        onApprove={handleBulkApprove}
+        onClear={() => setSelectedPlanIds(new Set())}
+        loading={bulkApproving}
+      />
     </div>
   );
 }
