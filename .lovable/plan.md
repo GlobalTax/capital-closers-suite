@@ -1,311 +1,299 @@
 
-# Plan: Apartado "Modelos" en Gestión
+
+# Plan: Módulo de Compradores Corporativos con Etiquetas de Origen
 
 ## Resumen Ejecutivo
 
-Crear un nuevo apartado **Gestión → Modelos** que sirva como repositorio central de plantillas Word reutilizables para mandatos y NDAs, **reutilizando al 100%** la infraestructura existente de `document_templates`.
+Implementar el módulo completo de **Compradores Corporativos** (`/admin/corporate-buyers`) que actualmente no existe en el frontend, incluyendo:
+1. Página principal con listado y KPIs
+2. Botón "Nuevo" funcional para crear compradores manualmente
+3. Sistema de etiquetas de origen configurables (dealsuite, arx, research, meta_compras)
+4. Gestión de etiquetas desde panel admin
 
 ---
 
-## Arquitectura Existente a Reutilizar
+## Diagnóstico
 
-| Componente | Estado | Uso |
-|------------|--------|-----|
-| Tabla `document_templates` | ✅ Ya existe | Almacenar metadatos de modelos |
-| Bucket `document-templates` | ✅ Ya existe | Almacenar archivos Word |
-| Servicio `documentTemplates.service.ts` | ✅ Ya existe | CRUD de plantillas |
-| RLS policies | ✅ Ya existen | Admin puede gestionar, todos pueden ver |
-| Edge Function `download-document` | ✅ Ya existe | Descargas firmadas |
+### Estado Actual
+- **Tabla `corporate_buyers`**: ✅ Existe con 355 registros (233 corporate, 95 holding, 25 family_office, 2 strategic_buyer)
+- **Tablas relacionadas**: ✅ `corporate_contacts`, `corporate_favorites`, `corporate_outreach`
+- **RLS configurado**: ✅ Políticas correctas para admins (INSERT/UPDATE/DELETE) y usuarios autenticados (SELECT)
+- **Página frontend**: ❌ NO EXISTE - La ruta `/admin/corporate-buyers` no está registrada en `App.tsx`
+- **Servicio backend**: ❌ NO EXISTE - No hay `corporateBuyers.service.ts`
+- **Hooks React Query**: ❌ NO EXISTE - No hay `useCorporateBuyers.ts`
 
----
-
-## Cambios en Base de Datos
-
-### No se crean tablas nuevas
-
-Se reutiliza `document_templates` agregando nuevas categorías:
-
-| Campo | Uso para Modelos |
-|-------|------------------|
-| `name` | Título descriptivo del modelo (obligatorio) |
-| `category` | `'Mandato_Compra'` / `'Mandato_Venta'` / `'NDA_Modelo'` |
-| `tipo_operacion` | `'compra'` / `'venta'` / `null` |
-| `template_url` | Ruta en Storage del archivo Word |
-| `file_name` | Nombre original del archivo |
-| `file_size_bytes` | Tamaño en bytes |
-| `mime_type` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
-| `is_active` | Soft delete |
-
-### Migración SQL
-
-```sql
--- Añadir nuevas categorías al sistema (solo documentación, no hay constraint)
--- Las categorías son strings libres en document_templates
-
--- Actualizar tipo TemplateCategory en código para incluir:
--- 'Mandato_Compra' | 'Mandato_Venta' | 'NDA_Modelo'
-```
+### Causa Raíz del Botón "Nuevo"
+El botón "Nuevo" no funciona porque **la página completa no existe en el código**. La captura de pantalla muestra una página que debe crearse desde cero.
 
 ---
 
-## Estructura de Archivos a Crear
+## Arquitectura de la Solución
+
+### Estructura de Archivos a Crear
 
 ```text
 src/
 ├── pages/
 │   └── admin/
-│       └── Modelos.tsx                    # Nueva página principal
+│       ├── CorporateBuyers.tsx              # Página principal
+│       └── BuyerSourceTags.tsx              # Admin de etiquetas
 ├── components/
-│   └── modelos/
-│       ├── ModelosPage.tsx                # Componente contenedor con tabs
-│       ├── ModeloCategorySection.tsx      # Sección por categoría
-│       └── ModeloUploadDialog.tsx         # Dialog para subir modelo
+│   └── corporate-buyers/
+│       ├── CorporateBuyerDrawer.tsx         # Drawer para crear/editar
+│       ├── CorporateBuyersTable.tsx         # Tabla con origen visible
+│       ├── CorporateBuyersKPIs.tsx          # Cards de KPIs
+│       ├── BuyerSourceBadge.tsx             # Badge de origen
+│       └── BuyerSourceTagsManager.tsx       # CRUD de etiquetas
 ├── services/
-│   └── modelos.service.ts                 # Reutiliza documentTemplates.service
+│   └── corporateBuyers.service.ts           # Servicio CRUD
 └── hooks/
     └── queries/
-        └── useModelos.ts                  # Hooks React Query
+        └── useCorporateBuyers.ts            # Hooks React Query
 ```
 
 ---
 
-## Detalle de Implementación
+## Cambios en Base de Datos
 
-### 1. Página Principal: `src/pages/admin/Modelos.tsx`
+### Nueva Tabla: `buyer_source_tags`
+```sql
+CREATE TABLE public.buyer_source_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,        -- 'dealsuite', 'arx', 'research', 'meta_compras'
+  label TEXT NOT NULL,             -- Texto visible al usuario
+  color TEXT DEFAULT '#6366f1',    -- Color hex del badge
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-Ruta: `/admin/modelos`
-
-Contenido:
-- Layout con AppLayout
-- Tabs para las 3 secciones:
-  - **Mandatos de Compra** (category = 'Mandato_Compra')
-  - **Mandatos de Venta** (category = 'Mandato_Venta')
-  - **NDA** (category = 'NDA_Modelo')
-
-Permisos:
-- Solo accesible para `admin` y `super_admin`
-- Usar `ProtectedRoute` con `requiredRole="admin"`
-
-### 2. Componente por Sección: `ModeloCategorySection.tsx`
-
-Similar a `CompanyDocumentCategorySection.tsx` pero para modelos globales:
-
-Funcionalidades:
-- Listado de modelos de la categoría
-- Botón "Subir modelo" que abre dialog
-- Cada modelo muestra:
-  - Título descriptivo
-  - Nombre del archivo
-  - Fecha de subida
-  - Botón descargar
-  - Botón eliminar (soft delete)
-- Estado vacío: "No hay modelos en esta categoría"
-
-### 3. Dialog de Subida: `ModeloUploadDialog.tsx`
-
-Campos:
-- **Título** (obligatorio) - Input de texto
-- **Archivo Word** (obligatorio) - Solo .doc/.docx
-- Botón "Subir"
-
-Validaciones:
-- Título no vacío
-- Archivo debe ser .doc o .docx
-- Tamaño máximo 50MB
-
-### 4. Servicio: `modelos.service.ts`
-
-Funciones:
-```typescript
-// Obtener modelos por categoría
-getModelosByCategory(category: ModeloCategory): Promise<DocumentTemplate[]>
-
-// Subir nuevo modelo
-uploadModelo(file: File, title: string, category: ModeloCategory): Promise<DocumentTemplate>
-
-// Eliminar modelo (soft delete)
-deleteModelo(id: string): Promise<void>
-
-// Descargar modelo
-downloadModelo(templateUrl: string, fileName: string): Promise<void>
+-- Datos iniciales
+INSERT INTO buyer_source_tags (key, label, color) VALUES
+  ('dealsuite', 'DealSuite', '#3b82f6'),
+  ('arx', 'ARX', '#8b5cf6'),
+  ('research', 'Research', '#10b981'),
+  ('meta_compras', 'Meta Compras', '#f59e0b');
 ```
 
-### 5. Hook: `useModelos.ts`
+### Modificación: `corporate_buyers`
+```sql
+-- Añadir columna source_tag_id
+ALTER TABLE public.corporate_buyers
+  ADD COLUMN source_tag_id UUID REFERENCES buyer_source_tags(id);
 
-```typescript
-useModelosByCategory(category: ModeloCategory)
-useUploadModelo()
-useDeleteModelo()
-useDownloadModelo()
+-- Actualizar registros existentes con 'research' como default
+UPDATE corporate_buyers 
+SET source_tag_id = (SELECT id FROM buyer_source_tags WHERE key = 'research')
+WHERE source_tag_id IS NULL;
+
+-- RLS para nueva tabla
+ALTER TABLE buyer_source_tags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated can view source tags"
+  ON buyer_source_tags FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins can manage source tags"
+  ON buyer_source_tags FOR ALL TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin'))
+  );
 ```
 
 ---
 
-## Cambios en Sidebar
+## Implementación Frontend
 
-Añadir nuevo item en el grupo "Gestión":
+### 1. Página Principal: `CorporateBuyers.tsx`
+
+Componentes:
+- **PageHeader**: Título "Compradores Corporativos" + Botón "Nuevo"
+- **KPI Cards**: Total, Por tipo (corporativo/holding/family office), Favoritos, Con contactos
+- **Filtros**: Búsqueda, Tipo, Origen, País
+- **Tabla**: Listado con columnas: Nombre, Tipo, País, Sectores, EBITDA, Deal Size, **Origen**, Geografía, Acciones
+
+Acciones del botón "Nuevo":
+1. Abre `CorporateBuyerDrawer`
+2. Formulario con campos mínimos: nombre*, tipo*, país, sectores, origen*
+3. Submit llama a `corporateBuyersService.create()`
+4. On success: toast + invalidar queries + cerrar drawer
+
+### 2. Drawer de Creación: `CorporateBuyerDrawer.tsx`
+
+Campos del formulario:
+| Campo | Tipo | Obligatorio |
+|-------|------|-------------|
+| name | text | ✅ |
+| buyer_type | select (corporate/holding/family_office/strategic_buyer) | ✅ |
+| source_tag_id | select dinámico (de buyer_source_tags) | ✅ |
+| country_base | text | ❌ |
+| sector_focus | multi-select | ❌ |
+| geography_focus | multi-select | ❌ |
+| revenue_min/max | number | ❌ |
+| ebitda_min/max | number | ❌ |
+| deal_size_min/max | number | ❌ |
+| website | url | ❌ |
+| description | textarea | ❌ |
+
+### 3. Columna "Origen" en Tabla
+
+```tsx
+// En la definición de columnas
+{
+  key: "source_tag",
+  label: "Origen",
+  render: (_, row) => (
+    <BuyerSourceBadge 
+      tagId={row.source_tag_id} 
+      tags={sourceTags} 
+    />
+  )
+}
+```
+
+Componente `BuyerSourceBadge`:
+- Muestra badge con color y label de la etiqueta
+- Si no tiene etiqueta: muestra "Sin origen" en gris
+
+### 4. Servicio: `corporateBuyers.service.ts`
 
 ```typescript
-// En menuGroups, grupo "gestion":
-{ id: "modelos", title: "Modelos", url: "/admin/modelos", icon: FileSignature },
+// Funciones principales
+getCorporateBuyers(filters?: Filters): Promise<CorporateBuyer[]>
+getCorporateBuyerById(id: string): Promise<CorporateBuyer>
+createCorporateBuyer(data: CreateCorporateBuyerInput): Promise<CorporateBuyer>
+updateCorporateBuyer(id: string, data: UpdateInput): Promise<CorporateBuyer>
+deleteCorporateBuyer(id: string): Promise<void>
+
+// Etiquetas
+getSourceTags(): Promise<BuyerSourceTag[]>
+createSourceTag(data: CreateTagInput): Promise<BuyerSourceTag>
+updateSourceTag(id: string, data: UpdateTagInput): Promise<BuyerSourceTag>
 ```
+
+### 5. Hooks: `useCorporateBuyers.ts`
+
+```typescript
+// Hooks principales
+useCorporateBuyers(filters?: Filters)
+useCorporateBuyer(id: string)
+useCreateCorporateBuyer()
+useUpdateCorporateBuyer()
+useDeleteCorporateBuyer()
+
+// Hooks de etiquetas
+useBuyerSourceTags()
+useCreateSourceTag()
+useUpdateSourceTag()
+```
+
+### 6. Admin de Etiquetas: `BuyerSourceTags.tsx`
+
+Ruta: `/admin/buyer-source-tags`
+
+Funcionalidad:
+- Tabla con etiquetas existentes (key, label, color, activa)
+- Botón crear nueva etiqueta
+- Edición inline de label y color
+- Toggle para activar/desactivar
 
 ---
 
-## Cambios en Routing
-
-En `App.tsx`:
-
-```typescript
-const Modelos = lazy(() => import("./pages/admin/Modelos"));
-
-// En rutas protegidas:
-<Route 
-  path="/admin/modelos" 
-  element={
-    <ProtectedRoute requiredRole="admin">
-      <AppLayout><Modelos /></AppLayout>
-    </ProtectedRoute>
-  } 
-/>
-```
-
----
-
-## Tipos TypeScript
-
-Actualizar `src/types/documents.ts`:
-
-```typescript
-export type TemplateCategory = 
-  | 'NDA' 
-  | 'LOI' 
-  | 'Teaser' 
-  | 'SPA' 
-  | 'DD_Checklist' 
-  | 'Contrato' 
-  | 'Mandato_Compra'    // NUEVO
-  | 'Mandato_Venta'     // NUEVO
-  | 'NDA_Modelo'        // NUEVO
-  | 'Otro';
-
-export type ModeloCategory = 'Mandato_Compra' | 'Mandato_Venta' | 'NDA_Modelo';
-```
-
----
-
-## Flujo de Subida de Modelo
+## Flujo de Creación Manual
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Admin hace clic en "Subir modelo" en sección Mandatos de Venta             │
+│  Admin hace clic en botón "Nuevo" en /admin/corporate-buyers                │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Se abre ModeloUploadDialog                                                 │
-│  - Input: Título del modelo (ej: "Mandato Venta Estándar v2")               │
-│  - Input: Archivo Word (.docx)                                              │
+│  Se abre CorporateBuyerDrawer                                               │
+│  - Carga opciones de source_tags desde DB                                   │
+│  - Formulario con validación Zod                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Validación:                                                                │
-│  - Título no vacío                                                          │
-│  - Archivo es .doc o .docx                                                  │
-│  - Tamaño < 50MB                                                            │
+│  Admin completa:                                                            │
+│  - Nombre: "Acme Holdings"                                                  │
+│  - Tipo: "holding"                                                          │
+│  - Origen: "research" (selector con tags activos)                           │
+│  - País: "España"                                                           │
+│  - Sectores: ["Tecnología", "Industrial"]                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Storage: Subir a bucket 'document-templates'                               │
-│  Ruta: modelos/{category}/{uuid}-{filename}                                 │
+│  Submit → corporateBuyersService.create()                                   │
+│  - Validación de campos obligatorios                                        │
+│  - INSERT en corporate_buyers con source_tag_id                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DB: Insert en document_templates                                           │
-│  - name: título descriptivo                                                 │
-│  - category: 'Mandato_Venta'                                                │
-│  - template_url: ruta en storage                                            │
-│  - file_name, file_size_bytes, mime_type                                    │
-│  - created_by: auth.uid()                                                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Refrescar listado - modelo aparece en la sección                           │
-└─────────────────────────────────────────────────────────────────────────────┘
+                            ┌───────┴───────┐
+                            │               │
+                         Error           Success
+                            │               │
+                            ▼               ▼
+┌─────────────────────────┐   ┌─────────────────────────────────────────────┐
+│  Toast con error real   │   │  Toast: "Comprador creado correctamente"   │
+│  (RLS/NOT NULL/etc.)    │   │  Cerrar drawer                              │
+│                         │   │  invalidateQueries(['corporate-buyers'])    │
+└─────────────────────────┘   │  Nuevo buyer aparece en tabla               │
+                              └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## Diseño Visual
+## Cambios en Routing y Navegación
 
-### Vista General de la Página
+### App.tsx - Nuevas rutas
+```typescript
+const CorporateBuyers = lazy(() => import("./pages/admin/CorporateBuyers"));
+const BuyerSourceTags = lazy(() => import("./pages/admin/BuyerSourceTags"));
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Sidebar]  │  Modelos de Documentos                                        │
-│             │                                                               │
-│             │  ┌─────────────────────────────────────────────────────────┐  │
-│             │  │ [Mandatos de Compra] [Mandatos de Venta] [NDA]          │  │
-│             │  └─────────────────────────────────────────────────────────┘  │
-│             │                                                               │
-│             │  ┌─────────────────────────────────────────────────────────┐  │
-│             │  │  📄 Mandatos de Venta (3)            [+ Subir modelo]   │  │
-│             │  ├─────────────────────────────────────────────────────────┤  │
-│             │  │                                                         │  │
-│             │  │  ┌───────────────────────────────────────────────────┐  │  │
-│             │  │  │ 📄 Mandato Venta Estándar v2                      │  │  │
-│             │  │  │    mandato_venta_estandar.docx • 245 KB           │  │  │
-│             │  │  │    Subido 4 feb 2026                [⬇️] [🗑️]      │  │  │
-│             │  │  └───────────────────────────────────────────────────┘  │  │
-│             │  │                                                         │  │
-│             │  │  ┌───────────────────────────────────────────────────┐  │  │
-│             │  │  │ 📄 Mandato Venta Industrial                       │  │  │
-│             │  │  │    mandato_industrial_2026.docx • 312 KB          │  │  │
-│             │  │  │    Subido 1 feb 2026                [⬇️] [🗑️]      │  │  │
-│             │  │  └───────────────────────────────────────────────────┘  │  │
-│             │  │                                                         │  │
-│             │  └─────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+// En Routes:
+<Route path="/admin/corporate-buyers" element={
+  <ProtectedRoute requiredRole="admin">
+    <AppLayout><CorporateBuyers /></AppLayout>
+  </ProtectedRoute>
+} />
+<Route path="/admin/buyer-source-tags" element={
+  <ProtectedRoute requiredRole="super_admin">
+    <AppLayout><BuyerSourceTags /></AppLayout>
+  </ProtectedRoute>
+} />
+```
+
+### AppSidebar.tsx - Nuevo item
+```typescript
+// En superAdminGroup.items o nuevo grupo "Directorios":
+{ id: "corporate-buyers", title: "Directorio Corporativo", url: "/admin/corporate-buyers", icon: Building2 },
+{ id: "buyer-source-tags", title: "Etiquetas Origen", url: "/admin/buyer-source-tags", icon: Tag },
 ```
 
 ---
 
-## Archivos a Crear/Modificar
-
-### Archivos Nuevos
+## Archivos a Crear
 
 | Archivo | Descripción |
 |---------|-------------|
-| `src/pages/admin/Modelos.tsx` | Página principal |
-| `src/components/modelos/ModeloCategorySection.tsx` | Sección por categoría |
-| `src/components/modelos/ModeloUploadDialog.tsx` | Dialog de subida |
-| `src/services/modelos.service.ts` | Servicio de modelos |
-| `src/hooks/queries/useModelos.ts` | Hooks React Query |
+| `supabase/migrations/xxx_buyer_source_tags.sql` | Tabla buyer_source_tags + FK en corporate_buyers |
+| `src/pages/admin/CorporateBuyers.tsx` | Página principal del directorio |
+| `src/pages/admin/BuyerSourceTags.tsx` | Admin de etiquetas de origen |
+| `src/components/corporate-buyers/CorporateBuyerDrawer.tsx` | Formulario crear/editar |
+| `src/components/corporate-buyers/CorporateBuyersTable.tsx` | Tabla con columna origen |
+| `src/components/corporate-buyers/CorporateBuyersKPIs.tsx` | KPI cards |
+| `src/components/corporate-buyers/BuyerSourceBadge.tsx` | Badge de origen |
+| `src/services/corporateBuyers.service.ts` | CRUD y etiquetas |
+| `src/hooks/queries/useCorporateBuyers.ts` | React Query hooks |
+| `src/types/corporateBuyers.ts` | Tipos TypeScript |
 
-### Archivos a Modificar
+## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/App.tsx` | Añadir ruta `/admin/modelos` |
-| `src/components/layout/AppSidebar.tsx` | Añadir item "Modelos" en Gestión |
-| `src/types/documents.ts` | Añadir nuevas categorías de template |
-
----
-
-## Validaciones de Archivo
-
-```typescript
-const ALLOWED_EXTENSIONS = ['.doc', '.docx'];
-const ALLOWED_MIME_TYPES = [
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-];
-const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
-```
+| `src/App.tsx` | Añadir rutas corporate-buyers y buyer-source-tags |
+| `src/components/layout/AppSidebar.tsx` | Añadir items en menú |
+| `src/integrations/supabase/types.ts` | Se regenera automáticamente |
 
 ---
 
@@ -313,43 +301,44 @@ const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
 | Caso | Acción | Resultado Esperado |
 |------|--------|-------------------|
-| A | Subir modelo Word en "Mandatos de Venta" con título | Aparece en listado, se puede descargar |
-| B | Subir 2 modelos distintos en "NDA" | Ambos aparecen correctamente |
-| C | Subir archivo no Word (.pdf) | Error: "Solo se permiten archivos .doc/.docx" |
-| D | Subir sin título | Error: "El título es obligatorio" |
-| E | Refresh de página | Todos los modelos persisten |
-| F | Usuario viewer intenta acceder a /admin/modelos | Redirigido a dashboard |
-| G | Descargar modelo | Se descarga archivo Word correctamente |
-| H | Eliminar modelo | Desaparece del listado (soft delete) |
+| A | Click "Nuevo" abre drawer | Drawer abre con formulario |
+| B | Crear buyer con name + tipo + origen | Aparece en listado inmediatamente |
+| C | Crear sin nombre | Error: "El nombre es obligatorio" |
+| D | Buyer muestra badge de origen | Columna "Origen" visible con color |
+| E | Cambiar origen en edición | Se actualiza correctamente |
+| F | Crear nueva etiqueta "linkedin" | Aparece en selector de origen |
+| G | Import Excel existente | Funciona sin cambios (origin default = 'research') |
+| H | Refresh de página | Datos persisten correctamente |
+| I | Usuario viewer intenta acceder | Redirigido (falta permisos) |
 
 ---
 
 ## Orden de Implementación
 
-1. Actualizar tipos en `src/types/documents.ts`
-2. Crear servicio `src/services/modelos.service.ts`
-3. Crear hooks `src/hooks/queries/useModelos.ts`
-4. Crear componentes UI:
-   - `ModeloUploadDialog.tsx`
-   - `ModeloCategorySection.tsx`
-5. Crear página `src/pages/admin/Modelos.tsx`
-6. Añadir ruta en `App.tsx`
-7. Añadir item en sidebar `AppSidebar.tsx`
-8. Probar flujo completo
+1. **Migración SQL**: Crear tabla `buyer_source_tags` + añadir FK a `corporate_buyers`
+2. **Tipos TypeScript**: Definir interfaces en `types/corporateBuyers.ts`
+3. **Servicio**: Crear `corporateBuyers.service.ts` con CRUD completo
+4. **Hooks**: Crear `useCorporateBuyers.ts` con React Query
+5. **Componentes UI**:
+   - `BuyerSourceBadge.tsx`
+   - `CorporateBuyersKPIs.tsx`
+   - `CorporateBuyerDrawer.tsx`
+   - `CorporateBuyersTable.tsx`
+6. **Páginas**:
+   - `CorporateBuyers.tsx`
+   - `BuyerSourceTags.tsx`
+7. **Routing**: Actualizar `App.tsx`
+8. **Navegación**: Actualizar `AppSidebar.tsx`
+9. **Pruebas**: Validar todos los casos
 
 ---
 
-## Resumen para Usuario No Técnico
+## Resumen Técnico
 
-Se creará un nuevo apartado **"Modelos"** dentro del menú **Gestión** del CRM. Este apartado tendrá 3 secciones:
+| Elemento | Detalle |
+|----------|---------|
+| **Tablas afectadas** | `corporate_buyers` (mod), `buyer_source_tags` (nueva) |
+| **Causa raíz botón Nuevo** | Página no existía en el código |
+| **Cuándo se dispara origen** | Al crear/editar buyer (manual o import) |
+| **Cómo probar rápido** | 1) Ir a /admin/corporate-buyers 2) Click Nuevo 3) Llenar form 4) Ver en tabla |
 
-1. **Mandatos de Compra** - Para plantillas de contratos de compra
-2. **Mandatos de Venta** - Para plantillas de contratos de venta  
-3. **NDA** - Para plantillas de acuerdos de confidencialidad
-
-En cada sección podrás:
-- **Subir** documentos Word (.doc o .docx) con un título descriptivo
-- **Descargar** los modelos cuando los necesites
-- **Eliminar** modelos que ya no sean necesarios
-
-Solo los usuarios con permisos de administrador podrán ver y gestionar este apartado.
