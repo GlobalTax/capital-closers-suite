@@ -109,6 +109,7 @@ function AlertItem({
 }
 
 export function AlertsCenter() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   
   const { data: alerts = [], isLoading: loadingAlerts } = useActiveAlerts();
@@ -236,10 +237,10 @@ export function AlertsCenter() {
               variant="ghost" 
               size="sm" 
               className="w-full text-xs justify-center"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); navigate('/alertas'); }}
             >
               <ExternalLink className="h-3 w-3 mr-1.5" />
-              Ver todas en Pipeline
+              Ver todas las alertas
             </Button>
           </div>
         )}

@@ -72,6 +72,7 @@ const ReportesEmail = lazy(() => import("./pages/admin/ReportesEmail"));
 const Modelos = lazy(() => import("./pages/admin/Modelos"));
 const CorporateBuyers = lazy(() => import("./pages/admin/CorporateBuyers"));
 const BuyerSourceTags = lazy(() => import("./pages/admin/BuyerSourceTags"));
+const Alertas = lazy(() => import("./pages/Alertas"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -101,6 +102,7 @@ function AppContent() {
           <Route path="/documentos" element={<ProtectedRoute><AppLayout><Documentos /></AppLayout></ProtectedRoute>} />
           <Route path="/gestor-documentos" element={<ProtectedRoute><AppLayout><GestorDocumentos /></AppLayout></ProtectedRoute>} />
           <Route path="/reportes" element={<ProtectedRoute><AppLayout><Reportes /></AppLayout></ProtectedRoute>} />
+          <Route path="/alertas" element={<ProtectedRoute><AppLayout><Alertas /></AppLayout></ProtectedRoute>} />
           <Route path="/calendario" element={<ProtectedRoute><AppLayout><Calendario /></AppLayout></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><AppLayout><Perfil /></AppLayout></ProtectedRoute>} />
           <Route path="/mis-horas" element={<ProtectedRoute><AppLayout><MisHoras /></AppLayout></ProtectedRoute>} />

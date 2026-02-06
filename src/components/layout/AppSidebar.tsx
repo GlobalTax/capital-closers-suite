@@ -42,6 +42,7 @@ import {
   Mail,
   HelpCircle,
   Tag,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -139,6 +140,7 @@ const menuGroups: MenuGroup[] = [
       { id: "plantillas-email", title: "Plantillas Email", url: "/plantillas-email", icon: Mail },
       { id: "presentaciones", title: "Presentaciones", url: "/presentaciones", icon: Presentation },
       { id: "reportes", title: "Reportes", url: "/reportes", icon: BarChart3 },
+      { id: "alertas", title: "Alertas", url: "/alertas", icon: Bell },
       { id: "dashboard-tv", title: "Dashboard TV", url: "/dashboard-tv", icon: Monitor },
     ],
   },
