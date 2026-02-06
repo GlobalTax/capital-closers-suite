@@ -1,155 +1,156 @@
 
 
-# Plan: Fix de Scroll Vertical en /sync-valuations
+# Plan: Pagina Dedicada /alertas
 
-## Diagnóstico
+## Resumen
 
-### Estructura Actual del Layout
-
-```text
-<html>
-└── <body>
-    └── <SidebarProvider>                  ← flex min-h-svh
-        └── <div> (AppLayout outer)        ← flex min-h-screen w-full
-            ├── <AppSidebar>               ← fixed h-svh (sidebar fijo)
-            └── <div>                      ← flex-1 flex flex-col min-w-0
-                ├── <Topbar>               ← sticky top-0 h-14
-                └── <main>                 ← flex-1 overflow-x-hidden
-                    └── <SyncValuations>   ← space-y-6 (contenido largo)
-```
-
-### Causa Raíz Identificada
-
-El problema está en la combinación de clases CSS en `AppLayout.tsx`:
-
-**Línea 14-18:**
-```jsx
-<div className="flex min-h-screen w-full bg-background">
-  ...
-  <div className="flex-1 flex flex-col min-w-0">
-    <Topbar />
-    <main className="flex-1 p-3 md:p-6 lg:p-8 overflow-x-hidden">
-```
-
-**El bug:** 
-- El `main` tiene `flex-1` que lo expande, pero **NO tiene altura máxima definida** ni `overflow-y-auto`
-- El contenedor padre tiene `min-h-screen` lo que **NO limita la altura máxima**
-- El scroll del body/document funciona normalmente, **PERO** el contenedor `flex-1` puede comportarse de forma inesperada en ciertos navegadores cuando el contenido excede el viewport
-
-**Verificación cruzada:**
-- Otras páginas como `/empresas` y `/documentos` usan el mismo layout y deberían tener el mismo comportamiento
-- Si el scroll funciona en esas páginas pero no en `/sync-valuations`, el problema puede estar en la interacción específica con los componentes de esa página
-
-### Componentes Sospechosos en SyncValuations
-
-Revisando `SyncValuations.tsx`, encontré:
-- **Línea 271:** `<ScrollArea className="h-[300px]">` - Esto está bien contenido
-- El resto del contenido no tiene restricciones de overflow
-
-El problema más probable es que en ciertos estados del navegador o resoluciones, la combinación de:
-1. `min-h-svh` en SidebarProvider
-2. `min-h-screen` en AppLayout
-3. `flex-1` sin `overflow-auto` en main
-
-...causa que el documento no scrollee correctamente.
+Crear una nueva pagina `/alertas` con vista completa de alertas del sistema, reutilizando la infraestructura existente (hooks, servicios, tipos) y agregando filtros, historial y acciones masivas.
 
 ---
 
-## Solución Recomendada
+## Archivos a Crear
 
-### Opción A: Fix en AppLayout (Recomendada)
-
-Modificar el contenedor principal para asegurar scroll correcto:
-
-**Cambio en `src/components/layout/AppLayout.tsx`:**
-
-```jsx
-// ANTES (línea 14-21)
-<div className="flex min-h-screen w-full bg-background">
-  <AppSidebar />
-  <div className="flex-1 flex flex-col min-w-0">
-    <Topbar />
-    <main className="flex-1 p-3 md:p-6 lg:p-8 overflow-x-hidden">
-      {children}
-    </main>
-  </div>
-</div>
-
-// DESPUÉS
-<div className="flex min-h-screen w-full bg-background">
-  <AppSidebar />
-  <div className="flex-1 flex flex-col min-w-0 h-screen">
-    <Topbar />
-    <main className="flex-1 p-3 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto">
-      {children}
-    </main>
-  </div>
-</div>
-```
-
-**Cambios:**
-1. Añadir `h-screen` al contenedor del contenido para limitar su altura
-2. Añadir `overflow-y-auto` al `main` para permitir scroll interno
-
-**Por qué funciona:**
-- `h-screen` fija la altura del contenedor a 100vh
-- `overflow-y-auto` permite scroll cuando el contenido excede esa altura
-- El `flex-1` ahora trabaja dentro de un contenedor con altura fija
-
----
+| Archivo | Descripcion |
+|---------|-------------|
+| `src/pages/Alertas.tsx` | Pagina principal con listado, filtros y acciones |
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/components/layout/AppLayout.tsx` | Añadir `h-screen` al content wrapper y `overflow-y-auto` al main |
+| `src/App.tsx` | Agregar lazy import + ruta `/alertas` |
+| `src/components/layout/AppSidebar.tsx` | Agregar item "Alertas" en el menu |
+| `src/components/alerts/AlertsCenter.tsx` | Cambiar el boton "Ver todas en Pipeline" para navegar a `/alertas` |
 
 ---
 
-## Cambio Específico
+## Estructura de la Pagina `/alertas`
 
-**Archivo:** `src/components/layout/AppLayout.tsx`
+### Header
+- Titulo "Centro de Alertas" con icono Bell
+- Boton "Generar Alertas" (ejecuta `generate_mandato_alerts` RPC)
+- Botones masivos: "Marcar todas como leidas", "Descartar leidas"
 
-**Línea 16:** Cambiar de:
-```jsx
-<div className="flex-1 flex flex-col min-w-0">
-```
-A:
-```jsx
-<div className="flex-1 flex flex-col min-w-0 h-screen">
+### KPI Cards (fila superior)
+Reutiliza `useAlertStats()`:
+- Total activas
+- Criticas (rojo)
+- Advertencias (ambar)
+- Informativas (azul)
+- Sin leer
+
+### Filtros (Toolbar)
+- **Busqueda**: por titulo/descripcion/empresa
+- **Severidad**: Select con opciones critical/warning/info/todas
+- **Tipo**: Select con los 7 tipos de AlertType (inactive_mandate, overdue_task, etc.)
+- **Estado lectura**: Todas / Solo sin leer / Solo leidas
+
+### Tabla de Alertas
+Columnas:
+| Columna | Contenido |
+|---------|-----------|
+| Severidad | Icono con color (critical=rojo, warning=ambar, info=azul) |
+| Titulo | Texto con indicador de no leida |
+| Descripcion | Texto truncado |
+| Empresa | empresa_nombre del mandato |
+| Tipo | Badge con alert_type legible |
+| Fecha | created_at formateado |
+| Acciones | Marcar leida, Descartar, Ir al mandato |
+
+- Filas no leidas tendran fondo diferenciado
+- Click en fila navega al mandato y marca como leida
+
+### Historial
+- Incluir un toggle "Mostrar descartadas" que cambia la query para incluir alertas descartadas (historial)
+- Las descartadas se muestran con opacidad reducida
+
+---
+
+## Detalles Tecnicos
+
+### Servicio
+Se reutiliza completamente `src/services/alerts.service.ts` existente. Se agrega una funcion para obtener alertas con filtros (incluyendo descartadas):
+
+```typescript
+// Nueva funcion en alerts.service.ts
+export const fetchAllAlerts = async (filters: AlertFilters): Promise<ActiveAlert[]> => {
+  let query = supabase
+    .from('v_active_alerts')  // Para activas
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  // Aplicar filtros de severidad, tipo, etc.
+  if (filters.severity) query = query.eq('severity', filters.severity);
+  if (filters.alertType) query = query.eq('alert_type', filters.alertType);
+  
+  return (await query).data || [];
+};
+
+// Para historial (descartadas), query directa a mandato_alerts
+export const fetchDismissedAlerts = async (): Promise<MandatoAlert[]> => {
+  const { data } = await supabase
+    .from('mandato_alerts')
+    .select('*')
+    .eq('is_dismissed', true)
+    .order('updated_at', { ascending: false })
+    .limit(100);
+  return data || [];
+};
 ```
 
-**Línea 18:** Cambiar de:
-```jsx
-<main className="flex-1 p-3 md:p-6 lg:p-8 overflow-x-hidden">
+### Hook
+Se agrega `useAllAlerts(filters)` en `useAlerts.ts` que acepta filtros opcionales.
+
+### Pagina
+La pagina `Alertas.tsx` usa:
+- `useActiveAlerts()` o `useAllAlerts(filters)` para el listado
+- `useAlertStats()` para los KPIs
+- `useGenerateAlerts()` para el boton de regenerar
+- `useMarkAlertAsRead()`, `useDismissAlert()` para acciones individuales
+- `useMarkAllAlertsAsRead()`, `useDismissAllReadAlerts()` para acciones masivas
+- Filtrado client-side para busqueda por texto, severidad, tipo y estado de lectura
+
+### Routing
+```tsx
+// App.tsx
+const Alertas = lazy(() => import("./pages/Alertas"));
+// En Routes:
+<Route path="/alertas" element={<ProtectedRoute><AppLayout><Alertas /></AppLayout></ProtectedRoute>} />
 ```
-A:
-```jsx
-<main className="flex-1 p-3 md:p-6 lg:p-8 overflow-x-hidden overflow-y-auto">
+
+### Sidebar
+Agregar item "Alertas" con icono `Bell` en el grupo principal, debajo de "Reportes".
+
+### AlertsCenter Update
+Cambiar el boton footer del popover para navegar a `/alertas`:
+```tsx
+onClick={() => { setOpen(false); navigate('/alertas'); }}
 ```
 
 ---
 
-## Casos de Prueba
+## Mapeo de Tipos Legibles
 
-| Caso | Acción | Resultado Esperado |
-|------|--------|-------------------|
-| A | Abrir /sync-valuations con contenido largo | Scroll vertical funciona hasta el final |
-| B | Scroll con ratón, trackpad y teclado | Todos los métodos funcionan |
-| C | Reducir altura de ventana | Scroll sigue funcionando |
-| D | Probar /empresas (página larga) | Scroll funciona igual que antes |
-| E | Probar /documentos | Scroll funciona igual que antes |
-| F | Probar /mandatos con muchos registros | Scroll funciona igual que antes |
-| G | Probar en móvil (responsive) | Scroll táctil funciona |
+```typescript
+const alertTypeLabels: Record<AlertType, string> = {
+  inactive_mandate: 'Mandato Inactivo',
+  overdue_task: 'Tarea Vencida',
+  stuck_deal: 'Deal Estancado',
+  upcoming_deadline: 'Fecha Limite Proxima',
+  missing_document: 'Documento Faltante',
+  low_probability: 'Baja Probabilidad',
+  critical_task_overdue: 'Tarea Critica Vencida',
+};
+```
 
 ---
 
-## Resumen Técnico
+## Orden de Implementacion
 
-| Elemento | Detalle |
-|----------|---------|
-| **Contenedor que bloqueaba** | `div.flex-1.flex.flex-col.min-w-0` sin altura límite |
-| **Clase/regla cambiada** | Añadir `h-screen` al wrapper y `overflow-y-auto` al main |
-| **Por qué funciona ahora** | El contenedor tiene altura fija (100vh) y el main permite scroll cuando el contenido excede esa altura |
-| **Impacto en otras páginas** | Ninguno negativo - mejora la consistencia del scroll en todo el CRM |
+1. Agregar funcion `fetchAllAlerts` al servicio existente
+2. Agregar hook `useAllAlerts` 
+3. Crear pagina `Alertas.tsx`
+4. Registrar ruta en `App.tsx`
+5. Agregar al sidebar en `AppSidebar.tsx`
+6. Actualizar link en `AlertsCenter.tsx`
 
