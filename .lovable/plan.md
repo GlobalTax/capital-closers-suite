@@ -1,98 +1,114 @@
 
-# Fase 3: Dashboard de IA - Metricas, Tokens, Costos y Actividad
+# Fase 4: Asistente IA Conversacional para el CRM
 
 ## Objetivo
+Crear un chat IA flotante accesible desde cualquier pagina del CRM que permita consultar datos con lenguaje natural: empresas, mandatos, contactos, tareas, y metricas generales.
 
-Crear un panel centralizado en `/admin/ai-dashboard` que permita a administradores monitorear todo el uso de IA en el CRM: tokens consumidos, costos estimados, tasa de exito, y actividad reciente por modulo.
+## Arquitectura
 
-## Datos disponibles
+El asistente funciona en dos capas:
 
-La tabla `ai_activity_log` ya registra toda la actividad de las Edge Functions de IA con los siguientes campos:
-- `module`: identificador del modulo (meeting_summary, alerts, batch-enrichment, alerts_cron, task-ai)
-- `model`: modelo usado (gpt-5-nano, gpt-5-mini, etc.)
-- `input_tokens` / `output_tokens`: consumo de tokens
-- `estimated_cost_usd`: costo estimado por llamada
-- `success` / `error_message`: resultado de la operacion
-- `duration_ms`: tiempo de respuesta
-- `entity_type` / `entity_id`: entidad afectada
-- `created_at`: timestamp
+1. **Edge Function `crm-assistant`**: Recibe el mensaje del usuario + historial de conversacion. Usa tool calling (Lovable AI Gateway con `google/gemini-3-flash-preview`) para que el modelo decida que datos consultar de Supabase, ejecuta las queries con service role, y devuelve la respuesta en streaming.
 
-Actualmente la tabla esta vacia (las funciones estan desplegadas pero aun no se han ejecutado), por lo que el dashboard mostrara estados vacios con buen UX.
+2. **Componente flotante `CRMAssistant`**: Boton fijo en esquina inferior derecha con panel de chat desplegable. Renderiza mensajes con markdown, soporta streaming token-by-token.
+
+## Herramientas disponibles para el modelo (tool calling)
+
+El modelo tendra acceso a estas herramientas que se ejecutan server-side:
+
+| Tool | Descripcion | Query Supabase |
+|------|------------|----------------|
+| `search_empresas` | Buscar empresas por nombre, sector, ubicacion, facturacion | `empresas` con filtros ilike/range |
+| `search_contactos` | Buscar contactos por nombre, empresa, cargo | `contactos` + join `empresas` |
+| `search_mandatos` | Buscar mandatos por estado, tipo, empresa | `mandatos` + join `empresas` |
+| `get_tareas_pendientes` | Listar tareas pendientes, filtrar por asignado/prioridad | `tareas` con filtros |
+| `get_stats_resumen` | Metricas generales: total empresas, mandatos activos, tareas pendientes | counts agregados |
+| `get_empresa_detalle` | Detalle completo de una empresa por ID o nombre | `empresas` + `contactos` + `mandatos` |
 
 ## Archivos a crear
 
-### 1. `src/hooks/queries/useAIDashboard.ts`
-- Hook con queries para obtener metricas agregadas desde `ai_activity_log`
-- Queries:
-  - **Totales**: sum tokens, sum cost, count total, count success/errors
-  - **Por modulo**: agrupado por `module` con totales de tokens, costo, llamadas
-  - **Por modelo**: agrupado por `model`
-  - **Actividad reciente**: ultimos 50 registros con orden descendente
-  - **Serie temporal**: agrupado por dia (ultimos 30 dias) para grafico de lineas
-- Filtro por rango de fechas (default: ultimos 30 dias)
+### 1. `supabase/functions/crm-assistant/index.ts`
+- Validacion de auth (usuario autenticado, no requiere admin)
+- System prompt con contexto M&A y las tools disponibles
+- Recibe `messages[]` (historial completo)
+- Llama a Lovable AI Gateway con streaming + tool calling
+- Cuando el modelo invoca una tool, ejecuta la query Supabase con service role
+- Re-envia resultado de la tool al modelo para que genere la respuesta final
+- Respuesta final en streaming SSE
+- Logging en `ai_activity_log` (modulo: `crm-assistant`)
+- Manejo de errores 429/402
 
-### 2. `src/pages/admin/AIDashboard.tsx`
-Pagina principal del dashboard con las siguientes secciones:
+### 2. `src/hooks/useCRMAssistant.ts`
+- Estado de mensajes `{role, content}[]`
+- Funcion `sendMessage(text)` que hace streaming SSE al edge function
+- Actualiza ultimo mensaje assistant token-by-token (patron del codebase)
+- Estado: `isStreaming`, `messages`, `error`
+- `clearHistory()` para reiniciar conversacion
 
-**Header**: Titulo "Dashboard de IA", selector de rango de fechas (7d / 30d / 90d / Todo)
+### 3. `src/components/assistant/CRMAssistantButton.tsx`
+- Boton flotante fijo en esquina inferior derecha (z-50)
+- Icono `MessageCircle` / `Sparkles` con badge animado
+- Toggle para abrir/cerrar el panel
+- Se oculta en rutas publicas
 
-**Tarjetas KPI** (fila superior, 5 cards):
-- Total llamadas IA
-- Tokens consumidos (input + output)
-- Costo total estimado (USD)
-- Tasa de exito (%)
-- Latencia promedio (ms)
+### 4. `src/components/assistant/CRMAssistantPanel.tsx`
+- Panel tipo chat (400px ancho, 500px alto) con sombra elevada
+- Header con titulo "Asistente IA" y boton cerrar
+- ScrollArea con mensajes renderizados con `react-markdown`
+- Input con boton enviar (Enter para enviar, Shift+Enter salto de linea)
+- Estado vacio con sugerencias rapidas:
+  - "Cuantas empresas tenemos en el sector tecnologia?"
+  - "Mandatos activos y su estado"
+  - "Tareas pendientes para hoy"
+  - "Resumen general del CRM"
+- Indicador de streaming (puntos animados)
+- Manejo de errores inline
 
-**Grafico de uso diario** (recharts AreaChart):
-- Eje X: fechas
-- Area 1: tokens por dia
-- Area 2: costo por dia
-- Tooltip con detalles
-
-**Tabla: Uso por Modulo** (desglose):
-- Columnas: Modulo, Llamadas, Tokens IN, Tokens OUT, Costo, Exito %, Latencia media
-- Iconos por modulo (Sparkles, Brain, Zap, etc.)
-
-**Tabla: Uso por Modelo**:
-- Columnas: Modelo, Llamadas, Tokens totales, Costo, Latencia media
-
-**Timeline: Actividad Reciente**:
-- Ultimas 50 operaciones con: timestamp, modulo, modelo, tokens, costo, estado (badge verde/rojo), entidad vinculada
-- ScrollArea con altura fija
-
-### 3. `src/components/ai-dashboard/AIKPICards.tsx`
-- Componente reutilizable para las 5 tarjetas de metricas
-- Skeleton loading state
-- Estado vacio cuando no hay datos
-
-### 4. `src/components/ai-dashboard/AIUsageChart.tsx`
-- Grafico de area con recharts
-- Dos series: tokens y costo
-- Responsive, con eje Y dual
-- Estado vacio con mensaje "Sin datos de actividad aun"
-
-### 5. `src/components/ai-dashboard/AIModuleBreakdown.tsx`
-- Tabla con desglose por modulo
-- Progress bars para porcentaje de uso relativo
-- Iconos y colores por modulo
-
-### 6. `src/components/ai-dashboard/AIActivityTimeline.tsx`
-- Lista de actividad reciente
-- Badges de estado (exito/error)
-- Formato de fecha relativo (hace 2 min, hace 1 hora)
-- Click para expandir detalles de error si aplica
+### 5. `src/components/assistant/CRMAssistant.tsx`
+- Componente wrapper que combina Button + Panel
+- Usa `useCRMAssistant` hook
+- Controla estado open/closed
 
 ## Archivos a modificar
 
-### 7. `src/App.tsx`
-- Agregar ruta `/admin/ai-dashboard` con ProtectedRoute requiredRole="admin"
-- Import lazy del componente AIDashboard
+### 6. `src/components/layout/AppLayout.tsx`
+- Agregar `<CRMAssistant />` dentro del layout para que aparezca en todas las paginas protegidas
+
+### 7. `supabase/config.toml`
+- Agregar `[functions.crm-assistant]` con `verify_jwt = true`
 
 ## Detalles tecnicos
 
-- Todas las queries usan el cliente Supabase existente (no se necesitan Edge Functions nuevas)
-- Los datos se leen directamente de `ai_activity_log` con queries agregadas
-- Se usa recharts (ya instalado) para graficos
-- Patron de componentes consistente con EnrichmentDashboard y TaskAIQA
-- staleTime de 2 minutos para las queries
-- No se requiere migracion de base de datos (la tabla ya existe con RLS)
+### System Prompt del asistente
+```
+Eres el asistente de IA de Capittal Partners CRM. Ayudas a los usuarios a consultar
+datos del CRM usando lenguaje natural en español. Tienes acceso a herramientas para
+buscar empresas, contactos, mandatos y tareas. Responde siempre en español, de forma
+concisa y profesional. Usa tablas markdown cuando presentes multiples resultados.
+Cuando no encuentres datos, sugerile al usuario refinar su busqueda.
+```
+
+### Flujo de una consulta
+1. Usuario escribe: "empresas del sector salud con mas de 50 empleados"
+2. Frontend envia POST con `messages[]` al edge function
+3. Edge function llama al modelo con tools habilitadas
+4. Modelo decide invocar `search_empresas({ sector: "salud", min_empleados: 50 })`
+5. Edge function ejecuta query en Supabase, obtiene resultados
+6. Re-envia resultados al modelo como tool response
+7. Modelo genera respuesta en lenguaje natural con tabla markdown
+8. Se hace streaming SSE al frontend
+
+### Streaming
+- El edge function hace la llamada inicial (non-streaming) para resolver tools
+- La llamada final (con resultados) se hace con streaming para la respuesta al usuario
+- Frontend parsea SSE linea-por-linea siguiendo el patron existente del codebase
+
+### Modelo
+- `google/gemini-3-flash-preview` (default del proyecto) para balance velocidad/calidad
+- Temperature: 0.3 para respuestas factuales
+
+### Limites de seguridad
+- Maximo 50 resultados por query para evitar respuestas enormes
+- Solo lectura (SELECT) - el asistente no puede modificar datos
+- Auth requerida (cualquier usuario del CRM, no solo admin)
+- Historial solo en memoria del cliente (no se persiste en DB)
