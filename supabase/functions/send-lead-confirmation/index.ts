@@ -15,11 +15,38 @@ const INTERNAL_BCC = [
   "oriol@capittal.es"
 ];
 
+// --- Whitelist de tablas permitidas ---
+const ALLOWED_LEAD_TYPES = [
+  'contact_leads',
+  'general_contact_leads',
+  'company_valuations',
+  'advisor_valuations',
+  'acquisition_leads',
+] as const;
+
+type AllowedLeadType = typeof ALLOWED_LEAD_TYPES[number];
+
 interface LeadConfirmationRequest {
   lead_id: string;
-  lead_type: 'contact_leads' | 'general_contact_leads' | 'company_valuations' | 'advisor_valuations' | 'acquisition_leads';
+  lead_type: AllowedLeadType;
   email: string;
   full_name: string;
+}
+
+// --- Rate limit en memoria ---
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 min
+const RATE_LIMIT_MAX = 3;
+
+function checkRateLimit(email: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(email) || []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_MS
+  );
+  if (timestamps.length >= RATE_LIMIT_MAX) return false;
+  timestamps.push(now);
+  rateLimitMap.set(email, timestamps);
+  return true;
 }
 
 function generateEmailHtml(fullName: string): string {
@@ -116,9 +143,6 @@ El equipo de Capittal
   `.trim();
 }
 
-/**
- * Validates internal auth: either SERVICE_ROLE_KEY or admin user.
- */
 async function validateInternalAuth(req: Request): Promise<Response | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
@@ -131,12 +155,10 @@ async function validateInternalAuth(req: Request): Promise<Response | null> {
   const token = authHeader.replace("Bearer ", "");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  // Allow internal service calls
   if (token === serviceRoleKey) {
     return null;
   }
 
-  // Validate as admin user
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
@@ -171,26 +193,50 @@ async function validateInternalAuth(req: Request): Promise<Response | null> {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("send-lead-confirmation: Request received");
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Logging: IP del cliente
+  const clientIP = req.headers.get("x-forwarded-for") ||
+    req.headers.get("cf-connecting-ip") || "unknown";
+
   // Auth validation
   const authError = await validateInternalAuth(req);
-  if (authError) return authError;
+  if (authError) {
+    console.warn(`send-lead-confirmation: Auth failed from IP=${clientIP}`);
+    return authError;
+  }
 
   try {
     const { lead_id, lead_type, email, full_name }: LeadConfirmationRequest = await req.json();
 
-    console.log(`send-lead-confirmation: Processing lead_id=${lead_id}, type=${lead_type}, email=${email}`);
+    console.log(`send-lead-confirmation: Request from IP=${clientIP}, email=${email}, lead_type=${lead_type}`);
 
+    // Validar campos requeridos
     if (!email || !full_name) {
-      console.error("send-lead-confirmation: Missing required fields");
+      console.error("send-lead-confirmation: Missing required fields", { email: !!email, full_name: !!full_name });
       return new Response(
         JSON.stringify({ error: "Missing required fields: email and full_name" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Validar lead_type contra whitelist
+    if (lead_type && !ALLOWED_LEAD_TYPES.includes(lead_type as any)) {
+      console.warn(`send-lead-confirmation: lead_type rechazado: "${lead_type}" from IP=${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: `lead_type inválido: ${lead_type}` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Rate limit por email
+    if (!checkRateLimit(email)) {
+      console.warn(`send-lead-confirmation: Rate limit exceeded for ${email} from IP=${clientIP}`);
+      return new Response(
+        JSON.stringify({ error: "Demasiadas solicitudes. Intenta de nuevo más tarde." }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -198,7 +244,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailText = generateEmailText(full_name);
 
     console.log(`send-lead-confirmation: Sending email to ${email} with BCC to ${INTERNAL_BCC.length} internal recipients`);
-    
+
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "Capittal <noreply@capittal.es>",
       to: [email],
@@ -216,15 +262,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`send-lead-confirmation: Email sent successfully, message_id=${emailData?.id}`);
+    console.log(`send-lead-confirmation: Email sent successfully, message_id=${emailData?.id}, lead_id=${lead_id}`);
 
     if (lead_id && lead_type) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-      
+
       if (supabaseUrl && supabaseServiceKey) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        
+
         const { error: updateError } = await supabase
           .from(lead_type)
           .update({
@@ -237,7 +283,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (updateError) {
           console.warn(`send-lead-confirmation: Failed to update lead record: ${updateError.message}`);
         } else {
-          console.log(`send-lead-confirmation: Lead ${lead_id} updated with email tracking`);
+          console.log(`send-lead-confirmation: Lead ${lead_id} updated in ${lead_type}`);
         }
       }
     }
@@ -255,7 +301,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("send-lead-confirmation: Unexpected error:", error);
+    console.error(`send-lead-confirmation: Unexpected error from IP=${clientIP}:`, error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
