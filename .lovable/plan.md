@@ -1,120 +1,62 @@
 
-# Gestion de Plantillas de Checklist
 
-## Resumen
+# Fix: Fases "Due Diligence" y "Cierre" sin tareas en Sell-Side + Mejora UI
 
-Crear una pantalla central en **Gestion > Plantillas Checklists** para editar las plantillas globales de Sell-Side y Buy-Side. Se reutilizan las tablas existentes (`mandato_checklist_templates` y `checklist_fases`) sin crear nuevas tablas ni modificar el comportamiento actual de los mandatos.
+## Diagnostico
 
-## Arquitectura actual (sin cambios)
-
-Las tablas ya existen y tienen RLS configurado:
-
-- **`checklist_fases`** -- Fases/secciones (nombre, orden, color, tipo_operacion, activo)
-- **`mandato_checklist_templates`** -- Tareas plantilla (fase, tarea, descripcion, responsable, sistema, orden, tipo_operacion, duracion_estimada_dias, es_critica, activo)
-- **`mandato_checklist_tasks`** -- Tareas reales por mandato (copia de templates)
-
-RLS ya permite a admin/super_admin gestionar ambas tablas. No se crean tablas nuevas.
+Las fases "4. Due Diligence" y "5. Cierre" existen en `checklist_fases` para Sell-Side pero **no tienen tareas plantilla** en `mandato_checklist_templates`. Buy-Side si tiene tareas para ambas fases (10 en DD, 8 en Cierre).
 
 ## Cambios a realizar
 
-### 1. Nueva pagina: `src/pages/PlantillasChecklist.tsx`
+### 1. Insertar tareas plantilla para Sell-Side (datos)
 
-Pagina con dos tabs: **Sell-Side** (tipo_operacion = 'venta') y **Buy-Side** (tipo_operacion = 'compra').
+Se insertaran tareas plantilla adaptadas al contexto Sell-Side (el vendedor facilita la DD, no la ejecuta):
 
-Cada tab muestra:
-- Las fases (secciones) ordenadas, con opcion de crear, editar nombre/color/orden, y eliminar (con confirmacion).
-- Dentro de cada fase, las tareas plantilla con CRUD inline (titulo, descripcion, responsable, sistema, duracion, es_critica, orden).
-- Reordenacion con botones arriba/abajo (ya hay `@dnd-kit` instalado, pero botones es mas simple y consistente con el patron existente).
+**4. Due Diligence (8 tareas):**
+| Orden | Tarea | Critica | Dias |
+|-------|-------|---------|------|
+| 1 | Coordinar kick-off de Due Diligence | Si | 1 |
+| 2 | Facilitar acceso al Data Room | Si | 3 |
+| 3 | Responder Q&A de compradores | No | 14 |
+| 4 | Coordinar management presentations | Si | 5 |
+| 5 | Gestionar solicitudes adicionales de info | No | 10 |
+| 6 | Monitorizar avance de DD | No | 14 |
+| 7 | Revisar hallazgos y preparar respuestas | Si | 7 |
+| 8 | Informe resumen DD para el cliente | Si | 3 |
 
-### 2. Componentes nuevos
+**5. Cierre (8 tareas):**
+| Orden | Tarea | Critica | Dias |
+|-------|-------|---------|------|
+| 1 | Analizar ofertas vinculantes recibidas | Si | 5 |
+| 2 | Negociar terminos del SPA | Si | 14 |
+| 3 | Definir ajustes de precio y earn-outs | Si | 7 |
+| 4 | Coordinar asesores legales del vendedor | No | 7 |
+| 5 | Gestionar condiciones suspensivas | Si | 14 |
+| 6 | Preparar closing checklist | No | 3 |
+| 7 | Firma del SPA | Si | 1 |
+| 8 | Closing y transferencia | Si | 1 |
 
-| Componente | Funcion |
-|---|---|
-| `src/pages/PlantillasChecklist.tsx` | Pagina principal con tabs Sell/Buy |
-| `src/components/templates/ChecklistTemplateManager.tsx` | Manager para un tipo (venta o compra): lista fases + tareas |
-| `src/components/templates/TemplatePhaseEditor.tsx` | Accordion de una fase con sus tareas y botones CRUD |
-| `src/components/templates/TemplateTaskForm.tsx` | Formulario inline/dialog para crear/editar una tarea plantilla |
-| `src/components/templates/TemplateSyncDialog.tsx` | Dialog para sincronizar mandatos existentes (accion manual) |
+### 2. Mejorar UI de fases sin tareas
 
-### 3. Servicio: `src/services/checklistTemplates.service.ts`
+En el componente `ChecklistPhaseCard.tsx`, cuando `total === 0`:
+- Mostrar un icono distinto (un circulo vacio en vez del reloj)
+- Mostrar texto "Sin tareas" en lugar de "0/0 tareas"
+- Aplicar estilo visual mas tenue (opacidad reducida)
 
-Funciones CRUD sobre las tablas existentes:
-- `fetchFases(tipo)` / `createFase(data)` / `updateFase(id, data)` / `deleteFase(id)`
-- `fetchTemplates(tipo)` / `createTemplate(data)` / `updateTemplate(id, data)` / `deleteTemplate(id)`
-- `reorderFases(ids[])` / `reorderTemplates(ids[])`
-- `syncTemplatesToMandatos(tipo, mode)` -- para el boton de sincronizacion manual
+En el Accordion de `ChecklistDynamicCard.tsx`, linea 307-310:
+- Mejorar el mensaje "No hay tareas en esta fase" con un call-to-action para crear una tarea manual
 
-### 4. RPC para sincronizacion manual (migracion SQL)
-
-```sql
--- Modo "solo anadir tareas nuevas que falten"
-CREATE OR REPLACE FUNCTION sync_template_additions(p_tipo text)
-RETURNS json ...
-```
-
-Logica:
-- Busca mandatos activos del tipo dado que ya tengan tareas.
-- Por cada mandato, inserta solo las tareas de la plantilla que no existan ya (comparacion por fase + tarea texto).
-- Retorna `{ mandatos_updated, tasks_added }`.
-- NO borra nada.
-
-Para "re-sincronizar completo" (solo super_admin): borra tareas del mandato y re-copia. Requiere confirmacion doble en frontend.
-
-### 5. Ruta y sidebar
-
-**Ruta:** `/plantillas-checklist` con `requiredRole="admin"` en `App.tsx`.
-
-**Sidebar:** Anadir entrada en el grupo "Gestion" (`menuGroups[2].items`):
-```
-{ id: "plantillas-checklist", title: "Plantillas Checklist", url: "/plantillas-checklist", icon: ClipboardList }
-```
-
-### 6. Validaciones
-
-- No permitir fase sin nombre.
-- No permitir tarea sin titulo.
-- No permitir eliminar una fase que tenga tareas (avisar y ofrecer mover tareas o eliminar todo).
-- Confirmacion antes de eliminar.
-- Toast de exito/error en cada operacion.
-
-### 7. Sincronizacion a mandatos existentes
-
-Seccion al final de la pagina con:
-- Boton "Aplicar a mandatos existentes" (solo visible para admin+).
-- Dialog con dos opciones:
-  - "Solo anadir tareas nuevas" (default, seguro)
-  - "Re-sincronizar completo" (solo super_admin, confirmacion extra con texto "CONFIRMAR")
-- Muestra preview de cuantos mandatos se afectaran antes de ejecutar.
-
-### 8. Lo que NO cambia
-
-- El checklist dentro de cada mandato sigue funcionando igual.
-- La copia automatica a mandatos nuevos ya funciona via `copy_checklist_template_by_type` (con la idempotencia recien anadida).
-- No se modifica el diseno del checklist del mandato.
-- No se agregan campos nuevos fuera de lo descrito.
-
----
-
-## Detalle tecnico - Archivos
+## Archivos afectados
 
 | Archivo | Accion |
-|---|---|
-| `src/pages/PlantillasChecklist.tsx` | NUEVO - Pagina principal |
-| `src/components/templates/ChecklistTemplateManager.tsx` | NUEVO - Manager por tipo |
-| `src/components/templates/TemplatePhaseEditor.tsx` | NUEVO - Editor de fase |
-| `src/components/templates/TemplateTaskForm.tsx` | NUEVO - Form tarea |
-| `src/components/templates/TemplateSyncDialog.tsx` | NUEVO - Dialog sincronizacion |
-| `src/services/checklistTemplates.service.ts` | NUEVO - CRUD service |
-| `src/App.tsx` | EDITAR - Anadir ruta + lazy import |
-| `src/components/layout/AppSidebar.tsx` | EDITAR - Anadir item en grupo Gestion |
-| Migracion SQL | NUEVA - RPC sync_template_additions + sync_template_full_reset |
+|---------|--------|
+| Datos (INSERT via tool) | Insertar 16 tareas plantilla para Sell-Side |
+| `src/components/mandatos/ChecklistPhaseCard.tsx` | Mejorar visualizacion cuando total=0 |
+| `src/components/mandatos/ChecklistDynamicCard.tsx` | Mejorar empty state por fase |
 
-## Flujo de usuario
+## Lo que NO cambia
 
-1. Admin abre Gestion > Plantillas Checklist
-2. Selecciona tab Sell-Side o Buy-Side
-3. Ve las fases con sus tareas actuales
-4. Puede anadir/editar/eliminar fases y tareas, reordenar
-5. Los cambios se guardan directamente en `checklist_fases` y `mandato_checklist_templates`
-6. Mandatos nuevos usaran automaticamente la plantilla actualizada
-7. Opcionalmente, puede sincronizar mandatos existentes con el boton manual
+- No se modifican mandatos existentes (las nuevas tareas solo se aplican al copiar plantilla en mandatos nuevos)
+- No se cambia la estructura de datos ni el schema
+- No se agregan features nuevas
+
