@@ -74,6 +74,7 @@ const CorporateBuyers = lazy(() => import("./pages/admin/CorporateBuyers"));
 const BuyerSourceTags = lazy(() => import("./pages/admin/BuyerSourceTags"));
 const Alertas = lazy(() => import("./pages/Alertas"));
 const PlantillasChecklist = lazy(() => import("./pages/PlantillasChecklist"));
+const EnrichmentDashboard = lazy(() => import("./pages/admin/EnrichmentDashboard"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -136,6 +137,7 @@ function AppContent() {
             <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
             <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
             <Route path="/plantillas-checklist" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasChecklist /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/enrichment" element={<ProtectedRoute requiredRole="admin"><AppLayout><EnrichmentDashboard /></AppLayout></ProtectedRoute>} />
             
             {/* Campaign Contacts - Buy and Sell */}
             <Route path="/admin/buyer-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
