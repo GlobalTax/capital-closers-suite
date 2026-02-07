@@ -8,19 +8,70 @@ const corsHeaders = {
 
 interface SendEmailRequest {
   recipientId: string;
-  testEmail?: string; // For test sends
+  testEmail?: string;
 }
 
 interface EmailAttachment {
   filename: string;
-  content: string; // base64
+  content: string;
   type: string;
+}
+
+/**
+ * Validates the request is from an admin user.
+ * Returns the user id if authorized, or a Response with error if not.
+ */
+async function validateAdminAuth(req: Request): Promise<{ userId: string } | Response> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return { userId: user.id };
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Auth validation
+  const authResult = await validateAdminAuth(req);
+  if (authResult instanceof Response) return authResult;
 
   try {
     const { recipientId, testEmail } = await req.json() as SendEmailRequest;
@@ -29,7 +80,6 @@ serve(async (req) => {
       throw new Error("recipientId is required");
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -38,10 +88,10 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch recipient with campaign and template data
-    const { data: recipient, error: recipientError } = await supabase
+    const { data: recipient, error: recipientError } = await supabaseAdmin
       .from("teaser_recipients")
       .select(`
         *,
@@ -63,7 +113,6 @@ serve(async (req) => {
       throw new Error("Campaign not found for recipient");
     }
 
-    // Check if already sent (unless test)
     if (!testEmail && recipient.status !== "pending" && recipient.status !== "queued") {
       return new Response(
         JSON.stringify({ success: false, error: "Email already sent", status: recipient.status }),
@@ -76,7 +125,7 @@ serve(async (req) => {
     let subject = campaign.subject;
 
     if (campaign.template_id) {
-      const { data: template } = await supabase
+      const { data: template } = await supabaseAdmin
         .from("email_templates")
         .select("*")
         .eq("id", campaign.template_id)
@@ -87,8 +136,7 @@ serve(async (req) => {
         subject = template.subject_template;
       }
     } else {
-      // Get default template for language
-      const { data: defaultTemplate } = await supabase
+      const { data: defaultTemplate } = await supabaseAdmin
         .from("email_templates")
         .select("*")
         .eq("idioma", campaign.idioma)
@@ -126,11 +174,9 @@ serve(async (req) => {
     const trackingPixelUrl = `${trackingBaseUrl}/track-email-open?tid=${recipient.tracking_id}`;
     const clickTrackingBaseUrl = `${trackingBaseUrl}/track-email-click?tid=${recipient.tracking_id}&url=`;
 
-    // Inject tracking pixel before </body>
     const trackingPixel = `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
     htmlContent = htmlContent.replace("</body>", `${trackingPixel}</body>`);
 
-    // Replace links with tracking redirects (except unsubscribe and capittal.es links for now)
     htmlContent = htmlContent.replace(
       /href="(https?:\/\/(?!capittal\.es)[^"]+)"/g,
       (match, url) => {
@@ -139,37 +185,20 @@ serve(async (req) => {
       }
     );
 
-    // Prepare attachments if teaser document exists
+    // Prepare attachments
     const attachments: EmailAttachment[] = [];
 
     if (campaign.teaser_document) {
       try {
         const doc = campaign.teaser_document;
-        
-        // Determine which PDF to use based on watermark settings
         let storagePath = doc.storage_path;
         let fileName = doc.file_name;
-        
-        // Check if watermark is enabled and if we need to generate/use watermarked PDF
+
         if (campaign.enable_watermark && doc.mime_type?.includes("pdf")) {
-          // Check if watermarked PDF already exists
           if (recipient.watermarked_path) {
             storagePath = recipient.watermarked_path;
-            console.log(`Using existing watermarked PDF: ${storagePath}`);
           } else {
-            // Generate watermarked PDF on-the-fly
-            console.log(`Generating watermarked PDF for recipient ${recipient.email}`);
-            
-            const watermarkTemplate = campaign.watermark_template || 
-              "Confidencial — {nombre} — {email} — ID:{id}";
-            
-            const watermarkText = watermarkTemplate
-              .replace("{nombre}", recipient.nombre || recipient.empresa_nombre || "Destinatario")
-              .replace("{email}", recipient.email)
-              .replace("{id}", campaign.id.substring(0, 8).toUpperCase());
-
-            // Call generate-watermarked-pdf function
-            const { data: watermarkResult, error: watermarkError } = await supabase.functions.invoke(
+            const { data: watermarkResult, error: watermarkError } = await supabaseAdmin.functions.invoke(
               "generate-watermarked-pdf",
               { body: { recipientId } }
             );
@@ -178,18 +207,15 @@ serve(async (req) => {
               console.error("Failed to generate watermark, using original:", watermarkError);
             } else if (watermarkResult?.success && watermarkResult?.watermarkedPath) {
               storagePath = watermarkResult.watermarkedPath;
-              console.log(`Generated watermarked PDF: ${storagePath}`);
             }
           }
         }
-        
-        // Download file from storage (either original or watermarked)
-        const { data: fileData, error: downloadError } = await supabase.storage
+
+        const { data: fileData, error: downloadError } = await supabaseAdmin.storage
           .from("mandato-documentos")
           .download(storagePath);
 
         if (!downloadError && fileData) {
-          // Convert to base64
           const arrayBuffer = await fileData.arrayBuffer();
           const base64 = btoa(
             new Uint8Array(arrayBuffer).reduce(
@@ -211,7 +237,6 @@ serve(async (req) => {
       }
     }
 
-    // Determine recipient email
     const toEmail = testEmail || recipient.email;
 
     // Send email via Resend
@@ -238,9 +263,8 @@ serve(async (req) => {
     const resendResult = await resendResponse.json();
 
     if (!resendResponse.ok) {
-      // Update recipient status to failed
       if (!testEmail) {
-        await supabase
+        await supabaseAdmin
           .from("teaser_recipients")
           .update({
             status: "failed",
@@ -253,9 +277,8 @@ serve(async (req) => {
       throw new Error(`Resend error: ${resendResult.message || "Unknown error"}`);
     }
 
-    // Update recipient status to sent (if not test)
     if (!testEmail) {
-      await supabase
+      await supabaseAdmin
         .from("teaser_recipients")
         .update({
           status: "sent",
@@ -265,8 +288,7 @@ serve(async (req) => {
         })
         .eq("id", recipientId);
 
-      // Record tracking event
-      await supabase
+      await supabaseAdmin
         .from("teaser_tracking_events")
         .insert({
           recipient_id: recipientId,

@@ -23,10 +23,60 @@ interface AIResponse {
   reasoning: string;
 }
 
+/**
+ * Validates the request is from an admin user.
+ */
+async function validateAdminAuth(req: Request): Promise<{ userId: string; role: string } | Response> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return { userId: user.id, role: adminUser.role };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Auth validation
+  const authResult = await validateAdminAuth(req);
+  if (authResult instanceof Response) return authResult;
 
   try {
     const { raw_text, user_context } = await req.json();
@@ -43,7 +93,6 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Get team members from database
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -95,7 +144,7 @@ Team members available:
 ${JSON.stringify(teamList, null, 2)}
 
 Current date: ${today}
-User role: ${user_context?.role || 'socio'}
+User role: ${user_context?.role || authResult.role || 'socio'}
 
 IMPORTANT: Always respond in valid JSON format with this exact structure:
 {
@@ -157,32 +206,22 @@ IMPORTANT: Always respond in valid JSON format with this exact structure:
       throw new Error('No content in AI response');
     }
 
-    // Parse the JSON response
     let parsed: AIResponse;
     try {
-      // Clean the response - remove markdown code blocks if present
       let cleanContent = content.trim();
-      if (cleanContent.startsWith('```json')) {
-        cleanContent = cleanContent.slice(7);
-      }
-      if (cleanContent.startsWith('```')) {
-        cleanContent = cleanContent.slice(3);
-      }
-      if (cleanContent.endsWith('```')) {
-        cleanContent = cleanContent.slice(0, -3);
-      }
+      if (cleanContent.startsWith('```json')) cleanContent = cleanContent.slice(7);
+      if (cleanContent.startsWith('```')) cleanContent = cleanContent.slice(3);
+      if (cleanContent.endsWith('```')) cleanContent = cleanContent.slice(0, -3);
       parsed = JSON.parse(cleanContent.trim());
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    // Validate the response structure
     if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
       throw new Error('Invalid AI response structure: missing tasks array');
     }
 
-    // Resolve team member names to user_ids
     const tasksWithIds = await Promise.all(
       parsed.tasks.map(async (task) => {
         let assigned_to_id: string | null = null;
@@ -199,10 +238,7 @@ IMPORTANT: Always respond in valid JSON format with this exact structure:
           assigned_to_id = user?.user_id || null;
         }
 
-        return {
-          ...task,
-          assigned_to_id,
-        };
+        return { ...task, assigned_to_id };
       })
     );
 

@@ -9,7 +9,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Equipo interno que recibe copia oculta
 const INTERNAL_BCC = [
   "samuel@capittal.es",
   "lluis@capittal.es",
@@ -117,20 +116,76 @@ El equipo de Capittal
   `.trim();
 }
 
+/**
+ * Validates internal auth: either SERVICE_ROLE_KEY or admin user.
+ */
+async function validateInternalAuth(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Allow internal service calls
+  if (token === serviceRoleKey) {
+    return null;
+  }
+
+  // Validate as admin user
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey!);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return null;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("send-lead-confirmation: Request received");
 
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Auth validation
+  const authError = await validateInternalAuth(req);
+  if (authError) return authError;
 
   try {
     const { lead_id, lead_type, email, full_name }: LeadConfirmationRequest = await req.json();
 
     console.log(`send-lead-confirmation: Processing lead_id=${lead_id}, type=${lead_type}, email=${email}`);
 
-    // Validate required fields
     if (!email || !full_name) {
       console.error("send-lead-confirmation: Missing required fields");
       return new Response(
@@ -139,11 +194,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate email content
     const emailHtml = generateEmailHtml(full_name);
     const emailText = generateEmailText(full_name);
 
-    // Send email with BCC to internal team
     console.log(`send-lead-confirmation: Sending email to ${email} with BCC to ${INTERNAL_BCC.length} internal recipients`);
     
     const { data: emailData, error: emailError } = await resend.emails.send({
@@ -165,7 +218,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`send-lead-confirmation: Email sent successfully, message_id=${emailData?.id}`);
 
-    // Update the lead record if lead_id and lead_type are provided
     if (lead_id && lead_type) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -184,7 +236,6 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (updateError) {
           console.warn(`send-lead-confirmation: Failed to update lead record: ${updateError.message}`);
-          // Don't fail the request, email was sent successfully
         } else {
           console.log(`send-lead-confirmation: Lead ${lead_id} updated with email tracking`);
         }

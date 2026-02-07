@@ -1,4 +1,3 @@
-// Task Health Check Edge Function for Phase 4
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -19,17 +18,51 @@ interface HealthIssue {
   days_overdue?: number;
 }
 
-interface HealthCheckResult {
-  success: boolean;
-  issues: HealthIssue[];
-  summary: {
-    total_tasks: number;
-    healthy: number;
-    at_risk: number;
-    overdue: number;
-    blocked: number;
-  };
-  recommendations: string[];
+/**
+ * Validates the request is from an admin user.
+ * Returns the user id if authorized, or a Response with error.
+ */
+async function validateAdminAuth(req: Request): Promise<{ userId: string } | Response> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return { userId: user.id };
 }
 
 serve(async (req) => {
@@ -37,14 +70,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Auth validation - derive user_id from token instead of body
+  const authResult = await validateAdminAuth(req);
+  if (authResult instanceof Response) return authResult;
+
   try {
-    const { user_id, scope = 'user' } = await req.json();
+    const { scope = 'user' } = await req.json().catch(() => ({}));
+    const user_id = authResult.userId;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build query based on scope
     let query = supabase
       .from('tareas')
       .select('id, titulo, descripcion, prioridad, fecha_vencimiento, estado, asignado_a, creado_por, created_at, updated_at, last_activity_at, health_status')
@@ -55,18 +92,15 @@ serve(async (req) => {
     }
 
     const { data: tasks, error: tasksError } = await query;
-
     if (tasksError) throw tasksError;
 
     const today = new Date();
     const issues: HealthIssue[] = [];
 
-    // Analyze each task
     for (const task of tasks || []) {
       const lastActivity = task.last_activity_at ? new Date(task.last_activity_at) : new Date(task.updated_at);
       const daysSinceActivity = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Check for overdue
       if (task.fecha_vencimiento) {
         const dueDate = new Date(task.fecha_vencimiento);
         if (dueDate < today) {
@@ -86,7 +120,6 @@ serve(async (req) => {
         }
       }
 
-      // Check for stalled (no activity in 7+ days)
       if (daysSinceActivity >= 7 && task.estado !== 'completada') {
         issues.push({
           task_id: task.id,
@@ -100,7 +133,6 @@ serve(async (req) => {
         });
       }
 
-      // Check for orphan (no assignee)
       if (!task.asignado_a && task.estado !== 'completada') {
         issues.push({
           task_id: task.id,
@@ -113,7 +145,6 @@ serve(async (req) => {
       }
     }
 
-    // Get team members for overload check
     if (scope === 'team') {
       const { data: teamTasks } = await supabase
         .from('tareas')
@@ -127,7 +158,6 @@ serve(async (req) => {
         }
       }
 
-      // Check for overloaded users (more than 10 pending tasks)
       for (const [userId, count] of Object.entries(taskCounts)) {
         if (count > 10) {
           issues.push({
@@ -143,7 +173,6 @@ serve(async (req) => {
       }
     }
 
-    // Calculate summary
     const summary = {
       total_tasks: tasks?.length || 0,
       healthy: (tasks || []).filter(t => t.health_status === 'healthy').length,
@@ -152,7 +181,6 @@ serve(async (req) => {
       blocked: issues.filter(i => i.issue_type === 'blocked').length
     };
 
-    // Generate recommendations
     const recommendations: string[] = [];
     if (summary.overdue > 0) {
       recommendations.push(`Tienes ${summary.overdue} tareas vencidas. Revísalas primero.`);
@@ -164,18 +192,11 @@ serve(async (req) => {
       recommendations.push('Hay tareas sin asignar. Distribúyelas entre el equipo.');
     }
 
-    // Update health status in database
     for (const issue of issues) {
       if (issue.issue_type === 'overdue') {
-        await supabase
-          .from('tareas')
-          .update({ health_status: 'overdue' })
-          .eq('id', issue.task_id);
+        await supabase.from('tareas').update({ health_status: 'overdue' }).eq('id', issue.task_id);
       } else if (issue.issue_type === 'stalled') {
-        await supabase
-          .from('tareas')
-          .update({ health_status: 'at_risk' })
-          .eq('id', issue.task_id);
+        await supabase.from('tareas').update({ health_status: 'at_risk' }).eq('id', issue.task_id);
       }
     }
 
