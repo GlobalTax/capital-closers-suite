@@ -119,3 +119,12 @@ verify_jwt = false
 
 [functions.send-teaser-email]
 verify_jwt = false
+
+[functions.run-alerts-cron]
+verify_jwt = false
+
+[functions.enhance-alert-message]
+verify_jwt = false
+
+[functions.summarize-meeting]
+verify_jwt = false
