@@ -18,7 +18,7 @@ interface EmailPayload {
   text?: string;
   attachments?: Array<{
     filename: string;
-    content: string; // base64
+    content: string;
     content_type?: string;
   }>;
 }
@@ -31,13 +31,11 @@ interface SendResult {
   rawResponse?: Record<string, unknown>;
 }
 
-// Email provider interface for future extensibility
 interface EmailProvider {
   name: string;
   send(payload: EmailPayload): Promise<SendResult>;
 }
 
-// Resend provider implementation
 class ResendProvider implements EmailProvider {
   name = "resend";
   private client: Resend;
@@ -54,7 +52,6 @@ class ResendProvider implements EmailProvider {
         ? `${payload.fromName} <${payload.from || 'noreply@capittal.es'}>`
         : payload.from || 'noreply@capittal.es';
 
-      // Build attachments if present
       const attachments = payload.attachments?.map(att => ({
         filename: att.filename,
         content: att.content,
@@ -96,15 +93,66 @@ class ResendProvider implements EmailProvider {
   }
 }
 
-// Get the appropriate email provider
 function getEmailProvider(): EmailProvider {
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  
   if (!resendKey) {
     throw new Error("No email provider configured. Set RESEND_API_KEY.");
   }
-
   return new ResendProvider(resendKey);
+}
+
+/**
+ * Validates the request is from an admin user or an internal service call.
+ * Returns null if authorized, or a Response with error if not.
+ */
+async function validateAuth(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Allow internal service-to-service calls (e.g., from process-email-queue)
+  if (token === serviceRoleKey) {
+    return null;
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey!);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -112,23 +160,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Auth validation
+  const authError = await validateAuth(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const { 
-      queueId,
-      to, 
-      toName,
-      from, 
-      fromName,
-      replyTo,
-      subject, 
-      html, 
-      text,
-      attachments,
-      updateQueue = true 
+      queueId, to, toName, from, fromName, replyTo,
+      subject, html, text, attachments, updateQueue = true 
     } = body;
 
-    // Validate required fields
     if (!to || !subject || !html) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields: to, subject, html" }),
@@ -139,25 +181,20 @@ serve(async (req) => {
     const provider = getEmailProvider();
 
     const result = await provider.send({
-      to,
-      toName,
+      to, toName,
       from: from || "noreply@capittal.es",
       fromName: fromName || "Capittal M&A",
-      replyTo,
-      subject,
-      html,
-      text,
-      attachments,
+      replyTo, subject, html, text, attachments,
     });
 
     // Update queue record if queueId provided
     if (queueId && updateQueue) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
       if (result.success) {
-        await supabase
+        await supabaseAdmin
           .from("email_queue")
           .update({
             status: "sent",
@@ -169,8 +206,7 @@ serve(async (req) => {
           })
           .eq("id", queueId);
       } else {
-        // Get current attempts
-        const { data: queueItem } = await supabase
+        const { data: queueItem } = await supabaseAdmin
           .from("email_queue")
           .select("attempts, max_attempts")
           .eq("id", queueId)
@@ -192,13 +228,12 @@ serve(async (req) => {
           updateData.failed_at = new Date().toISOString();
         } else {
           updateData.status = "pending";
-          // Calculate next retry with exponential backoff
-          const delays = [60, 300, 1800]; // 1min, 5min, 30min
+          const delays = [60, 300, 1800];
           const delaySeconds = delays[Math.min(newAttempts - 1, delays.length - 1)];
           updateData.next_retry_at = new Date(Date.now() + delaySeconds * 1000).toISOString();
         }
 
-        await supabase
+        await supabaseAdmin
           .from("email_queue")
           .update(updateData)
           .eq("id", queueId);
@@ -206,10 +241,7 @@ serve(async (req) => {
     }
 
     console.log(`Email ${result.success ? 'sent' : 'failed'} via ${result.provider}:`, {
-      to,
-      subject,
-      messageId: result.messageId,
-      error: result.error,
+      to, subject, messageId: result.messageId, error: result.error,
     });
 
     return new Response(

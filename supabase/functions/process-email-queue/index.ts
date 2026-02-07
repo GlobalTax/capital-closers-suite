@@ -33,17 +33,75 @@ interface EmailQueueItem {
   queue_type: string;
 }
 
-// Configuration
 const CONFIG = {
   EMAILS_PER_BATCH: 10,
-  BATCH_DELAY_MS: 3000, // 3 seconds between batches = ~20 emails/min
-  MAX_PROCESSING_TIME_MS: 50000, // 50 seconds max (leave margin for edge function timeout)
+  BATCH_DELAY_MS: 3000,
+  MAX_PROCESSING_TIME_MS: 50000,
 };
+
+/**
+ * Validates internal auth: either SERVICE_ROLE_KEY or admin user.
+ * Returns null if authorized, or a Response with error if not.
+ */
+async function validateInternalAuth(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token requerido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Allow internal service calls
+  if (token === serviceRoleKey) {
+    return null;
+  }
+
+  // Validate as admin user
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new Response(
+      JSON.stringify({ success: false, error: "No autorizado: token inválido" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey!);
+  const { data: adminUser, error: adminError } = await supabaseAdmin
+    .from("admin_users")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  if (adminError || !adminUser || !["admin", "super_admin"].includes(adminUser.role)) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Permisos insuficientes: se requiere rol admin" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Auth validation
+  const authError = await validateInternalAuth(req);
+  if (authError) return authError;
 
   const startTime = Date.now();
 
@@ -76,7 +134,7 @@ serve(async (req) => {
       .lte("scheduled_at", now)
       .order("priority", { ascending: true })
       .order("created_at", { ascending: true })
-      .limit(batchSize * 3); // Get more to have buffer
+      .limit(batchSize * 3);
 
     if (queueType) {
       query = query.eq("queue_type", queueType);
@@ -96,7 +154,7 @@ serve(async (req) => {
         .from("email_queue")
         .select("*")
         .eq("status", "failed")
-        .lt("attempts", 3) // Less than max_attempts
+        .lt("attempts", 3)
         .lte("next_retry_at", now)
         .order("priority", { ascending: true })
         .order("next_retry_at", { ascending: true })
@@ -110,7 +168,6 @@ serve(async (req) => {
       retryEmails = (retries || []) as EmailQueueItem[];
     }
 
-    // Combine and prioritize
     const allEmails = [
       ...(pendingEmails || []) as EmailQueueItem[],
       ...retryEmails,
@@ -118,22 +175,16 @@ serve(async (req) => {
 
     if (allEmails.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "No emails to process", 
-          ...results 
-        }),
+        JSON.stringify({ success: true, message: "No emails to process", ...results }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Processing ${allEmails.length} emails...`);
 
-    // Process in batches with rate limiting
     let batchIndex = 0;
     
     while (batchIndex * batchSize < allEmails.length) {
-      // Check if we're running out of time
       if (Date.now() - startTime > CONFIG.MAX_PROCESSING_TIME_MS) {
         console.log("Approaching timeout, stopping processing");
         break;
@@ -141,21 +192,18 @@ serve(async (req) => {
 
       const batch = allEmails.slice(batchIndex * batchSize, (batchIndex + 1) * batchSize);
       
-      // Mark batch as sending
       const batchIds = batch.map(e => e.id);
       await supabase
         .from("email_queue")
         .update({ status: "sending" })
         .in("id", batchIds);
 
-      // Update first_attempt_at for new emails
       await supabase
         .from("email_queue")
         .update({ first_attempt_at: new Date().toISOString() })
         .in("id", batchIds)
         .is("first_attempt_at", null);
 
-      // Process batch in parallel
       const sendPromises = batch.map(async (email) => {
         try {
           const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
@@ -183,9 +231,7 @@ serve(async (req) => {
           
           if (result.success) {
             results.sent++;
-            if (email.attempts > 0) {
-              results.retried++;
-            }
+            if (email.attempts > 0) results.retried++;
           } else {
             results.failed++;
             results.errors.push(`${email.to_email}: ${result.error}`);
@@ -199,7 +245,6 @@ serve(async (req) => {
           results.processed++;
           results.errors.push(`${email.to_email}: ${error.message}`);
           
-          // Update email as failed
           await supabase
             .from("email_queue")
             .update({
@@ -216,7 +261,6 @@ serve(async (req) => {
 
       await Promise.all(sendPromises);
 
-      // Rate limiting delay between batches
       if ((batchIndex + 1) * batchSize < allEmails.length) {
         await new Promise(resolve => setTimeout(resolve, CONFIG.BATCH_DELAY_MS));
       }
@@ -227,22 +271,14 @@ serve(async (req) => {
     console.log("Queue processing complete:", results);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        ...results,
-        duration_ms: Date.now() - startTime,
-      }),
+      JSON.stringify({ success: true, ...results, duration_ms: Date.now() - startTime }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     const error = err as Error;
     console.error("Error processing email queue:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message,
-        duration_ms: Date.now() - startTime,
-      }),
+      JSON.stringify({ success: false, error: error.message, duration_ms: Date.now() - startTime }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
