@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import DOMPurify from "dompurify";
 import { Mail, User } from "lucide-react";
 import { type RenderVariables } from "@/services/emailTemplate.service";
 
@@ -32,10 +33,20 @@ export function EmailPreview({
     [subjectTemplate, variables]
   );
 
-  const renderedBody = useMemo(
-    () => renderString(htmlContent, variables),
-    [htmlContent, variables]
-  );
+  const renderedBody = useMemo(() => {
+    const raw = renderString(htmlContent, variables);
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        "p", "br", "b", "i", "u", "strong", "em", "a", "ul", "ol", "li",
+        "h1", "h2", "h3", "h4", "h5", "h6", "span", "div", "img", "table",
+        "thead", "tbody", "tr", "td", "th", "hr", "blockquote", "pre", "code",
+      ],
+      ALLOWED_ATTR: [
+        "href", "target", "rel", "src", "alt", "width", "height",
+        "style", "class", "align", "valign", "colspan", "rowspan",
+      ],
+    });
+  }, [htmlContent, variables]);
 
   return (
     <div className="border rounded-lg overflow-hidden bg-background">
