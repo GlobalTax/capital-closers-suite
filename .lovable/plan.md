@@ -1,156 +1,170 @@
 
 
-# Plan: Pagina Dedicada /alertas
+# Plan: Securizar Edge Functions Internas
 
 ## Resumen
 
-Crear una nueva pagina `/alertas` con vista completa de alertas del sistema, reutilizando la infraestructura existente (hooks, servicios, tipos) y agregando filtros, historial y acciones masivas.
+6 edge functions carecen de validacion de autorizacion. Ninguna verifica el JWT del usuario ni comprueba su rol en `admin_users`. Cualquier persona con el anon key podria invocarlas directamente.
+
+## Estado Actual
+
+| Funcion | verify_jwt (config) | Auth en codigo | Riesgo |
+|---------|---------------------|----------------|--------|
+| send-email | true (deprecated) | NINGUNA | ALTO - permite enviar emails |
+| send-teaser-email | no aparece | NINGUNA | ALTO - envia teasers con adjuntos |
+| process-email-queue | false | NINGUNA | ALTO - procesa cola de emails |
+| task-health-check | true (deprecated) | NINGUNA | MEDIO - lee tareas del equipo |
+| task-ai | true (deprecated) | NINGUNA | MEDIO - consume creditos AI |
+| send-lead-confirmation | false | NINGUNA | MEDIO - envia emails de confirmacion |
+
+## Solucion
+
+### 1. Actualizar `supabase/config.toml`
+
+Cambiar todas a `verify_jwt = false` (segun directrices del proyecto, la validacion se hace en codigo con `getClaims()`).
+
+### 2. Patron de Autorizacion Comun
+
+Cada funcion recibira un bloque de validacion al inicio:
+
+```typescript
+// 1. Verificar header Authorization
+const authHeader = req.headers.get('Authorization');
+if (!authHeader?.startsWith('Bearer ')) {
+  return new Response(
+    JSON.stringify({ error: 'No autorizado: token requerido' }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// 2. Crear cliente Supabase con el token del usuario
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { headers: { Authorization: authHeader } },
+});
+
+// 3. Verificar usuario valido
+const { data: { user }, error: userError } = await supabase.auth.getUser();
+if (userError || !user) {
+  return new Response(
+    JSON.stringify({ error: 'No autorizado: token invalido' }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// 4. Verificar rol admin/super_admin en admin_users
+const supabaseAdmin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const { data: adminUser, error: adminError } = await supabaseAdmin
+  .from('admin_users')
+  .select('role')
+  .eq('user_id', user.id)
+  .eq('is_active', true)
+  .single();
+
+if (adminError || !adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
+  return new Response(
+    JSON.stringify({ error: 'Permisos insuficientes: se requiere rol admin' }),
+    { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+### 3. Caso Especial: process-email-queue
+
+Esta funcion es invocada por cron/scheduler (no por usuarios). Se validara de dos formas:
+- Si viene con Authorization header: validar usuario admin como las demas
+- Si viene sin Authorization: validar que el request incluya un secret interno (`CRON_SECRET`) como header para invocaciones automatizadas
+
+```typescript
+const authHeader = req.headers.get('Authorization');
+const cronSecret = req.headers.get('x-cron-secret');
+const expectedCronSecret = Deno.env.get('CRON_SECRET');
+
+if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
+  // Invocacion valida por cron - continuar
+} else if (authHeader?.startsWith('Bearer ')) {
+  // Validar usuario admin (mismo patron que las demas)
+} else {
+  return 401;
+}
+```
+
+### 4. Caso Especial: send-lead-confirmation
+
+Esta funcion se invoca desde triggers/webhooks internos sin contexto de usuario. Se aplicara el mismo patron dual (cron secret o usuario admin).
 
 ---
-
-## Archivos a Crear
-
-| Archivo | Descripcion |
-|---------|-------------|
-| `src/pages/Alertas.tsx` | Pagina principal con listado, filtros y acciones |
 
 ## Archivos a Modificar
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/App.tsx` | Agregar lazy import + ruta `/alertas` |
-| `src/components/layout/AppSidebar.tsx` | Agregar item "Alertas" en el menu |
-| `src/components/alerts/AlertsCenter.tsx` | Cambiar el boton "Ver todas en Pipeline" para navegar a `/alertas` |
+| `supabase/config.toml` | Cambiar las 6 funciones a `verify_jwt = false` |
+| `supabase/functions/send-email/index.ts` | Agregar validacion auth + rol admin |
+| `supabase/functions/send-teaser-email/index.ts` | Agregar validacion auth + rol admin |
+| `supabase/functions/process-email-queue/index.ts` | Agregar validacion dual (cron secret o admin) |
+| `supabase/functions/task-health-check/index.ts` | Agregar validacion auth + rol admin |
+| `supabase/functions/task-ai/index.ts` | Agregar validacion auth + rol admin |
+| `supabase/functions/send-lead-confirmation/index.ts` | Agregar validacion dual (cron secret o admin) |
 
 ---
 
-## Estructura de la Pagina `/alertas`
+## Detalle por Funcion
 
-### Header
-- Titulo "Centro de Alertas" con icono Bell
-- Boton "Generar Alertas" (ejecuta `generate_mandato_alerts` RPC)
-- Botones masivos: "Marcar todas como leidas", "Descartar leidas"
+### send-email
+- Agregar bloque auth completo (4 pasos) despues del manejo de OPTIONS
+- El `supabaseAdmin` que ya se usa para actualizar la cola se mantiene con SERVICE_ROLE_KEY
+- El nuevo `supabase` con token de usuario solo se usa para verificar identidad
 
-### KPI Cards (fila superior)
-Reutiliza `useAlertStats()`:
-- Total activas
-- Criticas (rojo)
-- Advertencias (ambar)
-- Informativas (azul)
-- Sin leer
+### send-teaser-email
+- Agregar bloque auth completo (4 pasos) despues del manejo de OPTIONS
+- El `supabase` existente con SERVICE_ROLE_KEY se renombra a `supabaseAdmin`
+- Nuevo `supabase` con anon key + token para verificar usuario
 
-### Filtros (Toolbar)
-- **Busqueda**: por titulo/descripcion/empresa
-- **Severidad**: Select con opciones critical/warning/info/todas
-- **Tipo**: Select con los 7 tipos de AlertType (inactive_mandate, overdue_task, etc.)
-- **Estado lectura**: Todas / Solo sin leer / Solo leidas
+### process-email-queue
+- Agregar validacion dual (cron secret o admin)
+- Nota: esta funcion llama a `send-email` con SERVICE_ROLE_KEY, asi que `send-email` tambien necesita aceptar service role como auth valida
+- Solucion: en `send-email`, si el Bearer token corresponde al SERVICE_ROLE_KEY, se permite sin validar admin_users
 
-### Tabla de Alertas
-Columnas:
-| Columna | Contenido |
-|---------|-----------|
-| Severidad | Icono con color (critical=rojo, warning=ambar, info=azul) |
-| Titulo | Texto con indicador de no leida |
-| Descripcion | Texto truncado |
-| Empresa | empresa_nombre del mandato |
-| Tipo | Badge con alert_type legible |
-| Fecha | created_at formateado |
-| Acciones | Marcar leida, Descartar, Ir al mandato |
+### task-health-check
+- Agregar bloque auth completo (4 pasos)
+- Eliminar el `user_id` del body y usar `user.id` del token validado (mas seguro)
 
-- Filas no leidas tendran fondo diferenciado
-- Click en fila navega al mandato y marca como leida
+### task-ai
+- Agregar bloque auth completo (4 pasos)
+- Ya tiene validacion parcial en el frontend (`taskAI.service.ts`), pero falta en el backend
 
-### Historial
-- Incluir un toggle "Mostrar descartadas" que cambia la query para incluir alertas descartadas (historial)
-- Las descartadas se muestran con opacidad reducida
+### send-lead-confirmation
+- Agregar validacion dual (cron secret o admin)
+- Se invoca desde codigo interno tras crear un lead, necesita permitir ambas vias
 
 ---
 
-## Detalles Tecnicos
+## Respuestas de Error Estandarizadas
 
-### Servicio
-Se reutiliza completamente `src/services/alerts.service.ts` existente. Se agrega una funcion para obtener alertas con filtros (incluyendo descartadas):
+| Codigo | Mensaje | Cuando |
+|--------|---------|--------|
+| 401 | `No autorizado: token requerido` | Sin header Authorization |
+| 401 | `No autorizado: token invalido` | Token expirado o falso |
+| 403 | `Permisos insuficientes: se requiere rol admin` | Usuario valido pero sin rol admin |
+
+---
+
+## Consideracion: Llamadas Internas entre Funciones
+
+`process-email-queue` llama a `send-email` con `Authorization: Bearer ${supabaseServiceKey}`. Para que esto siga funcionando:
+- En `send-email`, si `getUser()` falla (porque es un service role key, no un user token), verificar si el token es exactamente el SERVICE_ROLE_KEY como fallback
+- Esto permite llamadas internas de funcion a funcion
 
 ```typescript
-// Nueva funcion en alerts.service.ts
-export const fetchAllAlerts = async (filters: AlertFilters): Promise<ActiveAlert[]> => {
-  let query = supabase
-    .from('v_active_alerts')  // Para activas
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  // Aplicar filtros de severidad, tipo, etc.
-  if (filters.severity) query = query.eq('severity', filters.severity);
-  if (filters.alertType) query = query.eq('alert_type', filters.alertType);
-  
-  return (await query).data || [];
-};
-
-// Para historial (descartadas), query directa a mandato_alerts
-export const fetchDismissedAlerts = async (): Promise<MandatoAlert[]> => {
-  const { data } = await supabase
-    .from('mandato_alerts')
-    .select('*')
-    .eq('is_dismissed', true)
-    .order('updated_at', { ascending: false })
-    .limit(100);
-  return data || [];
-};
+// En send-email: fallback para llamadas internas
+const token = authHeader.replace('Bearer ', '');
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+if (token === serviceRoleKey) {
+  // Llamada interna de confianza - continuar sin verificar admin_users
+} else {
+  // Verificar usuario y rol admin
+}
 ```
-
-### Hook
-Se agrega `useAllAlerts(filters)` en `useAlerts.ts` que acepta filtros opcionales.
-
-### Pagina
-La pagina `Alertas.tsx` usa:
-- `useActiveAlerts()` o `useAllAlerts(filters)` para el listado
-- `useAlertStats()` para los KPIs
-- `useGenerateAlerts()` para el boton de regenerar
-- `useMarkAlertAsRead()`, `useDismissAlert()` para acciones individuales
-- `useMarkAllAlertsAsRead()`, `useDismissAllReadAlerts()` para acciones masivas
-- Filtrado client-side para busqueda por texto, severidad, tipo y estado de lectura
-
-### Routing
-```tsx
-// App.tsx
-const Alertas = lazy(() => import("./pages/Alertas"));
-// En Routes:
-<Route path="/alertas" element={<ProtectedRoute><AppLayout><Alertas /></AppLayout></ProtectedRoute>} />
-```
-
-### Sidebar
-Agregar item "Alertas" con icono `Bell` en el grupo principal, debajo de "Reportes".
-
-### AlertsCenter Update
-Cambiar el boton footer del popover para navegar a `/alertas`:
-```tsx
-onClick={() => { setOpen(false); navigate('/alertas'); }}
-```
-
----
-
-## Mapeo de Tipos Legibles
-
-```typescript
-const alertTypeLabels: Record<AlertType, string> = {
-  inactive_mandate: 'Mandato Inactivo',
-  overdue_task: 'Tarea Vencida',
-  stuck_deal: 'Deal Estancado',
-  upcoming_deadline: 'Fecha Limite Proxima',
-  missing_document: 'Documento Faltante',
-  low_probability: 'Baja Probabilidad',
-  critical_task_overdue: 'Tarea Critica Vencida',
-};
-```
-
----
-
-## Orden de Implementacion
-
-1. Agregar funcion `fetchAllAlerts` al servicio existente
-2. Agregar hook `useAllAlerts` 
-3. Crear pagina `Alertas.tsx`
-4. Registrar ruta en `App.tsx`
-5. Agregar al sidebar en `AppSidebar.tsx`
-6. Actualizar link en `AlertsCenter.tsx`
 
