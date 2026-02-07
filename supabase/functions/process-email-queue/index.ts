@@ -118,13 +118,42 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date().toISOString();
+    const stuckThreshold = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const results = {
       processed: 0,
       sent: 0,
       failed: 0,
       retried: 0,
+      recovered: 0,
       errors: [] as string[],
     };
+
+    // Recover stuck "sending" emails (>15 min without progress)
+    const { data: stuckEmails, error: stuckError } = await supabase
+      .from("email_queue")
+      .update({ status: "queued", last_error: "Recovered from stuck sending state" })
+      .eq("status", "sending")
+      .lt("last_attempt_at", stuckThreshold)
+      .select("id");
+
+    if (!stuckError && stuckEmails && stuckEmails.length > 0) {
+      results.recovered = stuckEmails.length;
+      console.log(`Recovered ${stuckEmails.length} stuck emails from 'sending' state`);
+    }
+
+    // Also recover "sending" emails that never had last_attempt_at set (stuck from the start)
+    const { data: stuckNoAttempt } = await supabase
+      .from("email_queue")
+      .update({ status: "queued", last_error: "Recovered: never attempted" })
+      .eq("status", "sending")
+      .is("last_attempt_at", null)
+      .lt("created_at", stuckThreshold)
+      .select("id");
+
+    if (stuckNoAttempt && stuckNoAttempt.length > 0) {
+      results.recovered += stuckNoAttempt.length;
+      console.log(`Recovered ${stuckNoAttempt.length} never-attempted stuck emails`);
+    }
 
     // Build query for pending emails
     let query = supabase
