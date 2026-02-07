@@ -305,9 +305,14 @@ export function ChecklistDynamicCard({ mandatoId, mandatoTipo }: ChecklistDynami
                     <AccordionContent>
                       <div className="space-y-3 pt-2">
                         {tasksInFase.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            No hay tareas en esta fase
-                          </p>
+                          <div className="text-center py-6 space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              No hay tareas en esta fase
+                            </p>
+                            <p className="text-xs text-muted-foreground/70">
+                              Usa el botón "Agregar Tarea" para crear una manualmente
+                            </p>
+                          </div>
                         ) : (
                           tasksInFase.map(task => (
                             <ChecklistTaskRow
