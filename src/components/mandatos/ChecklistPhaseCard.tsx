@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, AlertCircle, CircleDashed } from "lucide-react";
 import type { ChecklistFaseProgress, ChecklistFaseConfig } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +13,10 @@ interface ChecklistPhaseCardProps {
 
 export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: ChecklistPhaseCardProps) {
   const { completadas, total, porcentaje, vencidas = 0, tareasCriticas = 0 } = progress;
+  const isEmpty = total === 0;
   
   const getStatusColor = () => {
+    if (isEmpty) return "bg-muted";
     if (porcentaje === 100) return "bg-green-500";
     if (vencidas > 0) return "bg-red-500";
     if (porcentaje >= 50) return "bg-blue-500";
@@ -22,6 +24,7 @@ export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: Chec
   };
 
   const getStatusIcon = () => {
+    if (isEmpty) return <CircleDashed className="w-4 h-4 text-muted-foreground/50" />;
     if (porcentaje === 100) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
     if (vencidas > 0) return <AlertTriangle className="w-4 h-4 text-red-500" />;
     return <Clock className="w-4 h-4 text-muted-foreground" />;
@@ -32,7 +35,8 @@ export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: Chec
       className={cn(
         "p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md",
         isExpanded ? "ring-2 ring-primary" : "hover:border-primary/50",
-        vencidas > 0 && "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20"
+        vencidas > 0 && "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20",
+        isEmpty && "opacity-60"
       )}
       onClick={onClick}
       style={{ borderLeftColor: fase.color, borderLeftWidth: '4px' }}
@@ -42,8 +46,8 @@ export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: Chec
           {getStatusIcon()}
           <h3 className="font-medium text-sm">{fase.nombre}</h3>
         </div>
-        <span className="text-lg font-medium" style={{ color: fase.color }}>
-          {porcentaje}%
+        <span className="text-lg font-medium" style={{ color: isEmpty ? undefined : fase.color }}>
+          {isEmpty ? "—" : `${porcentaje}%`}
         </span>
       </div>
 
@@ -54,7 +58,7 @@ export function ChecklistPhaseCard({ fase, progress, isExpanded, onClick }: Chec
 
       <div className="flex flex-wrap gap-1.5">
         <Badge variant="secondary" className="text-xs">
-          {completadas}/{total} tareas
+          {isEmpty ? "Sin tareas" : `${completadas}/${total} tareas`}
         </Badge>
         
         {tareasCriticas > 0 && (
