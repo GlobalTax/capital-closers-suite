@@ -18,6 +18,8 @@ import {
   Save,
   Trash2,
   X,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import {
   useUpdateMeeting,
@@ -25,6 +27,8 @@ import {
 } from "@/hooks/queries/useCompanyMeetings";
 import type { CompanyMeeting } from "@/services/companyMeetings.service";
 import { MeetingDocuments } from "./MeetingDocuments";
+import { MeetingAISummary } from "./MeetingAISummary";
+import { useSummarizeMeeting } from "@/hooks/queries/useMeetingAI";
 
 interface MeetingCardProps {
   meeting: CompanyMeeting;
@@ -39,6 +43,7 @@ export function MeetingCard({ meeting, companyId }: MeetingCardProps) {
 
   const { mutate: updateMeeting, isPending: isUpdating } = useUpdateMeeting();
   const { mutate: deleteMeeting, isPending: isDeleting } = useDeleteMeeting();
+  const { mutate: summarize, isPending: isSummarizing } = useSummarizeMeeting();
 
   const formattedDate = format(new Date(meeting.meeting_date), "d MMM yyyy", { locale: es });
 
@@ -68,6 +73,8 @@ export function MeetingCard({ meeting, companyId }: MeetingCardProps) {
     setDeleteDialogOpen(false);
   };
 
+  const canSummarize = !isEditing && (meeting.meeting_notes || meeting.preparation_notes);
+
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
@@ -88,31 +95,34 @@ export function MeetingCard({ meeting, companyId }: MeetingCardProps) {
               <div className="flex items-center justify-end gap-2">
                 {isEditing ? (
                   <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCancel}
-                      disabled={isUpdating}
-                    >
+                    <Button size="sm" variant="outline" onClick={handleCancel} disabled={isUpdating}>
                       <X className="h-4 w-4 mr-1" />
                       Cancelar
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={isUpdating}
-                    >
+                    <Button size="sm" onClick={handleSave} disabled={isUpdating}>
                       <Save className="h-4 w-4 mr-1" />
                       {isUpdating ? "Guardando..." : "Guardar"}
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsEditing(true)}
-                    >
+                    {canSummarize && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => summarize(meeting.id)}
+                        disabled={isSummarizing}
+                        className="text-purple-600 border-purple-200 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-950"
+                      >
+                        {isSummarizing ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-1" />
+                        )}
+                        {isSummarizing ? "Resumiendo..." : "Resumir con IA"}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                       <Edit className="h-4 w-4 mr-1" />
                       Editar
                     </Button>
@@ -172,6 +182,18 @@ export function MeetingCard({ meeting, companyId }: MeetingCardProps) {
                   </p>
                 )}
               </div>
+
+              {/* AI Summary */}
+              {meeting.ai_summary && (
+                <>
+                  <Separator />
+                  <MeetingAISummary
+                    meeting={meeting}
+                    onRegenerate={() => summarize(meeting.id)}
+                    isRegenerating={isSummarizing}
+                  />
+                </>
+              )}
 
               <Separator />
 

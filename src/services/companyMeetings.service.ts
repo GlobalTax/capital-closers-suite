@@ -13,6 +13,10 @@ export interface CompanyMeeting {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  ai_summary: string | null;
+  ai_action_items: unknown[] | null;
+  ai_key_quotes: string[] | null;
+  ai_processed_at: string | null;
 }
 
 export interface MeetingDocument {
@@ -52,7 +56,7 @@ export async function fetchMeetingsByCompany(companyId: string): Promise<Company
     .order("meeting_date", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as unknown as CompanyMeeting[];
 }
 
 export async function getMeetingById(id: string): Promise<CompanyMeeting | null> {
@@ -63,7 +67,7 @@ export async function getMeetingById(id: string): Promise<CompanyMeeting | null>
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data as unknown as CompanyMeeting | null;
 }
 
 export async function createMeeting(meetingData: CreateMeetingData): Promise<CompanyMeeting> {
@@ -79,7 +83,7 @@ export async function createMeeting(meetingData: CreateMeetingData): Promise<Com
     .single();
 
   if (error) throw error;
-  return data;
+  return data as unknown as CompanyMeeting;
 }
 
 export async function updateMeeting(id: string, updateData: UpdateMeetingData): Promise<CompanyMeeting> {
@@ -91,7 +95,7 @@ export async function updateMeeting(id: string, updateData: UpdateMeetingData): 
     .single();
 
   if (error) throw error;
-  return data;
+  return data as unknown as CompanyMeeting;
 }
 
 export async function deleteMeeting(id: string): Promise<void> {
