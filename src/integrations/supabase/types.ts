@@ -6307,6 +6307,13 @@ export type Database = {
             referencedRelation: "cr_funds"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cr_portfolio_sector_pe_fkey"
+            columns: ["sector_pe"]
+            isOneToOne: false
+            referencedRelation: "pe_sector_taxonomy"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cr_portfolio_interactions: {
@@ -8195,6 +8202,15 @@ export type Database = {
       empresas: {
         Row: {
           actividades_destacadas: string[] | null
+          ai_business_model_tags: string[] | null
+          ai_classification_at: string | null
+          ai_classification_confidence: number | null
+          ai_company_summary: string | null
+          ai_company_summary_at: string | null
+          ai_negative_tags: string[] | null
+          ai_sector_name: string | null
+          ai_sector_pe: string | null
+          ai_tags: string[] | null
           alexa_ranking: number | null
           año_datos_financieros: number | null
           apollo_enriched_at: string | null
@@ -8250,6 +8266,15 @@ export type Database = {
         }
         Insert: {
           actividades_destacadas?: string[] | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           alexa_ranking?: number | null
           año_datos_financieros?: number | null
           apollo_enriched_at?: string | null
@@ -8305,6 +8330,15 @@ export type Database = {
         }
         Update: {
           actividades_destacadas?: string[] | null
+          ai_business_model_tags?: string[] | null
+          ai_classification_at?: string | null
+          ai_classification_confidence?: number | null
+          ai_company_summary?: string | null
+          ai_company_summary_at?: string | null
+          ai_negative_tags?: string[] | null
+          ai_sector_name?: string | null
+          ai_sector_pe?: string | null
+          ai_tags?: string[] | null
           alexa_ranking?: number | null
           año_datos_financieros?: number | null
           apollo_enriched_at?: string | null
@@ -11030,6 +11064,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          display_name: string | null
           display_order: number | null
           id: string
           is_active: boolean | null
@@ -11039,6 +11074,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          display_name?: string | null
           display_order?: number | null
           id: string
           is_active?: boolean | null
@@ -11048,6 +11084,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          display_name?: string | null
           display_order?: number | null
           id?: string
           is_active?: boolean | null
@@ -20303,6 +20340,13 @@ export type Database = {
             columns: ["fund_id"]
             isOneToOne: false
             referencedRelation: "cr_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cr_portfolio_sector_pe_fkey"
+            columns: ["sector_pe"]
+            isOneToOne: false
+            referencedRelation: "pe_sector_taxonomy"
             referencedColumns: ["id"]
           },
         ]
