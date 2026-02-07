@@ -138,6 +138,7 @@ const menuGroups: MenuGroup[] = [
       { id: "generador-docs", title: "Generador Docs", url: "/gestor-documentos", icon: FileText },
       { id: "modelos", title: "Modelos", url: "/admin/modelos", icon: FileText },
       { id: "plantillas-email", title: "Plantillas Email", url: "/plantillas-email", icon: Mail },
+      { id: "plantillas-checklist", title: "Plantillas Checklist", url: "/plantillas-checklist", icon: ClipboardList },
       { id: "presentaciones", title: "Presentaciones", url: "/presentaciones", icon: Presentation },
       { id: "reportes", title: "Reportes", url: "/reportes", icon: BarChart3 },
       { id: "alertas", title: "Alertas", url: "/alertas", icon: Bell },
