@@ -1,62 +1,81 @@
 
 
-# Fix: Fases "Due Diligence" y "Cierre" sin tareas en Sell-Side + Mejora UI
+# Filtro "Estado del Mandato" en Vista Kanban
 
-## Diagnostico
+## Situacion actual
 
-Las fases "4. Due Diligence" y "5. Cierre" existen en `checklist_fases` para Sell-Side pero **no tienen tareas plantilla** en `mandato_checklist_templates`. Buy-Side si tiene tareas para ambas fases (10 en DD, 8 en Cierre).
+La pagina `Mandatos.tsx` ya tiene un sistema de filtros (popover con checkboxes) que incluye "Estado" con los 5 valores posibles: **prospecto, activo, en_negociacion, cerrado, cancelado**. Este filtro ya se aplica tanto a la vista tabla como al kanban (ambas usan `mandatosFiltrados`).
+
+Sin embargo, el filtro esta "escondido" dentro de un popover generico y no es prominente en la vista Kanban. La mejora consiste en anadir un **multi-select inline visible** directamente en la barra del Kanban.
+
+## Nota sobre el ejemplo "Subir oportunidad a Dealsuite y ARX"
+
+Ese texto corresponde a una **tarea del checklist**, no a un estado del mandato. Los estados reales del mandato en la base de datos son: `prospecto`, `activo`, `en_negociacion`, `cerrado`, `cancelado`. El filtro se implementara sobre estos valores reales.
 
 ## Cambios a realizar
 
-### 1. Insertar tareas plantilla para Sell-Side (datos)
+### 1. Componente nuevo: `KanbanEstadoFilter.tsx`
 
-Se insertaran tareas plantilla adaptadas al contexto Sell-Side (el vendedor facilita la DD, no la ejecuta):
+Multi-select inline con chips/badges que muestra los estados disponibles:
 
-**4. Due Diligence (8 tareas):**
-| Orden | Tarea | Critica | Dias |
-|-------|-------|---------|------|
-| 1 | Coordinar kick-off de Due Diligence | Si | 1 |
-| 2 | Facilitar acceso al Data Room | Si | 3 |
-| 3 | Responder Q&A de compradores | No | 14 |
-| 4 | Coordinar management presentations | Si | 5 |
-| 5 | Gestionar solicitudes adicionales de info | No | 10 |
-| 6 | Monitorizar avance de DD | No | 14 |
-| 7 | Revisar hallazgos y preparar respuestas | Si | 7 |
-| 8 | Informe resumen DD para el cliente | Si | 3 |
+- Boton "Estado" que despliega un dropdown con checkboxes
+- Cada opcion muestra el label del estado con su badge de color
+- Seleccion multiple (OR)
+- Opcion "Todos" para limpiar
+- Chips visibles debajo mostrando filtros activos
+- Persistencia en localStorage (`kanban-estado-filter`)
 
-**5. Cierre (8 tareas):**
-| Orden | Tarea | Critica | Dias |
-|-------|-------|---------|------|
-| 1 | Analizar ofertas vinculantes recibidas | Si | 5 |
-| 2 | Negociar terminos del SPA | Si | 14 |
-| 3 | Definir ajustes de precio y earn-outs | Si | 7 |
-| 4 | Coordinar asesores legales del vendedor | No | 7 |
-| 5 | Gestionar condiciones suspensivas | Si | 14 |
-| 6 | Preparar closing checklist | No | 3 |
-| 7 | Firma del SPA | Si | 1 |
-| 8 | Closing y transferencia | Si | 1 |
+### 2. Editar `src/pages/Mandatos.tsx`
 
-### 2. Mejorar UI de fases sin tareas
+- Anadir estado local `kanbanEstadoFilter: string[]` (inicializado desde localStorage)
+- Cuando `vistaActual === "kanban"`, mostrar el componente `KanbanEstadoFilter` junto al boton "Configurar"
+- En `mandatosFiltrados`, aplicar el filtro adicional de estado del kanban (ademas de los filtros existentes del panel)
+- El filtro solo se aplica visualmente cuando estamos en vista kanban
 
-En el componente `ChecklistPhaseCard.tsx`, cuando `total === 0`:
-- Mostrar un icono distinto (un circulo vacio en vez del reloj)
-- Mostrar texto "Sin tareas" en lugar de "0/0 tareas"
-- Aplicar estilo visual mas tenue (opacidad reducida)
+### 3. Sin cambios backend
 
-En el Accordion de `ChecklistDynamicCard.tsx`, linea 307-310:
-- Mejorar el mensaje "No hay tareas en esta fase" con un call-to-action para crear una tarea manual
+No se necesita RPC nuevo. Los mandatos ya se cargan con el campo `estado` y el filtrado se hace en frontend (ya funciona asi para todos los filtros existentes). El volumen de mandatos es bajo (decenas/cientos), no miles, asi que el filtrado client-side es eficiente.
 
-## Archivos afectados
+## Detalle tecnico
 
 | Archivo | Accion |
 |---------|--------|
-| Datos (INSERT via tool) | Insertar 16 tareas plantilla para Sell-Side |
-| `src/components/mandatos/ChecklistPhaseCard.tsx` | Mejorar visualizacion cuando total=0 |
-| `src/components/mandatos/ChecklistDynamicCard.tsx` | Mejorar empty state por fase |
+| `src/components/mandatos/KanbanEstadoFilter.tsx` | NUEVO - Multi-select inline para estados |
+| `src/pages/Mandatos.tsx` | EDITAR - Integrar filtro en barra kanban + logica de filtrado |
+
+### Estructura del componente KanbanEstadoFilter
+
+```text
+Props:
+  - selectedEstados: string[]
+  - onChange: (estados: string[]) => void
+
+Render:
+  [Popover trigger: "Estado del mandato" + badge count]
+  [Popover content:]
+    [ ] Todos (limpia seleccion)
+    [x] Prospecto
+    [x] Activo
+    [ ] En negociacion
+    [ ] Cerrado
+    [ ] Cancelado
+```
+
+### Integracion en Mandatos.tsx
+
+- Nuevo estado: `kanbanEstadoFilter` con persistencia en localStorage
+- Se muestra junto al boton "Configurar" cuando `vistaActual === "kanban"`
+- El filtro se aplica sobre `mandatosFiltrados` como paso adicional (no interfiere con los filtros del panel existente)
+
+### Persistencia
+
+Se usa localStorage con key `kanban-estado-filter` (patron ya usado en el CRM para columnas, densidad, etc.).
 
 ## Lo que NO cambia
 
-- No se modifican mandatos existentes (las nuevas tareas solo se aplican al copiar plantilla en mandatos nuevos)
-- No se cambia la estructura de datos ni el schema
-- No se agregan features nuevas
+- La logica del Kanban por fases del checklist / pipeline_stage sigue exactamente igual
+- Los filtros existentes del panel popover siguen funcionando
+- La vista tabla no se ve afectada
+- No se modifican tablas ni RPCs
+- No se toca la logica del checklist
 
