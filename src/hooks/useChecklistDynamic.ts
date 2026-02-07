@@ -101,17 +101,29 @@ export function useChecklistDynamic(
   const copyTemplate = useCallback(async () => {
     if (!mandatoId) return;
 
+    console.log('[checklist] action=copyTemplate', { mandatoId, mandatoTipo });
+
     try {
       const count = await copyTemplateByType(mandatoId, mandatoTipo);
-      toast({
-        title: "Checklist creado",
-        description: `Se copiaron ${count} tareas de la plantilla de ${mandatoTipo}`,
-      });
+      console.log('[checklist] copyTemplate result', { count });
+
+      if (count === 0) {
+        toast({
+          title: "Plantilla ya copiada",
+          description: "Las tareas de esta plantilla ya estaban creadas para este mandato.",
+        });
+      } else {
+        toast({
+          title: "Checklist creado",
+          description: `Se copiaron ${count} tareas de la plantilla de ${mandatoTipo}`,
+        });
+      }
       await loadData();
     } catch (error: any) {
+      console.error('[checklist] copyTemplate error', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo copiar la plantilla",
+        description: error.message || "No se pudo copiar la plantilla. Reintenta o contacta soporte.",
         variant: "destructive",
       });
     }
