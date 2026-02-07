@@ -1330,6 +1330,54 @@ export type Database = {
           },
         ]
       }
+      ai_activity_log: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          id: string
+          input_tokens: number | null
+          model: string | null
+          module: string
+          output_tokens: number | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          module: string
+          output_tokens?: number | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          module?: string
+          output_tokens?: number | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_imports: {
         Row: {
           contacto_id: string | null
@@ -3975,6 +4023,10 @@ export type Database = {
       }
       company_meetings: {
         Row: {
+          ai_action_items: Json | null
+          ai_key_quotes: Json | null
+          ai_processed_at: string | null
+          ai_summary: string | null
           company_id: string
           created_at: string | null
           created_by: string | null
@@ -3986,6 +4038,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ai_action_items?: Json | null
+          ai_key_quotes?: Json | null
+          ai_processed_at?: string | null
+          ai_summary?: string | null
           company_id: string
           created_at?: string | null
           created_by?: string | null
@@ -3997,6 +4053,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ai_action_items?: Json | null
+          ai_key_quotes?: Json | null
+          ai_processed_at?: string | null
+          ai_summary?: string | null
           company_id?: string
           created_at?: string | null
           created_by?: string | null
@@ -5182,10 +5242,14 @@ export type Database = {
           external_capittal_id: string | null
           id: string
           import_log_id: string | null
+          last_interaction_at: string | null
           linkedin: string | null
           merged_into_contacto_id: string | null
           nombre: string
           notas: string | null
+          relationship_score: number | null
+          relationship_tier: string | null
+          score_updated_at: string | null
           source: string | null
           telefono: string | null
           updated_at: string | null
@@ -5205,10 +5269,14 @@ export type Database = {
           external_capittal_id?: string | null
           id?: string
           import_log_id?: string | null
+          last_interaction_at?: string | null
           linkedin?: string | null
           merged_into_contacto_id?: string | null
           nombre: string
           notas?: string | null
+          relationship_score?: number | null
+          relationship_tier?: string | null
+          score_updated_at?: string | null
           source?: string | null
           telefono?: string | null
           updated_at?: string | null
@@ -5228,10 +5296,14 @@ export type Database = {
           external_capittal_id?: string | null
           id?: string
           import_log_id?: string | null
+          last_interaction_at?: string | null
           linkedin?: string | null
           merged_into_contacto_id?: string | null
           nombre?: string
           notas?: string | null
+          relationship_score?: number | null
+          relationship_tier?: string | null
+          score_updated_at?: string | null
           source?: string | null
           telefono?: string | null
           updated_at?: string | null
@@ -8278,6 +8350,10 @@ export type Database = {
           ai_classification_confidence: number | null
           ai_company_summary: string | null
           ai_company_summary_at: string | null
+          ai_confidence: number | null
+          ai_enriched_at: string | null
+          ai_enrichment_source: string | null
+          ai_fields_locked: string[] | null
           ai_negative_tags: string[] | null
           ai_sector_name: string | null
           ai_sector_pe: string | null
@@ -8342,6 +8418,10 @@ export type Database = {
           ai_classification_confidence?: number | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          ai_confidence?: number | null
+          ai_enriched_at?: string | null
+          ai_enrichment_source?: string | null
+          ai_fields_locked?: string[] | null
           ai_negative_tags?: string[] | null
           ai_sector_name?: string | null
           ai_sector_pe?: string | null
@@ -8406,6 +8486,10 @@ export type Database = {
           ai_classification_confidence?: number | null
           ai_company_summary?: string | null
           ai_company_summary_at?: string | null
+          ai_confidence?: number | null
+          ai_enriched_at?: string | null
+          ai_enrichment_source?: string | null
+          ai_fields_locked?: string[] | null
           ai_negative_tags?: string[] | null
           ai_sector_name?: string | null
           ai_sector_pe?: string | null
