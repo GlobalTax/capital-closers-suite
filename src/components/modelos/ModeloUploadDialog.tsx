@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUploadModelo } from "@/hooks/queries/useModelos";
-import { validateWordFile, ALLOWED_EXTENSIONS } from "@/services/modelos.service";
+import { validateModeloFile, ALLOWED_EXTENSIONS } from "@/services/modelos.service";
 import type { ModeloCategory } from "@/types/documents";
 import { MODELO_CATEGORY_LABELS } from "@/types/documents";
 import { toast } from "sonner";
@@ -32,7 +32,7 @@ export function ModeloUploadDialog({ open, onOpenChange, category }: ModeloUploa
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    const validation = validateWordFile(selectedFile);
+    const validation = validateModeloFile(selectedFile);
     if (!validation.valid) {
       toast.error(validation.error);
       if (inputRef.current) inputRef.current.value = '';
@@ -94,7 +94,7 @@ export function ModeloUploadDialog({ open, onOpenChange, category }: ModeloUploa
           </div>
 
           <div className="space-y-2">
-            <Label>Archivo Word *</Label>
+            <Label>Archivo *</Label>
             
             {file ? (
               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
