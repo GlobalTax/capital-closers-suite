@@ -7,6 +7,26 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 // Default redirect for errors
 const DEFAULT_REDIRECT = "https://capittal.es";
 
+// Allowed redirect domains (prevent open redirect)
+const ALLOWED_DOMAINS = ["capittal.es", "www.capittal.es", "crm-capittal.lovable.app"];
+
+function isAllowedRedirect(targetUrl: string): boolean {
+  try {
+    const parsed = new URL(targetUrl);
+    return ALLOWED_DOMAINS.some(
+      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function safeRedirectUrl(targetUrl: string | null): string {
+  if (!targetUrl) return DEFAULT_REDIRECT;
+  const decoded = decodeURIComponent(targetUrl);
+  return isAllowedRedirect(decoded) ? decoded : DEFAULT_REDIRECT;
+}
+
 serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -24,22 +44,17 @@ serve(async (req) => {
     // Validate UUID format to prevent abuse
     if (!UUID_REGEX.test(trackingId)) {
       console.warn("Invalid tracking ID format:", trackingId);
-      // Still redirect to target URL if provided
-      const decodedUrl = decodeURIComponent(targetUrl);
       return new Response(null, {
         status: 302,
-        headers: { "Location": decodedUrl },
+        headers: { "Location": DEFAULT_REDIRECT },
       });
     }
 
-    // Decode the target URL
     const decodedUrl = decodeURIComponent(targetUrl);
 
-    // Validate target URL is a valid URL
-    try {
-      new URL(decodedUrl);
-    } catch {
-      console.warn("Invalid target URL:", decodedUrl);
+    // Validate target URL is allowed (prevent open redirect)
+    if (!isAllowedRedirect(decodedUrl)) {
+      console.warn("Blocked redirect to disallowed domain:", decodedUrl);
       return new Response(null, {
         status: 302,
         headers: { "Location": DEFAULT_REDIRECT },
@@ -82,14 +97,9 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error tracking click:", error);
     
-    // Try to redirect anyway if we have a URL
-    const url = new URL(req.url);
-    const targetUrl = url.searchParams.get("url");
-    const decodedUrl = targetUrl ? decodeURIComponent(targetUrl) : DEFAULT_REDIRECT;
-    
     return new Response(null, {
       status: 302,
-      headers: { "Location": decodedUrl },
+      headers: { "Location": DEFAULT_REDIRECT },
     });
   }
 });
