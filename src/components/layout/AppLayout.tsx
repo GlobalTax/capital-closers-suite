@@ -2,6 +2,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Topbar } from "./Topbar";
 import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
+import { CRMAssistant } from "@/components/assistant/CRMAssistant";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
       </div>
+      <CRMAssistant />
     </SidebarProvider>
   );
 }
