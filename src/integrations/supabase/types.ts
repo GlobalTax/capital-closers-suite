@@ -7093,8 +7093,12 @@ export type Database = {
       dealsuite_deals: {
         Row: {
           advisor: string | null
+          contact_company: string | null
+          contact_email: string | null
+          contact_name: string | null
           country: string | null
           created_at: string | null
+          customer_types: string | null
           deal_id: string
           deal_type: string | null
           description: string | null
@@ -7102,20 +7106,28 @@ export type Database = {
           ebitda_max: number | null
           ebitda_min: number | null
           id: string
+          image_url: string | null
+          location: string | null
           published_at: string | null
           raw_data: Json | null
+          reference: string | null
           revenue_max: number | null
           revenue_min: number | null
           scraped_at: string | null
           sector: string | null
           source_url: string | null
+          stake_offered: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
           advisor?: string | null
+          contact_company?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
           country?: string | null
           created_at?: string | null
+          customer_types?: string | null
           deal_id: string
           deal_type?: string | null
           description?: string | null
@@ -7123,20 +7135,28 @@ export type Database = {
           ebitda_max?: number | null
           ebitda_min?: number | null
           id?: string
+          image_url?: string | null
+          location?: string | null
           published_at?: string | null
           raw_data?: Json | null
+          reference?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
           scraped_at?: string | null
           sector?: string | null
           source_url?: string | null
+          stake_offered?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
           advisor?: string | null
+          contact_company?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
           country?: string | null
           created_at?: string | null
+          customer_types?: string | null
           deal_id?: string
           deal_type?: string | null
           description?: string | null
@@ -7144,13 +7164,17 @@ export type Database = {
           ebitda_max?: number | null
           ebitda_min?: number | null
           id?: string
+          image_url?: string | null
+          location?: string | null
           published_at?: string | null
           raw_data?: Json | null
+          reference?: string | null
           revenue_max?: number | null
           revenue_min?: number | null
           scraped_at?: string | null
           sector?: string | null
           source_url?: string | null
+          stake_offered?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -12858,6 +12882,94 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      mandato_scoring_history: {
+        Row: {
+          ai_confidence: number | null
+          created_at: string
+          id: string
+          mandato_id: string
+          new_probability: number
+          positive_signals: Json | null
+          previous_probability: number | null
+          reasoning: string | null
+          recommendations: Json | null
+          risk_factors: Json | null
+          scored_by: string | null
+          signals_snapshot: Json | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          created_at?: string
+          id?: string
+          mandato_id: string
+          new_probability: number
+          positive_signals?: Json | null
+          previous_probability?: number | null
+          reasoning?: string | null
+          recommendations?: Json | null
+          risk_factors?: Json | null
+          scored_by?: string | null
+          signals_snapshot?: Json | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          created_at?: string
+          id?: string
+          mandato_id?: string
+          new_probability?: number
+          positive_signals?: Json | null
+          previous_probability?: number | null
+          reasoning?: string | null
+          recommendations?: Json | null
+          risk_factors?: Json | null
+          scored_by?: string | null
+          signals_snapshot?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandato_scoring_history_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+        ]
       }
       mandato_time_entries: {
         Row: {

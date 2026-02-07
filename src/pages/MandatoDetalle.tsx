@@ -25,6 +25,7 @@ import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGeneratorDrawer";
 import { MarketingSubTabs } from "@/features/mandatos/components/MarketingSubTabs";
 import { MandatoActivityTimeline } from "@/components/mandatos/MandatoActivityTimeline";
+import { MandatoScoringPanel } from "@/components/mandatos/MandatoScoringPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -159,46 +160,55 @@ export default function MandatoDetalle() {
         </TabsList>
 
         <TabsContent value="resumen">
-          <ResumenTab
-            mandato={mandato}
-            onAddContacto={() => setOpenContactoDrawer(true)}
-            onAsociarContacto={() => setOpenAsociarDialog(true)}
-            onUpdateEmpresa={async (empresaId, field, value) => {
-              const { error } = await supabase
-                .from('empresas')
-                .update({ [field]: value })
-                .eq('id', empresaId);
-              
-              if (error) {
-                toast.error('Error al actualizar');
-                throw error;
-              }
-              
-              toast.success('Actualizado');
-              refetch();
-            }}
-            onUpdateEmpresaText={async (empresaId, field, value) => {
-              const { error } = await supabase
-                .from('empresas')
-                .update({ [field]: value })
-                .eq('id', empresaId);
-              
-              if (error) {
-                // Detectar error de CIF duplicado (constraint unique)
-                if (error.code === '23505' && field === 'cif') {
-                  toast.error('Este CIF ya está registrado en otra empresa');
-                } else {
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+            <ResumenTab
+              mandato={mandato}
+              onAddContacto={() => setOpenContactoDrawer(true)}
+              onAsociarContacto={() => setOpenAsociarDialog(true)}
+              onUpdateEmpresa={async (empresaId, field, value) => {
+                const { error } = await supabase
+                  .from('empresas')
+                  .update({ [field]: value })
+                  .eq('id', empresaId);
+                
+                if (error) {
                   toast.error('Error al actualizar');
+                  throw error;
                 }
-                throw error;
-              }
-              
-              toast.success('Actualizado');
-              refetch();
-            }}
-            onVincularEmpresa={() => setVincularEmpresaOpen(true)}
-            onEditMandato={() => setEditarMandatoOpen(true)}
-          />
+                
+                toast.success('Actualizado');
+                refetch();
+              }}
+              onUpdateEmpresaText={async (empresaId, field, value) => {
+                const { error } = await supabase
+                  .from('empresas')
+                  .update({ [field]: value })
+                  .eq('id', empresaId);
+                
+                if (error) {
+                  if (error.code === '23505' && field === 'cif') {
+                    toast.error('Este CIF ya está registrado en otra empresa');
+                  } else {
+                    toast.error('Error al actualizar');
+                  }
+                  throw error;
+                }
+                
+                toast.success('Actualizado');
+                refetch();
+              }}
+              onVincularEmpresa={() => setVincularEmpresaOpen(true)}
+              onEditMandato={() => setEditarMandatoOpen(true)}
+            />
+            {!esServicio && (
+              <div className="space-y-4">
+                <MandatoScoringPanel
+                  mandatoId={id!}
+                  currentProbability={mandato.probability}
+                />
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {esServicio ? (

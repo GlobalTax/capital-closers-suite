@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.crm-assistant]
 verify_jwt = false
+
+[functions.score-mandato]
+verify_jwt = false
