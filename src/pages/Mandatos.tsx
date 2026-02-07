@@ -80,6 +80,7 @@ import {
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, useSensors, PointerSensor, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useKanbanConfig } from "@/hooks/useKanbanConfig";
+import { KanbanEstadoFilter } from "@/components/mandatos/KanbanEstadoFilter";
 import { KanbanConfigDialog } from "@/components/mandatos/KanbanConfigDialog";
 import { SendTeasersDialog } from "@/components/mandatos/SendTeasersDialog";
 import { AsignarEmpresaMasivaDialog } from "@/components/mandatos/AsignarEmpresaMasivaDialog";
@@ -312,6 +313,17 @@ export default function Mandatos() {
   const [pageSize, setPageSize] = useState<number>(50);
   const isMobile = useIsMobile();
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [kanbanEstadoFilter, setKanbanEstadoFilter] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("kanban-estado-filter");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const handleKanbanEstadoChange = (estados: string[]) => {
+    setKanbanEstadoFilter(estados);
+    localStorage.setItem("kanban-estado-filter", JSON.stringify(estados));
+  };
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [downloadingTeaser, setDownloadingTeaser] = useState<string | null>(null);
   
@@ -584,9 +596,12 @@ export default function Mandatos() {
       const matchTipo = tipoFilter.length === 0 || tipoFilter.includes(mandato.tipo);
       const matchSF = sfFilter.length === 0 || (sfFilter.includes("true") && (mandato as any).potencial_searchfund === true);
 
-      return matchSearch && matchEstado && matchTipo && matchSF;
+      // Filtro de estado del kanban (solo aplica en vista kanban)
+      const matchKanbanEstado = vistaActual !== "kanban" || kanbanEstadoFilter.length === 0 || kanbanEstadoFilter.includes(mandato.estado);
+
+      return matchSearch && matchEstado && matchTipo && matchSF && matchKanbanEstado;
     });
-  }, [mandatos, searchQuery, filterValues]);
+  }, [mandatos, searchQuery, filterValues, vistaActual, kanbanEstadoFilter]);
 
   // Acciones inline para cada fila
   const getRowActions = (row: Mandato): ActionItem[] => [
@@ -1142,15 +1157,21 @@ export default function Mandatos() {
             </Button>
           </div>
           {vistaActual === "kanban" && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setConfigDialogOpen(true)}
-              className="gap-1.5 h-7 md:h-8 px-2 md:px-3"
-            >
-              <Settings className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Configurar</span>
-            </Button>
+            <>
+              <KanbanEstadoFilter
+                selectedEstados={kanbanEstadoFilter}
+                onChange={handleKanbanEstadoChange}
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setConfigDialogOpen(true)}
+                className="gap-1.5 h-7 md:h-8 px-2 md:px-3"
+              >
+                <Settings className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Configurar</span>
+              </Button>
+            </>
           )}
           <Button onClick={() => setDrawerOpen(true)} className="gap-1.5 h-8 md:h-9 px-3 md:px-4">
             <Plus className="w-4 h-4" />
