@@ -1,68 +1,98 @@
 
-# Fase 1: Implementación Completa
+# Fase 3: Dashboard de IA - Metricas, Tokens, Costos y Actividad
 
-Sin el CRON_SECRET, las Edge Functions validarán usando el SERVICE_ROLE_KEY (ya disponible) para llamadas internas desde pg_cron, y admin auth para llamadas manuales desde el frontend.
+## Objetivo
+
+Crear un panel centralizado en `/admin/ai-dashboard` que permita a administradores monitorear todo el uso de IA en el CRM: tokens consumidos, costos estimados, tasa de exito, y actividad reciente por modulo.
+
+## Datos disponibles
+
+La tabla `ai_activity_log` ya registra toda la actividad de las Edge Functions de IA con los siguientes campos:
+- `module`: identificador del modulo (meeting_summary, alerts, batch-enrichment, alerts_cron, task-ai)
+- `model`: modelo usado (gpt-5-nano, gpt-5-mini, etc.)
+- `input_tokens` / `output_tokens`: consumo de tokens
+- `estimated_cost_usd`: costo estimado por llamada
+- `success` / `error_message`: resultado de la operacion
+- `duration_ms`: tiempo de respuesta
+- `entity_type` / `entity_id`: entidad afectada
+- `created_at`: timestamp
+
+Actualmente la tabla esta vacia (las funciones estan desplegadas pero aun no se han ejecutado), por lo que el dashboard mostrara estados vacios con buen UX.
 
 ## Archivos a crear
 
-### 1. `supabase/functions/run-alerts-cron/index.ts`
-- Auth dual: SERVICE_ROLE_KEY para pg_cron, o admin auth para manual
-- Ejecuta `generate_mandato_alerts()` via RPC con service role
-- Busca alertas recién creadas (últimas 24h, sin description) y llama a `enhance-alert-message` para cada una
-- Registra en `ai_activity_log`
+### 1. `src/hooks/queries/useAIDashboard.ts`
+- Hook con queries para obtener metricas agregadas desde `ai_activity_log`
+- Queries:
+  - **Totales**: sum tokens, sum cost, count total, count success/errors
+  - **Por modulo**: agrupado por `module` con totales de tokens, costo, llamadas
+  - **Por modelo**: agrupado por `model`
+  - **Actividad reciente**: ultimos 50 registros con orden descendente
+  - **Serie temporal**: agrupado por dia (ultimos 30 dias) para grafico de lineas
+- Filtro por rango de fechas (default: ultimos 30 dias)
 
-### 2. `supabase/functions/enhance-alert-message/index.ts`
-- Recibe `alert_id`, lee contexto de la alerta + mandato + empresa
-- Llama a `openai/gpt-5-nano` via Lovable AI Gateway
-- Genera mensaje contextual en español (2-3 frases con acción sugerida)
-- Actualiza campo `description` de la alerta
-- Registra tokens/costo en `ai_activity_log`
+### 2. `src/pages/admin/AIDashboard.tsx`
+Pagina principal del dashboard con las siguientes secciones:
 
-### 3. `supabase/functions/summarize-meeting/index.ts`
-- Admin auth (mismo patrón que `task-ai`)
-- Recibe `meeting_id`, lee notas + empresa
-- Usa `openai/gpt-5-mini` con tool calling para extraer: summary, key_points, action_items (con responsible/deadline), key_quotes
-- Guarda en campos `ai_summary`, `ai_action_items`, `ai_key_quotes`, `ai_processed_at`
-- Maneja errores 429/402
-- Registra en `ai_activity_log`
+**Header**: Titulo "Dashboard de IA", selector de rango de fechas (7d / 30d / 90d / Todo)
 
-### 4. `src/hooks/queries/useMeetingAI.ts`
-- Hook `useSummarizeMeeting()` que invoca la Edge Function
-- Invalida queries de meetings al éxito
-- Toast de éxito/error con mensajes claros para 429/402
+**Tarjetas KPI** (fila superior, 5 cards):
+- Total llamadas IA
+- Tokens consumidos (input + output)
+- Costo total estimado (USD)
+- Tasa de exito (%)
+- Latencia promedio (ms)
 
-### 5. `src/components/empresas/MeetingAISummary.tsx`
-- Componente que muestra: badge "Resumen IA", resumen ejecutivo, acciones pendientes (con responsable/deadline), citas destacadas como blockquotes
-- Botón "Regenerar" con spinner
-- Estilo purple/violet coherente para diferenciar contenido IA
+**Grafico de uso diario** (recharts AreaChart):
+- Eje X: fechas
+- Area 1: tokens por dia
+- Area 2: costo por dia
+- Tooltip con detalles
+
+**Tabla: Uso por Modulo** (desglose):
+- Columnas: Modulo, Llamadas, Tokens IN, Tokens OUT, Costo, Exito %, Latencia media
+- Iconos por modulo (Sparkles, Brain, Zap, etc.)
+
+**Tabla: Uso por Modelo**:
+- Columnas: Modelo, Llamadas, Tokens totales, Costo, Latencia media
+
+**Timeline: Actividad Reciente**:
+- Ultimas 50 operaciones con: timestamp, modulo, modelo, tokens, costo, estado (badge verde/rojo), entidad vinculada
+- ScrollArea con altura fija
+
+### 3. `src/components/ai-dashboard/AIKPICards.tsx`
+- Componente reutilizable para las 5 tarjetas de metricas
+- Skeleton loading state
+- Estado vacio cuando no hay datos
+
+### 4. `src/components/ai-dashboard/AIUsageChart.tsx`
+- Grafico de area con recharts
+- Dos series: tokens y costo
+- Responsive, con eje Y dual
+- Estado vacio con mensaje "Sin datos de actividad aun"
+
+### 5. `src/components/ai-dashboard/AIModuleBreakdown.tsx`
+- Tabla con desglose por modulo
+- Progress bars para porcentaje de uso relativo
+- Iconos y colores por modulo
+
+### 6. `src/components/ai-dashboard/AIActivityTimeline.tsx`
+- Lista de actividad reciente
+- Badges de estado (exito/error)
+- Formato de fecha relativo (hace 2 min, hace 1 hora)
+- Click para expandir detalles de error si aplica
 
 ## Archivos a modificar
 
-### 6. `supabase/config.toml`
-Agregar las 3 funciones nuevas con `verify_jwt = false`:
-- `run-alerts-cron`
-- `enhance-alert-message`
-- `summarize-meeting`
+### 7. `src/App.tsx`
+- Agregar ruta `/admin/ai-dashboard` con ProtectedRoute requiredRole="admin"
+- Import lazy del componente AIDashboard
 
-### 7. `src/services/companyMeetings.service.ts`
-Extender interface `CompanyMeeting` con campos IA:
-- `ai_summary: string | null`
-- `ai_action_items: any[] | null`
-- `ai_key_quotes: string[] | null`
-- `ai_processed_at: string | null`
+## Detalles tecnicos
 
-### 8. `src/components/empresas/MeetingCard.tsx`
-- Importar `Sparkles`, `Loader2` de lucide + `MeetingAISummary` + `useSummarizeMeeting`
-- Agregar botón "Resumir con IA" junto a Editar/Eliminar (visible solo cuando hay `meeting_notes` y no se está editando)
-- Insertar `MeetingAISummary` entre las notas y los documentos
-
-## pg_cron schedule (SQL directo, no migración)
-
-Programar ejecución diaria a las 8:00 AM UTC llamando a `run-alerts-cron` via `pg_net.http_post` con el SERVICE_ROLE_KEY en el header Authorization.
-
-## Resumen de seguridad
-
-- Todas las funciones validan admin auth o SERVICE_ROLE_KEY
-- LOVABLE_API_KEY ya está configurado
-- No se necesitan secrets adicionales
-- pg_cron usa SERVICE_ROLE_KEY para autenticar las llamadas
+- Todas las queries usan el cliente Supabase existente (no se necesitan Edge Functions nuevas)
+- Los datos se leen directamente de `ai_activity_log` con queries agregadas
+- Se usa recharts (ya instalado) para graficos
+- Patron de componentes consistente con EnrichmentDashboard y TaskAIQA
+- staleTime de 2 minutos para las queries
+- No se requiere migracion de base de datos (la tabla ya existe con RLS)
