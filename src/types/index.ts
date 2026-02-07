@@ -212,6 +212,9 @@ export interface Mandato {
   // Favoritos
   is_favorite?: boolean;
   
+  // AI Scoring
+  probability?: number | null;
+  pipeline_stage_changed_at?: string;
 }
 
 // ============================================
