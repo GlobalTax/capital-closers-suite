@@ -1,114 +1,135 @@
 
-# Fase 4: Asistente IA Conversacional para el CRM
+# Fase 5: Scoring Inteligente de Mandatos con IA
 
 ## Objetivo
-Crear un chat IA flotante accesible desde cualquier pagina del CRM que permita consultar datos con lenguaje natural: empresas, mandatos, contactos, tareas, y metricas generales.
+Crear un sistema de scoring que analice automaticamente las senales de actividad de cada mandato (reuniones, tareas, documentos, tiempo invertido, tiempo en etapa) y genere una recomendacion de probabilidad de cierre con justificacion, actualizando el campo `probability` existente.
+
+## Senales que el modelo analizara
+
+Para cada mandato, la Edge Function recopilara:
+
+| Senal | Fuente | Peso logico |
+|-------|--------|-------------|
+| Etapa del pipeline | `mandatos.pipeline_stage` + `pipeline_stages.default_probability` | Base del scoring |
+| Dias en etapa actual | `mandatos.pipeline_stage_changed_at` vs hoy | Estancamiento = riesgo |
+| Dias sin actividad | `mandatos.last_activity_at` vs hoy | Inactividad = riesgo |
+| Reuniones recientes | `company_meetings` vinculadas a empresa principal | Actividad positiva |
+| Tareas pendientes/completadas | `tareas` del mandato | Progreso = positivo |
+| Documentos adjuntos | `documentos` del mandato (NDA, DD, etc.) | Documentacion avanzada = positivo |
+| Horas invertidas | `time_entries` del mandato | Inversion significativa |
+| Valor del mandato | `mandatos.valor` | Contexto |
+| Ofertas recibidas (venta) | `mandatos.numero_ofertas_recibidas` | Interes de mercado |
+| Targets vinculados | `mandato_empresas` con rol target | Progreso en busqueda |
 
 ## Arquitectura
 
-El asistente funciona en dos capas:
-
-1. **Edge Function `crm-assistant`**: Recibe el mensaje del usuario + historial de conversacion. Usa tool calling (Lovable AI Gateway con `google/gemini-3-flash-preview`) para que el modelo decida que datos consultar de Supabase, ejecuta las queries con service role, y devuelve la respuesta en streaming.
-
-2. **Componente flotante `CRMAssistant`**: Boton fijo en esquina inferior derecha con panel de chat desplegable. Renderiza mensajes con markdown, soporta streaming token-by-token.
-
-## Herramientas disponibles para el modelo (tool calling)
-
-El modelo tendra acceso a estas herramientas que se ejecutan server-side:
-
-| Tool | Descripcion | Query Supabase |
-|------|------------|----------------|
-| `search_empresas` | Buscar empresas por nombre, sector, ubicacion, facturacion | `empresas` con filtros ilike/range |
-| `search_contactos` | Buscar contactos por nombre, empresa, cargo | `contactos` + join `empresas` |
-| `search_mandatos` | Buscar mandatos por estado, tipo, empresa | `mandatos` + join `empresas` |
-| `get_tareas_pendientes` | Listar tareas pendientes, filtrar por asignado/prioridad | `tareas` con filtros |
-| `get_stats_resumen` | Metricas generales: total empresas, mandatos activos, tareas pendientes | counts agregados |
-| `get_empresa_detalle` | Detalle completo de una empresa por ID o nombre | `empresas` + `contactos` + `mandatos` |
+```text
+  [Boton "Scoring IA"]          [Cron semanal (futuro)]
+         |                              |
+         v                              v
+  POST /score-mandato  ───────────────────
+         |
+    1. Recopila senales (queries Supabase)
+    2. Construye prompt con datos factuales
+    3. Llama a google/gemini-3-flash-preview con tool calling
+    4. Extrae: probability, confidence, reasoning, risk_factors, recommendations
+    5. Actualiza mandatos.probability
+    6. Guarda historial en mandato_scoring_history
+    7. Log en ai_activity_log
+         |
+         v
+  [Panel de scoring en MandatoDetalle]
+```
 
 ## Archivos a crear
 
-### 1. `supabase/functions/crm-assistant/index.ts`
-- Validacion de auth (usuario autenticado, no requiere admin)
-- System prompt con contexto M&A y las tools disponibles
-- Recibe `messages[]` (historial completo)
-- Llama a Lovable AI Gateway con streaming + tool calling
-- Cuando el modelo invoca una tool, ejecuta la query Supabase con service role
-- Re-envia resultado de la tool al modelo para que genere la respuesta final
-- Respuesta final en streaming SSE
-- Logging en `ai_activity_log` (modulo: `crm-assistant`)
+### 1. Migracion: `mandato_scoring_history`
+Nueva tabla para guardar historial de scorings:
+- `id` (uuid)
+- `mandato_id` (uuid FK)
+- `previous_probability` (integer)
+- `new_probability` (integer)
+- `ai_confidence` (numeric 0-1)
+- `reasoning` (text) - explicacion del modelo
+- `risk_factors` (jsonb) - array de factores de riesgo
+- `positive_signals` (jsonb) - array de senales positivas
+- `recommendations` (jsonb) - array de acciones sugeridas
+- `signals_snapshot` (jsonb) - snapshot de los datos analizados
+- `scored_by` (uuid) - usuario que lo solicito
+- `created_at` (timestamptz)
+
+RLS: Lectura para usuarios autenticados, insert solo via service role.
+
+### 2. `supabase/functions/score-mandato/index.ts`
+- Recibe `{ mandato_id }` + auth del usuario
+- Ejecuta queries para recopilar todas las senales
+- Construye un prompt estructurado con los datos factuales
+- Usa tool calling con `google/gemini-3-flash-preview` para extraer:
+  - `probability` (0-100)
+  - `confidence` (0-1)
+  - `reasoning` (texto en espanol)
+  - `risk_factors` (array de strings)
+  - `positive_signals` (array de strings)
+  - `recommendations` (array de strings)
+- Actualiza `mandatos.probability` con el nuevo valor
+- Inserta registro en `mandato_scoring_history`
+- Log en `ai_activity_log` (modulo: `mandato-scoring`)
 - Manejo de errores 429/402
 
-### 2. `src/hooks/useCRMAssistant.ts`
-- Estado de mensajes `{role, content}[]`
-- Funcion `sendMessage(text)` que hace streaming SSE al edge function
-- Actualiza ultimo mensaje assistant token-by-token (patron del codebase)
-- Estado: `isStreaming`, `messages`, `error`
-- `clearHistory()` para reiniciar conversacion
+### 3. `src/hooks/useMandatoScoring.ts`
+- `useMandatoScoringHistory(mandatoId)`: query para obtener historial de scorings
+- `useScoreMandato()`: mutation que llama a la Edge Function
+- Invalidacion de queries de mandatos y scoring al completar
 
-### 3. `src/components/assistant/CRMAssistantButton.tsx`
-- Boton flotante fijo en esquina inferior derecha (z-50)
-- Icono `MessageCircle` / `Sparkles` con badge animado
-- Toggle para abrir/cerrar el panel
-- Se oculta en rutas publicas
+### 4. `src/components/mandatos/MandatoScoringPanel.tsx`
+Panel que se muestra en la pagina de detalle del mandato:
 
-### 4. `src/components/assistant/CRMAssistantPanel.tsx`
-- Panel tipo chat (400px ancho, 500px alto) con sombra elevada
-- Header con titulo "Asistente IA" y boton cerrar
-- ScrollArea con mensajes renderizados con `react-markdown`
-- Input con boton enviar (Enter para enviar, Shift+Enter salto de linea)
-- Estado vacio con sugerencias rapidas:
-  - "Cuantas empresas tenemos en el sector tecnologia?"
-  - "Mandatos activos y su estado"
-  - "Tareas pendientes para hoy"
-  - "Resumen general del CRM"
-- Indicador de streaming (puntos animados)
-- Manejo de errores inline
+**Seccion superior:**
+- Probabilidad actual con gauge visual (semicirculo con colores rojo/amarillo/verde)
+- Badge de confianza del modelo (alta/media/baja)
+- Boton "Recalcular con IA" (con icono Sparkles)
+- Fecha del ultimo scoring
 
-### 5. `src/components/assistant/CRMAssistant.tsx`
-- Componente wrapper que combina Button + Panel
-- Usa `useCRMAssistant` hook
-- Controla estado open/closed
+**Seccion de analisis (expandible):**
+- Lista de senales positivas (iconos verdes)
+- Lista de factores de riesgo (iconos rojos/amarillos)
+- Recomendaciones de accion (iconos azules)
+- Razonamiento completo del modelo
+
+**Historial:**
+- Mini timeline de cambios de probabilidad (ultimo 5)
+- Muestra anterior vs nuevo con flecha y delta
+
+### 5. `src/components/mandatos/ScoringGauge.tsx`
+- Componente visual de semicirculo/arco SVG
+- Colores: rojo (0-30), amarillo (31-60), verde (61-100)
+- Numero grande en el centro
+- Animacion suave al cambiar valor
 
 ## Archivos a modificar
 
-### 6. `src/components/layout/AppLayout.tsx`
-- Agregar `<CRMAssistant />` dentro del layout para que aparezca en todas las paginas protegidas
+### 6. `src/pages/MandatoDetalle.tsx`
+- Importar y renderizar `MandatoScoringPanel` en la tab Resumen o como panel lateral
+- Solo visible para mandatos de tipo M&A (no servicios)
 
 ### 7. `supabase/config.toml`
-- Agregar `[functions.crm-assistant]` con `verify_jwt = true`
+- Agregar `[functions.score-mandato]` con `verify_jwt = true`
 
 ## Detalles tecnicos
 
-### System Prompt del asistente
-```
-Eres el asistente de IA de Capittal Partners CRM. Ayudas a los usuarios a consultar
-datos del CRM usando lenguaje natural en español. Tienes acceso a herramientas para
-buscar empresas, contactos, mandatos y tareas. Responde siempre en español, de forma
-concisa y profesional. Usa tablas markdown cuando presentes multiples resultados.
-Cuando no encuentres datos, sugerile al usuario refinar su busqueda.
-```
+### Prompt del modelo
+El system prompt instruye al modelo como analista M&A experto que evalua probabilidad de cierre. Recibe datos factuales estructurados y debe razonar sobre ellos considerando:
+- La etapa actual y su probabilidad base
+- Si hay estancamiento (muchos dias sin avanzar)
+- Si hay actividad reciente (reuniones, tareas)
+- Si la documentacion esta avanzada (NDA, DD completados)
+- Si hay senales de mercado (ofertas, targets interesados)
 
-### Flujo de una consulta
-1. Usuario escribe: "empresas del sector salud con mas de 50 empleados"
-2. Frontend envia POST con `messages[]` al edge function
-3. Edge function llama al modelo con tools habilitadas
-4. Modelo decide invocar `search_empresas({ sector: "salud", min_empleados: 50 })`
-5. Edge function ejecuta query en Supabase, obtiene resultados
-6. Re-envia resultados al modelo como tool response
-7. Modelo genera respuesta en lenguaje natural con tabla markdown
-8. Se hace streaming SSE al frontend
+### Tool calling para output estructurado
+Se define una tool `evaluate_mandate_probability` con parametros tipados para garantizar que el modelo devuelve exactamente la estructura esperada.
 
-### Streaming
-- El edge function hace la llamada inicial (non-streaming) para resolver tools
-- La llamada final (con resultados) se hace con streaming para la respuesta al usuario
-- Frontend parsea SSE linea-por-linea siguiendo el patron existente del codebase
-
-### Modelo
-- `google/gemini-3-flash-preview` (default del proyecto) para balance velocidad/calidad
-- Temperature: 0.3 para respuestas factuales
-
-### Limites de seguridad
-- Maximo 50 resultados por query para evitar respuestas enormes
-- Solo lectura (SELECT) - el asistente no puede modificar datos
-- Auth requerida (cualquier usuario del CRM, no solo admin)
-- Historial solo en memoria del cliente (no se persiste en DB)
+### Seguridad
+- Auth requerida (cualquier usuario CRM)
+- La Edge Function usa service role para las queries pero valida que el usuario esta autenticado
+- Solo lectura + update de probability + insert en historial
+- No streaming (respuesta unica)
