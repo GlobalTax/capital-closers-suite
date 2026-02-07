@@ -1,104 +1,74 @@
 
 
-# Plan: Securizar `lead_type` en `send-lead-confirmation`
+# Plan: Corregir columnas en Data Room (access-cim-document + frontend)
 
 ## Problema
 
-En la linea 229, `lead_type` se pasa directamente a `.from(lead_type)`, lo que permite a un atacante con acceso al endpoint consultar/modificar cualquier tabla de Supabase si logra saltarse o tiene un token valido.
+El codigo usa columnas que no existen en la tabla `documentos`:
 
-## Cambios en `supabase/functions/send-lead-confirmation/index.ts`
+| Codigo actual (incorrecto) | Columna real en DB |
+|---|---|
+| `nombre` | `file_name` |
+| `file_path` | `storage_path` |
+| `file_size` | `file_size_bytes` |
 
-### 1. Whitelist estricta de `lead_type`
+Esto causa que el listado y la descarga fallen silenciosamente.
 
-Agregar una constante con las 5 tablas permitidas y validar antes de usar:
+## Cambios
 
-```typescript
-const ALLOWED_LEAD_TYPES = [
-  'contact_leads',
-  'general_contact_leads', 
-  'company_valuations',
-  'advisor_valuations',
-  'acquisition_leads',
-] as const;
+### 1. `supabase/functions/access-cim-document/index.ts`
 
-type AllowedLeadType = typeof ALLOWED_LEAD_TYPES[number];
+**Accion "list" (linea 154):** Cambiar el select de:
+```
+'id, nombre, descripcion, tipo, file_path, file_size, created_at'
+```
+a:
+```
+'id, file_name, descripcion, tipo, storage_path, file_size_bytes, created_at'
 ```
 
-Validar justo despues de parsear el body (linea ~185):
+**Accion "download" (linea 197):** Cambiar el select de:
+```
+'id, nombre, file_path, mandato_id, is_data_room, is_active'
+```
+a:
+```
+'id, file_name, storage_path, mandato_id, is_data_room, is_active'
+```
+
+**Linea 229** (signed URL): Cambiar `document.file_path` a `document.storage_path`
+
+**Linea 262** (response): Cambiar `document.nombre` a `document.file_name`
+
+### 2. `src/hooks/useDataRoomAccess.ts`
+
+Actualizar la interfaz `DataRoomDocument` (lineas 15-23):
 
 ```typescript
-if (lead_type && !ALLOWED_LEAD_TYPES.includes(lead_type)) {
-  return new Response(
-    JSON.stringify({ error: `lead_type invalido: ${lead_type}` }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+export interface DataRoomDocument {
+  id: string;
+  file_name: string;
+  descripcion: string | null;
+  tipo: string | null;
+  storage_path: string;
+  file_size_bytes: number | null;
+  created_at: string;
 }
 ```
 
-Actualizar el tipo `LeadConfirmationRequest` para usar `AllowedLeadType` en vez de un union literal manual.
+### 3. `src/components/dataroom/DataRoomDocumentList.tsx`
 
-### 2. Rate limit simple por email
+Tres cambios puntuales donde se leen los campos:
 
-Usar un `Map<string, number[]>` en memoria para rastrear timestamps de requests por email. Limitar a 3 emails por direccion en una ventana de 5 minutos:
+- **Linea 111:** `doc.file_path.split(...)` a `doc.storage_path.split(...) || doc.file_name`
+- **Linea 125:** `doc.nombre` a `doc.file_name`
+- **Linea 132:** `doc.file_size` a `doc.file_size_bytes`
 
-```typescript
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 min
-const RATE_LIMIT_MAX = 3;
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(email) || [])
-    .filter(t => now - t < RATE_LIMIT_WINDOW_MS);
-  if (timestamps.length >= RATE_LIMIT_MAX) return false;
-  timestamps.push(now);
-  rateLimitMap.set(email, timestamps);
-  return true;
-}
-```
-
-Si se excede, devolver 429:
-
-```typescript
-if (!checkRateLimit(email)) {
-  console.warn(`send-lead-confirmation: Rate limit exceeded for ${email}`);
-  return new Response(
-    JSON.stringify({ error: "Demasiadas solicitudes. Intenta de nuevo mas tarde." }),
-    { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-```
-
-> Nota: El rate limit en memoria se resetea con cada deploy/restart. Es suficiente para prevenir abuso basico en una herramienta interna con trafico externo limitado.
-
-### 3. Logging mejorado
-
-Agregar logs estructurados en puntos clave:
-- Al recibir request: IP (via headers), email, lead_type
-- En validacion fallida: motivo y datos recibidos
-- En rate limit: email afectado
-- En exito: lead_id, message_id
-
-```typescript
-const clientIP = req.headers.get("x-forwarded-for") || 
-                 req.headers.get("cf-connecting-ip") || "unknown";
-console.log(`send-lead-confirmation: Request from IP=${clientIP}, email=${email}, lead_type=${lead_type}`);
-```
-
-## Orden de validacion en el handler
-
-1. CORS (OPTIONS)
-2. Auth (validateInternalAuth)
-3. Parse body
-4. Validar campos requeridos (email, full_name)
-5. **Validar lead_type contra whitelist** (nuevo)
-6. **Rate limit por email** (nuevo)
-7. Enviar email
-8. Actualizar lead en DB (con lead_type ya validado)
-
-## Archivo unico a modificar
+## Archivos a modificar
 
 | Archivo | Cambio |
-|---------|--------|
-| `supabase/functions/send-lead-confirmation/index.ts` | Whitelist, rate limit, logging |
+|---|---|
+| `supabase/functions/access-cim-document/index.ts` | Columnas en select + referencias |
+| `src/hooks/useDataRoomAccess.ts` | Interfaz DataRoomDocument |
+| `src/components/dataroom/DataRoomDocumentList.tsx` | Referencias a campos en UI |
 
