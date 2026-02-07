@@ -108,7 +108,7 @@ export function DataRoomDocumentList({
         <div className="divide-y">
           {documents.map((doc) => {
             const isDownloading = downloadingId === doc.id;
-            const filename = doc.file_path.split('/').pop() || doc.nombre;
+            const filename = doc.storage_path?.split('/').pop() || doc.file_name;
             
             return (
               <div 
@@ -122,14 +122,14 @@ export function DataRoomDocumentList({
 
                 {/* File info */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-medium truncate">{doc.nombre}</h4>
+                  <h4 className="font-medium truncate">{doc.file_name}</h4>
                   {doc.descripcion && (
                     <p className="text-sm text-muted-foreground truncate">
                       {doc.descripcion}
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    <span>{formatFileSize(doc.file_size)}</span>
+                    <span>{formatFileSize(doc.file_size_bytes)}</span>
                     <span>·</span>
                     <span>
                       Añadido{' '}

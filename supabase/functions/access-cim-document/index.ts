@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       // List available Data Room documents for this mandato
       const { data: documents, error: docsError } = await supabase
         .from('documentos')
-        .select('id, nombre, descripcion, tipo, file_path, file_size, created_at')
+        .select('id, file_name, descripcion, tipo, storage_path, file_size_bytes, created_at')
         .eq('mandato_id', campaign.mandato_id)
         .eq('is_data_room', true)
         .eq('is_active', true)
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
       // Get document details
       const { data: document, error: docError } = await supabase
         .from('documentos')
-        .select('id, nombre, file_path, mandato_id, is_data_room, is_active')
+        .select('id, file_name, storage_path, mandato_id, is_data_room, is_active')
         .eq('id', documentId)
         .single()
 
@@ -226,7 +226,7 @@ Deno.serve(async (req) => {
       const { data: signedUrlData, error: signedUrlError } = await supabase
         .storage
         .from('mandato-documentos')
-        .createSignedUrl(document.file_path, expiresIn)
+        .createSignedUrl(document.storage_path, expiresIn)
 
       if (signedUrlError) {
         console.error('[AccessCIM] Error generating signed URL:', signedUrlError)
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
           expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
           document: {
             id: document.id,
-            nombre: document.nombre
+            file_name: document.file_name
           }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

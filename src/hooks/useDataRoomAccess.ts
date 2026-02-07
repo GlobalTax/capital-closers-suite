@@ -14,11 +14,11 @@ export type AccessDeniedReason =
 
 export interface DataRoomDocument {
   id: string;
-  nombre: string;
+  file_name: string;
   descripcion: string | null;
   tipo: string | null;
-  file_path: string;
-  file_size: number | null;
+  storage_path: string;
+  file_size_bytes: number | null;
   created_at: string;
 }
 
