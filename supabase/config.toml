@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.summarize-meeting]
 verify_jwt = false
+
+[functions.batch-enrich-companies]
+verify_jwt = false
