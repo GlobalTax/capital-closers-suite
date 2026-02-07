@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.batch-enrich-companies]
 verify_jwt = false
+
+[functions.crm-assistant]
+verify_jwt = false
