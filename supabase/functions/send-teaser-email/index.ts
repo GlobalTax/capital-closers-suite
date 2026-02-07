@@ -98,7 +98,7 @@ serve(async (req) => {
         campaign:teaser_campaigns(
           *,
           mandato:mandatos(id, nombre),
-          teaser_document:documentos(id, file_name, storage_path, file_type)
+          teaser_document:documentos(id, file_name, storage_path, mime_type)
         )
       `)
       .eq("id", recipientId)
@@ -227,7 +227,7 @@ serve(async (req) => {
           attachments.push({
             filename: fileName,
             content: base64,
-            type: doc.file_type || "application/pdf",
+            type: doc.mime_type || "application/pdf",
           });
         } else {
           console.error("Failed to download attachment:", downloadError);
