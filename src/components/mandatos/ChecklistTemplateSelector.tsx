@@ -53,6 +53,9 @@ export function ChecklistTemplateSelector({
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch (error: any) {
+      console.error('[checklist] handleConfirm error', error);
+      // Toast is handled by the hook, just keep dialog open
     } finally {
       setConfirming(false);
     }
