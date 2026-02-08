@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { 
   BarChart3, TrendingUp, Briefcase, Target, Clock, DollarSign, 
   CalendarCheck, AlertTriangle, Download, RefreshCw, FileText,
-  ArrowUpRight, ArrowDownRight, Activity, Trophy, XCircle
+  ArrowUpRight, ArrowDownRight, Activity, Trophy, XCircle, Sparkles
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInactiveMandatos } from "@/hooks/useMandatoActivity";
@@ -26,6 +26,7 @@ import { SyncFromBrevoCard } from "@/components/sync/SyncFromBrevoCard";
 import { SyncLeadsCard } from "@/components/sync/SyncLeadsCard";
 import { SyncDealsFromBrevoCard } from "@/components/sync/SyncDealsFromBrevoCard";
 import { AgingAlertsBanner } from "@/components/alerts/AgingAlertsBanner";
+import { ExecutiveReportPanel } from "@/components/reportes/ExecutiveReportPanel";
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#ec4899', '#84cc16'];
 
@@ -140,6 +141,9 @@ export default function Reportes() {
             <TabsTrigger value="comparacion" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">Compra vs Venta</TabsTrigger>
             <TabsTrigger value="alertas">Alertas</TabsTrigger>
             <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
+            <TabsTrigger value="reportes-ia" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0 gap-1">
+              <Sparkles className="w-3.5 h-3.5" />Reportes IA
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline" className="space-y-4">
@@ -558,6 +562,10 @@ export default function Reportes() {
               <SyncFromBrevoCard />
               <SyncDealsFromBrevoCard />
             </div>
+          </TabsContent>
+
+          <TabsContent value="reportes-ia">
+            <ExecutiveReportPanel />
           </TabsContent>
         </Tabs>
       </div>
