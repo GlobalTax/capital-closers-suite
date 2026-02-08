@@ -27,6 +27,7 @@ import { MarketingSubTabs } from "@/features/mandatos/components/MarketingSubTab
 import { MandatoActivityTimeline } from "@/components/mandatos/MandatoActivityTimeline";
 import { MandatoScoringPanel } from "@/components/mandatos/MandatoScoringPanel";
 import { BuyerMatchingPanel } from "@/components/mandatos/BuyerMatchingPanel";
+import { DealDocumentGenerator } from "@/components/mandatos/DealDocumentGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -253,6 +254,9 @@ export default function MandatoDetalle() {
               mandatoNombre={mandato.empresa_principal?.nombre || mandato.codigo}
               onRefresh={refetchDocumentos}
             />
+            {mandato.tipo === "venta" && (
+              <DealDocumentGenerator mandatoId={id!} />
+            )}
           </TabsContent>
         )}
 
