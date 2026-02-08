@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.score-mandato]
 verify_jwt = false
+
+[functions.generate-executive-report]
+verify_jwt = false

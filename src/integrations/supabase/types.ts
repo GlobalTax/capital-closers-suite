@@ -7090,6 +7090,59 @@ export type Database = {
           },
         ]
       }
+      dealsuite_contacts: {
+        Row: {
+          cargo: string | null
+          created_at: string | null
+          deal_ids: string[] | null
+          email: string | null
+          empresa: string | null
+          empresa_id: string | null
+          id: string
+          imagen_url: string | null
+          nombre: string
+          notas: string | null
+          telefono: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string | null
+          deal_ids?: string[] | null
+          email?: string | null
+          empresa?: string | null
+          empresa_id?: string | null
+          id?: string
+          imagen_url?: string | null
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string | null
+          deal_ids?: string[] | null
+          email?: string | null
+          empresa?: string | null
+          empresa_id?: string | null
+          id?: string
+          imagen_url?: string | null
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealsuite_contacts_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "dealsuite_empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dealsuite_deals: {
         Row: {
           advisor: string | null
@@ -7177,6 +7230,93 @@ export type Database = {
           stake_offered?: string | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      dealsuite_empresas: {
+        Row: {
+          created_at: string | null
+          deal_ids: string[] | null
+          descripcion: string | null
+          email: string | null
+          enfoque_consultivo: string | null
+          experiencia_ma: string[] | null
+          experiencia_sector: string[] | null
+          id: string
+          imagen_url: string | null
+          nombre: string
+          notas: string | null
+          parte_de: string | null
+          sitio_web: string | null
+          tamano_proyectos_max: number | null
+          tamano_proyectos_min: number | null
+          telefono: string | null
+          tipo_empresa: string | null
+          ubicacion: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deal_ids?: string[] | null
+          descripcion?: string | null
+          email?: string | null
+          enfoque_consultivo?: string | null
+          experiencia_ma?: string[] | null
+          experiencia_sector?: string[] | null
+          id?: string
+          imagen_url?: string | null
+          nombre: string
+          notas?: string | null
+          parte_de?: string | null
+          sitio_web?: string | null
+          tamano_proyectos_max?: number | null
+          tamano_proyectos_min?: number | null
+          telefono?: string | null
+          tipo_empresa?: string | null
+          ubicacion?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deal_ids?: string[] | null
+          descripcion?: string | null
+          email?: string | null
+          enfoque_consultivo?: string | null
+          experiencia_ma?: string[] | null
+          experiencia_sector?: string[] | null
+          id?: string
+          imagen_url?: string | null
+          nombre?: string
+          notas?: string | null
+          parte_de?: string | null
+          sitio_web?: string | null
+          tamano_proyectos_max?: number | null
+          tamano_proyectos_min?: number | null
+          telefono?: string | null
+          tipo_empresa?: string | null
+          ubicacion?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      dealsuite_favorites: {
+        Row: {
+          added_by: string
+          created_at: string | null
+          deal_id: string
+          id: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string | null
+          deal_id: string
+          id?: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string | null
+          deal_id?: string
+          id?: string
         }
         Relationships: []
       }
@@ -8690,6 +8830,78 @@ export type Database = {
           result_data?: Json | null
           started_at?: string | null
           status?: string | null
+        }
+        Relationships: []
+      }
+      executive_report_recipients: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      executive_reports: {
+        Row: {
+          created_at: string
+          email_sent: boolean
+          email_sent_at: string | null
+          generated_by: string | null
+          id: string
+          mandatos_snapshot: Json | null
+          metrics_snapshot: Json | null
+          period_end: string
+          period_start: string
+          recipients: string[] | null
+          recommendations: Json | null
+          report_date: string
+          summary_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandatos_snapshot?: Json | null
+          metrics_snapshot?: Json | null
+          period_end: string
+          period_start: string
+          recipients?: string[] | null
+          recommendations?: Json | null
+          report_date: string
+          summary_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandatos_snapshot?: Json | null
+          metrics_snapshot?: Json | null
+          period_end?: string
+          period_start?: string
+          recipients?: string[] | null
+          recommendations?: Json | null
+          report_date?: string
+          summary_text?: string | null
         }
         Relationships: []
       }
