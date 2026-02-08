@@ -1,187 +1,221 @@
 
 
-# Fase 8: Matching Automatico Compradores-Targets con IA
+# Fase 9: Generacion Automatica de Teasers y CIMs con IA
 
 ## Objetivo
-Crear un sistema de matching semantico que analice los perfiles de compradores corporativos (`corporate_buyers`) y los compare con empresas target de mandatos de venta activos, generando recomendaciones priorizadas de conexiones con justificacion y score de compatibilidad.
+Crear un sistema que genere automaticamente el contenido de Teasers (documentos anonimizados de una pagina) y CIMs (Confidential Information Memorandums de varias secciones) a partir de los datos existentes de la empresa y el mandato, con plantillas personalizables y soporte bilingue (ES/EN).
 
-## Por que NO usar embeddings vectoriales (y que hacer en su lugar)
+## Contexto: que ya existe en el CRM
 
-Los embeddings requieren infraestructura adicional (pgvector, almacenamiento de vectores, pipeline de re-embedding). Para el volumen actual del CRM (cientos de compradores, no miles), un enfoque mas pragmatico y mantenible es:
-
-1. **Pre-filtrado deterministico**: Descartar incompatibilidades obvias (sector, geografia, rango financiero) con queries SQL
-2. **Scoring IA por lotes**: Enviar los candidatos pre-filtrados a `google/gemini-3-flash-preview` para evaluacion semantica profunda usando tool calling
-
-Este enfoque es mas rapido de implementar, mas facil de depurar y escala bien hasta ~500 compradores.
+| Sistema existente | Relacion con esta fase |
+|---|---|
+| **Deal Sheet** (`deal_sheets`) | Contiene executive summary, highlights, sale rationale editados manualmente. La IA puede **pre-rellenar** estos campos |
+| **Presentaciones** (`presentation_*`) | Motor de slides con AI workflow. Diferente formato (slides vs documento largo) |
+| **Teaser Campaigns** (`teaser_campaigns`) | Envio de teasers a destinatarios con watermark. Necesita el **documento** generado |
+| **PSH Plantillas** (`psh_plantillas`) | Patron de plantillas reutilizables por tipo de servicio |
+| **Empresas** (datos financieros, sector, AI tags) | Fuente principal de datos para generar contenido |
 
 ## Arquitectura
 
 ```text
-  [Boton "Buscar Matches" en mandato de venta]
+  [Boton "Generar Teaser con IA" / "Generar CIM con IA"]
          |
          v
-  POST /match-buyers
+  POST /generate-deal-document
          |
-    1. Carga mandato de venta + empresa principal (sector, financials, descripcion)
-    2. Carga todos los corporate_buyers activos
-    3. Pre-filtro deterministico:
-       - Sector overlap (sector_focus del buyer vs sector/ai_tags de empresa)
-       - Geografia compatible (geography_focus vs ubicacion)
-       - Rango financiero compatible (revenue/ebitda ranges)
-    4. Envia top 30 candidatos pre-filtrados a Gemini
-    5. IA evalua fit semantico considerando:
-       - Investment thesis vs descripcion de empresa
-       - Search keywords vs ai_tags / keywords
-       - Sector exclusions (descarte)
-       - Tamano y modelo de negocio
-    6. Devuelve matches rankeados con score + justificacion
-    7. Guarda en buyer_matches
-    8. Log en ai_activity_log
+    1. Recibe { mandato_id, document_type: "teaser"|"cim", language: "es"|"en", template_id? }
+    2. Carga mandato + empresa principal (sector, financials, descripcion, AI summary, tags)
+    3. Carga deal_sheet si existe (como base/complemento)
+    4. Carga plantilla seleccionada (estructura de secciones)
+    5. Llama a google/gemini-3-flash-preview con tool calling
+    6. Para Teaser: genera contenido anonimizado (sin nombre de empresa)
+    7. Para CIM: genera secciones completas (executive summary, negocio, mercado, financials, etc.)
+    8. Devuelve contenido estructurado por secciones
+    9. Log en ai_activity_log (modulo: "document-generation")
          |
          v
-  [Panel de Matches en MandatoDetalle]
+  [Editor con contenido pre-generado, editable antes de exportar]
+         |
+         v
+  [Exportar a PDF / Guardar borrador / Enviar via campana teaser]
 ```
 
-## Datos usados para matching
+## Tipos de documento
 
-### Del comprador (`corporate_buyers`)
-| Campo | Uso |
-|-------|-----|
-| `sector_focus` (text[]) | Sectores de interes |
-| `sector_exclusions` (text[]) | Sectores descartados |
-| `geography_focus` (text[]) | Geografias objetivo |
-| `revenue_min/max` | Rango de facturacion aceptado |
-| `ebitda_min/max` | Rango de EBITDA aceptado |
-| `deal_size_min/max` | Tamano de deal aceptado |
-| `investment_thesis` (text) | Tesis de inversion (clave para matching semantico) |
-| `search_keywords` (text[]) | Palabras clave de busqueda |
-| `description` (text) | Descripcion general |
-| `key_highlights` (text[]) | Aspectos destacados |
+### Teaser (1-2 paginas, anonimizado)
+Documento corto para primer contacto con compradores potenciales. NO revela el nombre de la empresa.
+- Descripcion generica del sector y posicion
+- Highlights de inversion (3-5 puntos)
+- Metricas financieras agregadas (rangos, no exactos)
+- Tipo de transaccion buscada
+- Perfil de comprador ideal
+- Siguiente paso / contacto
 
-### De la empresa target (via `mandatos` + `empresas`)
-| Campo | Uso |
-|-------|-----|
-| `sector`, `subsector` | Clasificacion sectorial |
-| `ubicacion` | Geografia |
-| `revenue`, `ebitda` | Datos financieros |
-| `descripcion` | Descripcion de la empresa |
-| `ai_company_summary` | Resumen generado por IA |
-| `ai_tags`, `ai_business_model_tags` | Tags semanticos |
-| `keywords` | Palabras clave |
-| `empleados` | Tamano |
-| `mandatos.valor` | Valor del mandato (proxy de deal size) |
-| `mandatos.perfil_empresa_buscada` | Perfil buscado (para compra) |
-| `mandatos.tipo_comprador_buscado` | Tipo de comprador preferido |
+### CIM - Confidential Information Memorandum (10-20 paginas)
+Documento extenso post-NDA con informacion detallada.
+- Resumen ejecutivo
+- Descripcion del negocio y modelo operativo
+- Analisis de mercado y posicion competitiva
+- Equipo directivo y organizacion
+- Desempeno financiero historico (3-5 anos)
+- Proyecciones financieras
+- Oportunidades de crecimiento
+- Terminos de la transaccion
+- Anexos
+
+## Datos que alimentan la generacion
+
+| Fuente | Campos usados |
+|--------|---------------|
+| `empresas` | sector, subsector, descripcion, ubicacion, revenue, ebitda, margen_ebitda, empleados, ano_fundacion, modelo_negocio, keywords |
+| `empresas` (AI) | ai_company_summary, ai_tags, ai_business_model_tags |
+| `mandatos` | tipo, valor, nombre_proyecto, perfil_empresa_buscada, tipo_comprador_buscado |
+| `deal_sheets` | executive_summary, investment_highlights, sale_rationale, ideal_buyer_profile, transaction_type, financial visibility config |
+| `financial_statements` | Datos financieros historicos si existen |
+| Plantilla seleccionada | Estructura de secciones, tono, nivel de detalle |
 
 ## Archivos a crear
 
-### 1. Migracion: `buyer_matches`
-Nueva tabla para guardar resultados de matching:
+### 1. Migracion: `deal_document_templates`
+Tabla para plantillas personalizables de teasers y CIMs:
 - `id` (uuid PK)
-- `mandato_id` (uuid FK -> mandatos)
-- `buyer_id` (uuid FK -> corporate_buyers)
-- `match_score` (integer 0-100) - score de compatibilidad
-- `match_reasoning` (text) - justificacion del modelo
-- `fit_dimensions` (jsonb) - desglose: {sector_fit, financial_fit, geographic_fit, strategic_fit}
-- `risk_factors` (text[]) - posibles incompatibilidades
-- `recommended_approach` (text) - sugerencia de como abordar al comprador
-- `status` (text default 'suggested') - suggested | contacted | dismissed | converted
-- `dismissed_reason` (text) - motivo si se descarto
-- `generated_at` (timestamptz)
+- `name` (text) - nombre de la plantilla
+- `document_type` (text) - "teaser" o "cim"
+- `language` (text default 'es') - idioma por defecto
+- `sections` (jsonb) - array de secciones con orden, titulo, instrucciones para la IA
+- `tone` (text default 'professional') - professional, conservative, dynamic
+- `branding` (jsonb) - colores, logo, footer
+- `is_default` (boolean default false)
+- `is_active` (boolean default true)
+- `created_by` (uuid)
+- `created_at` (timestamptz)
+- `updated_at` (timestamptz)
+
+### 2. Migracion: `generated_deal_documents`
+Tabla para guardar documentos generados:
+- `id` (uuid PK)
+- `mandato_id` (uuid FK)
+- `template_id` (uuid FK -> deal_document_templates, nullable)
+- `document_type` (text) - "teaser" o "cim"
+- `language` (text)
+- `title` (text)
+- `sections` (jsonb) - contenido generado por seccion [{title, content, order}]
+- `metadata` (jsonb) - datos de empresa usados, modelo, tokens
+- `status` (text default 'draft') - draft, reviewed, approved, exported
+- `version` (integer default 1)
+- `pdf_storage_path` (text, nullable) - ruta del PDF exportado
 - `generated_by` (uuid)
-- `created_at` (timestamptz default now())
+- `reviewed_by` (uuid, nullable)
+- `approved_at` (timestamptz, nullable)
+- `created_at` (timestamptz)
+- `updated_at` (timestamptz)
 
-RLS: Lectura para usuarios autenticados, insert via service role.
+RLS: Lectura/escritura para usuarios autenticados.
 
-### 2. `supabase/functions/match-buyers/index.ts`
+### 3. `supabase/functions/generate-deal-document/index.ts`
 Edge Function principal:
-- Recibe `{ mandato_id }` + auth del usuario
-- Valida que el mandato es de tipo "venta" y esta activo
-- Carga empresa principal del mandato con todos los datos relevantes
-- Carga todos los `corporate_buyers` activos
-- Pre-filtrado deterministico en la Edge Function:
-  - Elimina buyers cuyo `sector_exclusions` contenga el sector de la empresa
-  - Filtra por overlap de `geography_focus` con `ubicacion` (si disponible)
-  - Filtra por rango financiero compatible (revenue/ebitda del target dentro del rango del buyer)
-- Construye prompt con datos del target + lista de candidatos pre-filtrados (max 30)
-- Llama a `google/gemini-3-flash-preview` con tool calling (`evaluate_buyer_matches`)
-- Extrae array de matches con score, reasoning, y dimensiones de fit
-- Guarda resultados en `buyer_matches` (elimina matches anteriores del mismo mandato si se recalcula)
-- Log en `ai_activity_log` (modulo: `buyer-matching`)
+- Recibe `{ mandato_id, document_type, language, template_id? }`
+- Auth requerida
+- Carga todos los datos de empresa + mandato + deal_sheet + financial_statements
+- Carga la plantilla (o usa una por defecto si no se especifica)
+- Construye prompt con:
+  - System: analista M&A senior redactando documentos de transaccion
+  - Para teaser: instrucciones de anonimizacion (no mencionar nombre, ubicacion exacta, etc.)
+  - Para CIM: instrucciones de profundidad por seccion
+  - Datos de la empresa como contexto factual
+- Tool calling con `generate_deal_document`:
+  - `title`: titulo del documento
+  - `sections`: array de {section_title, content (markdown), order}
+  - `anonymization_notes`: (solo teaser) notas sobre que se anonimizo
+- Guarda en `generated_deal_documents`
+- Log en `ai_activity_log` (modulo: `document-generation`)
 - Manejo de errores 429/402
 
-### 3. `src/hooks/useBuyerMatching.ts`
-- `useBuyerMatches(mandatoId)`: query para obtener matches de un mandato con datos del buyer joinados
-- `useGenerateBuyerMatches()`: mutation para disparar el matching
-- `useUpdateMatchStatus()`: mutation para cambiar status (contacted, dismissed, converted)
-- Invalidacion de queries al completar
+### 4. `src/hooks/useDealDocuments.ts`
+- `useDealDocuments(mandatoId)`: query para listar documentos generados de un mandato
+- `useGenerateDealDocument()`: mutation para disparar generacion
+- `useDealDocumentTemplates(type?)`: query para listar plantillas
+- `useUpdateDealDocument()`: mutation para editar contenido de secciones
+- `useApproveDealDocument()`: mutation para aprobar un documento
 
-### 4. `src/components/mandatos/BuyerMatchingPanel.tsx`
-Panel en la pagina de detalle del mandato (solo mandatos de venta):
+### 5. `src/components/mandatos/DealDocumentGenerator.tsx`
+Panel principal en el detalle del mandato (mandatos de venta):
+- Selector de tipo de documento (Teaser / CIM)
+- Selector de plantilla (con preview de secciones)
+- Selector de idioma (ES / EN)
+- Boton "Generar con IA" con icono Sparkles + FileText
+- Lista de documentos generados previamente con status badges
 
-**Seccion superior:**
-- Boton "Buscar Compradores Compatibles" con icono Sparkles + Users
-- Indicador de ultimo matching realizado
-- Contador de matches encontrados
+### 6. `src/components/mandatos/DealDocumentEditor.tsx`
+Editor de contenido generado (drawer o pagina):
+- Vista por secciones con titulo editable y contenido markdown
+- Cada seccion es un textarea/editor independiente
+- Boton "Regenerar seccion" para re-generar una seccion individual
+- Preview del documento completo
+- Acciones: Guardar borrador, Aprobar, Exportar PDF
+- Indicador de version
 
-**Lista de matches:**
-- Cards ordenadas por match_score (descendente)
-- Cada card muestra:
-  - Nombre del comprador + tipo (badge)
-  - Score circular (gauge mini similar al ScoringGauge)
-  - Barras de fit por dimension (sector, financiero, geografico, estrategico)
-  - Razonamiento resumido (expandible)
-  - Approach recomendado
-  - Botones de accion: "Contactar" (cambia status), "Descartar" (con motivo), "Ver perfil"
-- Filtros por score minimo y por status
-
-**Estado vacio:**
-- Mensaje invitando a generar el primer matching
-
-### 5. `src/components/mandatos/MatchScoreBar.tsx`
-Componente visual para mostrar barras de fit por dimension:
-- 4 barras horizontales (sector, financial, geographic, strategic)
-- Colores por nivel (rojo < 40, amarillo 40-70, verde > 70)
-- Labels con porcentaje
+### 7. `src/components/mandatos/DealDocumentPreview.tsx`
+Modal de preview del documento generado:
+- Renderizado de markdown a HTML con estilos profesionales
+- Header con branding Capittal
+- Separadores entre secciones
+- Footer con disclaimer de confidencialidad
+- Boton de exportar a PDF
 
 ## Archivos a modificar
 
-### 6. `src/pages/MandatoDetalle.tsx`
-- Importar y renderizar `BuyerMatchingPanel` en mandatos de tipo "venta"
-- Agregar en la tab "Resumen" o como tab separada "Matching IA"
+### 8. `src/pages/MandatoDetalle.tsx`
+- Agregar acceso al `DealDocumentGenerator` en mandatos de venta
+- Puede ser un boton en la seccion de Deal Sheet o una sub-tab en "Marketing"
 
-### 7. `supabase/config.toml`
-- Agregar `[functions.match-buyers]` con `verify_jwt = true`
+### 9. `supabase/config.toml`
+- Agregar `[functions.generate-deal-document]` con `verify_jwt = true`
 
 ## Detalles tecnicos
 
-### System prompt del modelo
-El system prompt instruye al modelo como analista de M&A senior especializado en buyer identification. Debe evaluar cada comprador candidato contra el perfil de la empresa target considerando: alineacion sectorial (no solo nombre del sector sino logica de negocio), compatibilidad financiera (el target esta en el rango del comprador?), geografia, y fit estrategico (la tesis de inversion del buyer encaja con lo que ofrece el target?).
+### System prompt para Teaser
+Instruye al modelo como banquero de inversion senior redactando un teaser confidencial. Reglas de anonimizacion:
+- NO mencionar el nombre de la empresa ni marcas
+- Usar "La Compania" o "La Sociedad"
+- Sector y posicion genericos ("empresa lider en el sector de servicios industriales")
+- Ubicacion vaga ("con sede en el norte de Espana")
+- Financials solo en rangos
+- Tono profesional, atractivo para generar interes
+
+### System prompt para CIM
+Instruye al modelo como analista de M&A senior redactando un CIM completo. Debe:
+- Ser exhaustivo pero conciso
+- Usar datos reales proporcionados (no inventar numeros)
+- Estructurar cada seccion segun la plantilla
+- Incluir analisis de mercado basado en el sector/subsector
+- Destacar fortalezas y oportunidades de crecimiento
+- Presentar financials historicos de forma profesional
 
 ### Tool calling para output estructurado
-Tool `evaluate_buyer_matches` con parametros:
-```text
-matches: array de objetos:
-  - buyer_name: string (nombre del comprador evaluado)
-  - match_score: integer (0-100, score general)
-  - sector_fit: integer (0-100)
-  - financial_fit: integer (0-100)
-  - geographic_fit: integer (0-100)
-  - strategic_fit: integer (0-100)
-  - reasoning: string (2-3 frases explicando el match)
-  - risk_factors: array de strings
-  - recommended_approach: string (como abordar a este comprador)
-```
+Tool `generate_deal_document`:
+- `title` (string): Titulo del documento
+- `sections` (array): [{section_title: string, content: string (markdown), order: number}]
+- `anonymization_notes` (string, opcional): Notas sobre datos anonimizados (solo teaser)
+- `key_metrics_used` (array de strings): Metricas de la empresa utilizadas
 
-### Pre-filtrado deterministico (antes de IA)
-Para evitar enviar demasiados candidatos y reducir tokens/costes:
-1. Si la empresa tiene sector, filtrar buyers cuyo `sector_focus` contenga algo similar O cuyo `sector_exclusions` NO contenga el sector
-2. Si la empresa tiene revenue/ebitda, eliminar buyers cuyo rango no sea compatible
-3. Limitar a 30 candidatos pre-filtrados para el prompt
+### Plantillas por defecto (seed data)
+Se insertan 4 plantillas predeterminadas:
+1. **Teaser Estandar (ES)**: 6 secciones (Oportunidad, Highlights, Metricas, Transaccion, Perfil Comprador, Contacto)
+2. **Teaser Estandar (EN)**: Mismas secciones en ingles
+3. **CIM Completo (ES)**: 9 secciones (Resumen, Negocio, Mercado, Equipo, Financials, Proyecciones, Crecimiento, Transaccion, Anexos)
+4. **CIM Completo (EN)**: Mismas secciones en ingles
+
+### Integracion con Deal Sheet existente
+Si el mandato ya tiene un Deal Sheet con contenido (executive_summary, highlights, etc.), ese contenido se incluye en el prompt como "base editada por el equipo" para que la IA lo respete y expanda, no lo reescriba desde cero.
+
+### Exportacion PDF
+Reutiliza el patron existente de jspdf + html2canvas del proyecto para generar PDFs con branding Capittal. El PDF se sube al bucket `mandato-documentos` y se vincula al documento generado.
 
 ### Seguridad
 - Auth requerida (usuario CRM autenticado)
 - Service role para queries
-- Solo lectura de datos + insert/update en buyer_matches
+- Insert/update en `generated_deal_documents`
 - No streaming (respuesta unica con tool calling)
+- Contenido generado siempre en estado "draft" hasta aprobacion manual
 
