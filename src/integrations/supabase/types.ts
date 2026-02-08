@@ -6978,6 +6978,51 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_document_templates: {
+        Row: {
+          branding: Json | null
+          created_at: string
+          created_by: string | null
+          document_type: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          language: string
+          name: string
+          sections: Json
+          tone: string
+          updated_at: string
+        }
+        Insert: {
+          branding?: Json | null
+          created_at?: string
+          created_by?: string | null
+          document_type: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          language?: string
+          name: string
+          sections?: Json
+          tone?: string
+          updated_at?: string
+        }
+        Update: {
+          branding?: Json | null
+          created_at?: string
+          created_by?: string | null
+          document_type?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          language?: string
+          name?: string
+          sections?: Json
+          tone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deal_paused_items: {
         Row: {
           company_id: string
@@ -9741,6 +9786,113 @@ export type Database = {
             columns: ["lead_form"]
             isOneToOne: false
             referencedRelation: "lead_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_deal_documents: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          document_type: string
+          generated_by: string | null
+          id: string
+          language: string
+          mandato_id: string
+          metadata: Json | null
+          pdf_storage_path: string | null
+          reviewed_by: string | null
+          sections: Json
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          document_type: string
+          generated_by?: string | null
+          id?: string
+          language?: string
+          mandato_id: string
+          metadata?: Json | null
+          pdf_storage_path?: string | null
+          reviewed_by?: string | null
+          sections?: Json
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          document_type?: string
+          generated_by?: string | null
+          id?: string
+          language?: string
+          mandato_id?: string
+          metadata?: Json | null
+          pdf_storage_path?: string | null
+          reviewed_by?: string | null
+          sections?: Json
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "generated_deal_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "deal_document_templates"
             referencedColumns: ["id"]
           },
         ]
