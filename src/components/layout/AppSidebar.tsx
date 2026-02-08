@@ -43,6 +43,7 @@ import {
   HelpCircle,
   Tag,
   Bell,
+  Euro,
 } from "lucide-react";
 import {
   Sidebar,
@@ -422,8 +423,23 @@ export function AppSidebar() {
   };
 
   // Build the list of groups to render based on user role
+  const BILLING_FORECAST_EMAILS = ["lluis@capittal.es", "s.navarro@obn.es"];
+  const userEmail = adminUser?.email?.toLowerCase() ?? "";
+  const showBillingForecast = BILLING_FORECAST_EMAILS.includes(userEmail);
+
   const allGroups = useMemo(() => {
-    const groups = [...menuGroups];
+    const groups = menuGroups.map(g => {
+      if (g.id === "gestion" && showBillingForecast) {
+        return {
+          ...g,
+          items: [
+            ...g.items,
+            { id: "billing-forecast", title: "Previsión Facturación", url: "/admin/billing-forecast", icon: Euro },
+          ],
+        };
+      }
+      return g;
+    });
     if (adminUser?.role === 'super_admin' || adminUser?.role === 'admin') {
       groups.push(adminDashboardGroup);
     }
@@ -431,7 +447,7 @@ export function AppSidebar() {
       groups.push(superAdminGroup);
     }
     return groups;
-  }, [adminUser?.role]);
+  }, [adminUser?.role, showBillingForecast]);
 
   // Quick Access items from store
   const quickAccessItems = useMemo(() => {

@@ -76,6 +76,7 @@ const Alertas = lazy(() => import("./pages/Alertas"));
 const PlantillasChecklist = lazy(() => import("./pages/PlantillasChecklist"));
 const EnrichmentDashboard = lazy(() => import("./pages/admin/EnrichmentDashboard"));
 const AIDashboard = lazy(() => import("./pages/admin/AIDashboard"));
+const BillingForecast = lazy(() => import("./pages/admin/BillingForecast"));
 
 function AppContent() {
   useKeyboardShortcuts();
@@ -140,6 +141,7 @@ function AppContent() {
             <Route path="/plantillas-checklist" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasChecklist /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/enrichment" element={<ProtectedRoute requiredRole="admin"><AppLayout><EnrichmentDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/ai-dashboard" element={<ProtectedRoute requiredRole="admin"><AppLayout><AIDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/billing-forecast" element={<ProtectedRoute><AppLayout><BillingForecast /></AppLayout></ProtectedRoute>} />
             
             {/* Campaign Contacts - Buy and Sell */}
             <Route path="/admin/buyer-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
