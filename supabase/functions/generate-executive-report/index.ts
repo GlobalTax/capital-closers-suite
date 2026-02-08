@@ -27,15 +27,14 @@ serve(async (req) => {
       const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
       });
-      const { data: claimsData, error: claimsErr } = await supabaseAuth.auth.getClaims(
-        authHeader.replace("Bearer ", "")
-      );
-      if (claimsErr || !claimsData?.claims) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+      if (userError || !user) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      userId = claimsData.claims.sub as string;
+      userId = user.id;
       // check admin role
       const admin = createClient(supabaseUrl, supabaseServiceKey);
       const { data: adminUser } = await admin
