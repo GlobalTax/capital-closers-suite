@@ -2634,6 +2634,104 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_matches: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          dismissed_reason: string | null
+          fit_dimensions: Json | null
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          mandato_id: string
+          match_reasoning: string | null
+          match_score: number
+          recommended_approach: string | null
+          risk_factors: string[] | null
+          status: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          dismissed_reason?: string | null
+          fit_dimensions?: Json | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandato_id: string
+          match_reasoning?: string | null
+          match_score: number
+          recommended_approach?: string | null
+          risk_factors?: string[] | null
+          status?: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          dismissed_reason?: string | null
+          fit_dimensions?: Json | null
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandato_id?: string
+          match_reasoning?: string | null
+          match_score?: number
+          recommended_approach?: string | null
+          risk_factors?: string[] | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_matches_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_matches_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+        ]
+      }
       buyer_preferences: {
         Row: {
           alert_frequency: string | null

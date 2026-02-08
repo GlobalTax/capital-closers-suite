@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { FileText, Target, ListTodo, Clock, Receipt, FilePlus, Megaphone, History } from "lucide-react";
+import { FileText, Target, ListTodo, Clock, Receipt, FilePlus, Megaphone, History, Sparkles } from "lucide-react";
 import { useTargetPipeline } from "@/hooks/useTargetPipeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGenerat
 import { MarketingSubTabs } from "@/features/mandatos/components/MarketingSubTabs";
 import { MandatoActivityTimeline } from "@/components/mandatos/MandatoActivityTimeline";
 import { MandatoScoringPanel } from "@/components/mandatos/MandatoScoringPanel";
+import { BuyerMatchingPanel } from "@/components/mandatos/BuyerMatchingPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchTimeEntries, getTimeStats } from "@/services/timeTracking";
 import { useChecklistDynamic } from "@/hooks/useChecklistDynamic";
@@ -149,6 +150,12 @@ export default function MandatoDetalle() {
               <span className="hidden sm:inline">Marketing</span>
             </TabsTrigger>
           )}
+          {!esServicio && mandato.tipo === "venta" && (
+            <TabsTrigger value="matching" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
+              <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Matching IA</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="horas" className="text-xs md:text-sm px-2 md:px-3 py-1.5 shrink-0">
             <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
             <span className="hidden sm:inline">Horas</span>
@@ -246,6 +253,12 @@ export default function MandatoDetalle() {
               mandatoNombre={mandato.empresa_principal?.nombre || mandato.codigo}
               onRefresh={refetchDocumentos}
             />
+          </TabsContent>
+        )}
+
+        {!esServicio && mandato.tipo === "venta" && (
+          <TabsContent value="matching">
+            <BuyerMatchingPanel mandatoId={id!} />
           </TabsContent>
         )}
 
