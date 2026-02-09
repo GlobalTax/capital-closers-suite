@@ -2,6 +2,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth, AdminRole } from '@/hooks/useAuth';
 import { LoadingScreen } from './LoadingScreen';
 import { AccessDenied } from './AccessDenied';
+import { ConfidentialityAgreementModal } from './ConfidentialityAgreementModal';
+import { useConfidentialityAgreement } from '@/hooks/useConfidentialityAgreement';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,8 +12,9 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, adminUser, loading, session } = useAuth();
+  const { hasAccepted, isLoading: isLoadingAgreement } = useConfidentialityAgreement();
 
-  if (loading) {
+  if (loading || isLoadingAgreement) {
     return <LoadingScreen />;
   }
 
@@ -24,7 +27,6 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   // Check role hierarchy: super_admin > admin > viewer
-  // Hybrid validation: prefer JWT claims, fallback to DB
   if (requiredRole) {
     const roleHierarchy: Record<AdminRole, number> = {
       super_admin: 3,
@@ -32,17 +34,19 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       viewer: 1,
     };
 
-    // Try to get role from JWT claims first (faster, real-time)
     const jwtRole = session?.user?.app_metadata?.role as AdminRole | undefined;
-    // Fallback to admin_users table role
     const effectiveRole = jwtRole || adminUser.role;
-
     const userLevel = roleHierarchy[effectiveRole] ?? 0;
     const requiredLevel = roleHierarchy[requiredRole];
 
     if (userLevel < requiredLevel) {
       return <AccessDenied message="No tienes permisos suficientes para acceder a esta página." />;
     }
+  }
+
+  // Block access until confidentiality agreement is accepted
+  if (!hasAccepted) {
+    return <ConfidentialityAgreementModal />;
   }
 
   return <>{children}</>;

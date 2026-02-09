@@ -20394,6 +20394,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_confidentiality_agreements: {
+        Row: {
+          accepted_at: string
+          agreement_version: number
+          id: string
+          ip_address: unknown
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_version?: number
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          agreement_version?: number
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_dashboard_layouts: {
         Row: {
           created_at: string
@@ -22419,6 +22446,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: Json
+      }
+      has_accepted_confidentiality: {
+        Args: { version_required?: number }
+        Returns: boolean
       }
       has_rh_role: {
         Args: {
