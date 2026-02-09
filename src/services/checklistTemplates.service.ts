@@ -174,7 +174,7 @@ export async function syncAdditions(
   tipo: string
 ): Promise<{ mandatos_updated: number; tasks_added: number }> {
   const { data, error } = await supabase.rpc("sync_template_additions", {
-    p_tipo: tipo,
+    p_tipo_operacion: tipo,
   });
   if (error) throw error;
   return data as { mandatos_updated: number; tasks_added: number };
@@ -184,7 +184,7 @@ export async function syncFullReset(
   tipo: string
 ): Promise<{ mandatos_updated: number; tasks_added: number }> {
   const { data, error } = await supabase.rpc("sync_template_full_reset", {
-    p_tipo: tipo,
+    p_tipo_operacion: tipo,
   });
   if (error) throw error;
   return data as { mandatos_updated: number; tasks_added: number };

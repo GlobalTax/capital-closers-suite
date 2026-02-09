@@ -22662,8 +22662,14 @@ export type Database = {
           website_url: string
         }[]
       }
-      sync_template_additions: { Args: { p_tipo: string }; Returns: Json }
-      sync_template_full_reset: { Args: { p_tipo: string }; Returns: Json }
+      sync_template_additions: {
+        Args: { p_tipo_operacion: string }
+        Returns: Json
+      }
+      sync_template_full_reset: {
+        Args: { p_tipo_operacion: string }
+        Returns: Json
+      }
       sync_valuations_to_contactos: {
         Args: never
         Returns: {
