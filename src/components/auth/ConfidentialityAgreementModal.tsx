@@ -16,6 +16,8 @@ Toda la información contenida en esta plataforma relativa a mandatos, operacion
 Usted se compromete a:
 • No divulgar, compartir, copiar ni transmitir información sobre mandatos, operaciones o datos de empresas a terceros, ya sea de forma verbal, escrita o electrónica.
 • No utilizar la información obtenida a través de esta plataforma para fines distintos a los estrictamente profesionales y autorizados.
+• No revelar, describir ni compartir el funcionamiento de los sistemas informáticos, herramientas, algoritmos, procesos internos ni la arquitectura tecnológica de la plataforma.
+• No divulgar el know-how tecnológico, metodológico u operativo de la organización, incluyendo sus métodos de trabajo, flujos de procesos y estrategias de gestión de datos.
 • Proteger la información con el mismo nivel de diligencia que emplearía para proteger su propia información confidencial.
 
 3. DATOS PROTEGIDOS
@@ -26,6 +28,8 @@ Se consideran confidenciales, sin carácter limitativo:
 • Datos de contacto y relaciones comerciales.
 • Documentación legal, financiera y operativa compartida en procesos de due diligence.
 • Información sobre el estado y progreso de las operaciones.
+• Funcionamiento, arquitectura y características de los sistemas informáticos de la plataforma.
+• Know-how tecnológico, metodológico y operativo de la organización.
 
 4. DURACIÓN
 Esta obligación de confidencialidad permanecerá vigente durante su relación con la organización y durante un período de 2 años tras su finalización.
@@ -76,7 +80,7 @@ export function ConfidentialityAgreementModal() {
               className="mt-0.5"
             />
             <span className="text-sm">
-              He leído y acepto el acuerdo de confidencialidad. Me comprometo a no divulgar información sobre mandatos y operaciones.
+              He leído y acepto el acuerdo de confidencialidad. Me comprometo a no divulgar información sobre mandatos, operaciones, ni el funcionamiento de los sistemas informáticos y el know-how de la plataforma.
             </span>
           </label>
           <Button
