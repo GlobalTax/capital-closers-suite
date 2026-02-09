@@ -2637,48 +2637,60 @@ export type Database = {
       buyer_matches: {
         Row: {
           buyer_id: string
+          contacted_at: string | null
           created_at: string | null
           dismissed_reason: string | null
           fit_dimensions: Json | null
           generated_at: string | null
           generated_by: string | null
           id: string
+          last_interaction_at: string | null
           mandato_id: string
           match_reasoning: string | null
           match_score: number
+          nda_sent_at: string | null
           recommended_approach: string | null
           risk_factors: string[] | null
           status: string
+          teaser_sent_at: string | null
         }
         Insert: {
           buyer_id: string
+          contacted_at?: string | null
           created_at?: string | null
           dismissed_reason?: string | null
           fit_dimensions?: Json | null
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          last_interaction_at?: string | null
           mandato_id: string
           match_reasoning?: string | null
           match_score: number
+          nda_sent_at?: string | null
           recommended_approach?: string | null
           risk_factors?: string[] | null
           status?: string
+          teaser_sent_at?: string | null
         }
         Update: {
           buyer_id?: string
+          contacted_at?: string | null
           created_at?: string | null
           dismissed_reason?: string | null
           fit_dimensions?: Json | null
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          last_interaction_at?: string | null
           mandato_id?: string
           match_reasoning?: string | null
           match_score?: number
+          nda_sent_at?: string | null
           recommended_approach?: string | null
           risk_factors?: string[] | null
           status?: string
+          teaser_sent_at?: string | null
         }
         Relationships: [
           {
@@ -2729,6 +2741,111 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_mandate_pipeline"
             referencedColumns: ["mandato_id"]
+          },
+        ]
+      }
+      buyer_outreach: {
+        Row: {
+          buyer_id: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          mandato_id: string
+          match_id: string
+          message_preview: string | null
+          notes: string | null
+          outreach_type: string
+          sent_at: string | null
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          buyer_id: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mandato_id: string
+          match_id: string
+          message_preview?: string | null
+          notes?: string | null
+          outreach_type?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mandato_id?: string
+          match_id?: string
+          message_preview?: string | null
+          notes?: string | null
+          outreach_type?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyer_outreach_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "corporate_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandato_time_summary"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "mandatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandato_costs"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_stuck"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "v_mandatos_winloss"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_mandato_id_fkey"
+            columns: ["mandato_id"]
+            isOneToOne: false
+            referencedRelation: "vw_mandate_pipeline"
+            referencedColumns: ["mandato_id"]
+          },
+          {
+            foreignKeyName: "buyer_outreach_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_matches"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -9991,6 +10108,33 @@ export type Database = {
           },
         ]
       }
+      hero_service_pills: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          is_active: boolean | null
+          label: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean | null
+          label: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          url?: string
+        }
+        Relationships: []
+      }
       hero_slides: {
         Row: {
           autoplay_duration: number | null
@@ -10009,6 +10153,7 @@ export type Database = {
           text_color: string | null
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           autoplay_duration?: number | null
@@ -10027,6 +10172,7 @@ export type Database = {
           text_color?: string | null
           title: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           autoplay_duration?: number | null
@@ -10045,6 +10191,7 @@ export type Database = {
           text_color?: string | null
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -11354,6 +11501,108 @@ export type Database = {
           metric_label?: string
           metric_value?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      la_firma_content: {
+        Row: {
+          cta_text: string
+          cta_url: string
+          heading_line1: string
+          heading_line2: string
+          id: string
+          image_alt: string | null
+          image_url: string | null
+          paragraph1: string
+          paragraph2: string
+          section_label: string
+          stat1_label: string
+          stat1_prefix: string | null
+          stat1_suffix: string
+          stat1_value: number
+          stat2_label: string
+          stat2_prefix: string | null
+          stat2_suffix: string
+          stat2_value: number
+          stat3_label: string
+          stat3_prefix: string | null
+          stat3_suffix: string
+          stat3_value: number
+          stat4_label: string
+          stat4_prefix: string | null
+          stat4_suffix: string
+          stat4_value: number
+          updated_at: string
+          value1_text: string
+          value1_title: string
+          value2_text: string
+          value2_title: string
+        }
+        Insert: {
+          cta_text?: string
+          cta_url?: string
+          heading_line1?: string
+          heading_line2?: string
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          paragraph1?: string
+          paragraph2?: string
+          section_label?: string
+          stat1_label?: string
+          stat1_prefix?: string | null
+          stat1_suffix?: string
+          stat1_value?: number
+          stat2_label?: string
+          stat2_prefix?: string | null
+          stat2_suffix?: string
+          stat2_value?: number
+          stat3_label?: string
+          stat3_prefix?: string | null
+          stat3_suffix?: string
+          stat3_value?: number
+          stat4_label?: string
+          stat4_prefix?: string | null
+          stat4_suffix?: string
+          stat4_value?: number
+          updated_at?: string
+          value1_text?: string
+          value1_title?: string
+          value2_text?: string
+          value2_title?: string
+        }
+        Update: {
+          cta_text?: string
+          cta_url?: string
+          heading_line1?: string
+          heading_line2?: string
+          id?: string
+          image_alt?: string | null
+          image_url?: string | null
+          paragraph1?: string
+          paragraph2?: string
+          section_label?: string
+          stat1_label?: string
+          stat1_prefix?: string | null
+          stat1_suffix?: string
+          stat1_value?: number
+          stat2_label?: string
+          stat2_prefix?: string | null
+          stat2_suffix?: string
+          stat2_value?: number
+          stat3_label?: string
+          stat3_prefix?: string | null
+          stat3_suffix?: string
+          stat3_value?: number
+          stat4_label?: string
+          stat4_prefix?: string | null
+          stat4_suffix?: string
+          stat4_value?: number
+          updated_at?: string
+          value1_text?: string
+          value1_title?: string
+          value2_text?: string
+          value2_title?: string
         }
         Relationships: []
       }
@@ -15893,6 +16142,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      practice_area_cards: {
+        Row: {
+          created_at: string
+          description: string
+          display_order: number
+          href: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_order?: number
+          href: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_order?: number
+          href?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       presentation_assets: {
         Row: {

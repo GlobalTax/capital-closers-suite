@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Users, ChevronDown, ChevronUp, ExternalLink, X, MessageSquare } from "lucide-react";
+import { Sparkles, Users, ChevronDown, ChevronUp, ExternalLink, X, MessageSquare, Send, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,23 +7,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { MatchScoreBar } from "./MatchScoreBar";
+import { BuyerOutreachTimeline } from "./BuyerOutreachTimeline";
+import { BuyerOutreachForm } from "./BuyerOutreachForm";
 import {
-  useBuyerMatches,
-  useGenerateBuyerMatches,
-  useUpdateMatchStatus,
-  type BuyerMatch,
+  useBuyerMatches, useGenerateBuyerMatches, useUpdateMatchStatus, type BuyerMatch,
 } from "@/hooks/useBuyerMatching";
+import { useCreateBuyerOutreach } from "@/hooks/useBuyerOutreach";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -38,6 +32,28 @@ function ScoreGaugeMini({ score }: { score: number }) {
     <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ${color} border-current font-bold text-sm`}>
       {score}
     </div>
+  );
+}
+
+function MilestoneBadges({ match }: { match: BuyerMatch & { contacted_at?: string | null; teaser_sent_at?: string | null; nda_sent_at?: string | null } }) {
+  return (
+    <>
+      {match.contacted_at && (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-700 dark:text-blue-300">
+          ✓ Contactado
+        </Badge>
+      )}
+      {match.teaser_sent_at && (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-700 dark:text-amber-300">
+          ✓ Teaser
+        </Badge>
+      )}
+      {match.nda_sent_at && (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-300 text-green-700 dark:text-green-300">
+          ✓ NDA
+        </Badge>
+      )}
+    </>
   );
 }
 
@@ -100,13 +116,7 @@ export function BuyerMatchingPanel({ mandatoId }: Props) {
           <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b">
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Score mín:</span>
-              <Slider
-                value={[minScore]}
-                onValueChange={([v]) => setMinScore(v)}
-                max={100}
-                step={5}
-                className="w-24"
-              />
+              <Slider value={[minScore]} onValueChange={([v]) => setMinScore(v)} max={100} step={5} className="w-24" />
               <span className="w-8 text-xs font-medium">{minScore}</span>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -140,6 +150,7 @@ export function BuyerMatchingPanel({ mandatoId }: Props) {
               <MatchCard
                 key={match.id}
                 match={match}
+                mandatoId={mandatoId}
                 onContact={() =>
                   updateStatusMutation.mutate({ matchId: match.id, status: "contacted" })
                 }
@@ -150,11 +161,7 @@ export function BuyerMatchingPanel({ mandatoId }: Props) {
           </div>
         )}
 
-        {/* Dismiss dialog */}
-        <AlertDialog
-          open={!!dismissDialogMatch}
-          onOpenChange={() => setDismissDialogMatch(null)}
-        >
+        <AlertDialog open={!!dismissDialogMatch} onOpenChange={() => setDismissDialogMatch(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Descartar comprador</AlertDialogTitle>
@@ -180,16 +187,21 @@ export function BuyerMatchingPanel({ mandatoId }: Props) {
 
 function MatchCard({
   match,
+  mandatoId,
   onContact,
   onDismiss,
   isUpdating,
 }: {
   match: BuyerMatch;
+  mandatoId: string;
   onContact: () => void;
   onDismiss: () => void;
   isUpdating: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [outreachFormOpen, setOutreachFormOpen] = useState(false);
+  const [outreachDefaultType, setOutreachDefaultType] = useState("contacto");
+  const createOutreach = useCreateBuyerOutreach();
 
   const statusBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     suggested: { label: "Sugerido", variant: "secondary" },
@@ -197,84 +209,131 @@ function MatchCard({
     dismissed: { label: "Descartado", variant: "destructive" },
     converted: { label: "Convertido", variant: "outline" },
   };
-
   const s = statusBadge[match.status] || statusBadge.suggested;
 
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
-        <div className="flex items-start gap-3">
-          <ScoreGaugeMini score={match.match_score} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm truncate">{match.buyer?.name || "Comprador"}</span>
-              {match.buyer?.buyer_type && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  {match.buyer.buyer_type}
-                </Badge>
-              )}
-              <Badge variant={s.variant} className="text-[10px] px-1.5 py-0">
-                {s.label}
-              </Badge>
-            </div>
-            <div className="mt-2">
-              <MatchScoreBar fitDimensions={match.fit_dimensions} />
-            </div>
-          </div>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7">
-              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </CollapsibleTrigger>
-        </div>
+  const matchWithMilestones = match as BuyerMatch & {
+    contacted_at?: string | null;
+    teaser_sent_at?: string | null;
+    nda_sent_at?: string | null;
+  };
 
-        <CollapsibleContent className="mt-3 space-y-3 pt-3 border-t">
-          {match.match_reasoning && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Razonamiento</p>
-              <p className="text-sm">{match.match_reasoning}</p>
+  const openOutreachForm = (type: string) => {
+    setOutreachDefaultType(type);
+    setOutreachFormOpen(true);
+  };
+
+  const quickOutreach = (type: string) => {
+    if (!match.buyer?.id) return;
+    createOutreach.mutate({
+      match_id: match.id,
+      buyer_id: match.buyer.id,
+      mandato_id: mandatoId,
+      channel: "email",
+      outreach_type: type,
+      status: "sent",
+    });
+  };
+
+  return (
+    <>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+          <div className="flex items-start gap-3">
+            <ScoreGaugeMini score={match.match_score} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm truncate">{match.buyer?.name || "Comprador"}</span>
+                {match.buyer?.buyer_type && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {match.buyer.buyer_type}
+                  </Badge>
+                )}
+                <Badge variant={s.variant} className="text-[10px] px-1.5 py-0">
+                  {s.label}
+                </Badge>
+                <MilestoneBadges match={matchWithMilestones} />
+              </div>
+              <div className="mt-2">
+                <MatchScoreBar fitDimensions={match.fit_dimensions} />
+              </div>
             </div>
-          )}
-          {match.recommended_approach && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Approach recomendado</p>
-              <p className="text-sm">{match.recommended_approach}</p>
-            </div>
-          )}
-          {match.risk_factors?.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Factores de riesgo</p>
-              <ul className="text-sm list-disc list-inside space-y-0.5">
-                {match.risk_factors.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {match.status === "suggested" && (
-            <div className="flex gap-2 pt-1">
-              <Button size="sm" variant="default" onClick={onContact} disabled={isUpdating}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0 h-7 w-7">
+                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+
+          <CollapsibleContent className="mt-3 space-y-3 pt-3 border-t">
+            {match.match_reasoning && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Razonamiento</p>
+                <p className="text-sm">{match.match_reasoning}</p>
+              </div>
+            )}
+            {match.recommended_approach && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Approach recomendado</p>
+                <p className="text-sm">{match.recommended_approach}</p>
+              </div>
+            )}
+            {match.risk_factors?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Factores de riesgo</p>
+                <ul className="text-sm list-disc list-inside space-y-0.5">
+                  {match.risk_factors.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Outreach actions */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button size="sm" variant="default" onClick={() => openOutreachForm("contacto")} disabled={createOutreach.isPending}>
                 <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                Contactar
+                Registrar Contacto
               </Button>
-              <Button size="sm" variant="outline" onClick={onDismiss} disabled={isUpdating}>
-                <X className="w-3.5 h-3.5 mr-1" />
-                Descartar
-              </Button>
+              {!matchWithMilestones.teaser_sent_at && (
+                <Button size="sm" variant="outline" onClick={() => quickOutreach("teaser")} disabled={createOutreach.isPending || !match.buyer?.id}>
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                  Enviar Teaser
+                </Button>
+              )}
+              {!matchWithMilestones.nda_sent_at && (
+                <Button size="sm" variant="outline" onClick={() => quickOutreach("nda")} disabled={createOutreach.isPending || !match.buyer?.id}>
+                  <FileText className="w-3.5 h-3.5 mr-1" />
+                  Enviar NDA
+                </Button>
+              )}
+              {match.status === "suggested" && (
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={onDismiss} disabled={isUpdating}>
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Descartar
+                </Button>
+              )}
               {match.buyer?.id && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => window.open(`/admin/corporate-buyers`, "_blank")}
-                >
+                <Button size="sm" variant="ghost" onClick={() => window.open(`/admin/corporate-buyers`, "_blank")}>
                   <ExternalLink className="w-3.5 h-3.5 mr-1" />
                   Ver perfil
                 </Button>
               )}
             </div>
-          )}
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+
+            {/* Outreach timeline */}
+            <BuyerOutreachTimeline matchId={match.id} />
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+
+      {match.buyer?.id && (
+        <BuyerOutreachForm
+          open={outreachFormOpen}
+          onOpenChange={setOutreachFormOpen}
+          matchId={match.id}
+          buyerId={match.buyer.id}
+          mandatoId={mandatoId}
+          defaultType={outreachDefaultType}
+        />
+      )}
+    </>
   );
 }

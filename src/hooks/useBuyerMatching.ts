@@ -38,6 +38,10 @@ export function useBuyerMatches(mandatoId: string | undefined) {
         .from("buyer_matches")
         .select(`
           *,
+          contacted_at,
+          teaser_sent_at,
+          nda_sent_at,
+          last_interaction_at,
           buyer:corporate_buyers!buyer_matches_buyer_id_fkey (
             id, name, buyer_type, description, country
           )
