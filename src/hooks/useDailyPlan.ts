@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { addDays, format } from "date-fns";
+import { addDays, format, isWeekend } from "date-fns";
 import { toast } from "sonner";
 import * as dailyPlansService from "@/services/dailyPlans.service";
 import type { DailyPlanWithItems, NewDailyPlanItem } from "@/types/dailyPlans";
@@ -16,7 +16,7 @@ export function useDailyPlan(date?: Date) {
   const targetDate = date || addDays(new Date(), 1);
   
   const loadPlan = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || isWeekend(targetDate)) return;
     
     try {
       setLoading(true);

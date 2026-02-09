@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { addDays, format, subDays, startOfToday } from "date-fns";
+import { addDays, format, subDays, startOfToday, isWeekend, isSaturday, isSunday, nextMonday } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CalendarDays, Clock, CheckCircle2, Palmtree } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Clock, CheckCircle2, Palmtree, CalendarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,9 +14,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
+// Skip weekends when navigating
+function skipWeekends(d: Date, direction: 'prev' | 'next'): Date {
+  if (direction === 'next') {
+    const next = addDays(d, 1);
+    if (isSaturday(next)) return addDays(next, 2);
+    if (isSunday(next)) return addDays(next, 1);
+    return next;
+  } else {
+    const prev = subDays(d, 1);
+    if (isSunday(prev)) return subDays(prev, 2);
+    if (isSaturday(prev)) return subDays(prev, 1);
+    return prev;
+  }
+}
+
+function getDefaultDate(): Date {
+  const tomorrow = addDays(new Date(), 1);
+  if (isWeekend(tomorrow)) return nextMonday(tomorrow);
+  return tomorrow;
+}
+
 export default function PlanDiario() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(addDays(new Date(), 1)); // Default: tomorrow
+  const [selectedDate, setSelectedDate] = useState(getDefaultDate);
   const [actualHours, setActualHours] = useState(0);
   
   const {
@@ -65,13 +86,14 @@ export default function PlanDiario() {
       });
   }, [user?.id, selectedDate, plan]);
   
-  const handlePrevDay = () => setSelectedDate(subDays(selectedDate, 1));
-  const handleNextDay = () => setSelectedDate(addDays(selectedDate, 1));
-  const handleToday = () => setSelectedDate(addDays(new Date(), 1));
+  const handlePrevDay = () => setSelectedDate(skipWeekends(selectedDate, 'prev'));
+  const handleNextDay = () => setSelectedDate(skipWeekends(selectedDate, 'next'));
+  const handleToday = () => setSelectedDate(getDefaultDate());
   
   const tomorrow = addDays(new Date(), 1);
   const isTomorrow = format(selectedDate, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd');
   const isPast = selectedDate < startOfToday();
+  const isWeekendDay = isWeekend(selectedDate);
   
   const completedTasks = plan?.items.filter(i => i.completed).length || 0;
   const totalTasks = plan?.items.length || 0;
@@ -83,9 +105,11 @@ export default function PlanDiario() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Plan Diario</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {isTomorrow 
-              ? "Planifica tu trabajo para mañana (requerido para registrar horas)"
-              : "Planifica tu trabajo con anticipación"
+            {isWeekendDay
+              ? "Los fines de semana no requieren planificación"
+              : isTomorrow 
+                ? "Planifica tu trabajo para mañana (requerido para registrar horas)"
+                : "Planifica tu trabajo con anticipación"
             }
           </p>
         </div>
@@ -110,8 +134,8 @@ export default function PlanDiario() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                disabled={(date) => date < startOfToday()}
+                onSelect={(date) => date && !isWeekend(date) && setSelectedDate(date)}
+                disabled={(date) => date < startOfToday() || isWeekend(date)}
                 initialFocus
                 className={cn("p-3 pointer-events-auto")}
                 locale={es}
@@ -132,8 +156,19 @@ export default function PlanDiario() {
         </div>
       </div>
       
+      {/* Weekend blocker */}
+      {isWeekendDay && (
+        <div className="bg-muted/50 border rounded-lg p-8 text-center space-y-3">
+          <CalendarOff className="h-10 w-10 text-muted-foreground mx-auto" />
+          <h3 className="text-lg font-medium">Fin de semana</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            No es necesario planificar ni registrar horas en fines de semana.
+          </p>
+        </div>
+      )}
+      
       {/* Absence indicator */}
-      {absenceForSelectedDate && (
+      {!isWeekendDay && absenceForSelectedDate && (
         <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Palmtree className="h-5 w-5 text-warning" />
@@ -163,7 +198,7 @@ export default function PlanDiario() {
       )}
       
       {/* Quick stats */}
-      {plan && !absenceForSelectedDate && (
+      {plan && !absenceForSelectedDate && !isWeekendDay && (
         <div className="flex flex-wrap items-center gap-6 py-3 px-1">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-muted-foreground" />
@@ -192,62 +227,62 @@ export default function PlanDiario() {
         </div>
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main form */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Show AbsenceMarker if no plan items and no absence */}
-          {plan && !absenceForSelectedDate && plan.items.length === 0 && canEdit && (
-            <AbsenceMarker
-              date={selectedDate}
-              canEdit={canEdit}
-              onMarkAbsence={addAbsence}
-              isLoading={addingAbsence}
-            />
-          )}
+      {!isWeekendDay && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main form */}
+          <div className="lg:col-span-2 space-y-4">
+            {plan && !absenceForSelectedDate && plan.items.length === 0 && canEdit && (
+              <AbsenceMarker
+                date={selectedDate}
+                canEdit={canEdit}
+                onMarkAbsence={addAbsence}
+                isLoading={addingAbsence}
+              />
+            )}
+            
+            {plan && !absenceForSelectedDate && (
+              <DailyPlanForm
+                plan={plan}
+                targetDate={selectedDate}
+                loading={loading}
+                saving={saving}
+                canEdit={canEdit}
+                isBlockingDate={isTomorrow}
+                autoCreateTasks={autoCreateTasks}
+                onAutoCreateTasksChange={setAutoCreateTasks}
+                onAddItem={addItem}
+                onUpdateItem={updateItem}
+                onDeleteItem={deleteItem}
+                onUpdateNotes={updateNotes}
+                onSubmit={submitPlan}
+              />
+            )}
+          </div>
           
-          {/* Only show plan form if not an absence day */}
-          {plan && !absenceForSelectedDate && (
-            <DailyPlanForm
-              plan={plan}
-              targetDate={selectedDate}
-              loading={loading}
-              saving={saving}
-              canEdit={canEdit}
-              isBlockingDate={isTomorrow}
-              autoCreateTasks={autoCreateTasks}
-              onAutoCreateTasksChange={setAutoCreateTasks}
-              onAddItem={addItem}
-              onUpdateItem={updateItem}
-              onDeleteItem={deleteItem}
-              onUpdateNotes={updateNotes}
-              onSubmit={submitPlan}
-            />
-          )}
-        </div>
-        
-        {/* Sidebar with chart */}
-        <div className="space-y-4">
-          {plan && isPast && !absenceForSelectedDate && (
-            <PlanVsRealChart
-              plannedHours={totalHours}
-              actualHours={actualHours}
-              plannedTasks={totalTasks}
-              completedTasks={completedTasks}
-            />
-          )}
-          
-          {/* Tips card */}
-          <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-            <h3 className="font-medium text-sm">Consejos</h3>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Planifica tareas realistas para tu jornada</li>
-              <li>• Incluye tiempo para imprevistos</li>
-              <li>• Prioriza las tareas urgentes</li>
-              <li>• Envía tu plan antes de terminar el día</li>
-            </ul>
+          {/* Sidebar with chart */}
+          <div className="space-y-4">
+            {plan && isPast && !absenceForSelectedDate && (
+              <PlanVsRealChart
+                plannedHours={totalHours}
+                actualHours={actualHours}
+                plannedTasks={totalTasks}
+                completedTasks={completedTasks}
+              />
+            )}
+            
+            {/* Tips card */}
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+              <h3 className="font-medium text-sm">Consejos</h3>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Planifica tareas realistas para tu jornada</li>
+                <li>• Incluye tiempo para imprevistos</li>
+                <li>• Prioriza las tareas urgentes</li>
+                <li>• Envía tu plan antes de terminar el día</li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

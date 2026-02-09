@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays } from "date-fns";
+import { format, addDays, isWeekend } from "date-fns";
 import type { 
   DailyPlan, 
   DailyPlanItem, 
@@ -425,6 +425,11 @@ export async function canRegisterHoursForDate(
   // Admin bypass - always allowed
   if (isAdmin) {
     return { allowed: true };
+  }
+  
+  // Weekend block - never allow registering hours on weekends
+  if (isWeekend(date)) {
+    return { allowed: false, reason: 'No se pueden registrar horas en fines de semana' };
   }
   
   const targetDate = format(date, 'yyyy-MM-dd');
