@@ -1,19 +1,45 @@
 
+# Fix: Sincronizacion de plantillas checklist - constraint violation
 
-# Actualizar texto del Acuerdo de Confidencialidad
+## Causa raiz
 
-## Cambio
-Modificar el texto del acuerdo en `ConfidentialityAgreementModal.tsx` para incluir una clausula especifica sobre la no divulgacion del funcionamiento de los sistemas informaticos y el know-how de la plataforma.
+La funcion RPC `sync_template_additions` inserta tareas con `estado = 'pendiente'` (texto plano), pero la constraint de la base de datos (`mandato_checklist_tasks_estado_check`) solo acepta estos valores exactos:
 
-## Detalle tecnico
+- `'⏳ Pendiente'`
+- `'🔄 En curso'`
+- `'✅ Completa'`
 
-**Archivo a modificar:** `src/components/auth/ConfidentialityAgreementModal.tsx`
+Esto causa el error: *"new row violates check constraint mandato_checklist_tasks_estado_check"*.
 
-Se añadira en la seccion de "OBLIGACION DE CONFIDENCIALIDAD" y/o "DATOS PROTEGIDOS" referencias explicitas a:
-- No revelar el funcionamiento de los sistemas informaticos de la plataforma.
-- No divulgar el know-how tecnologico o metodologico.
+La columna ya tiene `NOT NULL` y `DEFAULT '⏳ Pendiente'`, pero como la funcion RPC especifica explicitamente el valor `'pendiente'`, el default no se aplica.
 
-Tambien se actualizara el texto del checkbox de aceptacion para reflejar este compromiso adicional.
+## Solucion
 
-No se requieren cambios en la base de datos ni en la logica del hook, ya que la version del acuerdo se mantiene igual (es una actualizacion de redaccion, no un nuevo acuerdo que requiera re-aceptacion). Si se desea forzar que todos los usuarios vuelvan a aceptar, se incrementaria `CURRENT_AGREEMENT_VERSION` a 2.
+Un unico cambio: actualizar las dos funciones RPC para usar el valor correcto con emoji.
 
+### Archivo: Nueva migracion SQL
+
+Se recrearan las funciones `sync_template_additions` y `sync_template_full_reset` cambiando:
+
+```
+-- ANTES (incorrecto)
+'pendiente'
+
+-- DESPUES (correcto)
+'⏳ Pendiente'
+```
+
+Esto se aplica en ambas funciones, en la linea del INSERT donde se asigna el estado.
+
+### Detalle tecnico
+
+- `sync_template_additions`: linea 48 del INSERT, cambiar `'pendiente'` a `'⏳ Pendiente'`
+- `sync_template_full_reset`: linea 92 del SELECT, cambiar `'pendiente'` a `'⏳ Pendiente'`
+
+No se modifican archivos de frontend ni logica de negocio. No se borran datos. No se alteran constraints ni columnas. Solo se corrige el valor literal en las dos funciones.
+
+### Validacion
+
+- La columna `estado` ya es `NOT NULL` con default `'⏳ Pendiente'` (correcto)
+- Los 885 registros existentes ya tienen valores validos (700 Pendiente, 173 Completa, 12 En curso)
+- No hay datos corruptos que normalizar
