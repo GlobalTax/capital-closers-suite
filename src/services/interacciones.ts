@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 export interface Interaccion {
   id: string;
@@ -25,8 +26,8 @@ export const fetchInteraccionesByContacto = async (contactoId: string): Promise<
     .select('*')
     .eq('contacto_id', contactoId)
     .order('fecha', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener interacciones del contacto', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -36,8 +37,8 @@ export const fetchInteraccionesByEmpresa = async (empresaId: string): Promise<In
     .select('*')
     .eq('empresa_id', empresaId)
     .order('fecha', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener interacciones de la empresa', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -47,8 +48,8 @@ export const fetchInteraccionesByMandato = async (mandatoId: string): Promise<In
     .select('*')
     .eq('mandato_id', mandatoId)
     .order('fecha', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener interacciones del mandato', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -63,8 +64,8 @@ export const fetchInteraccionesByMandatoTarget = async (
     .eq('mandato_id', mandatoId)
     .eq('empresa_id', empresaId)
     .order('fecha', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener interacciones del target', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -81,8 +82,8 @@ export const createInteraccion = async (interaccion: Partial<Interaccion>) => {
     .insert({ ...interaccion, created_by } as any)
     .select()
     .single();
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al crear interacción', { supabaseError: error, table: 'interacciones' });
   return data as Interaccion;
 };
 
@@ -93,8 +94,8 @@ export const updateInteraccion = async (id: string, interaccion: Partial<Interac
     .eq('id', id)
     .select()
     .single();
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al actualizar interacción', { supabaseError: error, table: 'interacciones', id });
   return data;
 };
 
@@ -103,8 +104,8 @@ export const deleteInteraccion = async (id: string) => {
     .from('interacciones')
     .delete()
     .eq('id', id);
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al eliminar interacción', { supabaseError: error, table: 'interacciones', id });
 };
 
 export const getInteraccionesRecientes = async (limit = 10): Promise<Interaccion[]> => {
@@ -113,8 +114,8 @@ export const getInteraccionesRecientes = async (limit = 10): Promise<Interaccion
     .select('*')
     .order('fecha', { ascending: false })
     .limit(limit);
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener interacciones recientes', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -125,8 +126,8 @@ export const getProximasAcciones = async (): Promise<Interaccion[]> => {
     .not('fecha_siguiente_accion', 'is', null)
     .gte('fecha_siguiente_accion', new Date().toISOString().split('T')[0])
     .order('fecha_siguiente_accion', { ascending: true });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener próximas acciones', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
 };
 
@@ -138,8 +139,8 @@ export const getLastInteraccionByContacto = async (contactoId: string): Promise<
     .order('fecha', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener última interacción', { supabaseError: error, table: 'interacciones' });
   return data as Interaccion | null;
 };
 
@@ -150,7 +151,7 @@ export const getContactosByEmpresa = async (empresaId: string): Promise<any[]> =
     .eq('empresa_principal_id', empresaId)
     .is('merged_into_contacto_id', null)
     .order('nombre', { ascending: true });
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener contactos de la empresa', { supabaseError: error, table: 'contactos' });
   return data || [];
 };

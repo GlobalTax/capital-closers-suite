@@ -101,22 +101,26 @@ export default function Index() {
       ).length || 0;
 
       // Contactos sin actividad en 30 días
-      const { data: contactos, error: errorContactos } = await supabase
+      const { count: contactosInactivos, error: errorContactos } = await supabase
         .from('contactos')
-        .select('id, updated_at')
+        .select('id', { count: 'exact', head: true })
         .lt('updated_at', thirtyDaysAgo);
 
+      if (errorContactos) throw errorContactos;
+
       // Empresas sin actividad en 30 días
-      const { data: empresas, error: errorEmpresas } = await supabase
+      const { count: empresasInactivas, error: errorEmpresas } = await supabase
         .from('empresas')
-        .select('id, updated_at')
+        .select('id', { count: 'exact', head: true })
         .lt('updated_at', thirtyDaysAgo);
+
+      if (errorEmpresas) throw errorEmpresas;
 
       setStats({
         totalInteracciones: interaccionesMes?.length || 0,
         proximasAcciones: pendientes,
-        contactosInactivos: contactos?.length || 0,
-        empresasInactivas: empresas?.length || 0
+        contactosInactivos: contactosInactivos || 0,
+        empresasInactivas: empresasInactivas || 0
       });
 
       // Cargar próximas acciones con detalles
@@ -150,7 +154,6 @@ export default function Index() {
       setInteraccionesRecientes((recientes || []) as ProximaAccion[]);
 
     } catch (error) {
-      console.error("Error cargando datos:", error);
       toast.error("Error al cargar el dashboard");
     } finally {
       setLoading(false);

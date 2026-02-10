@@ -297,7 +297,6 @@ export async function findSimilarEmpresas(
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error finding similar empresas:', error);
     return [];
   }
 
