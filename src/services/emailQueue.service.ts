@@ -176,10 +176,13 @@ export async function cancelEmail(emailId: string): Promise<void> {
 }
 
 /**
- * Retry a failed email
+ * Retry a failed email.
+ * Includes a cooldown check: only retries if last attempt was >2 minutes ago.
  */
 export async function retryEmail(emailId: string): Promise<void> {
-  const { error } = await supabase
+  const cooldown = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
     .from("email_queue")
     .update({
       status: "pending",
@@ -187,15 +190,24 @@ export async function retryEmail(emailId: string): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("id", emailId)
-    .eq("status", "failed");
+    .eq("status", "failed")
+    .lt("updated_at", cooldown)
+    .select("id");
 
   if (error) throw error;
+
+  if (!data || data.length === 0) {
+    throw new Error("Este email ya fue reintentado recientemente. Espera unos minutos.");
+  }
 }
 
 /**
- * Bulk retry failed emails
+ * Bulk retry failed emails.
+ * Only retries emails not updated in the last 5 minutes to prevent re-queueing loops.
  */
 export async function bulkRetryFailed(queueType?: string): Promise<number> {
+  const cooldown = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
   let query = supabase
     .from("email_queue")
     .update({
@@ -204,7 +216,8 @@ export async function bulkRetryFailed(queueType?: string): Promise<number> {
       updated_at: new Date().toISOString(),
     })
     .eq("status", "failed")
-    .lt("attempts", 3);
+    .lt("attempts", 3)
+    .lt("updated_at", cooldown);
 
   if (queueType) {
     query = query.eq("queue_type", queueType);

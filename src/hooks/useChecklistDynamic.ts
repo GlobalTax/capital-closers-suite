@@ -1,20 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
-import { 
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
   fetchFasesByType,
   fetchChecklistTasksExtended,
   fetchDetailedProgress,
   fetchOverdueTasks,
   copyTemplateByType,
-  calculateDynamicProgress 
+  calculateDynamicProgress
 } from "@/services/checklistDynamic.service";
-import type { 
-  MandatoChecklistTask, 
-  ChecklistFaseProgress, 
+import type {
+  MandatoChecklistTask,
+  ChecklistFaseProgress,
   ChecklistFaseConfig,
   OverdueTask,
-  MandatoTipo 
+  MandatoTipo
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { handleError } from "@/lib/error-handler";
 
 interface UseChecklistDynamicReturn {
   tasks: MandatoChecklistTask[];
@@ -36,23 +37,23 @@ export function useChecklistDynamic(
   const [progress, setProgress] = useState<ChecklistFaseProgress[]>([]);
   const [overdueTasks, setOverdueTasks] = useState<OverdueTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   const loadData = useCallback(async () => {
     if (!mandatoId) return;
 
     try {
       setLoading(true);
-      
-      // Fetch fases and tasks in parallel
+
       const [fasesData, tasksData] = await Promise.all([
         fetchFasesByType(mandatoTipo),
         fetchChecklistTasksExtended(mandatoId),
       ]);
-      
+
+      if (!mountedRef.current) return;
       setFases(fasesData);
       setTasks(tasksData);
 
-      // Try to get progress from RPC, fallback to local calculation
       let progressData: ChecklistFaseProgress[];
       try {
         progressData = await fetchDetailedProgress(mandatoId);
@@ -62,18 +63,19 @@ export function useChecklistDynamic(
       } catch {
         progressData = calculateDynamicProgress(tasksData, fasesData);
       }
+      if (!mountedRef.current) return;
       setProgress(progressData);
 
-      // Get overdue tasks
       try {
         const overdueData = await fetchOverdueTasks(mandatoId);
+        if (!mountedRef.current) return;
         setOverdueTasks(overdueData);
       } catch {
-        // Calculate locally if RPC fails
+        if (!mountedRef.current) return;
         const localOverdue = tasksData
-          .filter(t => 
-            t.fecha_limite && 
-            new Date(t.fecha_limite) < new Date() && 
+          .filter(t =>
+            t.fecha_limite &&
+            new Date(t.fecha_limite) < new Date() &&
             t.estado !== "✅ Completa"
           )
           .map(t => ({
@@ -86,26 +88,18 @@ export function useChecklistDynamic(
           }));
         setOverdueTasks(localOverdue);
       }
-    } catch (error: any) {
-      console.error("Error loading checklist:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar el checklist",
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleError(error, 'Carga de checklist');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [mandatoId, mandatoTipo]);
 
   const copyTemplate = useCallback(async () => {
     if (!mandatoId) return;
 
-    console.log('[checklist] action=copyTemplate', { mandatoId, mandatoTipo });
-
     try {
       const count = await copyTemplateByType(mandatoId, mandatoTipo);
-      console.log('[checklist] copyTemplate result', { count });
 
       if (count === 0) {
         toast({
@@ -119,18 +113,15 @@ export function useChecklistDynamic(
         });
       }
       await loadData();
-    } catch (error: any) {
-      console.error('[checklist] copyTemplate error', error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo copiar la plantilla. Reintenta o contacta soporte.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleError(error, 'Copia de plantilla de checklist');
     }
   }, [mandatoId, mandatoTipo, loadData]);
 
   useEffect(() => {
+    mountedRef.current = true;
     loadData();
+    return () => { mountedRef.current = false; };
   }, [loadData]);
 
   const totalProgress = progress.length > 0

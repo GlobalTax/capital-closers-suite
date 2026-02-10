@@ -264,7 +264,7 @@ export function useValidateShareToken(token: string | undefined) {
     queryKey: ['presentation-share-validate', token],
     queryFn: () => presentationsService.validateShareToken(token!),
     enabled: !!token,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 }
