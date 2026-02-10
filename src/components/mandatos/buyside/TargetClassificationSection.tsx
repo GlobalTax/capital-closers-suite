@@ -81,14 +81,14 @@ export function TargetClassificationSection({
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Tipo de Comprador</Label>
         <Select
-          value={target.buyer_type || ""}
-          onValueChange={(value) => onBuyerTypeChange(value as BuyerType || null)}
+          value={target.buyer_type || "none"}
+          onValueChange={(value) => onBuyerTypeChange(value === "none" ? null : value as BuyerType)}
         >
           <SelectTrigger className="h-8">
             <SelectValue placeholder="Seleccionar tipo..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Sin asignar</SelectItem>
+            <SelectItem value="none">Sin asignar</SelectItem>
             {(Object.entries(BUYER_TYPE_CONFIG) as [BuyerType, typeof BUYER_TYPE_CONFIG[BuyerType]][]).map(
               ([type, config]) => (
                 <SelectItem key={type} value={type}>

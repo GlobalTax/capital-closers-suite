@@ -108,12 +108,12 @@ export function OutreachDrawer({
           {associatedMandatos.length > 0 && (
             <div className="space-y-2">
               <Label>Mandato asociado (opcional)</Label>
-              <Select value={selectedMandato} onValueChange={setSelectedMandato}>
+              <Select value={selectedMandato || "none"} onValueChange={(v) => setSelectedMandato(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar mandato..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin mandato</SelectItem>
+                  <SelectItem value="none">Sin mandato</SelectItem>
                   {associatedMandatos.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.codigo}

@@ -287,12 +287,12 @@ export function QuickTimeEntryModal({
           {/* Mandato Selection */}
           <div className="space-y-2">
             <Label>Mandato (opcional)</Label>
-            <Select value={selectedMandatoId} onValueChange={setSelectedMandatoId}>
+            <Select value={selectedMandatoId || "none"} onValueChange={(v) => setSelectedMandatoId(v === "none" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Prospección Comercial (por defecto)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Prospección Comercial</SelectItem>
+                <SelectItem value="none">Prospección Comercial</SelectItem>
                 {mandatos.map((mandato) => (
                   <SelectItem key={mandato.id} value={mandato.id}>
                     {mandato.codigo} - {mandato.descripcion?.substring(0, 30)}
