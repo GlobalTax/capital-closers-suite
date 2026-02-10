@@ -122,8 +122,6 @@ export function NuevoTargetDrawer({ open, onOpenChange, onSuccess, mandatoId }: 
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
-      console.log('[NuevoTargetDrawer] Submitting:', { values, mandatoId });
-
       const nuevaEmpresa = await createEmpresa({
         nombre: values.nombre.trim(),
         sector: values.sector,

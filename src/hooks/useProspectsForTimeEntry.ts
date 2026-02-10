@@ -32,15 +32,18 @@ export function useProspectsForTimeEntry(mandatoId: string | null) {
         supabase
           .from('contact_leads')
           .select('id, company, full_name, email, sectors_of_interest')
-          .eq('is_deleted', false),
+          .eq('is_deleted', false)
+          .limit(500),
         supabase
           .from('company_valuations')
           .select('id, company_name, contact_name, email, industry')
-          .eq('is_deleted', false),
+          .eq('is_deleted', false)
+          .limit(500),
         supabase
           .from('collaborator_applications')
           .select('id, company, full_name, email, profession')
-          .eq('is_deleted', false),
+          .eq('is_deleted', false)
+          .limit(500),
       ]);
 
       // Normalize and combine all results

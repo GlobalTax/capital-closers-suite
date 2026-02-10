@@ -168,14 +168,6 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
     setUploading(true);
     
     try {
-      console.log('[Teaser Upload] Iniciando subida:', {
-        mandatoId,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-        idioma,
-      });
-
       // Paso 0: Verificar autenticación ANTES de cualquier operación
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
@@ -183,8 +175,6 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         toast.error('Debes iniciar sesión para subir archivos');
         return;
       }
-      console.log('[Teaser Upload] Usuario autenticado:', user.id, user.email);
-
       // Verificar que es admin activo
       const { data: adminCheck, error: adminError } = await supabase
         .from('admin_users')
@@ -192,7 +182,6 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         .eq('user_id', user.id)
         .maybeSingle();
       
-      console.log('[Teaser Upload] Admin check:', adminCheck, 'Error:', adminError);
       if (adminError || !adminCheck?.is_active) {
         toast.error('No tienes permisos de administrador para subir archivos');
         return;
@@ -202,7 +191,6 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       let teaserFolder;
       try {
         teaserFolder = await ensureTeaserFolder();
-        console.log('[Teaser Upload] Carpeta obtenida:', teaserFolder?.id);
       } catch (folderError: any) {
         console.error('[Teaser Upload] Error en carpeta:', folderError);
         if (folderError.message?.includes('policy') || folderError.message?.includes('permission')) {
@@ -223,19 +211,12 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
       const timestamp = Date.now();
       const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storagePath = `${user.id}/mandatos/${mandatoId}/teaser/${idioma.toLowerCase()}_${timestamp}_${sanitizedFileName}`;
-      console.log('[Teaser Upload] Subiendo a storage, path:', storagePath);
 
       const { error: uploadError } = await supabase.storage
         .from('mandato-documentos')
         .upload(storagePath, file);
 
       if (uploadError) {
-        console.error('[Teaser Upload] Error storage:', {
-          code: (uploadError as any).code,
-          message: uploadError.message,
-          statusCode: (uploadError as any).statusCode,
-        });
-        
         const errorMsg = uploadError.message?.toLowerCase() || '';
         if (errorMsg.includes('mime') || errorMsg.includes('type')) {
           toast.error('Tipo de archivo no permitido. Usa PDF, Word o PowerPoint.');
@@ -248,10 +229,8 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
         }
         return;
       }
-      console.log('[Teaser Upload] Archivo subido a storage OK');
 
       // Paso 3: Registrar en base de datos usando upsertTeaser (maneja reemplazo)
-      console.log('[Teaser Upload] Registrando en base de datos...');
       try {
         await upsertTeaser({
           mandatoId,
@@ -263,14 +242,7 @@ export function DocumentosTab({ mandatoId, mandatoTipo, onRefresh }: DocumentosT
           uploadedBy: user.id,
           idioma,
         });
-        console.log('[Teaser Upload] Registro en DB OK');
       } catch (dbError: any) {
-        console.error('[Teaser Upload] Error registrando en DB:', {
-          code: dbError.code,
-          message: dbError.message,
-          details: dbError.details,
-          hint: dbError.hint,
-        });
         // Limpiar archivo huérfano del storage
         await supabase.storage.from('mandato-documentos').remove([storagePath]);
         

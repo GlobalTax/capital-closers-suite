@@ -235,7 +235,6 @@ export function ImportTargetsApolloDrawer({
       if (error) throw error;
       
       setLabels(data?.labels || []);
-      console.log('[Apollo] Loaded labels:', data?.labels?.length, 'API status:', data?.api_status);
     } catch (error: any) {
       console.error('[Apollo] Error loading labels:', error);
       toast.error('Error al cargar listas de Apollo', { description: error.message });

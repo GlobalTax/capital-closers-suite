@@ -152,14 +152,27 @@ export async function deleteSlide(id: string): Promise<void> {
 }
 
 export async function reorderSlides(projectId: string, slideIds: string[]): Promise<void> {
-  const updates = slideIds.map((id, index) => 
-    supabase
-      .from('presentation_slides')
-      .update({ order_index: index } as never)
-      .eq('id', id)
+  const results = await Promise.allSettled(
+    slideIds.map((id, index) =>
+      supabase
+        .from('presentation_slides')
+        .update({ order_index: index } as never)
+        .eq('id', id)
+    )
   );
 
-  await Promise.all(updates);
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length > 0) {
+    throw new DatabaseError('Error al reordenar slides', { table: 'presentation_slides' });
+  }
+
+  // Also check for Supabase-level errors (fulfilled but with error field)
+  const supabaseErrors = results
+    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+    .filter(r => r.value?.error);
+  if (supabaseErrors.length > 0) {
+    throw new DatabaseError('Error al reordenar slides', { supabaseError: supabaseErrors[0].value.error, table: 'presentation_slides' });
+  }
 }
 
 export async function duplicateSlide(slideId: string): Promise<PresentationSlide> {
