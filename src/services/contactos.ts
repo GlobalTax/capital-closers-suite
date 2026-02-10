@@ -237,6 +237,60 @@ export const getContactoMandatos = async (contactoId: string): Promise<any[]> =>
   }
 };
 
+/**
+ * Búsqueda paginada server-side con relevancia y normalización de teléfono
+ */
+export const searchContactosPaginated = async (
+  query: string,
+  page: number = 1,
+  pageSize: number = DEFAULT_PAGE_SIZE
+): Promise<PaginatedResult<Contacto>> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('search_contactos_paginated', {
+        search_query: query,
+        p_page: page,
+        p_page_size: pageSize,
+      });
+
+    if (error) {
+      throw new DatabaseError('Error al buscar contactos paginados', {
+        supabaseError: error,
+        table: 'contactos',
+      });
+    }
+
+    const rows = data || [];
+    const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+    const contactos: Contacto[] = rows.map((row: any) => ({
+      id: row.id,
+      nombre: row.nombre,
+      apellidos: row.apellidos,
+      email: row.email,
+      telefono: row.telefono,
+      cargo: row.cargo,
+      empresa_principal_id: row.empresa_principal_id,
+      linkedin: row.linkedin,
+      notas: row.notas,
+      avatar: row.avatar,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      empresa_principal: row.empresa_nombre
+        ? { id: row.empresa_principal_id, nombre: row.empresa_nombre, cif: row.empresa_cif }
+        : null,
+    }));
+
+    return {
+      data: contactos,
+      ...calculatePagination(totalCount, page, pageSize),
+    };
+  } catch (error) {
+    if (error instanceof DatabaseError) throw error;
+    throw new DatabaseError('Error inesperado al buscar contactos paginados');
+  }
+};
+
 export const searchContactos = async (query: string): Promise<Contacto[]> => {
   try {
     const { data, error } = await supabase

@@ -22609,6 +22609,26 @@ export type Database = {
           updated_at: string
         }[]
       }
+      search_contactos_paginated: {
+        Args: { p_page?: number; p_page_size?: number; search_query: string }
+        Returns: {
+          apellidos: string
+          avatar: string
+          cargo: string
+          created_at: string
+          email: string
+          empresa_cif: string
+          empresa_nombre: string
+          empresa_principal_id: string
+          id: string
+          linkedin: string
+          nombre: string
+          notas: string
+          telefono: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
       search_news_articles: {
         Args: {
           filter_category?: string
