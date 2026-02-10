@@ -105,7 +105,8 @@ export function AITaskDialog() {
   // Focus textarea when dialog opens
   useEffect(() => {
     if (isAITaskDialogOpen) {
-      setTimeout(() => textareaRef.current?.focus(), 100);
+      const timer = setTimeout(() => textareaRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     }
   }, [isAITaskDialogOpen]);
 
