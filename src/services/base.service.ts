@@ -64,6 +64,20 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
   }
 
   /**
+   * Sanitiza datos antes de insertar/actualizar:
+   * convierte strings vacíos a null para evitar conflictos con UNIQUE constraints
+   */
+  protected sanitize(data: Record<string, any>): Record<string, any> {
+    const sanitized: Record<string, any> = { ...data };
+    for (const key of Object.keys(sanitized)) {
+      if (sanitized[key] === '') {
+        sanitized[key] = null;
+      }
+    }
+    return sanitized;
+  }
+
+  /**
    * Obtener todos los registros
    */
   async getAll(): Promise<T[]> {
@@ -115,10 +129,11 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
    */
   async create(data: CreateDto): Promise<T> {
     this.validate(data);
+    const sanitizedData = this.sanitize(data as Record<string, any>);
 
     const { data: insertedData, error } = await supabase
       .from(this.tableName as any)
-      .insert(data as any)
+      .insert(sanitizedData as any)
       .select()
       .single();
 
@@ -150,10 +165,11 @@ export abstract class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial
     }
 
     this.validate(data);
+    const sanitizedData = this.sanitize(data as Record<string, any>);
 
     const { data: updatedData, error } = await supabase
       .from(this.tableName as any)
-      .update(data as any)
+      .update(sanitizedData as any)
       .eq('id', id)
       .select()
       .single();
