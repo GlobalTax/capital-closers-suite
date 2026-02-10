@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     // Fetch pending items from queue
     const { data: queueItems, error: fetchError } = await supabase
       .from('enrichment_queue')
-      .select('id, entity_id')
+      .select('id, entity_id, attempts')
       .eq('entity_type', 'empresa')
       .eq('status', 'pending')
       .lt('attempts', 3)
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     for (const item of queueItems) {
       // Mark as processing
       await supabase.from('enrichment_queue')
-        .update({ status: 'processing', started_at: new Date().toISOString(), attempts: item.attempts ?? 0 + 1 })
+        .update({ status: 'processing', started_at: new Date().toISOString(), attempts: (item.attempts ?? 0) + 1 })
         .eq('id', item.id);
 
       try {
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
           for (const contact of enrichedData.contactos) {
             if (!contact.nombre) continue;
             
-            // Check for existing contact by email
+            // Check for existing contact by email or by name+empresa
             if (contact.email) {
               const { data: existing } = await supabase
                 .from('contactos')
@@ -227,6 +227,20 @@ Deno.serve(async (req) => {
                 .eq('email', contact.email)
                 .maybeSingle();
               if (existing) continue;
+            } else {
+              // No email — check by name + empresa to avoid duplicates
+              const nameParts = contact.nombre.split(' ');
+              const firstName = nameParts[0];
+              let nameQuery = supabase
+                .from('contactos')
+                .select('id')
+                .eq('nombre', firstName)
+                .eq('empresa_principal_id', empresa.id);
+              if (nameParts.length > 1) {
+                nameQuery = nameQuery.eq('apellidos', nameParts.slice(1).join(' '));
+              }
+              const { data: existingByName } = await nameQuery.maybeSingle();
+              if (existingByName) continue;
             }
 
             const nameParts = contact.nombre.split(' ');

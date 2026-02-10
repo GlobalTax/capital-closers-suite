@@ -131,7 +131,11 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
           .from("contactos")
           .select("id, nombre, apellidos, email, cargo, telefono, empresa_principal_id, empresas:empresa_principal_id(nombre)")
           .limit(50);
-        if (args.nombre) q = q.or(`nombre.ilike.%${args.nombre}%,apellidos.ilike.%${args.nombre}%`);
+        if (args.nombre) {
+          // Sanitize to prevent PostgREST filter injection via .or() string
+          const sanitized = String(args.nombre).replace(/[,()]/g, '');
+          q = q.or(`nombre.ilike.%${sanitized}%,apellidos.ilike.%${sanitized}%`);
+        }
         if (args.email) q = q.ilike("email", `%${args.email}%`);
         if (args.cargo) q = q.ilike("cargo", `%${args.cargo}%`);
         const { data, error } = await q;
