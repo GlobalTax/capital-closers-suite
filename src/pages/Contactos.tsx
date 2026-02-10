@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
@@ -8,16 +8,17 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import type { Contacto } from "@/types";
 import { toast } from "sonner";
 import { NuevoContactoDrawer } from "@/components/contactos/NuevoContactoDrawer";
 import { AIImportDrawer } from "@/components/importacion/AIImportDrawer";
 import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawer";
-import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Link } from "lucide-react";
+import { Mail, MessageCircle, Linkedin, Users, UserCheck, UserPlus, TrendingUp, Activity, Sparkles, Clock, AlertCircle, UserX, Link, Search, X } from "lucide-react";
 import { format, isAfter, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { useContactosPaginated, useUpdateContacto } from "@/hooks/queries/useContactos";
+import { useContactosPaginated, useContactosSearchPaginated, useUpdateContacto } from "@/hooks/queries/useContactos";
 import { useContactosRealtime } from "@/hooks/useContactosRealtime";
 import { handleError } from "@/lib/error-handler";
 import { PageSkeleton } from "@/components/shared/LoadingStates";
@@ -45,7 +46,30 @@ export default function Contactos() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = parseInt(searchParams.get('page') || '1', 10);
   
-  const { data: result, isLoading, refetch } = useContactosPaginated(page, DEFAULT_PAGE_SIZE);
+  // Search state with debounce
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      // Reset to page 1 when query changes
+      if (searchInput.trim() !== searchQuery) {
+        setSearchParams({ page: '1' });
+      }
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchInput]);
+
+  const isSearching = searchQuery.length >= 2;
+
+  const { data: paginatedResult, isLoading: isPaginatedLoading, refetch } = useContactosPaginated(page, DEFAULT_PAGE_SIZE);
+  const { data: searchResult, isLoading: isSearchLoading } = useContactosSearchPaginated(searchQuery, page, DEFAULT_PAGE_SIZE);
+
+  const result = isSearching ? searchResult : paginatedResult;
+  const isLoading = isSearching ? isSearchLoading : isPaginatedLoading;
+
   const { mutateAsync: updateContacto } = useUpdateContacto();
   useContactosRealtime();
   
@@ -498,6 +522,25 @@ export default function Contactos() {
         </Card>
       </div>
 
+      {/* Campo de búsqueda dedicado */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Buscar por nombre, email, empresa, teléfono o CIF..."
+          className="pl-9 pr-9"
+        />
+        {searchInput && (
+          <button
+            onClick={() => { setSearchInput(''); setSearchQuery(''); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Filtros rápidos de acciones */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-muted-foreground mr-2">Filtrar por:</span>
@@ -533,19 +576,28 @@ export default function Contactos() {
         })}
       </div>
 
-      <DataTableEnhanced
-        columns={columns}
-        data={contactosFiltrados}
-        loading={isLoading}
-        onRowClick={(row) => navigate(`/contactos/${row.id}`)}
-        pageSize={DEFAULT_PAGE_SIZE}
-        serverPagination={{
-          currentPage: page,
-          totalPages: result?.totalPages || 1,
-          totalCount: result?.count || 0,
-          onPageChange: handlePageChange,
-        }}
-      />
+      {isSearching && !isLoading && contactosFiltrados.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Search className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">No se han encontrado contactos para "{searchQuery}"</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <DataTableEnhanced
+          columns={columns}
+          data={contactosFiltrados}
+          loading={isLoading}
+          onRowClick={(row) => navigate(`/contactos/${row.id}`)}
+          pageSize={DEFAULT_PAGE_SIZE}
+          serverPagination={{
+            currentPage: page,
+            totalPages: result?.totalPages || 1,
+            totalCount: result?.count || 0,
+            onPageChange: handlePageChange,
+          }}
+        />
+      )}
 
       <NuevoContactoDrawer
         open={drawerOpen}
