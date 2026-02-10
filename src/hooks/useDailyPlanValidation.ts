@@ -24,8 +24,8 @@ export function useDailyPlanValidation() {
       return await canRegisterHoursForDate(user.id, date, isAdmin);
     } catch (error) {
       console.error('Error checking plan validation:', error);
-      // On error, allow registration (fail open)
-      return { allowed: true };
+      // On error, allow registration but note the validation was skipped
+      return { allowed: true, reason: 'Validación no disponible temporalmente' };
     } finally {
       setChecking(false);
     }

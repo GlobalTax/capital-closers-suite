@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchChecklistTasks, calculateFaseProgress } from "@/services/checklist.service";
 import type { MandatoChecklistTask, ChecklistFaseProgress } from "@/types";
 import { toast } from "@/hooks/use-toast";
@@ -8,9 +8,9 @@ export const useChecklistTasks = (mandatoId: string | undefined) => {
   const [progress, setProgress] = useState<ChecklistFaseProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     if (!mandatoId) return;
-    
+
     try {
       setLoading(true);
       const data = await fetchChecklistTasks(mandatoId);
@@ -26,11 +26,11 @@ export const useChecklistTasks = (mandatoId: string | undefined) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mandatoId]);
 
   useEffect(() => {
     loadTasks();
-  }, [mandatoId]);
+  }, [loadTasks]);
 
   return { tasks, progress, loading, refetch: loadTasks };
 };

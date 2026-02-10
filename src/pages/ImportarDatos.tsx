@@ -231,6 +231,7 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     toast({
       title: "✅ Plantilla descargada",

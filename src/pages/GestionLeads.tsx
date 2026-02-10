@@ -397,6 +397,7 @@ export default function GestionLeads() {
     a.href = url;
     a.download = `leads-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
     toast.success(`${leadsToExport.length} leads exportados`);
   };
 
