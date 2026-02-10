@@ -1,44 +1,56 @@
 
+# Desvincular Targets de Mandatos (Buy-Side)
 
-# Fix: Errores 409 y 400 al crear empresa target
+## Estado actual
 
-## Problemas encontrados
+- **Sell-Side**: Ya tiene la funcionalidad de "Desvincular" en `EmpresasAsociadasCard.tsx`, usando `removeEmpresaFromMandato()` que hace un `DELETE` de `mandato_empresas`.
+- **Buy-Side**: Solo permite "Archivar" y "Restaurar" targets. No existe opcion para desvincular (eliminar permanentemente la relacion).
 
-**Error 409 (Conflict):** La tabla `empresas` tiene un constraint `UNIQUE (cif)`. Ya existe una fila con `cif = ''` (cadena vacia). Cuando se crea una empresa sin CIF, si el valor llega como string vacio en vez de `null`, choca con esa fila existente.
+## Viabilidad tecnica
 
-**Error 400 (Bad Request):** El constraint `enrichment_queue_entity_type_check` en la base de datos **todavia NO incluye 'empresa'**. Solo permite `portfolio`, `fund`, `people`, `lead`. El trigger `trg_auto_queue_enrichment` intenta insertar `'empresa'` y falla.
+La desvinculacion es segura. Todas las tablas hijas que referencian `mandato_empresas` tienen `ON DELETE CASCADE` o `ON DELETE SET NULL`:
 
-## Solucion
-
-### 1. Corregir el constraint de enrichment_queue (migracion SQL)
-
-La correccion que se discutio antes no se aplico en la base de datos real. Se creara una migracion SQL:
-
-```sql
-ALTER TABLE public.enrichment_queue
-  DROP CONSTRAINT IF EXISTS enrichment_queue_entity_type_check;
-
-ALTER TABLE public.enrichment_queue
-  ADD CONSTRAINT enrichment_queue_entity_type_check
-  CHECK (entity_type IN ('portfolio', 'fund', 'people', 'lead', 'empresa'));
-```
-
-### 2. Limpiar dato sucio: CIF vacio a NULL
-
-```sql
-UPDATE public.empresas SET cif = NULL WHERE cif = '';
-```
-
-### 3. Proteger en el codigo: sanitizar campos vacios antes de insertar
-
-En `NuevoTargetDrawer.tsx`, al construir el objeto para `createEmpresa`, los campos string vacios ya se convierten a `undefined`. Pero la capa `base.service.ts` no limpia strings vacios que puedan llegar de otras fuentes.
-
-Se anadira un metodo `sanitize` en `base.service.ts` que convierta strings vacios a `null` antes de insertar, previniendo futuros conflictos con constraints UNIQUE.
-
-### Archivos a modificar
-
-| Archivo | Cambio |
+| Tabla hija | Accion al borrar |
 |---|---|
-| Nueva migracion SQL | Corregir constraint de `enrichment_queue` + limpiar CIF vacio |
-| `src/services/base.service.ts` | Anadir sanitizacion de strings vacios antes de insert/update |
+| `mandato_empresa_scoring` | CASCADE (se borra) |
+| `target_ofertas` | CASCADE (se borra) |
+| `teaser_recipients` | SET NULL |
 
+La empresa en si (`empresas`) NO se elimina, solo la relacion `mandato_empresas`.
+
+## Cambios propuestos
+
+### 1. Nuevo servicio: `unlinkTarget` en `targetArchive.service.ts`
+
+Anadir una funcion `unlinkTarget(mandatoEmpresaId)` que reutilice la logica existente de `removeEmpresaFromMandato` pero con un nombre semantico para Buy-Side.
+
+### 2. Hook `useTargetPipeline.ts`
+
+Anadir una mutation `unlinkTarget` que:
+- Llame al servicio de desvinculacion
+- Invalide las queries del pipeline
+- Muestre un toast de confirmacion
+
+### 3. UI: `TargetDetailDrawer.tsx`
+
+Anadir un boton "Desvincular" (con icono Unlink) junto al boton de archivar, con un dialogo de confirmacion que advierta:
+- Se eliminaran el scoring, ofertas y datos asociados
+- La empresa seguira existiendo en el sistema
+
+### 4. UI: `TargetListView.tsx` (menu contextual)
+
+Anadir opcion "Desvincular" en el menu desplegable de cada target en la vista de lista.
+
+### 5. `TargetsTabBuySide.tsx`
+
+Conectar la nueva accion `unlinkTarget` del hook a los componentes.
+
+## Seccion tecnica
+
+### Flujo de desvinculacion
+
+1. Usuario hace clic en "Desvincular" en el drawer o lista
+2. Se muestra `ConfirmDialog` con advertencia
+3. Al confirmar: `DELETE FROM mandato_empresas WHERE id = ?`
+4. Cascade automatico borra scoring y ofertas
+5. Se invalidan queries y se cierra el drawer
