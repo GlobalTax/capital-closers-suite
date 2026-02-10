@@ -38,7 +38,7 @@ import { Loader2 } from "lucide-react";
 const contactoSchema = z.object({
   nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
   apellidos: z.string().optional(),
-  email: z.string().email("Email inválido"),
+  email: z.string().email("Email inválido").or(z.literal("")),
   telefono: z.string().optional(),
   cargo: z.string().optional(),
   empresa_principal_id: z.string().optional(),

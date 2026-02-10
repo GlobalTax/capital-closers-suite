@@ -223,8 +223,14 @@ export const removeContactoFromMandato = async (id: string) => {
     .from('mandato_contactos')
     .delete()
     .eq('id', id);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al desvincular contacto del mandato', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      id,
+    });
+  }
 };
 
 export const updateMandatoContacto = async (id: string, updates: Partial<MandatoContacto>) => {
@@ -234,8 +240,14 @@ export const updateMandatoContacto = async (id: string, updates: Partial<Mandato
     .eq('id', id)
     .select('*, contacto:contactos(*, empresa_principal:empresas(*))')
     .single();
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al actualizar contacto del mandato', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      id,
+    });
+  }
   return data;
 };
 
@@ -251,17 +263,22 @@ export const addEmpresaToMandato = async (
 ): Promise<MandatoEmpresa> => {
   const { data, error } = await supabase
     .from('mandato_empresas')
-    .insert({ 
-      mandato_id: mandatoId, 
-      empresa_id: empresaId, 
-      rol, 
-      notas 
+    .insert({
+      mandato_id: mandatoId,
+      empresa_id: empresaId,
+      rol,
+      notas
     })
     .select('*, empresa:empresas(*)')
     .single();
-  
-  if (error) throw error;
-  return data as any;
+
+  if (error) {
+    throw new DatabaseError('Error al vincular empresa al mandato', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+    });
+  }
+  return data as MandatoEmpresa;
 };
 
 export const removeEmpresaFromMandato = async (id: string) => {
@@ -269,8 +286,14 @@ export const removeEmpresaFromMandato = async (id: string) => {
     .from('mandato_empresas')
     .delete()
     .eq('id', id);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al desvincular empresa del mandato', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+      id,
+    });
+  }
 };
 
 export const updateMandatoEmpresa = async (id: string, updates: Partial<MandatoEmpresa>) => {
@@ -280,8 +303,14 @@ export const updateMandatoEmpresa = async (id: string, updates: Partial<MandatoE
     .eq('id', id)
     .select('*, empresa:empresas(*)')
     .single();
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al actualizar empresa del mandato', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+      id,
+    });
+  }
   return data;
 };
 
@@ -301,7 +330,13 @@ export const getMandatosByContacto = async (contactoId: string): Promise<Mandato
       )
     `)
     .eq('contacto_id', contactoId);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al obtener mandatos del contacto', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      contactoId,
+    });
+  }
   return (data || []).map((mc: any) => mc.mandato).filter(Boolean) as Mandato[];
 };

@@ -80,70 +80,46 @@ export default function Contactos() {
 
   const cargarInteracciones = async () => {
     if (contactos.length === 0) return;
-    
+
     try {
       const today = new Date().toISOString().split('T')[0];
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       const contactoIds = contactos.map(c => c.id);
-      
-      const { data: interaccionesRecientes, error: err1 } = await supabase
+
+      // Single query: fetch all interacciones data at once
+      const { data: allInteracciones, error } = await supabase
         .from('interacciones')
-        .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
-        .in('contacto_id', contactoIds)
-        .gte('fecha', thirtyDaysAgo);
-      
-      const { data: ultimasInteracciones, error: err2 } = await supabase
-        .from('interacciones')
-        .select('contacto_id, fecha')
+        .select('contacto_id, fecha, siguiente_accion, fecha_siguiente_accion')
         .in('contacto_id', contactoIds)
         .order('fecha', { ascending: false });
-      
-      const { data: proximasAcciones, error: err3 } = await supabase
-        .from('interacciones')
-        .select('contacto_id, siguiente_accion, fecha_siguiente_accion')
-        .in('contacto_id', contactoIds)
-        .not('siguiente_accion', 'is', null)
-        .not('fecha_siguiente_accion', 'is', null)
-        .order('fecha_siguiente_accion', { ascending: true });
-      
-      if (err1) throw err1;
-      if (err2) throw err2;
-      if (err3) throw err3;
-      
-      const ultimasPorContacto: Record<string, string> = {};
-      ultimasInteracciones?.forEach((int) => {
-        if (int.contacto_id && !ultimasPorContacto[int.contacto_id]) {
-          ultimasPorContacto[int.contacto_id] = int.fecha;
-        }
-      });
-      
-      const proximasPorContacto: Record<string, { texto: string; fecha: string; esVencida: boolean }> = {};
-      proximasAcciones?.forEach((int) => {
-        if (int.contacto_id && !proximasPorContacto[int.contacto_id]) {
-          const esVencida = int.fecha_siguiente_accion! < today;
-          proximasPorContacto[int.contacto_id] = {
-            texto: int.siguiente_accion!,
-            fecha: int.fecha_siguiente_accion!,
-            esVencida
-          };
-        }
-      });
-      
+
+      if (error) throw error;
+
       const counts: Record<string, InteraccionData> = {};
       contactoIds.forEach(contactoId => {
-        counts[contactoId] = { 
-          total: 0, 
-          pendientes: 0, 
+        counts[contactoId] = {
+          total: 0,
+          pendientes: 0,
           vencidas: 0,
-          ultimaFecha: ultimasPorContacto[contactoId] || null,
-          proximaAccion: proximasPorContacto[contactoId] || null
+          ultimaFecha: null,
+          proximaAccion: null
         };
       });
-      
-      interaccionesRecientes?.forEach((int) => {
-        if (int.contacto_id && counts[int.contacto_id]) {
+
+      const proximasPorContacto: Record<string, { texto: string; fecha: string; esVencida: boolean }> = {};
+
+      allInteracciones?.forEach((int) => {
+        if (!int.contacto_id || !counts[int.contacto_id]) return;
+
+        // Track última fecha (first match per contact since ordered desc)
+        if (!counts[int.contacto_id].ultimaFecha) {
+          counts[int.contacto_id].ultimaFecha = int.fecha;
+        }
+
+        // Count recent interactions (last 30 days)
+        if (int.fecha >= thirtyDaysAgo) {
           counts[int.contacto_id].total++;
-          
+
           if (int.siguiente_accion && int.fecha_siguiente_accion) {
             if (int.fecha_siguiente_accion >= today) {
               counts[int.contacto_id].pendientes++;
@@ -152,8 +128,34 @@ export default function Contactos() {
             }
           }
         }
+
+        // Track próxima acción (earliest upcoming or most recent overdue)
+        if (int.siguiente_accion && int.fecha_siguiente_accion && !proximasPorContacto[int.contacto_id]) {
+          proximasPorContacto[int.contacto_id] = {
+            texto: int.siguiente_accion,
+            fecha: int.fecha_siguiente_accion,
+            esVencida: int.fecha_siguiente_accion < today
+          };
+        }
       });
-      
+
+      // Assign best próxima acción per contact — prefer earliest non-overdue
+      for (const contactoId of contactoIds) {
+        const matching = allInteracciones?.filter(
+          i => i.contacto_id === contactoId && i.siguiente_accion && i.fecha_siguiente_accion
+        ) || [];
+        const upcoming = matching.find(i => i.fecha_siguiente_accion! >= today);
+        const overdue = matching.find(i => i.fecha_siguiente_accion! < today);
+        const best = upcoming || overdue;
+        if (best) {
+          counts[contactoId].proximaAccion = {
+            texto: best.siguiente_accion!,
+            fecha: best.fecha_siguiente_accion!,
+            esVencida: best.fecha_siguiente_accion! < today
+          };
+        }
+      }
+
       setInteraccionesCounts(counts);
     } catch (error) {
       handleError(error, 'Carga de interacciones');
