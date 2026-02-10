@@ -28,6 +28,7 @@ import {
   ArchiveRestore,
   Ban,
   AlertTriangle,
+  Unlink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TargetScoringPanel } from "./TargetScoringPanel";
@@ -63,10 +64,12 @@ interface TargetDetailDrawerProps {
   onCreateOferta: (targetId: string, oferta: { tipo: OfertaTipo; monto: number; condiciones?: string }) => void;
   onArchiveTarget?: (targetId: string) => void;
   onUnarchiveTarget?: (targetId: string) => void;
+  onUnlinkTarget?: (targetId: string) => void;
   isMoving?: boolean;
   isSavingScoring?: boolean;
   isSavingOferta?: boolean;
   isArchiving?: boolean;
+  isUnlinking?: boolean;
   onRefresh: () => void;
 }
 
@@ -81,10 +84,12 @@ export function TargetDetailDrawer({
   onCreateOferta,
   onArchiveTarget,
   onUnarchiveTarget,
+  onUnlinkTarget,
   isMoving = false,
   isSavingScoring = false,
   isSavingOferta = false,
   isArchiving = false,
+  isUnlinking = false,
   onRefresh,
 }: TargetDetailDrawerProps) {
   const navigate = useNavigate();
@@ -94,6 +99,7 @@ export function TargetDetailDrawer({
   const [asociarContactoOpen, setAsociarContactoOpen] = useState(false);
   const [nuevaInteraccionOpen, setNuevaInteraccionOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+  const [confirmUnlinkOpen, setConfirmUnlinkOpen] = useState(false);
 
   const empresa = target?.empresa;
   const empresaId = empresa?.id;
@@ -431,31 +437,43 @@ export function TargetDetailDrawer({
 
           {/* Footer actions */}
           <div className="px-6 py-4 border-t flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={target.is_archived ? "text-green-600 hover:text-green-700" : "text-amber-600 hover:text-amber-700"}
-              onClick={() => {
-                if (target.is_archived) {
-                  onUnarchiveTarget?.(target.id);
-                } else {
-                  setConfirmArchiveOpen(true);
-                }
-              }}
-              disabled={isArchiving}
-            >
-              {target.is_archived ? (
-                <>
-                  <ArchiveRestore className="h-4 w-4 mr-1" />
-                  Restaurar
-                </>
-              ) : (
-                <>
-                  <Archive className="h-4 w-4 mr-1" />
-                  Archivar
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={target.is_archived ? "text-green-600 hover:text-green-700" : "text-amber-600 hover:text-amber-700"}
+                onClick={() => {
+                  if (target.is_archived) {
+                    onUnarchiveTarget?.(target.id);
+                  } else {
+                    setConfirmArchiveOpen(true);
+                  }
+                }}
+                disabled={isArchiving || isUnlinking}
+              >
+                {target.is_archived ? (
+                  <>
+                    <ArchiveRestore className="h-4 w-4 mr-1" />
+                    Restaurar
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archivar
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setConfirmUnlinkOpen(true)}
+                disabled={isArchiving || isUnlinking}
+              >
+                <Unlink className="h-4 w-4 mr-1" />
+                Desvincular
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -525,6 +543,19 @@ export function TargetDetailDrawer({
           setConfirmArchiveOpen(false);
         }}
         textoConfirmar="Archivar"
+        textoCancelar="Cancelar"
+      />
+
+      <ConfirmDialog
+        open={confirmUnlinkOpen}
+        onOpenChange={setConfirmUnlinkOpen}
+        titulo="¿Desvincular este target?"
+        descripcion={`Se eliminará permanentemente la relación de "${empresa.nombre}" con este mandato, incluyendo su scoring, ofertas y datos asociados. La empresa seguirá existiendo en el sistema. Esta acción no se puede deshacer.`}
+        onConfirmar={() => {
+          onUnlinkTarget?.(target.id);
+          setConfirmUnlinkOpen(false);
+        }}
+        textoConfirmar="Desvincular"
         textoCancelar="Cancelar"
       />
     </>

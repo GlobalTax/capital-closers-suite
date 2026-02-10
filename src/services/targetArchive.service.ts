@@ -53,3 +53,16 @@ export async function unarchiveTarget(mandatoEmpresaId: string): Promise<void> {
 
   if (error) throw error;
 }
+
+/**
+ * Desvincular un target del mandato (elimina la relación permanentemente).
+ * Las tablas hijas (scoring, ofertas) se eliminan por CASCADE.
+ */
+export async function unlinkTarget(mandatoEmpresaId: string): Promise<void> {
+  const { error } = await supabase
+    .from("mandato_empresas")
+    .delete()
+    .eq("id", mandatoEmpresaId);
+
+  if (error) throw error;
+}
