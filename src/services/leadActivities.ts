@@ -30,13 +30,27 @@ export async function fetchLeadActivities(
   const activities: LeadActivity[] = [];
 
   // First, check if this lead exists in mandate_leads
-  // Now supports: contact_leads, advisor_valuations (valuation_id), collaborator_applications (admin_lead_id)
-  const fieldName = leadType === 'valuation' ? 'valuation_id' : 'admin_lead_id';
-  const { data: mandateLead } = await supabase
+  // Lookup by source + source_id (the standard path), falling back to valuation_id for legacy data
+  let mandateLead: { id: string } | null = null;
+
+  const { data: bySource } = await supabase
     .from('mandate_leads')
     .select('id')
-    .eq(fieldName, leadId)
+    .eq('source', leadType)
+    .eq('source_id', leadId)
     .maybeSingle();
+
+  mandateLead = bySource;
+
+  // Legacy fallback: valuation_id for old valuation records
+  if (!mandateLead && leadType === 'valuation') {
+    const { data: byValuation } = await supabase
+      .from('mandate_leads')
+      .select('id')
+      .eq('valuation_id', leadId)
+      .maybeSingle();
+    mandateLead = byValuation;
+  }
 
   // Fetch time entries if the lead is in mandate_leads
   if (mandateLead) {
@@ -91,14 +105,26 @@ export async function getLeadActivitySummary(
   let lastActivityDate: string | null = null;
   let lastActivityType: string | null = null;
 
-  // Check if this lead exists in mandate_leads
-  // Now supports: contact_leads, advisor_valuations (valuation_id), collaborator_applications (admin_lead_id)
-  const fieldName = leadType === 'valuation' ? 'valuation_id' : 'admin_lead_id';
-  const { data: mandateLead } = await supabase
+  // Check if this lead exists in mandate_leads (by source + source_id, with legacy fallback)
+  let mandateLead: { id: string; last_activity_at: string | null } | null = null;
+
+  const { data: bySource } = await supabase
     .from('mandate_leads')
     .select('id, last_activity_at')
-    .eq(fieldName, leadId)
+    .eq('source', leadType)
+    .eq('source_id', leadId)
     .maybeSingle();
+
+  mandateLead = bySource;
+
+  if (!mandateLead && leadType === 'valuation') {
+    const { data: byValuation } = await supabase
+      .from('mandate_leads')
+      .select('id, last_activity_at')
+      .eq('valuation_id', leadId)
+      .maybeSingle();
+    mandateLead = byValuation;
+  }
 
   if (mandateLead) {
     // Get time entries summary

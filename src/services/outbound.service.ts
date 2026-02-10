@@ -11,7 +11,7 @@ import type {
   OutboundStats 
 } from '@/types/outbound';
 
-const SUPABASE_URL = 'https://fwhqtzkkvnjkazhaficj.supabase.co';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ============================================
 // CAMPAÑAS
