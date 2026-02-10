@@ -60,10 +60,9 @@ export function useUpdateContacto() {
       await queryClient.cancelQueries({ queryKey: ['contactos', id] });
       const previous = queryClient.getQueryData(['contactos', id]);
       
-      queryClient.setQueryData(['contactos', id], (old: any) => ({
-        ...old,
-        ...data,
-      }));
+      queryClient.setQueryData(['contactos', id], (old: any) =>
+        old ? { ...old, ...data } : old
+      );
       
       return { previous };
     },

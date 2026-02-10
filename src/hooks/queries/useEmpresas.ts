@@ -85,10 +85,9 @@ export function useUpdateEmpresa() {
       await queryClient.cancelQueries({ queryKey: ['empresas', id] });
       const previous = queryClient.getQueryData(['empresas', id]);
 
-      queryClient.setQueryData(['empresas', id], (old: any) => ({
-        ...old,
-        ...data,
-      }));
+      queryClient.setQueryData(['empresas', id], (old: any) =>
+        old ? { ...old, ...data } : old
+      );
 
       return { previous };
     },
