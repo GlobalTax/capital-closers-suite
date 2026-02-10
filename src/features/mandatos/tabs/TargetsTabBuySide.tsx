@@ -60,11 +60,13 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
     archiveTarget,
     archiveTargetsBulk,
     unarchiveTarget,
+    unlinkTarget,
     isMoving,
     isSavingScoring,
     isSavingOferta,
     isArchiving,
     isArchivingBulk,
+    isUnlinking,
     refetch,
   } = useTargetPipeline(mandato.id);
 
@@ -367,10 +369,16 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
           setDetailDrawerOpen(false);
           setSelectedTarget(null);
         }}
+        onUnlinkTarget={(targetId) => {
+          unlinkTarget(targetId);
+          setDetailDrawerOpen(false);
+          setSelectedTarget(null);
+        }}
         isMoving={isMoving}
         isSavingScoring={isSavingScoring}
         isSavingOferta={isSavingOferta}
         isArchiving={isArchiving}
+        isUnlinking={isUnlinking}
         onRefresh={handleRefresh}
       />
 

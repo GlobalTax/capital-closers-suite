@@ -14,7 +14,7 @@ import {
   getOfertasByTarget,
   cambiarEstadoOferta,
 } from "@/services/targetOfertas.service";
-import { archiveTarget, archiveTargetsBulk, unarchiveTarget } from "@/services/targetArchive.service";
+import { archiveTarget, archiveTargetsBulk, unarchiveTarget, unlinkTarget } from "@/services/targetArchive.service";
 import type { 
   TargetFunnelStage, 
   TargetPipelineStage, 
@@ -174,6 +174,17 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     onError: (error) => handleError(error, 'Restaurar target'),
   });
 
+  // Mutation: Desvincular target (eliminar relación permanentemente)
+  const unlinkMutation = useMutation({
+    mutationFn: (targetId: string) => unlinkTarget(targetId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline', mandatoId] });
+      await queryClient.invalidateQueries({ queryKey: ['target-pipeline-stats', mandatoId] });
+      toast({ title: "Target desvinculado", description: "La relación con el mandato ha sido eliminada" });
+    },
+    onError: (error) => handleError(error, 'Desvincular target'),
+  });
+
   return {
     // Data
     targets: targetsQuery.data || [],
@@ -192,6 +203,7 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     archiveTarget: archiveMutation.mutate,
     archiveTargetsBulk: archiveBulkMutation.mutate,
     unarchiveTarget: unarchiveMutation.mutate,
+    unlinkTarget: unlinkMutation.mutate,
 
     // Loading states
     isMoving: moveFunnelMutation.isPending || movePipelineMutation.isPending,
@@ -199,6 +211,7 @@ export function useTargetPipeline(mandatoId: string | undefined) {
     isSavingOferta: createOfertaMutation.isPending || updateOfertaEstadoMutation.isPending,
     isArchiving: archiveMutation.isPending || unarchiveMutation.isPending,
     isArchivingBulk: archiveBulkMutation.isPending,
+    isUnlinking: unlinkMutation.isPending,
 
     // Refetch
     refetch: () => {
@@ -206,16 +219,4 @@ export function useTargetPipeline(mandatoId: string | undefined) {
       statsQuery.refetch();
     },
   };
-}
-
-/**
- * Hook para obtener ofertas de un target específico
- */
-export function useTargetOfertas(mandatoEmpresaId: string | undefined) {
-  return useQuery({
-    queryKey: ['target-ofertas', mandatoEmpresaId],
-    queryFn: () => getOfertasByTarget(mandatoEmpresaId!),
-    enabled: !!mandatoEmpresaId,
-    staleTime: 2 * 60 * 1000,
-  });
 }
