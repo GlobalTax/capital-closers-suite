@@ -17,13 +17,14 @@ CREATE TABLE IF NOT EXISTS public.enrichment_queue (
   created_at timestamptz DEFAULT now()
 );
 
--- Ensure correct check constraint (allows 'empresa', 'contacto', 'mandato')
+-- Fix check constraint: original only allowed ('portfolio','fund','people','lead')
+-- but trigger auto_queue_enrichment inserts 'empresa'. Add it to the allowed values.
 ALTER TABLE public.enrichment_queue
   DROP CONSTRAINT IF EXISTS enrichment_queue_entity_type_check;
 
 ALTER TABLE public.enrichment_queue
   ADD CONSTRAINT enrichment_queue_entity_type_check
-  CHECK (entity_type IN ('empresa', 'contacto', 'mandato'));
+  CHECK (entity_type IN ('portfolio', 'fund', 'people', 'lead', 'empresa'));
 
 -- Enable RLS (standard for all tables)
 ALTER TABLE public.enrichment_queue ENABLE ROW LEVEL SECURITY;
