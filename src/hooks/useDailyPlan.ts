@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { addDays, format, isWeekend } from "date-fns";
 import { toast } from "sonner";
+import { handleError } from "@/lib/error-handler";
 import * as dailyPlansService from "@/services/dailyPlans.service";
 import type { DailyPlanWithItems, NewDailyPlanItem } from "@/types/dailyPlans";
 
@@ -14,21 +15,21 @@ export function useDailyPlan(date?: Date) {
   
   // Default to tomorrow if no date provided
   const targetDate = date || addDays(new Date(), 1);
-  
+  const dateKey = useMemo(() => format(targetDate, 'yyyy-MM-dd'), [targetDate.getTime()]);
+
   const loadPlan = useCallback(async () => {
     if (!user?.id || isWeekend(targetDate)) return;
-    
+
     try {
       setLoading(true);
       const planData = await dailyPlansService.getOrCreatePlan(user.id, targetDate);
       setPlan(planData);
     } catch (error) {
-      console.error('Error loading plan:', error);
-      toast.error('Error al cargar el plan');
+      handleError(error, 'Carga de plan diario');
     } finally {
       setLoading(false);
     }
-  }, [user?.id, format(targetDate, 'yyyy-MM-dd')]);
+  }, [user?.id, dateKey]);
   
   useEffect(() => {
     loadPlan();
@@ -46,8 +47,7 @@ export function useDailyPlan(date?: Date) {
       } : null);
       toast.success('Tarea añadida');
     } catch (error) {
-      console.error('Error adding item:', error);
-      toast.error('Error al añadir tarea');
+      handleError(error, 'Añadir tarea al plan');
     } finally {
       setSaving(false);
     }
@@ -67,8 +67,7 @@ export function useDailyPlan(date?: Date) {
         )
       } : null);
     } catch (error) {
-      console.error('Error updating item:', error);
-      toast.error('Error al actualizar tarea');
+      handleError(error, 'Actualización de tarea del plan');
     } finally {
       setSaving(false);
     }
@@ -84,8 +83,7 @@ export function useDailyPlan(date?: Date) {
       } : null);
       toast.success('Tarea eliminada');
     } catch (error) {
-      console.error('Error deleting item:', error);
-      toast.error('Error al eliminar tarea');
+      handleError(error, 'Eliminación de tarea del plan');
     } finally {
       setSaving(false);
     }
@@ -99,8 +97,7 @@ export function useDailyPlan(date?: Date) {
       const updated = await dailyPlansService.updatePlanNotes(plan.id, notes);
       setPlan(prev => prev ? { ...prev, ...updated } : null);
     } catch (error) {
-      console.error('Error updating notes:', error);
-      toast.error('Error al guardar notas');
+      handleError(error, 'Actualización de notas del plan');
     } finally {
       setSaving(false);
     }
@@ -136,8 +133,7 @@ export function useDailyPlan(date?: Date) {
         toast.success('Plan enviado ✓');
       }
     } catch (error) {
-      console.error('Error submitting plan:', error);
-      toast.error('Error al enviar plan');
+      handleError(error, 'Envío de plan diario');
     } finally {
       setSaving(false);
     }

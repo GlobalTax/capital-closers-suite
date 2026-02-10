@@ -51,7 +51,9 @@ export function useAlertsRealtime() {
               action: {
                 label: 'Ver',
                 onClick: () => {
-                  window.location.href = `/mandatos/${newAlert.mandato_id}`;
+                  // Use history.pushState + popstate to navigate without full reload
+                  window.history.pushState({}, '', `/mandatos/${newAlert.mandato_id}`);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
                 },
               },
             });
@@ -95,7 +97,6 @@ export function useAlertsRealtime() {
   // Función para solicitar permisos de notificación
   const requestNotificationPermission = useCallback(async () => {
     if (!('Notification' in window)) {
-      console.log('Este navegador no soporta notificaciones');
       return false;
     }
     
