@@ -1,56 +1,81 @@
 
-# Desvincular Targets de Mandatos (Buy-Side)
 
-## Estado actual
+# Buscador dedicado para /contactos
 
-- **Sell-Side**: Ya tiene la funcionalidad de "Desvincular" en `EmpresasAsociadasCard.tsx`, usando `removeEmpresaFromMandato()` que hace un `DELETE` de `mandato_empresas`.
-- **Buy-Side**: Solo permite "Archivar" y "Restaurar" targets. No existe opcion para desvincular (eliminar permanentemente la relacion).
+## Resumen
 
-## Viabilidad tecnica
+Anadir un campo de busqueda especifico en la pagina `/contactos` que filtre server-side con paginacion, combinable con los filtros existentes (Todos/Pendientes/Vencidas/Sin actividad). Reutiliza y mejora la funcion RPC existente `search_contactos_full`.
 
-La desvinculacion es segura. Todas las tablas hijas que referencian `mandato_empresas` tienen `ON DELETE CASCADE` o `ON DELETE SET NULL`:
+## Cambios
 
-| Tabla hija | Accion al borrar |
+### 1. Nueva RPC: `search_contactos_paginated` (migracion SQL)
+
+Crear una nueva funcion RPC que extienda la busqueda actual con:
+- Paginacion (parametros `p_page`, `p_page_size`)
+- Busqueda por CIF de la empresa asociada
+- Normalizacion de telefono (quitar espacios, guiones, +) para comparar
+- Devolver `total_count` para calcular paginas
+- Ordenacion por relevancia basica: email exacto primero, luego nombre empieza por, luego contiene
+
+```sql
+CREATE OR REPLACE FUNCTION search_contactos_paginated(
+  search_query text,
+  p_page int DEFAULT 1,
+  p_page_size int DEFAULT 25
+)
+RETURNS TABLE(
+  id uuid, nombre text, apellidos text, email text, telefono text,
+  cargo text, empresa_principal_id uuid, linkedin text, notas text,
+  avatar text, created_at timestamptz, updated_at timestamptz,
+  empresa_nombre text, empresa_cif text, total_count bigint
+)
+```
+
+La busqueda normaliza el input de telefono (quita +, espacios, guiones) y lo compara contra una version normalizada del campo telefono.
+
+### 2. Servicio: `searchContactosPaginated` en `src/services/contactos.ts`
+
+Nueva funcion que llama al RPC con query, page y pageSize, y devuelve un `PaginatedResult<Contacto>`.
+
+### 3. Hook: `useContactosSearchPaginated` en `src/hooks/queries/useContactos.ts`
+
+Nuevo hook con react-query que:
+- Acepta `query`, `page`, `pageSize`
+- Solo se activa si `query.length >= 2`
+- Usa `keepPreviousData` para transiciones suaves
+- Query key: `['contactos', 'search', query, page, pageSize]`
+
+### 4. UI: Campo de busqueda en `src/pages/Contactos.tsx`
+
+- Anadir un `Input` con icono Search y boton X para limpiar, justo encima de los filtros rapidos
+- Estado `searchQuery` con debounce de 300ms
+- Cuando hay query activa: usar el hook de busqueda en vez del paginado normal
+- Resetear a pagina 1 cuando cambia la query
+- Los filtros de accion (Pendientes/Vencidas/Sin actividad) siguen funcionando sobre los resultados
+- Placeholder: "Buscar por nombre, email, empresa, telefono o CIF..."
+- Mensaje "No se han encontrado contactos" cuando no hay resultados
+
+### Flujo de datos
+
+```text
+Input (debounce 300ms)
+  |
+  v
+searchQuery vacio?
+  |-- SI --> useContactosPaginated (comportamiento actual)
+  |-- NO --> useContactosSearchPaginated (RPC nueva)
+              |
+              v
+          Resultados paginados + filtros de accion locales
+```
+
+### Archivos a crear/modificar
+
+| Archivo | Cambio |
 |---|---|
-| `mandato_empresa_scoring` | CASCADE (se borra) |
-| `target_ofertas` | CASCADE (se borra) |
-| `teaser_recipients` | SET NULL |
+| Nueva migracion SQL | Funcion `search_contactos_paginated` |
+| `src/services/contactos.ts` | Funcion `searchContactosPaginated()` |
+| `src/hooks/queries/useContactos.ts` | Hook `useContactosSearchPaginated()` |
+| `src/pages/Contactos.tsx` | Input de busqueda + logica de conmutacion entre paginado normal y busqueda |
 
-La empresa en si (`empresas`) NO se elimina, solo la relacion `mandato_empresas`.
-
-## Cambios propuestos
-
-### 1. Nuevo servicio: `unlinkTarget` en `targetArchive.service.ts`
-
-Anadir una funcion `unlinkTarget(mandatoEmpresaId)` que reutilice la logica existente de `removeEmpresaFromMandato` pero con un nombre semantico para Buy-Side.
-
-### 2. Hook `useTargetPipeline.ts`
-
-Anadir una mutation `unlinkTarget` que:
-- Llame al servicio de desvinculacion
-- Invalide las queries del pipeline
-- Muestre un toast de confirmacion
-
-### 3. UI: `TargetDetailDrawer.tsx`
-
-Anadir un boton "Desvincular" (con icono Unlink) junto al boton de archivar, con un dialogo de confirmacion que advierta:
-- Se eliminaran el scoring, ofertas y datos asociados
-- La empresa seguira existiendo en el sistema
-
-### 4. UI: `TargetListView.tsx` (menu contextual)
-
-Anadir opcion "Desvincular" en el menu desplegable de cada target en la vista de lista.
-
-### 5. `TargetsTabBuySide.tsx`
-
-Conectar la nueva accion `unlinkTarget` del hook a los componentes.
-
-## Seccion tecnica
-
-### Flujo de desvinculacion
-
-1. Usuario hace clic en "Desvincular" en el drawer o lista
-2. Se muestra `ConfirmDialog` con advertencia
-3. Al confirmar: `DELETE FROM mandato_empresas WHERE id = ?`
-4. Cascade automatico borra scoring y ofertas
-5. Se invalidan queries y se cierra el drawer
+No se modifica ningun componente compartido ni el buscador global existente.
