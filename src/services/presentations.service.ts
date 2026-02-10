@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { 
+import { DatabaseError } from "@/lib/error-handler";
+import type {
   PresentationProject, 
   PresentationSlide, 
   PresentationTemplate,
@@ -18,7 +19,7 @@ export async function getProjects(): Promise<PresentationProject[]> {
     .select('*')
     .order('updated_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener proyectos', { supabaseError: error, table: 'presentation_projects' });
   return data as unknown as PresentationProject[];
 }
 
@@ -53,7 +54,7 @@ export async function createProject(project: Partial<PresentationProject>): Prom
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear proyecto', { supabaseError: error, table: 'presentation_projects' });
   return data as unknown as PresentationProject;
 }
 
@@ -72,7 +73,7 @@ export async function updateProject(id: string, updates: Partial<PresentationPro
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar proyecto', { supabaseError: error, table: 'presentation_projects', id });
   return data as unknown as PresentationProject;
 }
 
@@ -82,7 +83,7 @@ export async function deleteProject(id: string): Promise<void> {
     .delete()
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar proyecto', { supabaseError: error, table: 'presentation_projects', id });
 }
 
 // =============================================
@@ -96,7 +97,7 @@ export async function getSlidesByProjectId(projectId: string): Promise<Presentat
     .eq('project_id', projectId)
     .order('order_index', { ascending: true });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener slides', { supabaseError: error, table: 'presentation_slides' });
   return data as unknown as PresentationSlide[];
 }
 
@@ -116,7 +117,7 @@ export async function createSlide(slide: Partial<PresentationSlide>): Promise<Pr
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear slide', { supabaseError: error, table: 'presentation_slides' });
   return data as unknown as PresentationSlide;
 }
 
@@ -137,7 +138,7 @@ export async function updateSlide(id: string, updates: Partial<PresentationSlide
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar slide', { supabaseError: error, table: 'presentation_slides', id });
   return data as unknown as PresentationSlide;
 }
 
@@ -147,7 +148,7 @@ export async function deleteSlide(id: string): Promise<void> {
     .delete()
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar slide', { supabaseError: error, table: 'presentation_slides', id });
 }
 
 export async function reorderSlides(projectId: string, slideIds: string[]): Promise<void> {
@@ -168,7 +169,7 @@ export async function duplicateSlide(slideId: string): Promise<PresentationSlide
     .eq('id', slideId)
     .single();
 
-  if (fetchError) throw fetchError;
+  if (fetchError) throw new DatabaseError('Error al obtener slide para duplicar', { supabaseError: fetchError, table: 'presentation_slides', id: slideId });
 
   const typedOriginal = original as unknown as PresentationSlide;
   
@@ -189,7 +190,7 @@ export async function duplicateSlide(slideId: string): Promise<PresentationSlide
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al duplicar slide', { supabaseError: error, table: 'presentation_slides' });
   return data as unknown as PresentationSlide;
 }
 
@@ -204,7 +205,7 @@ export async function getTemplates(): Promise<PresentationTemplate[]> {
     .eq('is_active', true)
     .order('display_order', { ascending: true });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener plantillas', { supabaseError: error, table: 'presentation_templates' });
   return data as unknown as PresentationTemplate[];
 }
 
@@ -215,7 +216,7 @@ export async function getTemplateById(id: string): Promise<PresentationTemplate 
     .eq('id', id)
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener plantilla', { supabaseError: error, table: 'presentation_templates', id });
   return data as unknown as PresentationTemplate;
 }
 
@@ -249,7 +250,7 @@ export async function createShareLink(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear enlace compartido', { supabaseError: error, table: 'presentation_sharing_links' });
   return data as unknown as PresentationSharingLink;
 }
 
@@ -260,7 +261,7 @@ export async function getShareLinksByProject(projectId: string): Promise<Present
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener enlaces compartidos', { supabaseError: error, table: 'presentation_sharing_links' });
   return data as unknown as PresentationSharingLink[];
 }
 
@@ -322,7 +323,7 @@ export async function deactivateShareLink(id: string): Promise<void> {
     .update({ is_active: false })
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al desactivar enlace', { supabaseError: error, table: 'presentation_sharing_links', id });
 }
 
 // =============================================

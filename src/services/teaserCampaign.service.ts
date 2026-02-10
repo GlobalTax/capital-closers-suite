@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 // =============================================
 // TYPES
@@ -382,16 +383,20 @@ export async function scheduleCampaign(campaignId: string): Promise<void> {
   }
 
   // Update campaign and wave statuses
-  await supabase
+  const { error: campaignError } = await supabase
     .from("teaser_campaigns")
     .update({ status: "scheduled" })
     .eq("id", campaignId);
 
-  await supabase
+  if (campaignError) throw new DatabaseError('Error al programar campaña', { supabaseError: campaignError, table: 'teaser_campaigns', id: campaignId });
+
+  const { error: wavesError } = await supabase
     .from("teaser_waves")
     .update({ status: "scheduled" })
     .eq("campaign_id", campaignId)
     .eq("status", "pending");
+
+  if (wavesError) throw new DatabaseError('Error al programar oleadas', { supabaseError: wavesError, table: 'teaser_waves' });
 }
 
 export async function startWaveNow(waveId: string): Promise<void> {
@@ -415,37 +420,47 @@ export async function startWaveNow(waveId: string): Promise<void> {
 }
 
 export async function pauseCampaign(campaignId: string): Promise<void> {
-  await supabase
+  const { error: campaignError } = await supabase
     .from("teaser_campaigns")
     .update({ status: "paused" })
     .eq("id", campaignId);
 
-  await supabase
+  if (campaignError) throw new DatabaseError('Error al pausar campaña', { supabaseError: campaignError, table: 'teaser_campaigns', id: campaignId });
+
+  const { error: wavesError } = await supabase
     .from("teaser_waves")
     .update({ status: "paused" })
     .eq("campaign_id", campaignId)
     .in("status", ["pending", "scheduled"]);
+
+  if (wavesError) throw new DatabaseError('Error al pausar oleadas', { supabaseError: wavesError, table: 'teaser_waves' });
 }
 
 export async function resumeCampaign(campaignId: string): Promise<void> {
-  await supabase
+  const { error: campaignError } = await supabase
     .from("teaser_campaigns")
     .update({ status: "scheduled" })
     .eq("id", campaignId)
     .eq("status", "paused");
 
-  await supabase
+  if (campaignError) throw new DatabaseError('Error al reanudar campaña', { supabaseError: campaignError, table: 'teaser_campaigns', id: campaignId });
+
+  const { error: wavesError } = await supabase
     .from("teaser_waves")
     .update({ status: "scheduled" })
     .eq("campaign_id", campaignId)
     .eq("status", "paused");
+
+  if (wavesError) throw new DatabaseError('Error al reanudar oleadas', { supabaseError: wavesError, table: 'teaser_waves' });
 }
 
 export async function cancelCampaign(campaignId: string): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from("teaser_campaigns")
     .update({ status: "cancelled" })
     .eq("id", campaignId);
+
+  if (error) throw new DatabaseError('Error al cancelar campaña', { supabaseError: error, table: 'teaser_campaigns', id: campaignId });
 }
 
 // =============================================

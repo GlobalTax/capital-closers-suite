@@ -153,7 +153,7 @@ export const validateMandatoRow = (row: Record<string, string>): ValidationResul
   }
 
   return {
-    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    isValid: !errors.some(e => e.severity === 'error'),
     errors
   };
 };
@@ -220,7 +220,7 @@ export const validateContactoRowTolerant = (
   }
 
   return {
-    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    isValid: !errors.some(e => e.severity === 'error'),
     errors
   };
 };
@@ -271,7 +271,7 @@ export const validateContactoRow = (row: Record<string, string>): ValidationResu
   }
 
   return {
-    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    isValid: !errors.some(e => e.severity === 'error'),
     errors
   };
 };
@@ -333,7 +333,7 @@ export const validateEmpresaRow = (row: Record<string, string>): ValidationResul
   }
 
   return {
-    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    isValid: !errors.some(e => e.severity === 'error'),
     errors
   };
 };
@@ -383,7 +383,7 @@ export const validateCampaignContactRow = (
   }
 
   return {
-    isValid: errors.filter(e => e.severity === 'error').length === 0,
+    isValid: !errors.some(e => e.severity === 'error'),
     errors
   };
 };

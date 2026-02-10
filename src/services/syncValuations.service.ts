@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 export interface SyncStats {
   total_valuations: number;
@@ -45,10 +46,9 @@ export async function getSyncStats(): Promise<SyncStats> {
   const { data, error } = await supabase.rpc('get_valuation_sync_stats');
   
   if (error) {
-    console.error('Error fetching sync stats:', error);
-    throw error;
+    throw new DatabaseError('Error al obtener estadísticas de sincronización', { supabaseError: error, table: 'rpc:get_valuation_sync_stats' });
   }
-  
+
   return data as unknown as SyncStats;
 }
 
@@ -58,10 +58,9 @@ export async function runSync(dryRun: boolean = false): Promise<SyncResult> {
   });
   
   if (error) {
-    console.error('Error running sync:', error);
-    throw error;
+    throw new DatabaseError('Error al ejecutar sincronización', { supabaseError: error, table: 'rpc:sync_valuations_to_crm' });
   }
-  
+
   return data as unknown as SyncResult;
 }
 
@@ -69,9 +68,8 @@ export async function getSyncHistory(): Promise<SyncHistoryItem[]> {
   const { data, error } = await supabase.rpc('get_sync_history');
   
   if (error) {
-    console.error('Error fetching sync history:', error);
-    throw error;
+    throw new DatabaseError('Error al obtener historial de sincronización', { supabaseError: error, table: 'rpc:get_sync_history' });
   }
-  
+
   return (data || []) as SyncHistoryItem[];
 }
