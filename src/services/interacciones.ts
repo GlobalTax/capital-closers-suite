@@ -25,7 +25,8 @@ export const fetchInteraccionesByContacto = async (contactoId: string): Promise<
     .from('interacciones')
     .select('*')
     .eq('contacto_id', contactoId)
-    .order('fecha', { ascending: false });
+    .order('fecha', { ascending: false })
+    .limit(200);
 
   if (error) throw new DatabaseError('Error al obtener interacciones del contacto', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
@@ -36,7 +37,8 @@ export const fetchInteraccionesByEmpresa = async (empresaId: string): Promise<In
     .from('interacciones')
     .select('*')
     .eq('empresa_id', empresaId)
-    .order('fecha', { ascending: false });
+    .order('fecha', { ascending: false })
+    .limit(200);
 
   if (error) throw new DatabaseError('Error al obtener interacciones de la empresa', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
@@ -47,7 +49,8 @@ export const fetchInteraccionesByMandato = async (mandatoId: string): Promise<In
     .from('interacciones')
     .select('*')
     .eq('mandato_id', mandatoId)
-    .order('fecha', { ascending: false });
+    .order('fecha', { ascending: false })
+    .limit(200);
 
   if (error) throw new DatabaseError('Error al obtener interacciones del mandato', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
@@ -63,7 +66,8 @@ export const fetchInteraccionesByMandatoTarget = async (
     .select('*')
     .eq('mandato_id', mandatoId)
     .eq('empresa_id', empresaId)
-    .order('fecha', { ascending: false });
+    .order('fecha', { ascending: false })
+    .limit(200);
 
   if (error) throw new DatabaseError('Error al obtener interacciones del target', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
@@ -125,7 +129,8 @@ export const getProximasAcciones = async (): Promise<Interaccion[]> => {
     .select('*')
     .not('fecha_siguiente_accion', 'is', null)
     .gte('fecha_siguiente_accion', new Date().toISOString().split('T')[0])
-    .order('fecha_siguiente_accion', { ascending: true });
+    .order('fecha_siguiente_accion', { ascending: true })
+    .limit(200);
 
   if (error) throw new DatabaseError('Error al obtener próximas acciones', { supabaseError: error, table: 'interacciones' });
   return (data || []) as Interaccion[];
@@ -150,7 +155,8 @@ export const getContactosByEmpresa = async (empresaId: string): Promise<any[]> =
     .select('*')
     .eq('empresa_principal_id', empresaId)
     .is('merged_into_contacto_id', null)
-    .order('nombre', { ascending: true });
+    .order('nombre', { ascending: true })
+    .limit(500);
 
   if (error) throw new DatabaseError('Error al obtener contactos de la empresa', { supabaseError: error, table: 'contactos' });
   return data || [];

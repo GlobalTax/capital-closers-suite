@@ -15,8 +15,9 @@ export const fetchContactos = async (): Promise<Contacto[]> => {
         empresa_principal:empresas(id, nombre, cif)
       `)
       .is('merged_into_contacto_id', null)
-      .order('created_at', { ascending: false });
-    
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
     if (error) {
       throw new DatabaseError('Error al obtener contactos', {
         supabaseError: error,

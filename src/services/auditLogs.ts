@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 export interface AuditLog {
   id: string;
@@ -70,7 +71,7 @@ export async function fetchAuditLogs(
 
   const { data, error, count } = await query;
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener audit logs', { supabaseError: error, table: 'audit_logs' });
 
   return {
     logs: data as AuditLog[],
@@ -83,9 +84,10 @@ export async function getAuditStats(): Promise<AuditStats> {
   const { data, error } = await supabase
     .from('audit_logs')
     .select('table_name, action, created_at')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+    .limit(5000);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener estadísticas de audit', { supabaseError: error, table: 'audit_logs' });
 
   const stats: AuditStats = {
     totalOperations: data.length,
@@ -111,8 +113,9 @@ export async function getRecordHistory(tableName: string, recordId: string) {
     .select('*')
     .eq('table_name', tableName)
     .eq('record_id', recordId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener historial', { supabaseError: error, table: 'audit_logs' });
   return data as AuditLog[];
 }

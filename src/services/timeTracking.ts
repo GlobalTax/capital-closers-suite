@@ -81,12 +81,13 @@ export const fetchTimeEntries = async (
   // Fetch admin users separately
   const { data: adminUsers } = await supabase
     .from('admin_users')
-    .select('user_id, full_name, email');
-  
+    .select('user_id, full_name, email')
+    .limit(200);
+
   const usersMap = new Map(
     (adminUsers || []).map(u => [u.user_id, u])
   );
-  
+
   return (data || []).map(entry => ({
     ...entry,
     user: usersMap.get(entry.user_id) ? {
