@@ -1,81 +1,39 @@
 
+# Mejorar relevancia de cargo en search_contactos_paginated
 
-# Buscador dedicado para /contactos
+## Estado actual
 
-## Resumen
+La RPC `search_contactos_paginated` **ya busca por cargo** en el WHERE (`lower(c.cargo) LIKE '%' || normalized_query || '%'`). Buscar "director" ya devuelve 21 resultados correctamente.
 
-Anadir un campo de busqueda especifico en la pagina `/contactos` que filtre server-side con paginacion, combinable con los filtros existentes (Todos/Pendientes/Vencidas/Sin actividad). Reutiliza y mejora la funcion RPC existente `search_contactos_full`.
+Sin embargo, el cargo NO tiene su propia posicion en el ranking de relevancia, asi que los resultados con match en cargo se mezclan con el bucket generico (relevancia 8).
 
-## Cambios
+## Cambio propuesto
 
-### 1. Nueva RPC: `search_contactos_paginated` (migracion SQL)
+Unica modificacion: anadir cargo como nivel de relevancia 6 en el CASE, desplazando empresa a 7, CIF a 8 y "otros" a 9.
 
-Crear una nueva funcion RPC que extienda la busqueda actual con:
-- Paginacion (parametros `p_page`, `p_page_size`)
-- Busqueda por CIF de la empresa asociada
-- Normalizacion de telefono (quitar espacios, guiones, +) para comparar
-- Devolver `total_count` para calcular paginas
-- Ordenacion por relevancia basica: email exacto primero, luego nombre empieza por, luego contiene
+### Migracion SQL
+
+Actualizar la funcion `search_contactos_paginated` cambiando solo el bloque CASE:
 
 ```sql
-CREATE OR REPLACE FUNCTION search_contactos_paginated(
-  search_query text,
-  p_page int DEFAULT 1,
-  p_page_size int DEFAULT 25
-)
-RETURNS TABLE(
-  id uuid, nombre text, apellidos text, email text, telefono text,
-  cargo text, empresa_principal_id uuid, linkedin text, notas text,
-  avatar text, created_at timestamptz, updated_at timestamptz,
-  empresa_nombre text, empresa_cif text, total_count bigint
-)
+CASE
+  WHEN lower(c.email) = normalized_query THEN 1
+  WHEN lower(c.nombre) LIKE normalized_query || '%' THEN 2
+  WHEN lower(c.apellidos) LIKE normalized_query || '%' THEN 3
+  WHEN lower(c.nombre) LIKE '%' || normalized_query || '%'
+    OR lower(c.apellidos) LIKE '%' || normalized_query || '%' THEN 4
+  WHEN lower(c.email) LIKE '%' || normalized_query || '%' THEN 5
+  WHEN lower(c.cargo) LIKE '%' || normalized_query || '%' THEN 6   -- NUEVO
+  WHEN lower(e.nombre) LIKE '%' || normalized_query || '%' THEN 7  -- era 6
+  WHEN lower(e.cif) LIKE '%' || normalized_query || '%' THEN 8    -- era 7
+  ELSE 9                                                           -- era 8
+END AS relevance
 ```
 
-La busqueda normaliza el input de telefono (quita +, espacios, guiones) y lo compara contra una version normalizada del campo telefono.
-
-### 2. Servicio: `searchContactosPaginated` en `src/services/contactos.ts`
-
-Nueva funcion que llama al RPC con query, page y pageSize, y devuelve un `PaginatedResult<Contacto>`.
-
-### 3. Hook: `useContactosSearchPaginated` en `src/hooks/queries/useContactos.ts`
-
-Nuevo hook con react-query que:
-- Acepta `query`, `page`, `pageSize`
-- Solo se activa si `query.length >= 2`
-- Usa `keepPreviousData` para transiciones suaves
-- Query key: `['contactos', 'search', query, page, pageSize]`
-
-### 4. UI: Campo de busqueda en `src/pages/Contactos.tsx`
-
-- Anadir un `Input` con icono Search y boton X para limpiar, justo encima de los filtros rapidos
-- Estado `searchQuery` con debounce de 300ms
-- Cuando hay query activa: usar el hook de busqueda en vez del paginado normal
-- Resetear a pagina 1 cuando cambia la query
-- Los filtros de accion (Pendientes/Vencidas/Sin actividad) siguen funcionando sobre los resultados
-- Placeholder: "Buscar por nombre, email, empresa, telefono o CIF..."
-- Mensaje "No se han encontrado contactos" cuando no hay resultados
-
-### Flujo de datos
-
-```text
-Input (debounce 300ms)
-  |
-  v
-searchQuery vacio?
-  |-- SI --> useContactosPaginated (comportamiento actual)
-  |-- NO --> useContactosSearchPaginated (RPC nueva)
-              |
-              v
-          Resultados paginados + filtros de accion locales
-```
-
-### Archivos a crear/modificar
+### Archivos a modificar
 
 | Archivo | Cambio |
 |---|---|
-| Nueva migracion SQL | Funcion `search_contactos_paginated` |
-| `src/services/contactos.ts` | Funcion `searchContactosPaginated()` |
-| `src/hooks/queries/useContactos.ts` | Hook `useContactosSearchPaginated()` |
-| `src/pages/Contactos.tsx` | Input de busqueda + logica de conmutacion entre paginado normal y busqueda |
+| Nueva migracion SQL | Actualizar CASE de relevancia en `search_contactos_paginated` |
 
-No se modifica ningun componente compartido ni el buscador global existente.
+No hay cambios en frontend. El servicio y hooks siguen funcionando igual.
