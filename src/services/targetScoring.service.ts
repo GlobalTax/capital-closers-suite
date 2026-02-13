@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type { TargetScoring, TargetFunnelStage, TargetPipelineStage, TargetPipelineStats, CriteriosBusqueda } from "@/types";
 
 /**
@@ -11,7 +12,7 @@ export async function getTargetScoring(mandatoEmpresaId: string): Promise<Target
     .eq("mandato_empresa_id", mandatoEmpresaId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
   return data;
 }
 
@@ -40,7 +41,7 @@ export async function upsertTargetScoring(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
   return data;
 }
 
@@ -56,7 +57,7 @@ export async function moveTargetToFunnelStage(
     .update({ funnel_stage: stage })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -74,7 +75,7 @@ export async function moveTargetToPipelineStage(
     })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -89,7 +90,7 @@ export async function updateMatchScore(
     .update({ match_score: Math.min(100, Math.max(0, score)) })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -168,7 +169,7 @@ export async function getTargetPipelineStats(mandatoId: string): Promise<TargetP
     .eq("rol", "target")
     .or("is_archived.is.null,is_archived.eq.false");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
 
   const stats: TargetPipelineStats = {
     total: targets?.length || 0,
@@ -245,6 +246,6 @@ export async function getTargetsWithScoring(mandatoId: string) {
     .order("is_archived", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de scoring', { supabaseError: error, table: 'mandato_empresas' });
   return targets;
 }

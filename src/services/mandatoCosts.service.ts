@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type { BillingRate, MandatoCostSummary, CostByWorkType, CostByUser } from "@/types";
 
 export interface MandatoCostDetail extends MandatoCostSummary {
@@ -16,7 +17,6 @@ export async function fetchMandatoCosts(mandatoId: string): Promise<MandatoCostD
     .single();
 
   if (costError || !costData) {
-    console.error('Error fetching mandato costs:', costError);
     return null;
   }
 
@@ -29,13 +29,15 @@ export async function fetchMandatoCosts(mandatoId: string): Promise<MandatoCostD
       is_billable,
       user_id
     `)
-    .eq('mandato_id', mandatoId);
+    .eq('mandato_id', mandatoId)
+    .limit(2000);
 
   // Get billing rates for cost calculation
   const { data: rates } = await supabase
     .from('billing_rates')
     .select('*')
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .limit(100);
 
   const rateMap = new Map<string, number>();
   rates?.forEach(r => rateMap.set(r.role, r.hourly_rate));
@@ -43,7 +45,8 @@ export async function fetchMandatoCosts(mandatoId: string): Promise<MandatoCostD
   // Get user roles for rate lookup
   const { data: users } = await supabase
     .from('admin_users')
-    .select('user_id, full_name, role');
+    .select('user_id, full_name, role')
+    .limit(200);
 
   const userMap = new Map<string, { name: string; role: string; rate: number }>();
   users?.forEach(u => {
@@ -122,8 +125,7 @@ export async function fetchTopMandatosByCost(limit = 10): Promise<MandatoCostSum
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching top mandatos by cost:', error);
-    return [];
+    throw new DatabaseError('Error al obtener top mandatos por coste', { supabaseError: error, table: 'v_mandato_costs' });
   }
 
   return (data || []).map(row => ({
@@ -148,8 +150,7 @@ export async function fetchBillingRates(): Promise<BillingRate[]> {
     .order('hourly_rate', { ascending: false });
 
   if (error) {
-    console.error('Error fetching billing rates:', error);
-    return [];
+    throw new DatabaseError('Error al obtener tarifas', { supabaseError: error, table: 'billing_rates' });
   }
 
   return data || [];

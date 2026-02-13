@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type { TargetOferta, OfertaTipo, OfertaEstado } from "@/types";
 
 /**
@@ -33,7 +34,7 @@ export async function createOferta(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de ofertas', { supabaseError: error, table: 'target_ofertas' });
   return data as TargetOferta;
 }
 
@@ -51,7 +52,7 @@ export async function updateOferta(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de ofertas', { supabaseError: error, table: 'target_ofertas' });
   return data as TargetOferta;
 }
 
@@ -64,7 +65,7 @@ export async function deleteOferta(id: string): Promise<void> {
     .delete()
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de ofertas', { supabaseError: error, table: 'target_ofertas' });
 }
 
 /**
@@ -77,7 +78,7 @@ export async function getOfertasByTarget(mandatoEmpresaId: string): Promise<Targ
     .eq("mandato_empresa_id", mandatoEmpresaId)
     .order("fecha", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de ofertas', { supabaseError: error, table: 'target_ofertas' });
   return (data || []) as TargetOferta[];
 }
 
@@ -92,7 +93,7 @@ export async function getOfertasByMandato(mandatoId: string): Promise<TargetOfer
     .eq("mandato_id", mandatoId)
     .eq("rol", "target");
 
-  if (meError) throw meError;
+  if (meError) throw new DatabaseError('Error al obtener targets del mandato', { supabaseError: meError, table: 'mandato_empresas' });
   if (!mandatoEmpresas || mandatoEmpresas.length === 0) return [];
 
   const { data, error } = await supabase
@@ -101,7 +102,7 @@ export async function getOfertasByMandato(mandatoId: string): Promise<TargetOfer
     .in("mandato_empresa_id", mandatoEmpresas.map(me => me.id))
     .order("fecha", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de ofertas', { supabaseError: error, table: 'target_ofertas' });
   return (data || []) as TargetOferta[];
 }
 

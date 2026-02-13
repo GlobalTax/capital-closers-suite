@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import { format, addDays, isWeekend } from "date-fns";
 import type { 
   DailyPlan, 
@@ -24,8 +25,8 @@ export async function getOrCreatePlan(
     .eq('planned_for_date', dateStr)
     .maybeSingle();
   
-  if (fetchError) throw fetchError;
-  
+  if (fetchError) throw new DatabaseError('Error al obtener plan diario', { supabaseError: fetchError, table: 'daily_plans' });
+
   if (existingPlan) {
     // Get items for this plan
     const { data: items, error: itemsError } = await supabase
@@ -34,8 +35,8 @@ export async function getOrCreatePlan(
       .eq('plan_id', existingPlan.id)
       .order('order_index');
     
-    if (itemsError) throw itemsError;
-    
+    if (itemsError) throw new DatabaseError('Error al obtener items del plan', { supabaseError: itemsError, table: 'daily_plan_items' });
+
     return {
       ...existingPlan,
       items: items || []
@@ -53,8 +54,8 @@ export async function getOrCreatePlan(
     .select()
     .single();
   
-  if (createError) throw createError;
-  
+  if (createError) throw new DatabaseError('Error al crear plan diario', { supabaseError: createError, table: 'daily_plans' });
+
   return {
     ...newPlan,
     items: []
@@ -73,16 +74,16 @@ export async function getTomorrowPlan(userId: string): Promise<DailyPlanWithItem
     .eq('planned_for_date', dateStr)
     .maybeSingle();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener plan de mañana', { supabaseError: error, table: 'daily_plans' });
   if (!plan) return null;
-  
+
   const { data: items, error: itemsError } = await supabase
     .from('daily_plan_items')
     .select('*')
     .eq('plan_id', plan.id)
     .order('order_index');
-  
-  if (itemsError) throw itemsError;
+
+  if (itemsError) throw new DatabaseError('Error al obtener items del plan', { supabaseError: itemsError, table: 'daily_plan_items' });
   
   return {
     ...plan,
@@ -140,7 +141,7 @@ export async function addPlanItem(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   // Mark plan as modified if already submitted
   await markPlanAsModified(planId);
@@ -167,7 +168,7 @@ export async function updatePlanItem(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   // Mark plan as modified if already submitted
   if (item?.plan_id) {
@@ -191,7 +192,7 @@ export async function deletePlanItem(itemId: string): Promise<void> {
     .delete()
     .eq('id', itemId);
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   // Mark plan as modified if already submitted
   if (item?.plan_id) {
@@ -274,7 +275,7 @@ export async function submitPlan(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   // Create tasks if enabled
   let tasksCreated = 0;
@@ -302,7 +303,7 @@ export async function updatePlanNotes(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   return data as DailyPlan;
 }
 
@@ -316,7 +317,7 @@ export async function getPlansForDate(date: Date): Promise<DailyPlanWithUser[]> 
     .eq('planned_for_date', dateStr)
     .order('created_at');
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   if (!plans || plans.length === 0) return [];
   
   // Get user info
@@ -376,7 +377,7 @@ export async function updatePlanStatus(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   return data as DailyPlan;
 }
 
@@ -410,7 +411,7 @@ export async function addAdminTask(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   return data as DailyPlanItem;
 }
 
@@ -510,7 +511,7 @@ export async function canRegisterHoursForDate(
       .eq('planned_for_date', targetDate)
       .maybeSingle();
     
-    if (error) throw error;
+    if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
     
     if (!plan) {
       return {
@@ -565,7 +566,7 @@ export async function approveBulkPlans(
     .eq('status', 'submitted')
     .select();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   return {
     approved: data?.length || 0,
@@ -602,7 +603,7 @@ export async function createPlanForUser(
     .select()
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de plan diario', { supabaseError: error, table: 'daily_plans' });
   
   return data as DailyPlan;
 }
