@@ -81,7 +81,7 @@ export function useEnrichmentDashboard() {
         withWeb: withWeb || 0,
       };
     },
-    refetchInterval: 10000, // Refresh every 10s when processing
+    refetchInterval: 30000,
   });
 
   const recentQueueQuery = useQuery({
@@ -112,7 +112,7 @@ export function useEnrichmentDashboard() {
         empresa: empresaMap.get(item.entity_id) || null,
       }));
     },
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const unenrichedQuery = useQuery({

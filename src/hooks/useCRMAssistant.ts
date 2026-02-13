@@ -37,7 +37,7 @@ export function useCRMAssistant() {
       const allMessages = [...messages, userMsg].map(({ role, content }) => ({ role, content }));
 
       const resp = await fetch(
-        `https://fwhqtzkkvnjkazhaficj.supabase.co/functions/v1/crm-assistant`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-assistant`,
         {
           method: "POST",
           headers: {

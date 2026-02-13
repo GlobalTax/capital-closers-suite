@@ -51,6 +51,9 @@ export const useMarkAlertAsRead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
+    onError: () => {
+      toast.error('Error al marcar alerta como leída');
+    },
   });
 };
 
@@ -62,6 +65,9 @@ export const useDismissAlert = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       toast.success('Alerta descartada');
+    },
+    onError: () => {
+      toast.error('Error al descartar alerta');
     },
   });
 };
@@ -75,6 +81,9 @@ export const useMarkAllAlertsAsRead = () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       toast.success('Todas las alertas marcadas como leídas');
     },
+    onError: () => {
+      toast.error('Error al marcar alertas como leídas');
+    },
   });
 };
 
@@ -86,6 +95,9 @@ export const useDismissAllReadAlerts = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       toast.success('Alertas leídas descartadas');
+    },
+    onError: () => {
+      toast.error('Error al descartar alertas leídas');
     },
   });
 };

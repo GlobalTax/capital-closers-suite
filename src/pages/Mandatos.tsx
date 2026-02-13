@@ -397,9 +397,6 @@ export default function Mandatos() {
     setLoading(true);
     try {
       const data = await fetchMandatos();
-      console.log('[Mandatos] Datos cargados:', data.length, 'mandatos');
-      console.log('[Mandatos] Pipeline stages:', [...new Set(data.map(m => m.pipeline_stage))]);
-      console.log('[Mandatos] Tipos:', [...new Set(data.map(m => m.tipo))]);
       setMandatos(data);
     } catch (error) {
       console.error("[Mandatos] Error cargando mandatos:", error);
@@ -419,7 +416,6 @@ export default function Mandatos() {
     if (!mandatoToDelete) return;
     
     try {
-      console.log('[Mandatos] Eliminando mandato:', mandatoToDelete.id);
       await deleteMandato(mandatoToDelete.id);
       toast.success("Mandato eliminado correctamente");
       setDeleteDialogOpen(false);
@@ -1381,7 +1377,6 @@ export default function Mandatos() {
                 <div className="grid grid-flow-col md:grid-flow-row md:grid-cols-5 gap-3 md:gap-4 min-w-max md:min-w-0">
                   {fases.map((fase) => {
                     const mandatosColumna = getMandatosPorStage(fase.fase_id);
-                    console.log(`[Kanban] Fase ${fase.fase_id} (${fase.label}): ${mandatosColumna.length} mandatos`);
                     return (
                       <div key={fase.id} className="w-64 md:w-auto shrink-0 md:shrink">
                         <KanbanColumn

@@ -72,7 +72,7 @@ async function enrichQueueItems(items: QueueItem[]): Promise<QueueItemWithEntity
   const companyIds = items.filter(i => i.entity_type === 'company').map(i => i.entity_id);
   const dealIds = items.filter(i => i.entity_type === 'deal').map(i => i.entity_id);
 
-  const [contactsRes, companiesRes, dealsRes] = await Promise.all([
+  const [contactsResult, companiesResult, dealsResult] = await Promise.allSettled([
     contactIds.length > 0
       ? supabase.from('contactos').select('id, nombre').in('id', contactIds)
       : Promise.resolve({ data: [] }),
@@ -84,9 +84,13 @@ async function enrichQueueItems(items: QueueItem[]): Promise<QueueItemWithEntity
       : Promise.resolve({ data: [] }),
   ]);
 
-  const contactMap = new Map((contactsRes.data || []).map(c => [c.id, c.nombre]));
-  const companyMap = new Map((companiesRes.data || []).map(c => [c.id, c.nombre]));
-  const dealMap = new Map((dealsRes.data || []).map(d => [d.id, d.codigo]));
+  const contactsData = contactsResult.status === 'fulfilled' ? contactsResult.value.data || [] : [];
+  const companiesData = companiesResult.status === 'fulfilled' ? companiesResult.value.data || [] : [];
+  const dealsData = dealsResult.status === 'fulfilled' ? dealsResult.value.data || [] : [];
+
+  const contactMap = new Map(contactsData.map((c: any) => [c.id, c.nombre]));
+  const companyMap = new Map(companiesData.map((c: any) => [c.id, c.nombre]));
+  const dealMap = new Map(dealsData.map((d: any) => [d.id, d.codigo]));
 
   return items.map(item => ({
     ...item,

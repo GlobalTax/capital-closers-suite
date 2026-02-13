@@ -93,7 +93,8 @@ export function TimeEntryInlineForm({ onSuccess }: TimeEntryInlineFormProps) {
 
   // Auto-focus on hours input on mount
   useEffect(() => {
-    setTimeout(() => hoursInputRef.current?.focus(), 100);
+    const timer = setTimeout(() => hoursInputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Smart defaults based on mandato selection

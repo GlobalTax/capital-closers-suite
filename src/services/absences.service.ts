@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import { format } from "date-fns";
 
 export type AbsenceType = 'vacation' | 'sick_leave' | 'personal' | 'other';
@@ -28,7 +29,7 @@ export async function getAbsencesForRange(
     .lte('absence_date', format(endDate, 'yyyy-MM-dd'))
     .order('absence_date');
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener ausencias', { supabaseError: error, table: 'user_absences' });
   return data as UserAbsence[];
 }
 
@@ -46,7 +47,7 @@ export async function getAbsenceForDate(
     .eq('absence_date', dateStr)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener ausencia', { supabaseError: error, table: 'user_absences' });
   return data as UserAbsence | null;
 }
 
@@ -83,7 +84,7 @@ export async function addAbsence(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear ausencia', { supabaseError: error, table: 'user_absences' });
   return data as UserAbsence;
 }
 
@@ -100,7 +101,7 @@ export async function removeAbsence(
     .eq('user_id', userId)
     .eq('absence_date', dateStr);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar ausencia', { supabaseError: error, table: 'user_absences' });
 }
 
 // Get absence labels for display

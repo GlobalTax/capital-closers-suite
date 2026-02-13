@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://fwhqtzkkvnjkazhaficj.supabase.co';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const corsHeaders = {
@@ -33,9 +33,15 @@ interface BrevoDeal {
 }
 
 // Mapear estado del mandato a etapa de deal en Brevo
-// Todos los deals nuevos se crean en "Fase 1" independientemente del estado interno
 function mapEstadoToBrevoStage(estado: string): string {
-  return 'Fase 1';
+  const stageMap: Record<string, string> = {
+    prospecto: 'Fase 1',
+    activo: 'Fase 2',
+    en_negociacion: 'Fase 3',
+    cerrado: 'Won',
+    cancelado: 'Lost',
+  };
+  return stageMap[estado] || 'Fase 1';
 }
 
 // Validar email

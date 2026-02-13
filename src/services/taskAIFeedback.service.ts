@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 export interface TaskAIEventFilters {
   dateFrom?: string;
@@ -56,7 +57,8 @@ export async function fetchTaskAIEvents(filters: TaskAIEventFilters): Promise<Ta
     .from('task_events')
     .select('*')
     .eq('event_type', 'AI_CREATED')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(500);
 
   // Apply date filters
   if (filters.dateFrom) {
@@ -67,8 +69,8 @@ export async function fetchTaskAIEvents(filters: TaskAIEventFilters): Promise<Ta
   }
 
   const { data: events, error } = await query;
-  
-  if (error) throw error;
+
+  if (error) throw new DatabaseError('Error al obtener eventos AI', { supabaseError: error, table: 'task_events' });
   if (!events || events.length === 0) return [];
 
   // Get task IDs from events
@@ -146,9 +148,10 @@ export async function fetchTaskAIStats(): Promise<TaskAIStats> {
   const { data: events, error } = await supabase
     .from('task_events')
     .select('id, payload')
-    .eq('event_type', 'AI_CREATED');
+    .eq('event_type', 'AI_CREATED')
+    .limit(2000);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener estadísticas AI', { supabaseError: error, table: 'task_events' });
 
   const eventIds = events?.map(e => e.id) || [];
   
@@ -218,7 +221,7 @@ export async function saveTaskAIFeedback(params: {
       })
       .eq('id', existing.id);
 
-    if (error) throw error;
+    if (error) throw new DatabaseError('Error al actualizar feedback', { supabaseError: error, table: 'task_ai_feedback' });
   } else {
     // Insert new feedback
     const { error } = await supabase
@@ -231,6 +234,6 @@ export async function saveTaskAIFeedback(params: {
         user_id: user.id,
       });
 
-    if (error) throw error;
+    if (error) throw new DatabaseError('Error al guardar feedback', { supabaseError: error, table: 'task_ai_feedback' });
   }
 }

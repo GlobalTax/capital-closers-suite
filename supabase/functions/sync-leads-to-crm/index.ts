@@ -299,18 +299,22 @@ async function syncLead(
 
     // Then try by normalized name (case-insensitive, whitespace-normalized)
     if (!empresaId) {
-      // Usar ILIKE con el nombre normalizado para búsqueda flexible
+      // Build search term from normalized name words for server-side filtering
+      const searchWords = normalizedName.split(' ').filter(Boolean);
+      const searchPattern = `%${searchWords.join('%')}%`;
+
       const { data: existingByName } = await supabase
         .from('empresas')
         .select('id, nombre')
-        .limit(50); // Obtener candidatos para comparar manualmente
-      
+        .ilike('nombre', searchPattern)
+        .limit(20);
+
       if (existingByName?.length) {
-        // Buscar coincidencia con nombre normalizado
-        const match = existingByName.find((emp: { id: string; nombre: string }) => 
+        // Refine with exact normalized match from server-filtered candidates
+        const match = existingByName.find((emp: { id: string; nombre: string }) =>
           normalizeCompanyName(emp.nombre) === normalizedName
         );
-        
+
         if (match) {
           empresaId = match.id;
           console.log(`[sync-leads-to-crm] Found empresa by normalized name: ${empresaId} (${match.nombre})`);

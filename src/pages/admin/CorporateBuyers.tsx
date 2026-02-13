@@ -39,7 +39,6 @@ export default function CorporateBuyers() {
   const { data: sourceTags } = useBuyerSourceTags();
 
   const handleNewClick = () => {
-    console.log('[corporate-buyers] click new');
     setEditingBuyer(null);
     setDrawerOpen(true);
   };

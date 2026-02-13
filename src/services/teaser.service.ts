@@ -41,8 +41,6 @@ export interface UpsertTeaserParams {
  * Upsert teaser: si ya existe uno para ese idioma, lo reemplaza
  */
 export async function upsertTeaser(params: UpsertTeaserParams): Promise<DocumentWithVersion> {
-  console.log('[Teaser Upsert] Iniciando upsert:', params.idioma, params.fileName);
-  
   // 1. Buscar teaser existente para este idioma
   const { data: existing, error: findError } = await supabase
     .from('documentos')
@@ -53,14 +51,12 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
     .maybeSingle();
 
   if (findError) {
-    console.error('[Teaser Upsert] Error buscando existente:', findError);
     throw new Error(translateDbError(findError));
   }
 
   let version = 1;
 
   if (existing) {
-    console.log('[Teaser Upsert] Teaser existente encontrado:', existing.id);
     version = 2; // Será la versión 2+
 
     // 2. Marcar anterior como no-latest
@@ -70,7 +66,6 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
       .eq('id', existing.id);
 
     if (updateError) {
-      console.error('[Teaser Upsert] Error marcando anterior:', updateError);
       throw new Error(translateDbError(updateError));
     }
 
@@ -79,9 +74,8 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
       await supabase.storage
         .from('mandato-documentos')
         .remove([existing.storage_path]);
-      console.log('[Teaser Upsert] Archivo anterior eliminado del storage');
-    } catch (storageErr) {
-      console.warn('[Teaser Upsert] No se pudo eliminar archivo anterior:', storageErr);
+    } catch {
+      // Best effort — old file cleanup is non-critical
     }
   }
 
@@ -108,11 +102,9 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
     .single();
 
   if (insertError) {
-    console.error('[Teaser Upsert] Error insertando:', insertError);
     throw new Error(translateDbError(insertError));
   }
 
-  console.log('[Teaser Upsert] Nuevo teaser creado:', newDoc.id);
   return newDoc as DocumentWithVersion;
 }
 
@@ -121,8 +113,6 @@ export async function upsertTeaser(params: UpsertTeaserParams): Promise<Document
  * Con manejo robusto de errores y fallback a tipo 'custom' si 'teaser' falla
  */
 export async function getOrCreateTeaserFolder(mandatoId: string): Promise<DocumentFolder> {
-  console.log('[Teaser] Buscando/creando carpeta teaser para mandato:', mandatoId);
-  
   // 1. Buscar carpeta existente por tipo 'teaser' O por nombre 'Teaser' (fallback)
   const { data: existing, error: findError } = await supabase
     .from('document_folders')
@@ -133,7 +123,6 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
     .maybeSingle();
 
   if (findError) {
-    console.error('[Teaser] Error buscando carpeta:', findError);
     if (findError.code === '42501' || findError.message?.includes('policy')) {
       throw new Error('No tienes permisos para acceder a las carpetas. Contacta al administrador.');
     }
@@ -141,13 +130,10 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
   }
 
   if (existing) {
-    console.log('[Teaser] Carpeta existente encontrada:', existing.id, 'tipo:', existing.folder_type);
     return existing as DocumentFolder;
   }
 
   // 2. Crear carpeta - intentar primero con tipo 'teaser'
-  console.log('[Teaser] Creando nueva carpeta con folder_type:', TEASER_FOLDER_TYPE);
-  
   const insertPayload = {
     mandato_id: mandatoId,
     name: TEASER_FOLDER_NAME,
@@ -156,8 +142,6 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
     is_data_room: false,
   };
   
-  console.log('[Teaser] Payload de inserción:', JSON.stringify(insertPayload));
-  
   const { data: newFolder, error: createError } = await supabase
     .from('document_folders')
     .insert(insertPayload)
@@ -165,17 +149,8 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
     .single();
 
   if (createError) {
-    console.error('[Teaser] Error creando carpeta:', {
-      code: createError.code,
-      message: createError.message,
-      details: createError.details,
-      hint: createError.hint,
-    });
-    
     // Si es error de check constraint, intentar con tipo 'custom' como fallback
     if (createError.code === '23514' || createError.message?.includes('check constraint')) {
-      console.warn('[Teaser] folder_type "teaser" no aceptado, intentando con "custom"...');
-      
       const fallbackPayload = {
         ...insertPayload,
         folder_type: 'custom',
@@ -188,11 +163,9 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
         .single();
         
       if (fallbackError) {
-        console.error('[Teaser] Error en fallback:', fallbackError);
         throw new Error(`Error creando carpeta Teaser: ${translateDbError(fallbackError)}`);
       }
       
-      console.log('[Teaser] Carpeta creada con fallback (custom):', fallbackFolder.id);
       return fallbackFolder as DocumentFolder;
     }
     
@@ -204,7 +177,6 @@ export async function getOrCreateTeaserFolder(mandatoId: string): Promise<Docume
     throw new Error(`Error creando carpeta Teaser: ${translateDbError(createError)}`);
   }
 
-  console.log('[Teaser] Carpeta creada exitosamente:', newFolder.id, 'tipo:', newFolder.folder_type);
   return newFolder as DocumentFolder;
 }
 
@@ -349,13 +321,11 @@ export async function getSignedUrlForTeaser(storagePath: string, expiresIn: numb
     });
 
     if (error || !data?.signedUrl) {
-      console.error('[Teaser] Error getting signed URL via edge:', error);
       return null;
     }
 
     return data.signedUrl;
-  } catch (error) {
-    console.error('[Teaser] Error getting teaser URL:', error);
+  } catch {
     return null;
   }
 }

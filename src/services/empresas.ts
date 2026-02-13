@@ -55,7 +55,8 @@ class EmpresaService extends BaseService<Empresa> {
     let query = supabase
       .from(this.tableName as any)
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(1000);
 
     if (esTarget !== undefined) {
       query = query.eq('es_target', esTarget);
@@ -297,7 +298,6 @@ export async function findSimilarEmpresas(
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error finding similar empresas:', error);
     return [];
   }
 

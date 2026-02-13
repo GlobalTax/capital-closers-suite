@@ -81,8 +81,8 @@ export function useUpdateMandato() {
       }
       handleError(error, 'Actualización de mandato');
     },
-    onSettled: (_, __, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['mandatos', id] });
+    onSettled: () => {
+      // invalidation already handled in onSuccess/onError
     },
   });
 }

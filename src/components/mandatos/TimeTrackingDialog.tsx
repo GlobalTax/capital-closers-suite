@@ -102,7 +102,8 @@ export function TimeTrackingDialog({
   // Auto-focus on hours input when dialog opens
   useEffect(() => {
     if (open && hoursInputRef.current) {
-      setTimeout(() => hoursInputRef.current?.focus(), 100);
+      const timer = setTimeout(() => hoursInputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 

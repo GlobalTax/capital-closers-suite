@@ -3,15 +3,16 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { 
-  OutboundCampaign, 
-  OutboundProspect, 
+import { DatabaseError } from '@/lib/error-handler';
+import type {
+  OutboundCampaign,
+  OutboundProspect,
   OutboundFilters,
   ApolloSectorMapping,
-  OutboundStats 
+  OutboundStats
 } from '@/types/outbound';
 
-const SUPABASE_URL = 'https://fwhqtzkkvnjkazhaficj.supabase.co';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ============================================
 // CAMPAÑAS
@@ -21,11 +22,11 @@ export async function getCampaigns(): Promise<OutboundCampaign[]> {
   const { data, error } = await supabase
     .from('outbound_campaigns')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (error) {
-    console.error('[Outbound] Error fetching campaigns:', error);
-    throw new Error('Error al cargar campañas');
+    throw new DatabaseError('Error al cargar campañas', { supabaseError: error, table: 'outbound_campaigns' });
   }
 
   return (data || []) as unknown as OutboundCampaign[];
@@ -40,8 +41,7 @@ export async function getCampaignById(id: string): Promise<OutboundCampaign | nu
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    console.error('[Outbound] Error fetching campaign:', error);
-    throw new Error('Error al cargar campaña');
+    throw new DatabaseError('Error al cargar campaña', { supabaseError: error, table: 'outbound_campaigns' });
   }
 
   return data as unknown as OutboundCampaign;
@@ -75,8 +75,7 @@ export async function createCampaign(data: {
     .single();
 
   if (error) {
-    console.error('[Outbound] Error creating campaign:', error);
-    throw new Error('Error al crear campaña');
+    throw new DatabaseError('Error al crear campaña', { supabaseError: error, table: 'outbound_campaigns' });
   }
 
   return campaign as unknown as OutboundCampaign;
@@ -100,8 +99,7 @@ export async function updateCampaign(
     .single();
 
   if (error) {
-    console.error('[Outbound] Error updating campaign:', error);
-    throw new Error('Error al actualizar campaña');
+    throw new DatabaseError('Error al actualizar campaña', { supabaseError: error, table: 'outbound_campaigns' });
   }
 
   return campaign as unknown as OutboundCampaign;
@@ -114,8 +112,7 @@ export async function deleteCampaign(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) {
-    console.error('[Outbound] Error deleting campaign:', error);
-    throw new Error('Error al eliminar campaña');
+    throw new DatabaseError('Error al eliminar campaña', { supabaseError: error, table: 'outbound_campaigns' });
   }
 }
 
@@ -126,8 +123,7 @@ export async function archiveCampaign(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) {
-    console.error('[Outbound] Error archiving campaign:', error);
-    throw new Error('Error al archivar campaña');
+    throw new DatabaseError('Error al archivar campaña', { supabaseError: error, table: 'outbound_campaigns' });
   }
 }
 
@@ -140,11 +136,11 @@ export async function getProspects(campaignId: string): Promise<OutboundProspect
     .from('outbound_prospects')
     .select('*')
     .eq('campaign_id', campaignId)
-    .order('score', { ascending: false, nullsFirst: false });
+    .order('score', { ascending: false, nullsFirst: false })
+    .limit(500);
 
   if (error) {
-    console.error('[Outbound] Error fetching prospects:', error);
-    throw new Error('Error al cargar prospectos');
+    throw new DatabaseError('Error al cargar prospectos', { supabaseError: error, table: 'outbound_prospects' });
   }
 
   return (data || []) as unknown as OutboundProspect[];
@@ -192,8 +188,7 @@ export async function getProspectsPaginated(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('[Outbound] Error fetching paginated prospects:', error);
-    throw new Error('Error al cargar prospectos');
+    throw new DatabaseError('Error al cargar prospectos', { supabaseError: error, table: 'outbound_prospects' });
   }
 
   return {
@@ -216,8 +211,7 @@ export async function updateProspect(
     .single();
 
   if (error) {
-    console.error('[Outbound] Error updating prospect:', error);
-    throw new Error('Error al actualizar prospecto');
+    throw new DatabaseError('Error al actualizar prospecto', { supabaseError: error, table: 'outbound_prospects' });
   }
 
   return prospect as unknown as OutboundProspect;
@@ -233,8 +227,7 @@ export async function updateProspectsSelection(
     .in('id', ids);
 
   if (error) {
-    console.error('[Outbound] Error updating selection:', error);
-    throw new Error('Error al actualizar selección');
+    throw new DatabaseError('Error al actualizar selección', { supabaseError: error, table: 'outbound_prospects' });
   }
 }
 
@@ -245,8 +238,7 @@ export async function deleteProspects(ids: string[]): Promise<void> {
     .in('id', ids);
 
   if (error) {
-    console.error('[Outbound] Error deleting prospects:', error);
-    throw new Error('Error al eliminar prospectos');
+    throw new DatabaseError('Error al eliminar prospectos', { supabaseError: error, table: 'outbound_prospects' });
   }
 }
 
@@ -364,8 +356,7 @@ export async function importAllProspects(campaignId: string): Promise<{
     .eq('import_status', 'not_imported');
 
   if (error) {
-    console.error('[Outbound] Error fetching prospects for import all:', error);
-    throw new Error('Error al obtener prospectos');
+    throw new DatabaseError('Error al obtener prospectos', { supabaseError: error, table: 'outbound_prospects' });
   }
 
   if (!prospects || prospects.length === 0) {
@@ -385,11 +376,11 @@ export async function getSectorMappings(): Promise<ApolloSectorMapping[]> {
     .from('apollo_sector_mapping')
     .select('*')
     .eq('is_active', true)
-    .order('sector_name');
+    .order('sector_name')
+    .limit(200);
 
   if (error) {
-    console.error('[Outbound] Error fetching sector mappings:', error);
-    throw new Error('Error al cargar mapeo de sectores');
+    throw new DatabaseError('Error al cargar mapeo de sectores', { supabaseError: error, table: 'apollo_sector_mapping' });
   }
 
   return (data || []) as unknown as ApolloSectorMapping[];
@@ -404,8 +395,7 @@ export async function getSectorMapping(sectorId: string): Promise<ApolloSectorMa
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    console.error('[Outbound] Error fetching sector mapping:', error);
-    return null;
+    throw new DatabaseError('Error al cargar mapeo de sector', { supabaseError: error, table: 'apollo_sector_mapping' });
   }
 
   return data as unknown as ApolloSectorMapping;
@@ -418,10 +408,10 @@ export async function getSectorMapping(sectorId: string): Promise<ApolloSectorMa
 export async function getOutboundStats(): Promise<OutboundStats> {
   const { data: campaigns, error: campaignsError } = await supabase
     .from('outbound_campaigns')
-    .select('status, total_found, total_enriched, total_imported, credits_used');
+    .select('status, total_found, total_enriched, total_imported, credits_used')
+    .limit(500);
 
   if (campaignsError) {
-    console.error('[Outbound] Error fetching stats:', campaignsError);
     return {
       totalCampaigns: 0,
       activeCampaigns: 0,

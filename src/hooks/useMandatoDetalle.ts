@@ -85,20 +85,12 @@ export function useMandatoDetalle(mandatoId: string | undefined) {
     if (!mandatoId) return;
     
     try {
-      console.log('[useMandatoDetalle] Eliminando mandato:', mandatoId);
-      
       const { error } = await supabase
         .from("mandatos")
         .delete()
         .eq("id", mandatoId);
 
       if (error) {
-        console.error('[useMandatoDetalle] Error Supabase:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-        });
-        
         // Detectar error específico de permisos
         if (error.code === '42501') {
           throw new Error('No tienes permisos para eliminar este mandato');
@@ -115,7 +107,6 @@ export function useMandatoDetalle(mandatoId: string | undefined) {
       const tipo = mandato?.tipo || 'venta';
       navigate(`/mandatos?tipo=${tipo}`);
     } catch (error: any) {
-      console.error('[useMandatoDetalle] Error eliminando:', error);
       handleError(error, "Eliminación de mandato");
       throw error; // Re-throw para que el dialog lo capture
     }

@@ -83,15 +83,18 @@ export async function validateBeforeCreate(
     }
   }
 
-  // 2. Check by normalized name
+  // 2. Check by normalized name — server-side filtering
   const normalizedName = normalizeCompanyName(data.nombre);
-  const { data: allEmpresas } = await supabase
+  // Use ilike with the base name (without legal suffixes) for efficient server-side search
+  const searchTerm = normalizedName.split(' ').filter(Boolean).join('%');
+  const { data: candidateEmpresas } = await supabase
     .from('empresas')
     .select('id, nombre, cif, sector')
-    .limit(5000);
+    .ilike('nombre', `%${searchTerm}%`)
+    .limit(50);
 
-  if (allEmpresas) {
-    const matchByName = allEmpresas.find(e => 
+  if (candidateEmpresas) {
+    const matchByName = candidateEmpresas.find(e =>
       normalizeCompanyName(e.nombre) === normalizedName
     );
 

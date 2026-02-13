@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 // ============================================
 // Types
@@ -55,7 +56,7 @@ export async function fetchMeetingsByCompany(companyId: string): Promise<Company
     .eq("company_id", companyId)
     .order("meeting_date", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener reuniones', { supabaseError: error, table: 'company_meetings' });
   return (data || []) as unknown as CompanyMeeting[];
 }
 
@@ -66,7 +67,7 @@ export async function getMeetingById(id: string): Promise<CompanyMeeting | null>
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener reunión', { supabaseError: error, table: 'company_meetings', id });
   return data as unknown as CompanyMeeting | null;
 }
 
@@ -82,7 +83,7 @@ export async function createMeeting(meetingData: CreateMeetingData): Promise<Com
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear reunión', { supabaseError: error, table: 'company_meetings' });
   return data as unknown as CompanyMeeting;
 }
 
@@ -94,7 +95,7 @@ export async function updateMeeting(id: string, updateData: UpdateMeetingData): 
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar reunión', { supabaseError: error, table: 'company_meetings', id });
   return data as unknown as CompanyMeeting;
 }
 
@@ -117,7 +118,7 @@ export async function deleteMeeting(id: string): Promise<void> {
     .delete()
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar reunión', { supabaseError: error, table: 'company_meetings', id });
 }
 
 // ============================================
@@ -131,7 +132,7 @@ export async function fetchMeetingDocuments(meetingId: string): Promise<MeetingD
     .eq("meeting_id", meetingId)
     .order("uploaded_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener documentos de reunión', { supabaseError: error, table: 'company_meeting_documents' });
   return data || [];
 }
 
@@ -152,7 +153,7 @@ export async function uploadMeetingDocument(
     .from("mandato-documentos")
     .upload(storagePath, file);
 
-  if (uploadError) throw uploadError;
+  if (uploadError) throw new DatabaseError('Error al subir documento', { supabaseError: uploadError, table: 'storage' });
 
   // Create document record
   const { data, error } = await supabase
@@ -171,7 +172,7 @@ export async function uploadMeetingDocument(
   if (error) {
     // Rollback: delete uploaded file
     await supabase.storage.from("mandato-documentos").remove([storagePath]);
-    throw error;
+    throw new DatabaseError('Error al registrar documento', { supabaseError: error, table: 'company_meeting_documents' });
   }
 
   return data;
@@ -183,10 +184,7 @@ export async function deleteMeetingDocument(docId: string, storagePath: string):
     .from("mandato-documentos")
     .remove([storagePath]);
 
-  if (storageError) {
-    console.warn("Error deleting file from storage:", storageError);
-    // Continue to delete the record even if storage delete fails
-  }
+  // Continue to delete the record even if storage delete fails
 
   // Delete the document record
   const { error } = await supabase
@@ -194,7 +192,7 @@ export async function deleteMeetingDocument(docId: string, storagePath: string):
     .delete()
     .eq("id", docId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar documento de reunión', { supabaseError: error, table: 'company_meeting_documents' });
 }
 
 export async function downloadMeetingDocument(storagePath: string): Promise<Blob> {
@@ -202,6 +200,6 @@ export async function downloadMeetingDocument(storagePath: string): Promise<Blob
     .from("mandato-documentos")
     .download(storagePath);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al descargar documento', { supabaseError: error, table: 'storage' });
   return data;
 }

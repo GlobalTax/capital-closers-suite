@@ -12,7 +12,8 @@ export async function fetchSearchFunds(filters?: {
   let query = supabase
     .from('sf_funds')
     .select('*')
-    .order('name');
+    .order('name')
+    .limit(500);
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -24,10 +25,7 @@ export async function fetchSearchFunds(filters?: {
 
   const { data, error } = await query;
 
-  if (error) {
-    console.error('[SearchFunds] Error fetching:', error);
-    throw error;
-  }
+  if (error) throw error;
 
   let results = (data || []) as unknown as SearchFund[];
   

@@ -17,10 +17,9 @@ export function useEmpresasRealtime() {
           table: 'empresas'
         },
         (payload) => {
-          console.log('Nueva empresa creada:', payload.new);
           queryClient.invalidateQueries({ queryKey: ['empresas'] });
           toast.info('Nueva empresa sincronizada', {
-            description: payload.new.nombre,
+            description: (payload.new as { nombre?: string }).nombre,
           });
         }
       )

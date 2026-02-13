@@ -79,8 +79,9 @@ export default function MisHoras() {
       const { data: mandatosData } = await supabase
         .from('mandatos')
         .select('id, descripcion, tipo')
-        .order('created_at', { ascending: false });
-      
+        .order('created_at', { ascending: false })
+        .limit(200);
+
       if (mandatosData) {
         setMandatos(mandatosData.map((m) => ({
           id: m.id,
@@ -90,12 +91,12 @@ export default function MisHoras() {
 
       const { data: tasks } = await supabase
         .from('mandato_checklist_tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .select('id, tarea, fase, mandato_id')
+        .order('created_at', { ascending: false })
+        .limit(500);
+
       setAvailableTasks((tasks || []) as MandatoChecklistTask[]);
     } catch (error: any) {
-      console.error("Error loading my time data:", error);
       toast.error("Error al cargar tus horas");
     } finally {
       setLoading(false);

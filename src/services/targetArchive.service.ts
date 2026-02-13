@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 /**
  * Archivar un target (excluirlo de KPIs activos)
@@ -15,7 +16,7 @@ export async function archiveTarget(mandatoEmpresaId: string): Promise<void> {
     })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de archivo', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -35,7 +36,7 @@ export async function archiveTargetsBulk(mandatoEmpresaIds: string[]): Promise<v
     })
     .in("id", mandatoEmpresaIds);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de archivo', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -51,7 +52,7 @@ export async function unarchiveTarget(mandatoEmpresaId: string): Promise<void> {
     })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de archivo', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**

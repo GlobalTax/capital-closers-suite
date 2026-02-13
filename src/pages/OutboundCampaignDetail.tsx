@@ -236,6 +236,7 @@ export default function OutboundCampaignDetail() {
     a.href = url;
     a.download = `${campaign?.name || 'prospectos'}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Column definitions for DataTableEnhanced

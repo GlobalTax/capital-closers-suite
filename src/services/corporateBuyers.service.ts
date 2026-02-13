@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { 
+import { DatabaseError } from "@/lib/error-handler";
+import type {
   CorporateBuyer, 
   CreateCorporateBuyerInput, 
   UpdateCorporateBuyerInput,
@@ -36,8 +37,8 @@ export async function getCorporateBuyers(
     query = query.ilike('country_base', `%${filters.country_base}%`);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const { data, error } = await query.limit(500);
+  if (error) throw new DatabaseError('Error al obtener corporate buyers', { supabaseError: error, table: 'corporate_buyers' });
   return data as CorporateBuyer[];
 }
 
@@ -51,7 +52,7 @@ export async function getCorporateBuyerById(id: string): Promise<CorporateBuyer 
     .eq('id', id)
     .single();
   
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener corporate buyer', { supabaseError: error, table: 'corporate_buyers' });
   return data as CorporateBuyer;
 }
 
@@ -83,7 +84,7 @@ export async function createCorporateBuyer(
     `)
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear corporate buyer', { supabaseError: error, table: 'corporate_buyers' });
   return data as CorporateBuyer;
 }
 
@@ -104,7 +105,7 @@ export async function updateCorporateBuyer(
     `)
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar corporate buyer', { supabaseError: error, table: 'corporate_buyers' });
   return data as CorporateBuyer;
 }
 
@@ -115,7 +116,7 @@ export async function deleteCorporateBuyer(id: string): Promise<void> {
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al eliminar corporate buyer', { supabaseError: error, table: 'corporate_buyers' });
 }
 
 // ============ KPIs ============
@@ -136,9 +137,10 @@ export async function getCorporateBuyersKPIs(): Promise<CorporateBuyersKPIs> {
       source_tag_id,
       source_tag:buyer_source_tags(key)
     `)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .limit(1000);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener KPIs', { supabaseError: error, table: 'corporate_buyers' });
 
   const buyers = data || [];
   const byType: Record<string, number> = {};
@@ -178,8 +180,8 @@ export async function getBuyerSourceTags(includeInactive = false): Promise<Buyer
     query = query.eq('is_active', true);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const { data, error } = await query.limit(200);
+  if (error) throw new DatabaseError('Error al obtener source tags', { supabaseError: error, table: 'buyer_source_tags' });
   return data as BuyerSourceTag[];
 }
 
@@ -195,7 +197,7 @@ export async function createSourceTag(input: CreateSourceTagInput): Promise<Buye
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al crear source tag', { supabaseError: error, table: 'buyer_source_tags' });
   return data as BuyerSourceTag;
 }
 
@@ -210,6 +212,6 @@ export async function updateSourceTag(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar source tag', { supabaseError: error, table: 'buyer_source_tags' });
   return data as BuyerSourceTag;
 }

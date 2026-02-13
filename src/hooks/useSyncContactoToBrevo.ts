@@ -40,13 +40,17 @@ export function useSyncContactoToBrevo() {
       }
 
       // Actualizar campos brevo_synced_at en contactos
-      await supabase
+      const { error: updateError } = await supabase
         .from('contactos')
         .update({
           brevo_synced_at: new Date().toISOString(),
           brevo_id: contacto.email
         })
         .eq('id', contacto.id);
+
+      if (updateError) {
+        console.error('Error updating brevo sync status:', updateError);
+      }
 
       toast({
         title: "Sincronizado con Brevo",
@@ -59,13 +63,17 @@ export function useSyncContactoToBrevo() {
       const errorMsg = error.message?.toLowerCase() || '';
       if (errorMsg.includes('duplicate') || errorMsg.includes('already exists')) {
         // Marcar como sincronizado igualmente
-        await supabase
+        const { error: linkError } = await supabase
           .from('contactos')
           .update({
             brevo_synced_at: new Date().toISOString(),
             brevo_id: contacto.email
           })
           .eq('id', contacto.id);
+
+        if (linkError) {
+          console.error('Error linking existing Brevo contact:', linkError);
+        }
 
         toast({
           title: "Ya registrado en Brevo",

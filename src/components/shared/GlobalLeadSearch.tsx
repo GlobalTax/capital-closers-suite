@@ -40,7 +40,8 @@ export function GlobalLeadSearch({
   // Focus input when popover opens
   useEffect(() => {
     if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 0);
+      const timer = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 

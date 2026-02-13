@@ -49,7 +49,7 @@ export function useAIDashboard(dateRange: DateRange = "30d") {
   const startDate = getStartDate(dateRange);
 
   const buildQuery = () => {
-    let q = supabase.from("ai_activity_log").select("*");
+    let q = supabase.from("ai_activity_log").select("*").limit(5000);
     if (startDate) q = q.gte("created_at", startDate);
     return q;
   };

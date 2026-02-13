@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 
 export interface EmailQueueItem {
   id: string;
@@ -112,7 +113,7 @@ export async function fetchEmailQueue(
   const { data, error, count } = await query
     .range(page * pageSize, (page + 1) * pageSize - 1);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener cola de emails', { supabaseError: error, table: 'email_queue' });
 
   return {
     data: (data as EmailQueueItem[]) || [],
@@ -128,7 +129,7 @@ export async function fetchQueueStats(): Promise<QueueStats[]> {
     .from("v_email_queue_stats")
     .select("*");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al obtener estadísticas de cola', { supabaseError: error, table: 'v_email_queue_stats' });
 
   return (data as QueueStats[]) || [];
 }
@@ -154,7 +155,7 @@ export async function enqueueEmail(params: EnqueueEmailParams): Promise<string> 
     p_metadata: JSON.parse(JSON.stringify(params.metadata || {})),
   });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al encolar email', { supabaseError: error, table: 'email_queue' });
 
   return data as string;
 }
@@ -172,14 +173,17 @@ export async function cancelEmail(emailId: string): Promise<void> {
     .eq("id", emailId)
     .in("status", ["pending", "queued"]);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al cancelar email', { supabaseError: error, table: 'email_queue' });
 }
 
 /**
- * Retry a failed email
+ * Retry a failed email.
+ * Includes a cooldown check: only retries if last attempt was >2 minutes ago.
  */
 export async function retryEmail(emailId: string): Promise<void> {
-  const { error } = await supabase
+  const cooldown = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
     .from("email_queue")
     .update({
       status: "pending",
@@ -187,15 +191,24 @@ export async function retryEmail(emailId: string): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("id", emailId)
-    .eq("status", "failed");
+    .eq("status", "failed")
+    .lt("updated_at", cooldown)
+    .select("id");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al reintentar email', { supabaseError: error, table: 'email_queue' });
+
+  if (!data || data.length === 0) {
+    throw new Error("Este email ya fue reintentado recientemente. Espera unos minutos.");
+  }
 }
 
 /**
- * Bulk retry failed emails
+ * Bulk retry failed emails.
+ * Only retries emails not updated in the last 5 minutes to prevent re-queueing loops.
  */
 export async function bulkRetryFailed(queueType?: string): Promise<number> {
+  const cooldown = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
   let query = supabase
     .from("email_queue")
     .update({
@@ -204,7 +217,8 @@ export async function bulkRetryFailed(queueType?: string): Promise<number> {
       updated_at: new Date().toISOString(),
     })
     .eq("status", "failed")
-    .lt("attempts", 3);
+    .lt("attempts", 3)
+    .lt("updated_at", cooldown);
 
   if (queueType) {
     query = query.eq("queue_type", queueType);
@@ -212,7 +226,7 @@ export async function bulkRetryFailed(queueType?: string): Promise<number> {
 
   const { data, error } = await query.select("id");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al reintentar emails fallidos', { supabaseError: error, table: 'email_queue' });
 
   return data?.length || 0;
 }
@@ -231,7 +245,7 @@ export async function clearOldEmails(daysOld = 30): Promise<number> {
     .lt("created_at", cutoffDate.toISOString())
     .select("id");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al limpiar emails antiguos', { supabaseError: error, table: 'email_queue' });
 
   return data?.length || 0;
 }
@@ -254,7 +268,7 @@ export async function processQueue(options: {
     body: options,
   });
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al procesar cola de emails', { supabaseError: error, table: 'email_queue' });
 
   return data;
 }
@@ -271,7 +285,7 @@ export async function getEmailById(emailId: string): Promise<EmailQueueItem | nu
 
   if (error) {
     if (error.code === "PGRST116") return null;
-    throw error;
+    throw new DatabaseError('Error al obtener email', { supabaseError: error, table: 'email_queue' });
   }
 
   return data as EmailQueueItem;

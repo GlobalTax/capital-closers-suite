@@ -161,13 +161,6 @@ export const parseSpreadsheet = async (file: File): Promise<ParsedSpreadsheet> =
       throw new Error('No se encontraron filas con datos válidos');
     }
 
-    console.log(`[SpreadsheetParser] Archivo ${extension.toUpperCase()} procesado:`, {
-      headers,
-      totalRows: rows.length,
-      emptyRowsSkipped,
-      sampleRow: rows[0]
-    });
-
     return {
       headers,
       rows,

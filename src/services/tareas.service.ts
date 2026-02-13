@@ -34,7 +34,8 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .from('tareas')
       .select('*')
       .order('order_index', { ascending: true })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error) {
       throw new DatabaseError('Error obteniendo tareas', {
@@ -52,7 +53,8 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .select('*')
       .eq('mandato_id', mandatoId)
       .order('order_index', { ascending: true })
-      .order('fecha_vencimiento', { ascending: true });
+      .order('fecha_vencimiento', { ascending: true })
+      .limit(200);
 
     if (error) {
       throw new DatabaseError('Error obteniendo tareas del mandato', {
@@ -70,7 +72,8 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .select('*')
       .eq('asignado_a', userId)
       .order('order_index', { ascending: true })
-      .order('fecha_vencimiento', { ascending: true });
+      .order('fecha_vencimiento', { ascending: true })
+      .limit(200);
 
     if (error) {
       throw new DatabaseError('Error obteniendo tareas del usuario', {
@@ -88,7 +91,8 @@ class TareaService extends BaseService<Tarea, TareaInsert, TareaUpdate> {
       .select('*')
       .in('estado', ['pendiente', 'en_progreso'])
       .order('order_index', { ascending: true })
-      .order('fecha_vencimiento', { ascending: true });
+      .order('fecha_vencimiento', { ascending: true })
+      .limit(200);
 
     if (error) {
       throw new DatabaseError('Error obteniendo tareas pendientes', {

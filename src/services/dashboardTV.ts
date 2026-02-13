@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type { LucideIcon } from "lucide-react";
 import { 
   Building2, 
@@ -45,7 +46,8 @@ export async function fetchNuevosLeads(): Promise<UnifiedLead[]> {
     .select('*')
     .eq('status', 'new')
     .eq('is_deleted', false)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (contactLeads) {
     leads.push(...contactLeads.map(lead => ({
@@ -67,7 +69,8 @@ export async function fetchNuevosLeads(): Promise<UnifiedLead[]> {
     .select('*')
     .in('valuation_status', ['started', 'in_progress'])
     .eq('is_deleted', false)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (valuations) {
     leads.push(...valuations.map(val => ({
@@ -90,7 +93,8 @@ export async function fetchNuevosLeads(): Promise<UnifiedLead[]> {
     .select('*')
     .eq('status', 'pending')
     .eq('is_deleted', false)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (collaborators) {
     leads.push(...collaborators.map(collab => ({
@@ -118,7 +122,8 @@ export async function fetchLeadsEnContacto(): Promise<UnifiedLead[]> {
     .select('*')
     .eq('status', 'contacted')
     .eq('is_deleted', false)
-    .order('status_updated_at', { ascending: false });
+    .order('status_updated_at', { ascending: false })
+    .limit(100);
 
   if (contactLeads) {
     leads.push(...contactLeads.map(lead => ({
@@ -141,7 +146,8 @@ export async function fetchLeadsEnContacto(): Promise<UnifiedLead[]> {
     .eq('valuation_status', 'in_progress')
     .eq('is_deleted', false)
     .not('email_sent', 'is', null)
-    .order('last_activity_at', { ascending: false });
+    .order('last_activity_at', { ascending: false })
+    .limit(100);
 
   if (valuations) {
     leads.push(...valuations.map(val => ({
@@ -170,7 +176,8 @@ export async function fetchLeadsCalificados(): Promise<UnifiedLead[]> {
     .select('*')
     .eq('status', 'qualified')
     .eq('is_deleted', false)
-    .order('status_updated_at', { ascending: false });
+    .order('status_updated_at', { ascending: false })
+    .limit(100);
 
   if (contactLeads) {
     leads.push(...contactLeads.map(lead => ({
@@ -330,5 +337,5 @@ export async function updateLeadStatus(
     .update(updateData)
     .eq('id', leadId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error al actualizar estado del lead', { supabaseError: error, table, id: leadId });
 }

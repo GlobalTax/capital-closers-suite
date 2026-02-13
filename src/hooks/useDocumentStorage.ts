@@ -157,8 +157,6 @@ export function useDocumentStorage() {
         return null;
       }
 
-      console.log('[Storage] Obteniendo signed URL via Edge Function para:', storagePath);
-
       // Usar Edge Function con Service Role para bypasear RLS
       const { data, error } = await supabase.functions.invoke('download-document', {
         body: { filePath: storagePath, bucket: 'mandato-documentos', expiresIn: expirationSeconds }
@@ -175,8 +173,6 @@ export function useDocumentStorage() {
         toast.error('Error: No se recibió URL firmada');
         return null;
       }
-
-      console.log('[Storage] Signed URL obtenida correctamente');
 
       // Registrar acceso de forma asíncrona (no bloquea la descarga)
       if (documentInfo?.id) {

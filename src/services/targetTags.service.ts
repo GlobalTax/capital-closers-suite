@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type { BuyerType } from "@/types";
 
 /**
@@ -13,7 +14,7 @@ export async function updateBuyerType(
     .update({ buyer_type: buyerType })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -28,7 +29,7 @@ export async function updateGeografia(
     .update({ geografia })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -45,7 +46,7 @@ export async function addTag(
     .eq("id", mandatoEmpresaId)
     .single();
 
-  if (fetchError) throw fetchError;
+  if (fetchError) throw new DatabaseError('Error al obtener tags', { supabaseError: fetchError, table: 'mandato_empresas' });
 
   const currentTags: string[] = data?.tags || [];
   const normalizedTag = tag.toLowerCase().trim();
@@ -61,7 +62,7 @@ export async function addTag(
     .update({ tags: newTags })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
   return newTags;
 }
 
@@ -78,7 +79,7 @@ export async function removeTag(
     .eq("id", mandatoEmpresaId)
     .single();
 
-  if (fetchError) throw fetchError;
+  if (fetchError) throw new DatabaseError('Error al obtener tags', { supabaseError: fetchError, table: 'mandato_empresas' });
 
   const currentTags: string[] = data?.tags || [];
   const newTags = currentTags.filter(t => t !== tag.toLowerCase().trim());
@@ -88,7 +89,7 @@ export async function removeTag(
     .update({ tags: newTags })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
   return newTags;
 }
 
@@ -108,7 +109,7 @@ export async function setNoContactar(
     })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -127,7 +128,7 @@ export async function setConflicto(
     })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -142,7 +143,7 @@ export async function updateNotasInternas(
     .update({ notas_internas: notas })
     .eq("id", mandatoEmpresaId);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -155,7 +156,7 @@ export async function getDistinctTags(mandatoId: string): Promise<string[]> {
     .eq("mandato_id", mandatoId)
     .eq("rol", "target");
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 
   const allTags = new Set<string>();
   data?.forEach(row => {
@@ -177,7 +178,7 @@ export async function bulkUpdateBuyerType(
     .update({ buyer_type: buyerType })
     .in("id", targetIds);
 
-  if (error) throw error;
+  if (error) throw new DatabaseError('Error en operación de tags', { supabaseError: error, table: 'mandato_empresas' });
 }
 
 /**
@@ -193,7 +194,7 @@ export async function bulkAddTag(
     .select("id, tags")
     .in("id", targetIds);
 
-  if (fetchError) throw fetchError;
+  if (fetchError) throw new DatabaseError('Error al obtener tags', { supabaseError: fetchError, table: 'mandato_empresas' });
 
   const normalizedTag = tag.toLowerCase().trim();
   

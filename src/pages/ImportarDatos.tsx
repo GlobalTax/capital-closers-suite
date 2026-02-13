@@ -76,9 +76,6 @@ export default function ImportarDatos() {
       // Usar parser universal que soporta CSV, XLSX, XLS
       const parsed = await parseSpreadsheet(file);
       
-      console.log('[ImportarDatos] Headers detectados:', parsed.headers);
-      console.log('[ImportarDatos] Primera fila raw:', parsed.rows[0]);
-      
       // Normalizar filas según el tipo de importación
       const normalizedRows = parsed.rows.map(row => {
         if (activeTab === 'contactos') {
@@ -86,8 +83,6 @@ export default function ImportarDatos() {
         }
         return normalizeMandatoRow(row);
       });
-      
-      console.log('[ImportarDatos] Primera fila normalizada:', normalizedRows[0]);
       
       // Actualizar headers para mostrar los normalizados
       const normalizedHeaders = activeTab === 'contactos'
@@ -231,6 +226,7 @@ Textiles SA,B87654321,Manufactura,Barcelona,500000,25`
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
     toast({
       title: "✅ Plantilla descargada",

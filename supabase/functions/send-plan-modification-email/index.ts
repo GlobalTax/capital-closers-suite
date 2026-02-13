@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
-    const supabaseUrl = "https://fwhqtzkkvnjkazhaficj.supabase.co";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseServiceKey) {
       throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");

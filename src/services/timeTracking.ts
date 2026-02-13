@@ -53,7 +53,8 @@ export const fetchTimeEntries = async (
     .from('mandato_time_entries')
     .select(TIME_ENTRY_SELECT)
     .eq('is_deleted', false)
-    .order('start_time', { ascending: false });
+    .order('start_time', { ascending: false })
+    .limit(2000);
 
   if (mandatoId) {
     query = query.eq('mandato_id', mandatoId);
@@ -80,12 +81,13 @@ export const fetchTimeEntries = async (
   // Fetch admin users separately
   const { data: adminUsers } = await supabase
     .from('admin_users')
-    .select('user_id, full_name, email');
-  
+    .select('user_id, full_name, email')
+    .limit(200);
+
   const usersMap = new Map(
     (adminUsers || []).map(u => [u.user_id, u])
   );
-  
+
   return (data || []).map(entry => ({
     ...entry,
     user: usersMap.get(entry.user_id) ? {
@@ -116,7 +118,8 @@ export const fetchMyTimeEntries = async (
     .select(TIME_ENTRY_SELECT)
     .eq('user_id', userId)
     .eq('is_deleted', false)
-    .order('start_time', { ascending: false });
+    .order('start_time', { ascending: false })
+    .limit(2000);
 
   if (filters?.startDate) {
     query = query.gte('start_time', filters.startDate);
@@ -177,7 +180,8 @@ export const fetchAllTimeEntries = async (
     .from('mandato_time_entries')
     .select(TIME_ENTRY_SELECT)
     .eq('is_deleted', false)
-    .order('start_time', { ascending: false });
+    .order('start_time', { ascending: false })
+    .limit(5000);
 
   if (filters?.startDate) {
     query = query.gte('start_time', filters.startDate);
@@ -450,14 +454,6 @@ export const getTimeStats = async (mandatoId?: string): Promise<TimeStats> => {
 export const createTimeEntry = async (
   entry: Partial<TimeEntry>
 ): Promise<TimeEntry> => {
-  console.log('[TimeTracking] Creando entrada:', {
-    mandato_id: entry.mandato_id,
-    contacto_id: entry.contacto_id,
-    mandate_lead_id: (entry as any).mandate_lead_id,
-    work_task_type_id: entry.work_task_type_id,
-    user_id: entry.user_id
-  });
-
   // Validate: must have either mandato_id, contacto_id, OR mandate_lead_id
   if (!entry.mandato_id && !entry.contacto_id && !(entry as any).mandate_lead_id) {
     throw new Error('Debe seleccionar un mandato o un lead');
@@ -493,7 +489,6 @@ export const createTimeEntry = async (
     throw error;
   }
   
-  console.log('[TimeTracking] Entrada creada:', data.id);
   return data as TimeEntry;
 };
 
@@ -544,8 +539,6 @@ export const deleteTimeEntry = async (id: string): Promise<void> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
 
-  console.log('[deleteTimeEntry] Soft delete:', id);
-
   const { data, error } = await supabase
     .from('mandato_time_entries')
     .update({
@@ -571,8 +564,6 @@ export const deleteTimeEntry = async (id: string): Promise<void> => {
   if (!data) {
     throw new Error('El registro no existe o ya fue eliminado');
   }
-
-  console.log('[deleteTimeEntry] Eliminado correctamente');
 };
 
 // ============================================

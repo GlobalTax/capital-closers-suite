@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { DatabaseError } from "@/lib/error-handler";
 import type {
   EnrichedData,
   ExistingEmpresa,
@@ -134,22 +135,31 @@ export async function dedupeContacts(
   let existingContacts: Array<{ id: string; nombre: string; apellidos?: string; email?: string; telefono?: string }> = [];
 
   if (emails.length > 0 || phones.length > 0) {
-    let query = supabase.from('contactos').select('id, nombre, apellidos, email, telefono');
-    
-    if (empresaId) {
-      query = query.eq('empresa_principal_id', empresaId);
+    // Use separate .in() queries instead of .or() with string interpolation
+    // to prevent injection from malformed email/phone values
+    const results: typeof existingContacts = [];
+
+    if (emails.length > 0) {
+      let q = supabase.from('contactos').select('id, nombre, apellidos, email, telefono').in('email', emails);
+      if (empresaId) q = q.eq('empresa_principal_id', empresaId);
+      const { data } = await q.limit(500);
+      if (data) results.push(...data);
     }
 
-    if (emails.length > 0 && phones.length > 0) {
-      query = query.or(`email.in.(${emails.join(',')}),telefono.in.(${phones.join(',')})`);
-    } else if (emails.length > 0) {
-      query = query.in('email', emails);
-    } else {
-      query = query.in('telefono', phones);
+    if (phones.length > 0) {
+      let q = supabase.from('contactos').select('id, nombre, apellidos, email, telefono').in('telefono', phones);
+      if (empresaId) q = q.eq('empresa_principal_id', empresaId);
+      const { data } = await q.limit(500);
+      if (data) results.push(...data);
     }
 
-    const { data } = await query;
-    existingContacts = data || [];
+    // Deduplicate by id
+    const seen = new Set<string>();
+    existingContacts = results.filter(c => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
   }
 
   return contacts.map(contact => {
@@ -232,7 +242,7 @@ export async function applyEnrichment(
         .update(updateData)
         .eq('id', empresaId);
 
-      if (error) throw error;
+      if (error) throw new DatabaseError('Error al actualizar empresa enriquecida', { supabaseError: error, table: 'empresas' });
       action = 'updated';
     } else {
       action = 'skipped';
@@ -261,7 +271,7 @@ export async function applyEnrichment(
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) throw new DatabaseError('Error al crear empresa enriquecida', { supabaseError: error, table: 'empresas' });
     empresaId = data.id;
     action = 'created';
     fieldsUpdated.push(...Object.keys(insertData).filter(k => insertData[k] != null));
@@ -269,11 +279,12 @@ export async function applyEnrichment(
 
   // Associate to mandato if provided
   if (mandatoId && action === 'created') {
-    await supabase.from('mandato_empresas').insert({
+    const { error: linkError } = await supabase.from('mandato_empresas').insert({
       mandato_id: mandatoId,
       empresa_id: empresaId,
       rol: 'target',
     });
+    if (linkError) throw new DatabaseError('Error al asociar empresa al mandato', { supabaseError: linkError, table: 'mandato_empresas' });
   }
 
   // Create selected contacts
