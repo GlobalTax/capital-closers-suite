@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   Plus,
   Link2,
   User,
+  Unlink,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -38,6 +40,7 @@ interface TargetCardProps {
   onImportFromLink: (empresaId: string) => void;
   onInteraccionUpdate: () => void;
   onAsociarExistente?: (empresaId: string) => void;
+  onUnlink?: () => void;
 }
 
 export function TargetCard({
@@ -51,9 +54,11 @@ export function TargetCard({
   onImportFromLink,
   onInteraccionUpdate,
   onAsociarExistente,
+  onUnlink,
 }: TargetCardProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [unlinkConfirmOpen, setUnlinkConfirmOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<"contactos" | "timeline" | null>(null);
 
   const lastInteraccion = interacciones[0];
@@ -83,6 +88,7 @@ export function TargetCard({
   };
 
   return (
+    <>
     <Card className="overflow-hidden transition-shadow hover:shadow-md">
       {/* Header */}
       <CardHeader className="pb-3">
@@ -210,6 +216,20 @@ export function TargetCard({
             <Link2 className="h-4 w-4 mr-1" />
             Link
           </Button>
+          {onUnlink && (
+            <>
+              <Separator orientation="vertical" className="h-6 hidden sm:block" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setUnlinkConfirmOpen(true)}
+              >
+                <Unlink className="h-4 w-4 mr-1" />
+                Desvincular
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -358,5 +378,22 @@ export function TargetCard({
         </CollapsibleContent>
       </Collapsible>
     </Card>
+
+    {/* Confirm unlink dialog */}
+    {onUnlink && (
+      <ConfirmDialog
+        open={unlinkConfirmOpen}
+        onOpenChange={setUnlinkConfirmOpen}
+        titulo="¿Desvincular target?"
+        descripcion={`Se eliminará la relación de "${empresa.nombre}" con este mandato. La empresa seguirá existiendo en el CRM.`}
+        onConfirmar={() => {
+          onUnlink();
+          setUnlinkConfirmOpen(false);
+        }}
+        textoConfirmar="Desvincular"
+        variant="destructive"
+      />
+    )}
+    </>
   );
 }
