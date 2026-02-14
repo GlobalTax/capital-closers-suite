@@ -119,38 +119,38 @@ function AppContent() {
           <Route path="/usuarios" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><Usuarios /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-mandatos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarMandatos /></AppLayout></ProtectedRoute>} />
           <Route path="/importar-datos" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><ImportarDatos /></AppLayout></ProtectedRoute>} />
-            <Route path="/dashboard-tv" element={<ProtectedRoute><DashboardTV /></ProtectedRoute>} />
-            <Route path="/dashboard-tv/configurar" element={<ProtectedRoute requiredRole="admin"><ConfigurarDashboardTV /></ProtectedRoute>} />
-            <Route path="/gestion-leads" element={<ProtectedRoute requiredRole="admin"><AppLayout><GestionLeads /></AppLayout></ProtectedRoute>} />
-            <Route path="/sync-valuations" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncValuations /></AppLayout></ProtectedRoute>} />
-            <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
-            <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
-            <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
-            <Route path="/sync-contacts-capittal" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncContactsCapittal /></AppLayout></ProtectedRoute>} />
-            <Route path="/team-workload" element={<ProtectedRoute requiredRole="admin"><AppLayout><TeamWorkload /></AppLayout></ProtectedRoute>} />
-            <Route path="/outbound" element={<ProtectedRoute requiredRole="admin"><AppLayout><Outbound /></AppLayout></ProtectedRoute>} />
-            <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/modelos" element={<ProtectedRoute requiredRole="admin"><AppLayout><Modelos /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/corporate-buyers" element={<ProtectedRoute requiredRole="admin"><AppLayout><CorporateBuyers /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/buyer-source-tags" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><BuyerSourceTags /></AppLayout></ProtectedRoute>} />
-            <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
-            <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
-            <Route path="/plantillas-checklist" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasChecklist /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/enrichment" element={<ProtectedRoute requiredRole="admin"><AppLayout><EnrichmentDashboard /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/ai-dashboard" element={<ProtectedRoute requiredRole="admin"><AppLayout><AIDashboard /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/billing-forecast" element={<ProtectedRoute><AppLayout><BillingForecast /></AppLayout></ProtectedRoute>} />
-            
-            {/* Campaign Contacts - Buy and Sell */}
-            <Route path="/admin/buyer-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
-            <Route path="/admin/seller-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
+          <Route path="/dashboard-tv" element={<ProtectedRoute><DashboardTV /></ProtectedRoute>} />
+          <Route path="/dashboard-tv/configurar" element={<ProtectedRoute requiredRole="admin"><ConfigurarDashboardTV /></ProtectedRoute>} />
+          <Route path="/gestion-leads" element={<ProtectedRoute requiredRole="admin"><AppLayout><GestionLeads /></AppLayout></ProtectedRoute>} />
+          <Route path="/sync-valuations" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncValuations /></AppLayout></ProtectedRoute>} />
+          <Route path="/sync-operations" element={<ProtectedRoute requiredRole="super_admin"><SyncOperations /></ProtectedRoute>} />
+          <Route path="/configuracion/tareas-tiempo" element={<ProtectedRoute requiredRole="admin"><ConfiguracionTareasTiempo /></ProtectedRoute>} />
+          <Route path="/integraciones/brevo" element={<ProtectedRoute requiredRole="super_admin"><BrevoIntegration /></ProtectedRoute>} />
+          <Route path="/sync-contacts-capittal" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncContactsCapittal /></AppLayout></ProtectedRoute>} />
+          <Route path="/team-workload" element={<ProtectedRoute requiredRole="admin"><AppLayout><TeamWorkload /></AppLayout></ProtectedRoute>} />
+          <Route path="/outbound" element={<ProtectedRoute requiredRole="admin"><AppLayout><Outbound /></AppLayout></ProtectedRoute>} />
+          <Route path="/outbound/:id" element={<ProtectedRoute requiredRole="admin"><AppLayout><OutboundCampaignDetail /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/sync-control" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><SyncControl /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/empresas-monitor" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><EmpresasMonitor /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/task-ai-qa" element={<ProtectedRoute requiredRole="admin"><AppLayout><TaskAIQA /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/modelos" element={<ProtectedRoute requiredRole="admin"><AppLayout><Modelos /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/corporate-buyers" element={<ProtectedRoute requiredRole="admin"><AppLayout><CorporateBuyers /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/buyer-source-tags" element={<ProtectedRoute requiredRole="super_admin"><AppLayout><BuyerSourceTags /></AppLayout></ProtectedRoute>} />
+          <Route path="/sync-center" element={<ProtectedRoute requiredRole="super_admin"><SyncCenter /></ProtectedRoute>} />
+          <Route path="/plantillas-email" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasEmail /></AppLayout></ProtectedRoute>} />
+          <Route path="/plantillas-checklist" element={<ProtectedRoute requiredRole="admin"><AppLayout><PlantillasChecklist /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/enrichment" element={<ProtectedRoute requiredRole="admin"><AppLayout><EnrichmentDashboard /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/ai-dashboard" element={<ProtectedRoute requiredRole="admin"><AppLayout><AIDashboard /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/billing-forecast" element={<ProtectedRoute requiredRole="admin"><AppLayout><BillingForecast /></AppLayout></ProtectedRoute>} />
 
-            {/* Help Center */}
-            <Route path="/ayuda" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
-            <Route path="/ayuda/:slug" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
-          
+          {/* Campaign Contacts - Buy and Sell */}
+          <Route path="/admin/buyer-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
+          <Route path="/admin/seller-contacts" element={<ProtectedRoute requiredRole="admin"><AppLayout><CampaignContacts /></AppLayout></ProtectedRoute>} />
+
+          {/* Help Center */}
+          <Route path="/ayuda" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
+          <Route path="/ayuda/:slug" element={<ProtectedRoute><AppLayout><Ayuda /></AppLayout></ProtectedRoute>} />
+
           {/* Presentation routes */}
           <Route path="/presentaciones" element={<ProtectedRoute><AppLayout><Presentaciones /></AppLayout></ProtectedRoute>} />
           <Route path="/presentaciones/:id/editor" element={<ProtectedRoute><PresentacionEditor /></ProtectedRoute>} />

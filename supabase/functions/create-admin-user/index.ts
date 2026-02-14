@@ -241,7 +241,7 @@ serve(async (req) => {
         JSON.stringify({
           user_id: authUser.id,
           email: normalizedEmail,
-          temporary_password: tempPassword,
+          credentials_sent_via_email: true,
           message: `Usuario vinculado exitosamente (usuario huérfano reparado).`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -305,7 +305,7 @@ serve(async (req) => {
             JSON.stringify({
               user_id: retryAuthUser.id,
               email: normalizedEmail,
-              temporary_password: tempPassword,
+              credentials_sent_via_email: true,
               message: `Usuario vinculado exitosamente.`
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -447,7 +447,7 @@ serve(async (req) => {
       JSON.stringify({
         user_id: newUser.user.id,
         email: normalizedEmail,
-        temporary_password: tempPassword,
+        credentials_sent_via_email: true,
         message: `Usuario creado exitosamente y email de bienvenida enviado.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

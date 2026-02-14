@@ -151,7 +151,7 @@ class EmpresaService extends BaseService<Empresa> {
       return [];
     }
 
-    const searchTerm = query.trim();
+    const searchTerm = query.trim().replace(/%/g, '\\%').replace(/_/g, '\\_');
     const limit = options?.limit ?? 20;
 
     let queryBuilder = supabase
@@ -285,8 +285,8 @@ export async function findSimilarEmpresas(
 ): Promise<{ id: string; nombre: string; sector?: string; similarity: number }[]> {
   if (!nombre || nombre.length < 2) return [];
 
-  const searchTerm = nombre.toLowerCase().trim();
-  
+  const searchTerm = nombre.toLowerCase().trim().replace(/%/g, '\\%').replace(/_/g, '\\_');
+
   // Build OR conditions for search
   let query = supabase
     .from('empresas')
