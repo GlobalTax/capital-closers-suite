@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -242,6 +243,7 @@ export default function Documentos() {
 
   return (
     <div>
+      <PageBreadcrumb segments={[{ label: "Documentos" }]} />
       <PageHeader
         title="Documentos"
         description="Gestión de documentos y archivos"

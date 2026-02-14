@@ -29,6 +29,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useConfirmAction } from "@/hooks/useConfirmAction";
 import { TemplateSelector } from "@/features/presentations/components/TemplateSelector";
 import { OutlineGenerator } from "@/features/presentations/components/OutlineGenerator";
 import { usePresentationProjects, useCreateProject, useDeleteProject, useCreateSlide } from "@/hooks/usePresentations";
@@ -44,6 +47,7 @@ export default function Presentaciones() {
   const [searchQuery, setSearchQuery] = useState('');
   const [creationMode, setCreationMode] = useState<'template' | 'ai'>('template');
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const { confirmState, requestConfirm, closeConfirm, handleConfirm } = useConfirmAction();
 
   const { data: projects = [], isLoading } = usePresentationProjects();
   const createProject = useCreateProject();
@@ -127,9 +131,13 @@ export default function Presentaciones() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('¿Eliminar esta presentación?')) {
-      await deleteProject.mutateAsync(id);
-    }
+    requestConfirm(
+      '¿Eliminar esta presentación?',
+      async () => {
+        await deleteProject.mutateAsync(id);
+      },
+      'Esta acción no se puede deshacer.'
+    );
   };
 
   const handleCloseDialog = () => {
@@ -142,6 +150,7 @@ export default function Presentaciones() {
 
   return (
     <div className="container py-6 space-y-6">
+      <PageBreadcrumb segments={[{ label: "Presentaciones" }]} />
       <PageHeader
         title="Presentaciones"
         subtitle="Crea y gestiona presentaciones profesionales"
@@ -373,6 +382,16 @@ export default function Presentaciones() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={closeConfirm}
+        titulo={confirmState.title}
+        descripcion={confirmState.description}
+        onConfirmar={handleConfirm}
+        textoConfirmar="Eliminar"
+        variant="destructive"
+      />
     </div>
   );
 }

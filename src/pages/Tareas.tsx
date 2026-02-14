@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Calendar, User, Table as TableIcon, Columns, Plus, X, AlertCircle, Sparkles, Users, Clock, CheckCircle2, TrendingUp } from "lucide-react";
 import { useTareas, useUpdateTarea, useCreateTarea } from "@/hooks/queries/useTareas";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
 import type { Tarea, TareaEstado } from "@/types";
 import { startOfWeek, endOfWeek, isToday, isBefore, startOfDay } from "date-fns";
 import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
@@ -27,11 +28,11 @@ import {
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { NuevaTareaDrawer } from "@/components/tareas/NuevaTareaDrawer";
-import { EditarTareaDrawer } from "@/components/tareas/EditarTareaDrawer";
+import { NuevaTareaDrawer } from "@/components/tasks/NuevaTareaDrawer";
+import { EditarTareaDrawer } from "@/components/tasks/EditarTareaDrawer";
 import { DataTableEnhanced } from "@/components/shared/DataTableEnhanced";
 import { TaskCommandBar } from "@/components/tasks/TaskCommandBar";
-import { QuickAssignDropdown } from "@/components/tareas/QuickAssignDropdown";
+import { QuickAssignDropdown } from "@/components/tasks/QuickAssignDropdown";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -636,6 +637,7 @@ export default function Tareas() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <PageBreadcrumb segments={[{ label: "Tareas" }]} />
       {/* Header with Stats */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

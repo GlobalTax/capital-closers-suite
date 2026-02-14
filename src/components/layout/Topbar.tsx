@@ -14,7 +14,7 @@ import { TimerAssignmentDialog } from "@/components/timer/TimerAssignmentDialog"
 const NuevoMandatoDrawer = lazy(() => import("@/components/mandatos/NuevoMandatoDrawer").then(m => ({ default: m.NuevoMandatoDrawer })));
 const NuevoContactoDrawer = lazy(() => import("@/components/contactos/NuevoContactoDrawer").then(m => ({ default: m.NuevoContactoDrawer })));
 const NuevoEmpresaDrawer = lazy(() => import("@/components/empresas/NuevoEmpresaDrawer").then(m => ({ default: m.NuevoEmpresaDrawer })));
-const NuevaTareaDrawer = lazy(() => import("@/components/tareas/NuevaTareaDrawer").then(m => ({ default: m.NuevaTareaDrawer })));
+const NuevaTareaDrawer = lazy(() => import("@/components/tasks/NuevaTareaDrawer").then(m => ({ default: m.NuevaTareaDrawer })));
 import {
   DropdownMenu,
   DropdownMenuContent,
