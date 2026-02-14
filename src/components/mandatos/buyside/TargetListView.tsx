@@ -27,7 +27,9 @@ import {
   ArrowDown,
   MapPin,
   Archive,
+  Unlink,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { TargetQuickTags } from "./TargetQuickTags";
 import {
@@ -50,6 +52,7 @@ interface TargetListViewProps {
   onAddTag: (targetId: string, tag: string) => void;
   onRemoveTag: (targetId: string, tag: string) => void;
   onBuyerTypeChange: (targetId: string, type: BuyerType | null) => void;
+  onUnlinkTarget: (targetId: string) => void;
 }
 
 export function TargetListView({
@@ -61,8 +64,10 @@ export function TargetListView({
   onAddTag,
   onRemoveTag,
   onBuyerTypeChange,
+  onUnlinkTarget,
 }: TargetListViewProps) {
   const [sortField, setSortField] = useState<SortField>("nombre");
+  const [unlinkTargetId, setUnlinkTargetId] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const handleSort = (field: SortField) => {
@@ -160,6 +165,7 @@ export function TargetListView({
   };
 
   return (
+    <>
     <TooltipProvider>
       <div className="border rounded-lg bg-card">
         <ScrollArea className="h-[calc(100vh-420px)]">
@@ -343,7 +349,16 @@ export function TargetListView({
                         compact
                       />
                     </TableCell>
-                    <TableCell></TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setUnlinkTargetId(target.id)}
+                      >
+                        <Unlink className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -359,5 +374,21 @@ export function TargetListView({
         </ScrollArea>
       </div>
     </TooltipProvider>
+
+    <ConfirmDialog
+      open={unlinkTargetId !== null}
+      onOpenChange={(open) => { if (!open) setUnlinkTargetId(null); }}
+      titulo="¿Desvincular target?"
+      descripcion="Se eliminará la relación con este proyecto, incluyendo scoring y ofertas asociadas. La empresa seguirá existiendo en el CRM."
+      onConfirmar={() => {
+        if (unlinkTargetId) {
+          onUnlinkTarget(unlinkTargetId);
+          setUnlinkTargetId(null);
+        }
+      }}
+      textoConfirmar="Desvincular"
+      variant="destructive"
+    />
+    </>
   );
 }
