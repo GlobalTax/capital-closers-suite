@@ -1,51 +1,93 @@
 
-# Siguiente ronda de mejoras del Plan Maestro
 
-## Cambios a implementar
+# Integrar Claude (Anthropic) para Generacion de Contenido
 
-### 1. Unificar carpetas `tareas/` y `tasks/` (Fase 1.2)
+## Objetivo
 
-Mover los 3 archivos de `src/components/tareas/` a `src/components/tasks/`:
-- `NuevaTareaDrawer.tsx`
-- `EditarTareaDrawer.tsx`
-- `QuickAssignDropdown.tsx`
+Usar Claude para las funciones de IA que generan texto largo y de alta calidad, manteniendo el Lovable AI Gateway para tareas simples (parsing, alertas, matching).
 
-Actualizar los imports en `src/pages/Tareas.tsx` (unico archivo que los usa) de `@/components/tareas/` a `@/components/tasks/`.
+## Funciones a migrar a Claude
 
-Eliminar la carpeta `src/components/tareas/`.
+| Edge Function | Que hace | Por que Claude |
+|---|---|---|
+| `generate-deal-document` | Genera Teasers y CIMs (documentos largos M&A) | Redaccion profesional extensa |
+| `refine-slide-copy` | Refina copy de presentaciones | Tono preciso y matizado |
+| `generate-executive-report` | Reporte ejecutivo semanal | Narrativa estructurada |
+| `crm-assistant` | Asistente conversacional (streaming) | Respuestas mas naturales y contextuales |
 
----
+## Funciones que se quedan en Lovable AI Gateway
 
-### 2. Reemplazar ultimo `window.confirm()` en Presentaciones.tsx (Fase 1.4)
+- `task-ai` (parsing de tareas)
+- `enhance-alert-message` (alertas cortas)
+- `summarize-meeting` (resumen estructurado)
+- `match-buyers` (scoring numerico)
+- `translate-slides` (traduccion)
+- `generate-slide-outline` (outline estructurado)
+- `batch-enrich-companies` (extraccion de datos)
 
-En `src/pages/Presentaciones.tsx` linea 130 queda un `window.confirm()` nativo. Reemplazarlo con el hook `useConfirmAction` y el componente `ConfirmDialog`, igual que se hizo en Outbound, Mandatos y Servicios.
+## Implementacion
 
----
+### Paso 1: Configurar secret
 
-### 3. Breadcrumbs en mas paginas de detalle
+Solicitar al usuario su `ANTHROPIC_API_KEY` y guardarla como secret de Supabase.
 
-Actualmente solo `MandatoDetalle` y `ContactoDetalle` tienen breadcrumbs. Extender `PageBreadcrumb` a:
-- **Presentaciones** (pagina de listado con titulo)
-- **Tareas** (pagina de listado)
-- **Documentos** (pagina de listado)
+### Paso 2: Crear modulo compartido de llamada a Claude
 
----
+Crear una funcion helper reutilizable dentro de cada Edge Function que llame a la API de Anthropic (`https://api.anthropic.com/v1/messages`) con:
+- Header `x-api-key` y `anthropic-version: 2023-06-01`
+- Modelo: `claude-sonnet-4-20250514` (mejor relacion calidad/coste para contenido)
+- Soporte para tool calling (misma estructura de tools que ya usan las funciones)
 
-### 4. Tests unitarios para servicios criticos (inicio Fase 1.1)
+### Paso 3: Migrar `generate-deal-document`
 
-Crear los primeros tests del proyecto en `src/test/`:
-- `mandatos.test.ts` - Tests para `fetchMandatos`, `createMandato`, `updateMandato`, `deleteMandato`
-- `empresas.test.ts` - Tests para `fetchEmpresas`, `createEmpresa`, `updateEmpresa`, `deleteEmpresa`
-- `error-handler.test.ts` - Tests para `handleError` con distintos tipos de error
+- Reemplazar la llamada a `ai.gateway.lovable.dev` por la API de Anthropic
+- Adaptar el formato de mensajes (Anthropic usa `system` como parametro separado, no como mensaje)
+- Adaptar tool calling al formato de Anthropic (`tools` con `input_schema` en vez de `parameters`)
+- Mantener el logging en `ai_activity_log` con modelo `claude-sonnet-4-20250514`
 
-Cada test mockea el cliente de Supabase y valida que los servicios llaman correctamente a `.from()`, `.select()`, `.insert()`, etc.
+### Paso 4: Migrar `refine-slide-copy`
 
----
+- Misma adaptacion de formato
+- Mantener la logica de deteccion de template (MA Sell Teaser, Firm Deck, etc.)
+
+### Paso 5: Migrar `generate-executive-report`
+
+- Adaptar llamada y formato de respuesta
+- Mantener estructura de secciones del reporte
+
+### Paso 6: Migrar `crm-assistant` (streaming)
+
+- Adaptar el streaming SSE de Anthropic (usa `event: content_block_delta` en vez del formato OpenAI)
+- Adaptar tool calling de Anthropic (2 fases: tool_use -> tool_result)
+- Mantener las 6 tools existentes del asistente
+
+### Paso 7: Fallback automatico
+
+Si la API de Anthropic falla (timeout, rate limit), hacer fallback al Lovable AI Gateway con el modelo actual para no dejar al usuario sin servicio.
 
 ## Detalle tecnico
 
-**Unificacion de carpetas**: Solo requiere mover archivos y actualizar 3 imports en `Tareas.tsx`.
+**Formato de llamada Anthropic:**
+```text
+POST https://api.anthropic.com/v1/messages
+Headers:
+  x-api-key: ANTHROPIC_API_KEY
+  anthropic-version: 2023-06-01
+  content-type: application/json
 
-**ConfirmDialog en Presentaciones**: Importar `useConfirmAction` y `ConfirmDialog`, reemplazar `if (window.confirm(...))` por `requestConfirm(titulo, callback)`, y renderizar el `ConfirmDialog` en el JSX.
+Body:
+  model: claude-sonnet-4-20250514
+  max_tokens: 4096
+  system: "..." (separado del array messages)
+  messages: [{ role: "user", content: "..." }]
+  tools: [{ name, description, input_schema }]
+```
 
-**Tests**: Usaran el setup existente en `tests/setup.ts` que ya mockea `supabase.from()`, `toast`, y `handleError`. Se seguira la convencion de Vitest con `describe/it/expect`.
+**Diferencias clave vs OpenAI format:**
+- `system` es parametro top-level, no un mensaje
+- Tool calling usa `input_schema` en vez de `parameters`
+- Streaming usa eventos `content_block_delta` con `delta.text`
+- Las respuestas de tools van como `tool_result` en vez de `tool` role
+
+**Modelo recomendado:** `claude-sonnet-4-20250514` - mejor equilibrio entre calidad de redaccion y coste. Para CIMs muy largos se podria usar `claude-sonnet-4-20250514` con `max_tokens: 8192`.
+
