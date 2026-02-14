@@ -7,6 +7,98 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+
+// ── Anthropic API helper with fallback ──
+async function callAIWithToolCalling(
+  systemPrompt: string,
+  userPrompt: string,
+  toolName: string,
+  toolDescription: string,
+  toolSchema: any
+): Promise<{ result: any; usage: { input_tokens: number; output_tokens: number }; model: string }> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+  if (ANTHROPIC_API_KEY) {
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+          tools: [{
+            name: toolName,
+            description: toolDescription,
+            input_schema: toolSchema,
+          }],
+          tool_choice: { type: "tool", name: toolName },
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const toolUse = data.content?.find((b: any) => b.type === "tool_use");
+        if (toolUse) {
+          return {
+            result: toolUse.input,
+            usage: { input_tokens: data.usage?.input_tokens ?? 0, output_tokens: data.usage?.output_tokens ?? 0 },
+            model: CLAUDE_MODEL,
+          };
+        }
+      } else {
+        console.error("Anthropic error:", resp.status, await resp.text());
+      }
+    } catch (e) {
+      console.error("Anthropic call failed, falling back:", e);
+    }
+  }
+
+  // Fallback to Lovable AI Gateway
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("No AI API key configured");
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [{
+        type: "function",
+        function: { name: toolName, description: toolDescription, parameters: toolSchema },
+      }],
+      tool_choice: { type: "function", function: { name: toolName } },
+    }),
+  });
+
+  if (!resp.ok) {
+    const status = resp.status;
+    if (status === 429) throw new Error("RATE_LIMIT");
+    if (status === 402) throw new Error("CREDITS_EXHAUSTED");
+    throw new Error(`AI gateway error: ${status}`);
+  }
+
+  const data = await resp.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("No tool call in fallback response");
+
+  return {
+    result: JSON.parse(toolCall.function.arguments),
+    usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 },
+    model: "google/gemini-3-flash-preview",
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -14,7 +106,6 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
   try {
     // --- Auth: user token OR cron-secret ---
@@ -148,104 +239,66 @@ CIERRES PRÓXIMOS (30 días):
 ${upcomingCloses.map((m) => `- ${m.nombre} - cierre estimado: ${new Date(m.estimated_close_date).toLocaleDateString("es-ES")}`).join("\n") || "Sin cierres inminentes."}
 `;
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
+    const systemPrompt = "Eres el director de M&A de Capittal Partners redactando el reporte ejecutivo semanal para el comité de socios. Sé conciso, profesional, en español. Enfócate en: deals que avanzaron, deals en riesgo, uso del tiempo del equipo, y acciones concretas para la próxima semana. No inventes datos, usa solo los datos proporcionados.";
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Eres el director de M&A de Capittal Partners redactando el reporte ejecutivo semanal para el comité de socios. Sé conciso, profesional, en español. Enfócate en: deals que avanzaron, deals en riesgo, uso del tiempo del equipo, y acciones concretas para la próxima semana. No inventes datos, usa solo los datos proporcionados.",
-          },
-          { role: "user", content: dataContext },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_executive_report",
-              description: "Genera el reporte ejecutivo semanal estructurado",
-              parameters: {
-                type: "object",
-                properties: {
-                  executive_summary: {
-                    type: "string",
-                    description: "Resumen narrativo de 2-3 párrafos sobre la actividad de la semana",
-                  },
-                  highlights: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "3-5 logros o avances principales de la semana",
-                  },
-                  risks: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        mandato: { type: "string" },
-                        reason: { type: "string" },
-                        suggested_action: { type: "string" },
-                      },
-                      required: ["mandato", "reason", "suggested_action"],
-                    },
-                    description: "Mandatos en riesgo con razón y acción sugerida",
-                  },
-                  recommendations: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        mandato: { type: "string" },
-                        action: { type: "string" },
-                        priority: { type: "string", enum: ["alta", "media", "baja"] },
-                      },
-                      required: ["mandato", "action", "priority"],
-                    },
-                    description: "Próximos pasos recomendados por mandato prioritario",
-                  },
-                },
-                required: ["executive_summary", "highlights", "risks", "recommendations"],
-                additionalProperties: false,
-              },
+    const toolSchema = {
+      type: "object",
+      properties: {
+        executive_summary: { type: "string", description: "Resumen narrativo de 2-3 párrafos sobre la actividad de la semana" },
+        highlights: { type: "array", items: { type: "string" }, description: "3-5 logros o avances principales de la semana" },
+        risks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mandato: { type: "string" },
+              reason: { type: "string" },
+              suggested_action: { type: "string" },
             },
+            required: ["mandato", "reason", "suggested_action"],
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_executive_report" } },
-      }),
-    });
+          description: "Mandatos en riesgo con razón y acción sugerida",
+        },
+        recommendations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mandato: { type: "string" },
+              action: { type: "string" },
+              priority: { type: "string", enum: ["alta", "media", "baja"] },
+            },
+            required: ["mandato", "action", "priority"],
+          },
+          description: "Próximos pasos recomendados por mandato prioritario",
+        },
+      },
+      required: ["executive_summary", "highlights", "risks", "recommendations"],
+    };
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      if (status === 429) {
+    let aiResult: { result: any; usage: any; model: string };
+    try {
+      aiResult = await callAIWithToolCalling(
+        systemPrompt, dataContext,
+        "generate_executive_report",
+        "Genera el reporte ejecutivo semanal estructurado",
+        toolSchema
+      );
+    } catch (e: any) {
+      if (e.message === "RATE_LIMIT") {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Intenta más tarde." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (status === 402) {
+      if (e.message === "CREDITS_EXHAUSTED") {
         return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", status, errText);
-      throw new Error(`AI gateway error: ${status}`);
+      throw e;
     }
 
-    const aiResult = await aiResponse.json();
-    const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
-
-    const aiData = JSON.parse(toolCall.function.arguments);
-    const { executive_summary, highlights, risks, recommendations } = aiData;
+    const { executive_summary, highlights, risks, recommendations } = aiResult.result;
 
     // --- Build email HTML ---
     const reportDateStr = now.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
@@ -331,9 +384,9 @@ ${upcomingCloses.map((m) => `- ${m.nombre} - cierre estimado: ${new Date(m.estim
       module: "executive-report",
       entity_type: "executive_report",
       entity_id: report?.id || null,
-      model: "google/gemini-3-flash-preview",
-      input_tokens: aiResult.usage?.prompt_tokens || null,
-      output_tokens: aiResult.usage?.completion_tokens || null,
+      model: aiResult.model,
+      input_tokens: aiResult.usage.input_tokens || null,
+      output_tokens: aiResult.usage.output_tokens || null,
       duration_ms: durationMs,
       success: true,
       user_id: userId,
@@ -358,7 +411,7 @@ ${upcomingCloses.map((m) => `- ${m.nombre} - cierre estimado: ${new Date(m.estim
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       await supabase.from("ai_activity_log").insert({
         module: "executive-report",
-        model: "google/gemini-3-flash-preview",
+        model: CLAUDE_MODEL,
         duration_ms: Date.now() - startTime,
         success: false,
         error_message: error.message,

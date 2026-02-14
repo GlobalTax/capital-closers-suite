@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = "https://fwhqtzkkvnjkazhaficj.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
 
 function getAdminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -32,6 +33,99 @@ async function verifyAuth(req: Request) {
   }
   return user;
 }
+
+// ── Anthropic API helper with fallback ──
+async function callAIWithToolCalling(
+  systemPrompt: string,
+  userPrompt: string,
+  toolName: string,
+  toolDescription: string,
+  toolSchema: any
+): Promise<{ result: any; usage: { input_tokens: number; output_tokens: number }; model: string }> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+  // Try Anthropic first
+  if (ANTHROPIC_API_KEY) {
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: 8192,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+          tools: [{
+            name: toolName,
+            description: toolDescription,
+            input_schema: toolSchema,
+          }],
+          tool_choice: { type: "tool", name: toolName },
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const toolUse = data.content?.find((b: any) => b.type === "tool_use");
+        if (toolUse) {
+          return {
+            result: toolUse.input,
+            usage: { input_tokens: data.usage?.input_tokens ?? 0, output_tokens: data.usage?.output_tokens ?? 0 },
+            model: CLAUDE_MODEL,
+          };
+        }
+      } else {
+        console.error("Anthropic error:", resp.status, await resp.text());
+      }
+    } catch (e) {
+      console.error("Anthropic call failed, falling back:", e);
+    }
+  }
+
+  // Fallback to Lovable AI Gateway
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("No AI API key configured");
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [{
+        type: "function",
+        function: { name: toolName, description: toolDescription, parameters: toolSchema },
+      }],
+      tool_choice: { type: "function", function: { name: toolName } },
+    }),
+  });
+
+  if (!resp.ok) {
+    const status = resp.status;
+    if (status === 429) throw new Error("RATE_LIMIT");
+    if (status === 402) throw new Error("CREDITS_EXHAUSTED");
+    throw new Error(`AI gateway error: ${status}`);
+  }
+
+  const data = await resp.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("No tool call in fallback response");
+
+  return {
+    result: JSON.parse(toolCall.function.arguments),
+    usage: { input_tokens: data.usage?.prompt_tokens ?? 0, output_tokens: data.usage?.completion_tokens ?? 0 },
+    model: "google/gemini-3-flash-preview",
+  };
+}
+
+// ── Section defaults ──
 
 const DEFAULT_TEASER_SECTIONS = [
   { order: 1, title: "Oportunidad de Inversión", instructions: "Descripción anónima de la empresa y el sector." },
@@ -88,16 +182,8 @@ RULES:
 - Maintain a professional, objective tone throughout`;
 }
 
-function buildUserPrompt(
-  documentType: string,
-  empresa: any,
-  mandato: any,
-  dealSheet: any,
-  financials: any[],
-  templateSections: any[]
-): string {
+function buildUserPrompt(documentType: string, empresa: any, mandato: any, dealSheet: any, financials: any[], templateSections: any[]): string {
   const sections = templateSections.map((s: any) => `- Section ${s.order}: "${s.title}" — ${s.instructions}`).join("\n");
-
   let prompt = `Generate a ${documentType === "teaser" ? "Teaser" : "CIM"} document with the following sections:\n${sections}\n\n`;
 
   prompt += `=== COMPANY DATA ===\n`;
@@ -154,7 +240,6 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     if (!["teaser", "cim"].includes(document_type)) {
       return new Response(JSON.stringify({ error: "document_type must be 'teaser' or 'cim'" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -164,7 +249,6 @@ serve(async (req) => {
     const adminClient = getAdminClient();
     const startTime = Date.now();
 
-    // Load mandato with empresa
     const { data: mandato, error: mandatoErr } = await adminClient
       .from("mandatos")
       .select("*, empresa_principal:empresas(*)")
@@ -177,7 +261,6 @@ serve(async (req) => {
       });
     }
 
-    // Load deal_sheet, financials, and template in parallel
     const [dealSheetRes, financialsRes, templateRes] = await Promise.all([
       adminClient.from("deal_sheets").select("*").eq("mandato_id", mandato_id).maybeSingle(),
       mandato.empresa_principal?.id
@@ -191,98 +274,60 @@ serve(async (req) => {
     const templateSections = templateRes.data?.sections ||
       (document_type === "teaser" ? DEFAULT_TEASER_SECTIONS : DEFAULT_CIM_SECTIONS);
 
-    // Build prompts
     const systemPrompt = buildSystemPrompt(document_type, language);
-    const userPrompt = buildUserPrompt(
-      document_type,
-      mandato.empresa_principal,
-      mandato,
-      dealSheetRes.data,
-      (financialsRes as any).data || [],
-      templateSections
-    );
+    const userPrompt = buildUserPrompt(document_type, mandato.empresa_principal, mandato, dealSheetRes.data, (financialsRes as any).data || [], templateSections);
 
-    // Call Lovable AI with tool calling
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_deal_document",
-              description: "Generate a structured deal document with sections",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: { type: "string", description: "Document title" },
-                  sections: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        section_title: { type: "string" },
-                        content: { type: "string", description: "Section content in markdown" },
-                        order: { type: "number" },
-                      },
-                      required: ["section_title", "content", "order"],
-                      additionalProperties: false,
-                    },
-                  },
-                  anonymization_notes: { type: "string", description: "Notes on anonymized data (teaser only)" },
-                  key_metrics_used: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "List of metrics from the company data that were used",
-                  },
-                },
-                required: ["title", "sections"],
-                additionalProperties: false,
-              },
+    const toolSchema = {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Document title" },
+        sections: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              section_title: { type: "string" },
+              content: { type: "string", description: "Section content in markdown" },
+              order: { type: "number" },
             },
+            required: ["section_title", "content", "order"],
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_deal_document" } },
-      }),
-    });
+        },
+        anonymization_notes: { type: "string", description: "Notes on anonymized data (teaser only)" },
+        key_metrics_used: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of metrics from the company data that were used",
+        },
+      },
+      required: ["title", "sections"],
+    };
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      if (status === 429) {
+    let aiResult: { result: any; usage: any; model: string };
+    try {
+      aiResult = await callAIWithToolCalling(
+        systemPrompt, userPrompt,
+        "generate_deal_document",
+        "Generate a structured deal document with sections",
+        toolSchema
+      );
+    } catch (e: any) {
+      if (e.message === "RATE_LIMIT") {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (status === 402) {
+      if (e.message === "CREDITS_EXHAUSTED") {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", status, errText);
-      throw new Error(`AI gateway error: ${status}`);
+      throw e;
     }
 
-    const aiResult = await aiResponse.json();
-    const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) throw new Error("No tool call response from AI");
-
-    const generated = JSON.parse(toolCall.function.arguments);
+    const generated = aiResult.result;
     const durationMs = Date.now() - startTime;
 
-    // Save document
     const { data: doc, error: insertErr } = await adminClient
       .from("generated_deal_documents")
       .insert({
@@ -295,9 +340,9 @@ serve(async (req) => {
         metadata: {
           anonymization_notes: generated.anonymization_notes,
           key_metrics_used: generated.key_metrics_used,
-          model: "google/gemini-3-flash-preview",
-          input_tokens: aiResult.usage?.prompt_tokens,
-          output_tokens: aiResult.usage?.completion_tokens,
+          model: aiResult.model,
+          input_tokens: aiResult.usage.input_tokens,
+          output_tokens: aiResult.usage.output_tokens,
         },
         generated_by: user.id,
       })
@@ -309,14 +354,13 @@ serve(async (req) => {
       throw new Error("Failed to save document");
     }
 
-    // Log in ai_activity_log
     await adminClient.from("ai_activity_log").insert({
       module: "document-generation",
       entity_type: document_type,
       entity_id: mandato_id,
-      model: "google/gemini-3-flash-preview",
-      input_tokens: aiResult.usage?.prompt_tokens,
-      output_tokens: aiResult.usage?.completion_tokens,
+      model: aiResult.model,
+      input_tokens: aiResult.usage.input_tokens,
+      output_tokens: aiResult.usage.output_tokens,
       duration_ms: durationMs,
       success: true,
       user_id: user.id,
