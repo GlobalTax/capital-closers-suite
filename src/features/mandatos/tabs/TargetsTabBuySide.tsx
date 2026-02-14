@@ -330,6 +330,7 @@ export function TargetsTabBuySide({ mandato, onRefresh, onEditMandato }: Targets
           onAddTag={(targetId, tag) => addTag.mutate({ targetId, tag })}
           onRemoveTag={(targetId, tag) => removeTag.mutate({ targetId, tag })}
           onBuyerTypeChange={(targetId, type) => updateBuyerType.mutate({ targetId, buyerType: type })}
+          onUnlinkTarget={(targetId) => unlinkTarget(targetId)}
         />
       )}
 
