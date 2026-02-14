@@ -353,8 +353,7 @@ ${emailHtml}`;
       JSON.stringify({
         user_id: user_id,
         email: targetUser.email,
-        temporary_password: temporaryPassword,
-        action_link: actionLink,
+        credentials_sent_via_email: emailSent,
         email_sent: emailSent,
         email_id: emailId,
         provider: 'resend',

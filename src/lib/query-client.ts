@@ -85,9 +85,9 @@ export function prefetchEntity<T>(
 }
 
 /**
- * Limpiar cache de queries inactivas
- * Útil para liberar memoria
+ * Limpiar toda la cache de React Query
+ * Útil para liberar memoria (ej: al cerrar sesión)
  */
-export function clearInactiveQueries() {
+export function clearAllQueryCache() {
   queryClient.clear();
 }

@@ -219,23 +219,43 @@ export const addContactoToMandato = async (
 };
 
 export const removeContactoFromMandato = async (id: string) => {
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de relación inválido', { id });
+  }
+
   const { error } = await supabase
     .from('mandato_contactos')
     .delete()
     .eq('id', id);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al desvincular contacto del mandato', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      id,
+    });
+  }
 };
 
 export const updateMandatoContacto = async (id: string, updates: Partial<MandatoContacto>) => {
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de relación inválido', { id });
+  }
+
   const { data, error } = await supabase
     .from('mandato_contactos')
     .update(updates)
     .eq('id', id)
     .select('*, contacto:contactos(*, empresa_principal:empresas(*))')
     .single();
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al actualizar relación mandato-contacto', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      id,
+    });
+  }
   return data;
 };
 
@@ -249,39 +269,71 @@ export const addEmpresaToMandato = async (
   rol: EmpresaRol,
   notas?: string
 ): Promise<MandatoEmpresa> => {
+  if (!mandatoId || !isValidUUID(mandatoId)) {
+    throw new DatabaseError('ID de mandato inválido', { mandatoId });
+  }
+  if (!empresaId || !isValidUUID(empresaId)) {
+    throw new DatabaseError('ID de empresa inválido', { empresaId });
+  }
+
   const { data, error } = await supabase
     .from('mandato_empresas')
-    .insert({ 
-      mandato_id: mandatoId, 
-      empresa_id: empresaId, 
-      rol, 
-      notas 
+    .insert({
+      mandato_id: mandatoId,
+      empresa_id: empresaId,
+      rol,
+      notas
     })
     .select('*, empresa:empresas(*)')
     .single();
-  
-  if (error) throw error;
-  return data as any;
+
+  if (error) {
+    throw new DatabaseError('Error al vincular empresa al mandato', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+    });
+  }
+  return data as MandatoEmpresa;
 };
 
 export const removeEmpresaFromMandato = async (id: string) => {
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de relación inválido', { id });
+  }
+
   const { error } = await supabase
     .from('mandato_empresas')
     .delete()
     .eq('id', id);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al desvincular empresa del mandato', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+      id,
+    });
+  }
 };
 
 export const updateMandatoEmpresa = async (id: string, updates: Partial<MandatoEmpresa>) => {
+  if (!id || !isValidUUID(id)) {
+    throw new DatabaseError('ID de relación inválido', { id });
+  }
+
   const { data, error } = await supabase
     .from('mandato_empresas')
     .update(updates)
     .eq('id', id)
     .select('*, empresa:empresas(*)')
     .single();
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al actualizar relación mandato-empresa', {
+      supabaseError: error,
+      table: 'mandato_empresas',
+      id,
+    });
+  }
   return data;
 };
 
@@ -290,6 +342,10 @@ export const updateMandatoEmpresa = async (id: string, updates: Partial<MandatoE
 // ============================================
 
 export const getMandatosByContacto = async (contactoId: string): Promise<Mandato[]> => {
+  if (!contactoId || !isValidUUID(contactoId)) {
+    throw new DatabaseError('ID de contacto inválido', { contactoId });
+  }
+
   const { data, error } = await supabase
     .from('mandato_contactos')
     .select(`
@@ -301,7 +357,13 @@ export const getMandatosByContacto = async (contactoId: string): Promise<Mandato
       )
     `)
     .eq('contacto_id', contactoId);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw new DatabaseError('Error al obtener mandatos del contacto', {
+      supabaseError: error,
+      table: 'mandato_contactos',
+      contactoId,
+    });
+  }
   return (data || []).map((mc: any) => mc.mandato).filter(Boolean) as Mandato[];
 };

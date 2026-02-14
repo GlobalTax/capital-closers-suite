@@ -1,20 +1,39 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { ResultadoBusqueda } from "@/types";
 
+/** Escapa caracteres especiales de LIKE (% y _) para evitar inyección de wildcards */
+function escapeLike(term: string): string {
+  return term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 export const searchGlobal = async (query: string): Promise<ResultadoBusqueda[]> => {
-  const searchTerm = `%${query.toLowerCase()}%`;
-  const results: ResultadoBusqueda[] = [];
+  const sanitized = escapeLike(query.toLowerCase());
+  const searchTerm = `%${sanitized}%`;
 
   try {
-    // Buscar mandatos
-    const { data: mandatos } = await supabase
-      .from('mandatos')
-      .select('id, descripcion, empresa_principal:empresas(nombre)')
-      .or(`descripcion.ilike.${searchTerm}`)
-      .limit(5);
+    // Ejecutar las 3 búsquedas en paralelo
+    const [mandatosResult, contactosResult, empresasResult] = await Promise.all([
+      supabase
+        .from('mandatos')
+        .select('id, descripcion, empresa_principal:empresas(nombre)')
+        .or(`descripcion.ilike.${searchTerm}`)
+        .limit(5),
+      supabase
+        .from('contactos')
+        .select('id, nombre, apellidos, email, cargo, telefono')
+        .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm},telefono.ilike.${searchTerm},cargo.ilike.${searchTerm}`)
+        .limit(5),
+      supabase
+        .from('empresas')
+        .select('id, nombre, sector')
+        .ilike('nombre', searchTerm)
+        .limit(5),
+    ]);
 
-    if (mandatos) {
-      mandatos.forEach((m: any) => {
+    const results: ResultadoBusqueda[] = [];
+
+    if (mandatosResult.data) {
+      mandatosResult.data.forEach((m: any) => {
         results.push({
           tipo: "mandato",
           id: m.id,
@@ -25,15 +44,8 @@ export const searchGlobal = async (query: string): Promise<ResultadoBusqueda[]> 
       });
     }
 
-    // Buscar contactos (incluye teléfono y cargo)
-    const { data: contactos } = await supabase
-      .from('contactos')
-      .select('id, nombre, apellidos, email, cargo, telefono')
-      .or(`nombre.ilike.${searchTerm},apellidos.ilike.${searchTerm},email.ilike.${searchTerm},telefono.ilike.${searchTerm},cargo.ilike.${searchTerm}`)
-      .limit(5);
-
-    if (contactos) {
-      contactos.forEach((c: any) => {
+    if (contactosResult.data) {
+      contactosResult.data.forEach((c: any) => {
         results.push({
           tipo: "contacto",
           id: c.id,
@@ -44,15 +56,8 @@ export const searchGlobal = async (query: string): Promise<ResultadoBusqueda[]> 
       });
     }
 
-    // Buscar empresas
-    const { data: empresas } = await supabase
-      .from('empresas')
-      .select('id, nombre, sector')
-      .ilike('nombre', searchTerm)
-      .limit(5);
-
-    if (empresas) {
-      empresas.forEach((e: any) => {
+    if (empresasResult.data) {
+      empresasResult.data.forEach((e: any) => {
         results.push({
           tipo: "empresa",
           id: e.id,
@@ -62,9 +67,10 @@ export const searchGlobal = async (query: string): Promise<ResultadoBusqueda[]> 
         });
       });
     }
+
+    return results;
   } catch (error) {
     console.error("Error en búsqueda global:", error);
+    return [];
   }
-
-  return results;
 };
