@@ -1,39 +1,41 @@
 
-# Mejorar relevancia de cargo en search_contactos_paginated
 
-## Estado actual
+# Corregir errores de build en batch-enrich-companies
 
-La RPC `search_contactos_paginated` **ya busca por cargo** en el WHERE (`lower(c.cargo) LIKE '%' || normalized_query || '%'`). Buscar "director" ya devuelve 21 resultados correctamente.
+## Problema
 
-Sin embargo, el cargo NO tiene su propia posicion en el ranking de relevancia, asi que los resultados con match en cargo se mezclan con el bucket generico (relevancia 8).
+Hay 3 errores TypeScript en `supabase/functions/batch-enrich-companies/index.ts`. El archivo `src/services/mandatos.ts` ya esta limpio (sin conflictos de merge).
 
-## Cambio propuesto
+## Errores y correcciones
 
-Unica modificacion: anadir cargo como nivel de relevancia 6 en el CASE, desplazando empresa a 7, CIF a 8 y "otros" a 9.
+### Error 1 (linea 112): `Property 'attempts' does not exist`
 
-### Migracion SQL
+La query de la linea ~85 solo selecciona `id` y `entity_id` de `enrichment_queue`, pero luego se usa `item.attempts` en la linea 112.
 
-Actualizar la funcion `search_contactos_paginated` cambiando solo el bloque CASE:
+**Solucion**: Anadir `attempts` al select de la query que obtiene los items de la cola.
 
-```sql
-CASE
-  WHEN lower(c.email) = normalized_query THEN 1
-  WHEN lower(c.nombre) LIKE normalized_query || '%' THEN 2
-  WHEN lower(c.apellidos) LIKE normalized_query || '%' THEN 3
-  WHEN lower(c.nombre) LIKE '%' || normalized_query || '%'
-    OR lower(c.apellidos) LIKE '%' || normalized_query || '%' THEN 4
-  WHEN lower(c.email) LIKE '%' || normalized_query || '%' THEN 5
-  WHEN lower(c.cargo) LIKE '%' || normalized_query || '%' THEN 6   -- NUEVO
-  WHEN lower(e.nombre) LIKE '%' || normalized_query || '%' THEN 7  -- era 6
-  WHEN lower(e.cif) LIKE '%' || normalized_query || '%' THEN 8    -- era 7
-  ELSE 9                                                           -- era 8
-END AS relevance
-```
+### Errores 2 y 3 (linea 203): Indexar objeto tipado con string
 
-### Archivos a modificar
+`currentEmpresa[field]` falla porque TypeScript no permite indexar un objeto con tipo explicito usando un `string` generico.
+
+**Solucion**: Castear `currentEmpresa` como `Record<string, any>` o usar una variable intermedia tipada.
+
+## Cambios
 
 | Archivo | Cambio |
 |---|---|
-| Nueva migracion SQL | Actualizar CASE de relevancia en `search_contactos_paginated` |
+| `supabase/functions/batch-enrich-companies/index.ts` | 1. Anadir `attempts` al `.select()` de enrichment_queue (~linea 85) |
+| `supabase/functions/batch-enrich-companies/index.ts` | 2. Castear `currentEmpresa` como `Record<string, any>` en la linea 203 |
 
-No hay cambios en frontend. El servicio y hooks siguen funcionando igual.
+## Detalle tecnico
+
+```typescript
+// Fix 1: Anadir attempts al select (linea ~85)
+.select('id, entity_id, attempts')
+
+// Fix 2: Castear para indexar (linea 203)
+const current = currentEmpresa as Record<string, any>;
+if (current && current[field] != null && current[field] !== '') continue;
+```
+
+No se modifica ninguna logica de negocio. Solo se corrigen tipos.
