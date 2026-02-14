@@ -1,32 +1,43 @@
 
-# Anadir boton "Desvincular" en la lista de targets
+# Añadir botón "Desvincular" en las tarjetas de target (Sell-Side)
 
-## Objetivo
+## Contexto
 
-Anadir un boton rojo "Desvincular" directamente visible en cada fila de la tabla de targets (TargetListView), sin necesidad de abrir el drawer de detalle.
+La imagen muestra un mandato Sell-Side con la pestaña "Targets" donde aparecen las empresas target como tarjetas (TargetCard). Actualmente no hay forma de desvincular un target desde esta vista.
+
+El botón "Desvincular" ya existe en la vista de lista del Buy-Side (TargetListView). Ahora hay que añadirlo también a las tarjetas del Sell-Side.
 
 ## Cambios
 
-### 1. TargetListView.tsx - Anadir prop y boton
+### 1. TargetCard.tsx - Añadir botón y confirmación
 
-- Anadir nueva prop `onUnlinkTarget: (targetId: string) => void` a la interfaz
-- En la celda vacia de acciones (linea 346), anadir un boton con icono Unlink en rojo
-- Incluir un ConfirmDialog para confirmar la desvinculacion (mismo texto que el drawer)
-- Estado local para trackear que target se esta desvinculando
+- Nueva prop opcional: `onUnlink?: () => void`
+- En la barra de acciones (junto a "Asociar", "+ Contacto", "Link"), añadir un botón rojo "Desvincular" con icono Unlink
+- Separador visual antes del botón para diferenciarlo de las acciones positivas
+- ConfirmDialog integrado para confirmar antes de ejecutar
 
-### 2. TargetsTabBuySide.tsx - Pasar la prop
+### 2. TargetsTab.tsx - Pasar el handler
 
-- Pasar `onUnlinkTarget={unlinkTarget}` al componente TargetListView (linea 324-333)
+- Importar `removeEmpresaFromMandato` del servicio de mandatos
+- Crear función `handleUnlinkTarget` que elimine la relación `mandato_empresas` usando `me.id` y luego llame a `onRefresh()`
+- Pasar `onUnlink` al TargetCard con el `me.id` correspondiente
 
-## Detalle tecnico
+## Detalle técnico
 
-**TargetListView.tsx:**
-- Nueva prop: `onUnlinkTarget: (targetId: string) => void`
-- Estado: `const [unlinkTargetId, setUnlinkTargetId] = useState<string | null>(null)`
-- Celda de acciones (linea 346): boton ghost con Unlink icon, clase `text-destructive hover:text-destructive hover:bg-destructive/10`
-- ConfirmDialog al final del componente, controlado por `unlinkTargetId !== null`
+**TargetCard.tsx:**
+- Nueva prop: `onUnlink?: () => void`
+- Estado local: `unlinkConfirmOpen` para el ConfirmDialog
+- Botón en la barra de acciones con clases `text-destructive hover:text-destructive hover:bg-destructive/10`
+- Icono `Unlink` de lucide-react
 
-**TargetsTabBuySide.tsx:**
-- Linea ~332: anadir `onUnlinkTarget={(targetId) => unlinkTarget(targetId)}`
-
-No se modifica el drawer ni ninguna otra funcionalidad existente.
+**TargetsTab.tsx (TargetsTabSellSide):**
+- Importar `removeEmpresaFromMandato` desde `@/services/mandatos`
+- Handler:
+```
+const handleUnlinkTarget = async (mandatoEmpresaId: string) => {
+  await removeEmpresaFromMandato(mandatoEmpresaId);
+  toast.success("Target desvinculado");
+  onRefresh();
+};
+```
+- En el render del TargetCard, pasar `onUnlink={() => handleUnlinkTarget(me.id)}`
