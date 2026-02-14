@@ -14,9 +14,8 @@ import { SearchFundsSection } from "@/components/targets/SearchFundsSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
-import { fetchInteraccionesByMandatoTarget, getContactosByEmpresa } from "@/services/interacciones";
+import { fetchInteraccionesByMandatoTarget, getContactosByEmpresa, type Interaccion } from "@/services/interacciones.service";
 import { addEmpresaToMandato, removeEmpresaFromMandato } from "@/services/mandatos";
-import type { Interaccion } from "@/services/interacciones";
 import type { Mandato, Contacto } from "@/types";
 
 interface TargetsTabProps {

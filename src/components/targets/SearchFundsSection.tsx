@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { SearchFundCard } from './SearchFundCard';
 import { AsociarSearchFundDialog } from './AsociarSearchFundDialog';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { 
   useSearchFundMatchesForMandato, 
   useUpdateMatchStatus,
@@ -21,6 +22,7 @@ interface SearchFundsSectionProps {
 export function SearchFundsSection({ mandato }: SearchFundsSectionProps) {
   const [showAsociarDialog, setShowAsociarDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unlinkConfirm, setUnlinkConfirm] = useState<{ open: boolean; matchId: string }>({ open: false, matchId: '' });
 
   const { data: matches = [], isLoading } = useSearchFundMatchesForMandato(mandato.id);
   const updateStatusMutation = useUpdateMatchStatus();
@@ -36,12 +38,15 @@ export function SearchFundsSection({ mandato }: SearchFundsSectionProps) {
   };
 
   const handleRemove = (matchId: string) => {
-    if (confirm('¿Desvincular este Search Fund del mandato?')) {
-      removeMutation.mutate({
-        matchId,
-        mandatoId: mandato.id,
-      });
-    }
+    setUnlinkConfirm({ open: true, matchId });
+  };
+
+  const confirmRemove = () => {
+    removeMutation.mutate({
+      matchId: unlinkConfirm.matchId,
+      mandatoId: mandato.id,
+    });
+    setUnlinkConfirm({ open: false, matchId: '' });
   };
 
   const handleNotesChange = (matchId: string, notes: string) => {
@@ -164,6 +169,15 @@ export function SearchFundsSection({ mandato }: SearchFundsSectionProps) {
         mandatoId={mandato.id}
         mandatoEbitda={mandatoEbitda}
         mandatoSector={mandatoSector}
+      />
+
+      <ConfirmDialog
+        open={unlinkConfirm.open}
+        onOpenChange={(open) => !open && setUnlinkConfirm({ open: false, matchId: '' })}
+        titulo="¿Desvincular este Search Fund del mandato?"
+        onConfirmar={confirmRemove}
+        textoConfirmar="Desvincular"
+        variant="destructive"
       />
     </div>
   );

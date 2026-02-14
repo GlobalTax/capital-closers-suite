@@ -23,7 +23,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Interaccion } from "@/services/interacciones";
+import type { Interaccion } from "@/services/interacciones.service";
 import { AlertsSummaryWidget } from "@/components/dashboard/AlertsSummaryWidget";
 import { OnboardingWidget } from "@/components/dashboard/OnboardingWidget";
 import { useAlertsRealtime } from "@/hooks/useAlertsRealtime";

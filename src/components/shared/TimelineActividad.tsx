@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Interaccion } from "@/services/interacciones";
+import type { Interaccion } from "@/services/interacciones.service";
 
 interface TimelineActividadProps {
   interacciones: Interaccion[];

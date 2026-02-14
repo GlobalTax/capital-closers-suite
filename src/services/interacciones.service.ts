@@ -133,6 +133,43 @@ class InteraccionService extends BaseService<Interaccion, InteraccionInsert, Int
 
     return this.transformMany(data || []);
   }
+
+  async getByMandatoTarget(mandatoId: string, empresaId: string): Promise<Interaccion[]> {
+    const { data, error } = await supabase
+      .from('interacciones')
+      .select('*')
+      .eq('mandato_id', mandatoId)
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: false });
+
+    if (error) {
+      throw new DatabaseError('Error obteniendo interacciones del mandato-target', {
+        table: 'interacciones',
+        code: error.code,
+      });
+    }
+
+    return this.transformMany(data || []);
+  }
+
+  async getLastByContacto(contactoId: string): Promise<Interaccion | null> {
+    const { data, error } = await supabase
+      .from('interacciones')
+      .select('*')
+      .eq('contacto_id', contactoId)
+      .order('fecha', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new DatabaseError('Error obteniendo última interacción del contacto', {
+        table: 'interacciones',
+        code: error.code,
+      });
+    }
+
+    return data ? this.transform(data as InteraccionRow) : null;
+  }
 }
 
 // Singleton instance
@@ -142,8 +179,23 @@ const interaccionService = new InteraccionService();
 export const fetchInteraccionesByContacto = (contactoId: string) => interaccionService.getByContacto(contactoId);
 export const fetchInteraccionesByEmpresa = (empresaId: string) => interaccionService.getByEmpresa(empresaId);
 export const fetchInteraccionesByMandato = (mandatoId: string) => interaccionService.getByMandato(mandatoId);
+export const fetchInteraccionesByMandatoTarget = (mandatoId: string, empresaId: string) => interaccionService.getByMandatoTarget(mandatoId, empresaId);
 export const createInteraccion = (data: InteraccionInsert) => interaccionService.create(data);
 export const updateInteraccion = (id: string, data: InteraccionUpdate) => interaccionService.update(id, data);
 export const deleteInteraccion = (id: string) => interaccionService.delete(id);
 export const getInteraccionesRecientes = (limit?: number) => interaccionService.getRecientes(limit);
 export const getProximasAcciones = () => interaccionService.getProximasAcciones();
+export const getLastInteraccionByContacto = (contactoId: string) => interaccionService.getLastByContacto(contactoId);
+
+// Utility: get contactos by empresa (migrated from legacy interacciones.ts)
+export const getContactosByEmpresa = async (empresaId: string): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('contactos')
+    .select('*')
+    .eq('empresa_principal_id', empresaId)
+    .is('merged_into_contacto_id', null)
+    .order('nombre', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+};

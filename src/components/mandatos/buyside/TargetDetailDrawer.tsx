@@ -41,7 +41,7 @@ import { ImportFromLinkDrawer } from "@/components/contactos/ImportFromLinkDrawe
 import { AsociarContactoEmpresaDialog } from "@/components/contactos/AsociarContactoEmpresaDialog";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { useQuery } from "@tanstack/react-query";
-import { getContactosByEmpresa, fetchInteraccionesByEmpresa } from "@/services/interacciones";
+import { getContactosByEmpresa, fetchInteraccionesByEmpresa } from "@/services/interacciones.service";
 import { useTargetTags } from "@/hooks/useTargetTags";
 import type {
   MandatoEmpresaBuySide,

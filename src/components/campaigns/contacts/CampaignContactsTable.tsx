@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -71,9 +72,16 @@ export function CampaignContactsTable({ contacts, isLoading, campaignType, onRef
     updateContact.mutate({ id: contactId, updates: { status: newStatus } });
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   const handleDelete = (contactId: string) => {
-    if (confirm("¿Estás seguro de eliminar este contacto?")) {
-      deleteContact.mutate(contactId);
+    setDeleteConfirmId(contactId);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteContact.mutate(deleteConfirmId);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -231,6 +239,16 @@ export function CampaignContactsTable({ contacts, isLoading, campaignType, onRef
           </div>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+        titulo="¿Estás seguro de eliminar este contacto?"
+        descripcion="Esta acción no se puede deshacer."
+        onConfirmar={confirmDelete}
+        textoConfirmar="Eliminar"
+        variant="destructive"
+      />
     </Card>
   );
 }
