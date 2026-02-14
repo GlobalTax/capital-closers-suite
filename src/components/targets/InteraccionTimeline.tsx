@@ -23,8 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
 import { Mail, Phone, Users, FileText, Plus, MessageCircle, Linkedin, MapPin, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import type { Interaccion } from "@/services/interacciones";
-import { createInteraccion, updateInteraccion, deleteInteraccion } from "@/services/interacciones";
+import type { Interaccion } from "@/services/interacciones.service";
+import { createInteraccion, updateInteraccion, deleteInteraccion } from "@/services/interacciones.service";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 

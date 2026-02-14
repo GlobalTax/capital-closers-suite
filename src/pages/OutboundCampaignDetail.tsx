@@ -36,6 +36,8 @@ import {
 } from '@/hooks/useOutboundCampaigns';
 import { estimateApolloCredits } from '@/lib/apollo-sector-mapping';
 import { DataTableEnhanced, Column } from '@/components/shared/DataTableEnhanced';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import type { OutboundProspect } from '@/types/outbound';
 
 const PAGE_SIZE = 50;
@@ -65,6 +67,7 @@ export default function OutboundCampaignDetail() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { confirmState, requestConfirm, closeConfirm, handleConfirm } = useConfirmAction();
 
   // Debounce search input
   useEffect(() => {
@@ -140,16 +143,17 @@ export default function OutboundCampaignDetail() {
     }
 
     const credits = estimateApolloCredits(pendingIds.length);
-    if (!confirm(`Se consumirán aproximadamente ${credits} créditos de Apollo. ¿Continuar?`)) {
-      return;
-    }
-
-    try {
-      await enrichProspects.mutateAsync({ prospectIds: pendingIds });
-      setSelectedIds(new Set());
-    } catch (error) {
-      // Error handled by hook
-    }
+    requestConfirm(
+      `Se consumirán aproximadamente ${credits} créditos de Apollo. ¿Continuar?`,
+      async () => {
+        try {
+          await enrichProspects.mutateAsync({ prospectIds: pendingIds });
+          setSelectedIds(new Set());
+        } catch (error) {
+          // Error handled by hook
+        }
+      }
+    );
   };
 
   const handleImport = async () => {
@@ -186,29 +190,34 @@ export default function OutboundCampaignDetail() {
       return;
     }
 
-    if (!confirm(`¿Importar todos los prospectos enriquecidos (~${enrichedNotImported}) al CRM?`)) {
-      return;
-    }
-
-    try {
-      await importAll.mutateAsync(campaign.id);
-    } catch (error) {
-      // Error handled by hook
-    }
+    requestConfirm(
+      `¿Importar todos los prospectos enriquecidos (~${enrichedNotImported}) al CRM?`,
+      async () => {
+        try {
+          await importAll.mutateAsync(campaign.id);
+        } catch (error) {
+          // Error handled by hook
+        }
+      }
+    );
   };
 
   const handleDelete = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    if (!confirm(`¿Eliminar ${ids.length} prospectos?`)) return;
-
-    try {
-      await deleteProspects.mutateAsync(ids);
-      setSelectedIds(new Set());
-    } catch (error) {
-      // Error handled by hook
-    }
+    requestConfirm(
+      `¿Eliminar ${ids.length} prospectos?`,
+      async () => {
+        try {
+          await deleteProspects.mutateAsync(ids);
+          setSelectedIds(new Set());
+        } catch (error) {
+          // Error handled by hook
+        }
+      },
+      'Esta acción no se puede deshacer.'
+    );
   };
 
   const handleExportCSV = () => {
@@ -544,6 +553,16 @@ export default function OutboundCampaignDetail() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={closeConfirm}
+        titulo={confirmState.title}
+        descripcion={confirmState.description}
+        onConfirmar={handleConfirm}
+        textoConfirmar="Confirmar"
+        variant="destructive"
+      />
     </div>
   );
 }

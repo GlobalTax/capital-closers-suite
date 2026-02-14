@@ -23,6 +23,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useOutboundCampaigns, useOutboundStats, useDeleteCampaign, useArchiveCampaign } from '@/hooks/useOutboundCampaigns';
 import NuevaCampanaDrawer from '@/components/outbound/NuevaCampanaDrawer';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import type { OutboundCampaign } from '@/types/outbound';
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
@@ -41,6 +43,7 @@ export default function Outbound() {
   const { data: stats, isLoading: loadingStats } = useOutboundStats();
   const deleteCampaign = useDeleteCampaign();
   const archiveCampaign = useArchiveCampaign();
+  const { confirmState, requestConfirm, closeConfirm, handleConfirm } = useConfirmAction();
 
   const handleCampaignClick = (campaign: OutboundCampaign) => {
     navigate(`/outbound/${campaign.id}`);
@@ -48,16 +51,19 @@ export default function Outbound() {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('¿Eliminar esta campaña y todos sus prospectos?')) {
-      deleteCampaign.mutate(id);
-    }
+    requestConfirm(
+      '¿Eliminar esta campaña y todos sus prospectos?',
+      () => deleteCampaign.mutate(id),
+      'Esta acción no se puede deshacer.'
+    );
   };
 
   const handleArchive = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('¿Archivar esta campaña?')) {
-      archiveCampaign.mutate(id);
-    }
+    requestConfirm(
+      '¿Archivar esta campaña?',
+      () => archiveCampaign.mutate(id)
+    );
   };
 
   return (
@@ -300,6 +306,16 @@ export default function Outbound() {
           setIsDrawerOpen(false);
           navigate(`/outbound/${campaignId}`);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={closeConfirm}
+        titulo={confirmState.title}
+        descripcion={confirmState.description}
+        onConfirmar={handleConfirm}
+        textoConfirmar="Confirmar"
+        variant="destructive"
       />
     </div>
   );

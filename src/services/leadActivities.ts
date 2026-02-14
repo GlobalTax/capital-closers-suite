@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Interaccion } from "./interacciones";
+import type { Interaccion } from "./interacciones.service";
 
 export interface LeadActivity {
   id: string;

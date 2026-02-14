@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Interaccion } from "@/services/interacciones";
+import type { Interaccion } from "@/services/interacciones.service";
 import type { Empresa, Contacto } from "@/types";
 
 interface TargetCardProps {

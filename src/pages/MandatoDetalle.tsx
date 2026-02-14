@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { TimeEntry, TimeStats } from "@/types";
 import { handleError } from "@/lib/error-handler";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
 export default function MandatoDetalle() {
   const { id } = useParams();
   const { user, adminUser } = useAuth();
@@ -97,6 +98,13 @@ export default function MandatoDetalle() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <PageBreadcrumb
+        segments={[
+          { label: esServicio ? "Servicios" : "Mandatos", href: esServicio ? "/servicios" : "/mandatos" },
+          { label: mandato.codigo || mandato.nombre_proyecto || mandato.empresa_principal?.nombre || "Detalle" },
+        ]}
+      />
+
       <MandatoHeader
         mandato={mandato}
         onEdit={() => setEditarMandatoOpen(true)}

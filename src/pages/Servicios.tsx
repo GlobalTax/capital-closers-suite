@@ -23,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { fetchServicios, deleteMandato, updateMandato } from "@/services/mandatos";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useConfirmAction } from "@/hooks/useConfirmAction";
 import { exportToCSV, cn } from "@/lib/utils";
 import { MANDATO_CATEGORIA_LABELS, PIPELINE_STAGE_LABELS_SERVICIO } from "@/lib/constants";
 import type { Mandato, MandatoCategoria } from "@/types";
@@ -106,6 +108,7 @@ export default function Servicios() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [vistaActual, setVistaActual] = useState<"tabla" | "kanban">("tabla");
   const [servicioArrastrado, setServicioArrastrado] = useState<Mandato | null>(null);
+  const { confirmState, requestConfirm, closeConfirm, handleConfirm } = useConfirmAction();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -295,9 +298,11 @@ export default function Servicios() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm("¿Estás seguro de eliminar este servicio?")) {
-                  handleDelete(row.id);
-                }
+                requestConfirm(
+                  "¿Estás seguro de eliminar este servicio?",
+                  () => handleDelete(row.id),
+                  "Esta acción no se puede deshacer."
+                );
               }}
               className="text-destructive"
             >
@@ -471,6 +476,16 @@ export default function Servicios() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={cargarServicios}
+      />
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={closeConfirm}
+        titulo={confirmState.title}
+        descripcion={confirmState.description}
+        onConfirmar={handleConfirm}
+        textoConfirmar="Eliminar"
+        variant="destructive"
       />
     </div>
   );

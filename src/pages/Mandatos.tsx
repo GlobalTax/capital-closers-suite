@@ -47,6 +47,8 @@ import { MANDATO_ESTADOS, MANDATO_TIPOS } from "@/lib/constants";
 import type { Mandato, MandatoEstado } from "@/types";
 import { toast } from "sonner";
 import { DeleteConfirmDialog } from "@/components/shared/DeleteConfirmDialog";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useConfirmAction } from "@/hooks/useConfirmAction";
 import {
   Search,
   Download,
@@ -440,17 +442,23 @@ export default function Mandatos() {
     }
   };
 
+  const { confirmState, requestConfirm, closeConfirm, handleConfirm } = useConfirmAction();
+
   const handleBulkDelete = async () => {
-    if (!confirm(`¿Eliminar ${selectedRows.length} mandatos seleccionados?`)) return;
-    
-    try {
-      await Promise.all(selectedRows.map((id) => deleteMandato(id)));
-      toast.success(`${selectedRows.length} mandatos eliminados`);
-      setSelectedRows([]);
-      cargarMandatos();
-    } catch (error) {
-      toast.error("Error al eliminar mandatos");
-    }
+    requestConfirm(
+      `¿Eliminar ${selectedRows.length} mandatos seleccionados?`,
+      async () => {
+        try {
+          await Promise.all(selectedRows.map((id) => deleteMandato(id)));
+          toast.success(`${selectedRows.length} mandatos eliminados`);
+          setSelectedRows([]);
+          cargarMandatos();
+        } catch (error) {
+          toast.error("Error al eliminar mandatos");
+        }
+      },
+      'Esta acción no se puede deshacer.'
+    );
   };
 
   const handleBulkExport = () => {
@@ -1471,6 +1479,16 @@ export default function Mandatos() {
         itemName={mandatoToDelete?.codigo || mandatoToDelete?.empresa_principal?.nombre || mandatoToDelete?.nombre_proyecto || "este mandato"}
         description="Se eliminarán todos los documentos, tareas y registros asociados. Esta acción no se puede deshacer."
         onConfirm={confirmDelete}
+      />
+
+      <ConfirmDialog
+        open={confirmState.open}
+        onOpenChange={closeConfirm}
+        titulo={confirmState.title}
+        descripcion={confirmState.description}
+        onConfirmar={handleConfirm}
+        textoConfirmar="Eliminar"
+        variant="destructive"
       />
     </PageTransition>
   );

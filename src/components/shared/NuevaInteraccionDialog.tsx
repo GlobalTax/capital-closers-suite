@@ -13,7 +13,7 @@ import { CalendarIcon, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { createInteraccion } from "@/services/interacciones";
+import { createInteraccion } from "@/services/interacciones.service";
 
 interface NuevaInteraccionDialogProps {
   contactoId?: string;

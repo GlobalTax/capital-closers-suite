@@ -6,7 +6,7 @@ import {
   updateInteraccion,
   deleteInteraccion,
   type Interaccion
-} from "@/services/interacciones";
+} from "@/services/interacciones.service";
 
 export function useContactoInteracciones(contactoId: string | undefined) {
   return useQuery({

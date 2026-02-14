@@ -14,7 +14,7 @@ import { useContactoDocumentos, useDesvincularDocumentoContacto } from "@/hooks/
 import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { useSyncContactoToBrevo } from "@/hooks/useSyncContactoToBrevo";
 import type { Contacto, Mandato } from "@/types";
-import type { Interaccion } from "@/services/interacciones";
+import type { Interaccion } from "@/services/interacciones.service";
 import { TimelineActividad } from "@/components/shared/TimelineActividad";
 import { NuevaInteraccionDialog } from "@/components/shared/NuevaInteraccionDialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -25,6 +25,7 @@ import { BadgeStatus } from "@/components/shared/BadgeStatus";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatPhoneForWhatsApp } from "@/lib/validation/validators";
+import { PageBreadcrumb } from "@/components/shared/PageBreadcrumb";
 
 export default function ContactoDetalle() {
   const { id } = useParams();
@@ -103,6 +104,13 @@ export default function ContactoDetalle() {
 
   return (
     <div className="space-y-6">
+      <PageBreadcrumb
+        segments={[
+          { label: "Contactos", href: "/contactos" },
+          { label: contacto.nombre || "Detalle" },
+        ]}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
