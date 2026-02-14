@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Search, Building2, Globe, Sparkles, Link2 } from "lucide-react";
 import { fetchInteraccionesByMandatoTarget, getContactosByEmpresa } from "@/services/interacciones";
-import { addEmpresaToMandato } from "@/services/mandatos";
+import { addEmpresaToMandato, removeEmpresaFromMandato } from "@/services/mandatos";
 import type { Interaccion } from "@/services/interacciones";
 import type { Mandato, Contacto } from "@/types";
 
@@ -164,6 +164,15 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
   const handleAddContacto = (empresaId: string) => {
     setSelectedEmpresaId(empresaId);
     setNuevoContactoOpen(true);
+  };
+
+  const handleUnlinkTarget = async (mandatoEmpresaId: string) => {
+    try {
+      await removeEmpresaFromMandato(mandatoEmpresaId);
+      onRefresh();
+    } catch (error) {
+      console.error("Error desvinculando target:", error);
+    }
   };
 
   const handleImportFromLink = (empresaId: string) => {
@@ -383,6 +392,7 @@ function TargetsTabSellSide({ mandato, onRefresh }: TargetsTabProps) {
                 onImportFromLink={() => handleImportFromLink(empresa.id)}
                 onInteraccionUpdate={() => handleInteraccionUpdate(empresa.id)}
                 onAsociarExistente={() => handleAsociarExistente(empresa.id, empresa.nombre)}
+                onUnlink={() => handleUnlinkTarget(me.id)}
               />
             );
           })}
