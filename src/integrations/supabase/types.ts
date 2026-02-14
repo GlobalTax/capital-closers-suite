@@ -5623,6 +5623,93 @@ export type Database = {
           },
         ]
       }
+      content_calendar: {
+        Row: {
+          assigned_to: string | null
+          blog_post_id: string | null
+          category: string | null
+          content_type: string | null
+          created_at: string
+          created_by: string | null
+          estimated_reading_time: number | null
+          id: string
+          meta_description: string | null
+          meta_title: string | null
+          notes: string | null
+          pe_sector_id: string | null
+          priority: string | null
+          published_date: string | null
+          scheduled_date: string | null
+          slug: string | null
+          status: string
+          tags: string[] | null
+          target_keywords: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          blog_post_id?: string | null
+          category?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_reading_time?: number | null
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          notes?: string | null
+          pe_sector_id?: string | null
+          priority?: string | null
+          published_date?: string | null
+          scheduled_date?: string | null
+          slug?: string | null
+          status?: string
+          tags?: string[] | null
+          target_keywords?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          blog_post_id?: string | null
+          category?: string | null
+          content_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          estimated_reading_time?: number | null
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          notes?: string | null
+          pe_sector_id?: string | null
+          priority?: string | null
+          published_date?: string | null
+          scheduled_date?: string | null
+          slug?: string | null
+          status?: string
+          tags?: string[] | null
+          target_keywords?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_calendar_blog_post_id_fkey"
+            columns: ["blog_post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_calendar_pe_sector_id_fkey"
+            columns: ["pe_sector_id"]
+            isOneToOne: false
+            referencedRelation: "pe_sector_intelligence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corporate_buyers: {
         Row: {
           buyer_type: string | null
@@ -15829,6 +15916,60 @@ export type Database = {
         }
         Relationships: []
       }
+      pe_sector_intelligence: {
+        Row: {
+          active_pe_firms: string | null
+          consolidation_phase: string | null
+          created_at: string
+          geography: string | null
+          id: string
+          is_active: boolean | null
+          multiples_valuations: string | null
+          pe_thesis: string | null
+          platforms_operations: string | null
+          quantitative_data: string | null
+          sector: string
+          subsector: string
+          tags: string[] | null
+          updated_at: string
+          vertical: string | null
+        }
+        Insert: {
+          active_pe_firms?: string | null
+          consolidation_phase?: string | null
+          created_at?: string
+          geography?: string | null
+          id?: string
+          is_active?: boolean | null
+          multiples_valuations?: string | null
+          pe_thesis?: string | null
+          platforms_operations?: string | null
+          quantitative_data?: string | null
+          sector: string
+          subsector: string
+          tags?: string[] | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Update: {
+          active_pe_firms?: string | null
+          consolidation_phase?: string | null
+          created_at?: string
+          geography?: string | null
+          id?: string
+          is_active?: boolean | null
+          multiples_valuations?: string | null
+          pe_thesis?: string | null
+          platforms_operations?: string | null
+          quantitative_data?: string | null
+          sector?: string
+          subsector?: string
+          tags?: string[] | null
+          updated_at?: string
+          vertical?: string | null
+        }
+        Relationships: []
+      }
       pe_sector_taxonomy: {
         Row: {
           created_at: string | null
@@ -20568,6 +20709,210 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      valuation_campaign_companies: {
+        Row: {
+          ai_context: string | null
+          ai_enriched: boolean | null
+          ai_strengths: string | null
+          ai_weaknesses: string | null
+          campaign_id: string
+          client_cif: string | null
+          client_company: string
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          custom_multiple: number | null
+          ebitda: number
+          error_message: string | null
+          excel_row_number: number | null
+          financial_year: number | null
+          financial_years_data: Json | null
+          id: string
+          multiple_used: number | null
+          normalized_ebitda: number | null
+          pdf_url: string | null
+          professional_valuation_id: string | null
+          revenue: number | null
+          source: string | null
+          status: string | null
+          valuation_central: number | null
+          valuation_high: number | null
+          valuation_low: number | null
+        }
+        Insert: {
+          ai_context?: string | null
+          ai_enriched?: boolean | null
+          ai_strengths?: string | null
+          ai_weaknesses?: string | null
+          campaign_id: string
+          client_cif?: string | null
+          client_company: string
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          custom_multiple?: number | null
+          ebitda: number
+          error_message?: string | null
+          excel_row_number?: number | null
+          financial_year?: number | null
+          financial_years_data?: Json | null
+          id?: string
+          multiple_used?: number | null
+          normalized_ebitda?: number | null
+          pdf_url?: string | null
+          professional_valuation_id?: string | null
+          revenue?: number | null
+          source?: string | null
+          status?: string | null
+          valuation_central?: number | null
+          valuation_high?: number | null
+          valuation_low?: number | null
+        }
+        Update: {
+          ai_context?: string | null
+          ai_enriched?: boolean | null
+          ai_strengths?: string | null
+          ai_weaknesses?: string | null
+          campaign_id?: string
+          client_cif?: string | null
+          client_company?: string
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          custom_multiple?: number | null
+          ebitda?: number
+          error_message?: string | null
+          excel_row_number?: number | null
+          financial_year?: number | null
+          financial_years_data?: Json | null
+          id?: string
+          multiple_used?: number | null
+          normalized_ebitda?: number | null
+          pdf_url?: string | null
+          professional_valuation_id?: string | null
+          revenue?: number | null
+          source?: string | null
+          status?: string | null
+          valuation_central?: number | null
+          valuation_high?: number | null
+          valuation_low?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "valuation_campaign_companies_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "valuation_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "valuation_campaign_companies_professional_valuation_id_fkey"
+            columns: ["professional_valuation_id"]
+            isOneToOne: false
+            referencedRelation: "professional_valuations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      valuation_campaigns: {
+        Row: {
+          advisor_email: string | null
+          advisor_name: string | null
+          advisor_phone: string | null
+          advisor_role: string | null
+          ai_personalize: boolean | null
+          comparables_text: string | null
+          created_at: string
+          created_by: string | null
+          custom_multiple: number | null
+          financial_years: number[] | null
+          id: string
+          include_comparables: boolean | null
+          lead_source: string | null
+          multiple_high: number | null
+          multiple_low: number | null
+          name: string
+          sector: string
+          service_type: string | null
+          status: string | null
+          strengths_template: string | null
+          total_companies: number | null
+          total_created: number | null
+          total_errors: number | null
+          total_sent: number | null
+          total_valuation: number | null
+          updated_at: string
+          use_custom_advisor: boolean | null
+          valuation_context: string | null
+          weaknesses_template: string | null
+        }
+        Insert: {
+          advisor_email?: string | null
+          advisor_name?: string | null
+          advisor_phone?: string | null
+          advisor_role?: string | null
+          ai_personalize?: boolean | null
+          comparables_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_multiple?: number | null
+          financial_years?: number[] | null
+          id?: string
+          include_comparables?: boolean | null
+          lead_source?: string | null
+          multiple_high?: number | null
+          multiple_low?: number | null
+          name: string
+          sector: string
+          service_type?: string | null
+          status?: string | null
+          strengths_template?: string | null
+          total_companies?: number | null
+          total_created?: number | null
+          total_errors?: number | null
+          total_sent?: number | null
+          total_valuation?: number | null
+          updated_at?: string
+          use_custom_advisor?: boolean | null
+          valuation_context?: string | null
+          weaknesses_template?: string | null
+        }
+        Update: {
+          advisor_email?: string | null
+          advisor_name?: string | null
+          advisor_phone?: string | null
+          advisor_role?: string | null
+          ai_personalize?: boolean | null
+          comparables_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_multiple?: number | null
+          financial_years?: number[] | null
+          id?: string
+          include_comparables?: boolean | null
+          lead_source?: string | null
+          multiple_high?: number | null
+          multiple_low?: number | null
+          name?: string
+          sector?: string
+          service_type?: string | null
+          status?: string | null
+          strengths_template?: string | null
+          total_companies?: number | null
+          total_created?: number | null
+          total_errors?: number | null
+          total_sent?: number | null
+          total_valuation?: number | null
+          updated_at?: string
+          use_custom_advisor?: boolean | null
+          valuation_context?: string | null
+          weaknesses_template?: string | null
         }
         Relationships: []
       }
