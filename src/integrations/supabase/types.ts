@@ -5625,14 +5625,19 @@ export type Database = {
       }
       content_calendar: {
         Row: {
+          ai_generated_content: string | null
+          ai_generation_metadata: Json | null
           assigned_to: string | null
           blog_post_id: string | null
           category: string | null
+          channel: string | null
           content_type: string | null
           created_at: string
           created_by: string | null
           estimated_reading_time: number | null
           id: string
+          key_data: string | null
+          linkedin_format: string | null
           meta_description: string | null
           meta_title: string | null
           notes: string | null
@@ -5643,19 +5648,25 @@ export type Database = {
           slug: string | null
           status: string
           tags: string[] | null
+          target_audience: string | null
           target_keywords: string[] | null
           title: string
           updated_at: string
         }
         Insert: {
+          ai_generated_content?: string | null
+          ai_generation_metadata?: Json | null
           assigned_to?: string | null
           blog_post_id?: string | null
           category?: string | null
+          channel?: string | null
           content_type?: string | null
           created_at?: string
           created_by?: string | null
           estimated_reading_time?: number | null
           id?: string
+          key_data?: string | null
+          linkedin_format?: string | null
           meta_description?: string | null
           meta_title?: string | null
           notes?: string | null
@@ -5666,19 +5677,25 @@ export type Database = {
           slug?: string | null
           status?: string
           tags?: string[] | null
+          target_audience?: string | null
           target_keywords?: string[] | null
           title: string
           updated_at?: string
         }
         Update: {
+          ai_generated_content?: string | null
+          ai_generation_metadata?: Json | null
           assigned_to?: string | null
           blog_post_id?: string | null
           category?: string | null
+          channel?: string | null
           content_type?: string | null
           created_at?: string
           created_by?: string | null
           estimated_reading_time?: number | null
           id?: string
+          key_data?: string | null
+          linkedin_format?: string | null
           meta_description?: string | null
           meta_title?: string | null
           notes?: string | null
@@ -5689,6 +5706,7 @@ export type Database = {
           slug?: string | null
           status?: string
           tags?: string[] | null
+          target_audience?: string | null
           target_keywords?: string[] | null
           title?: string
           updated_at?: string

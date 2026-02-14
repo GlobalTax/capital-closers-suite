@@ -25,7 +25,7 @@ import { EditarMandatoDrawer } from "@/components/mandatos/EditarMandatoDrawer";
 import { DocumentGeneratorDrawer } from "@/components/documentos/DocumentGeneratorDrawer";
 import { MarketingSubTabs } from "@/features/mandatos/components/MarketingSubTabs";
 import { MandatoActivityTimeline } from "@/components/mandatos/MandatoActivityTimeline";
-import { MandatoScoringPanel } from "@/components/mandatos/MandatoScoringPanel";
+
 import { BuyerMatchingPanel } from "@/components/mandatos/BuyerMatchingPanel";
 import { DealDocumentGenerator } from "@/components/mandatos/DealDocumentGenerator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -216,14 +216,6 @@ export default function MandatoDetalle() {
               onVincularEmpresa={() => setVincularEmpresaOpen(true)}
               onEditMandato={() => setEditarMandatoOpen(true)}
             />
-            {!esServicio && (
-              <div className="space-y-4">
-                <MandatoScoringPanel
-                  mandatoId={id!}
-                  currentProbability={mandato.probability}
-                />
-              </div>
-            )}
           </div>
         </TabsContent>
 
