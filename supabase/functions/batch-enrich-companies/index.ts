@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     // Fetch pending items from queue
     const { data: queueItems, error: fetchError } = await supabase
       .from('enrichment_queue')
-      .select('id, entity_id')
+      .select('id, entity_id, attempts')
       .eq('entity_type', 'empresa')
       .eq('status', 'pending')
       .lt('attempts', 3)
@@ -200,7 +200,8 @@ Deno.serve(async (req) => {
         for (const [field, value] of Object.entries(fieldMap)) {
           if (value == null) continue;
           if (lockedFields.includes(field)) continue; // Respect locked fields
-          if (currentEmpresa && currentEmpresa[field] != null && currentEmpresa[field] !== '') continue; // Only fill empty
+          const current = currentEmpresa as Record<string, any>;
+          if (current && current[field] != null && current[field] !== '') continue; // Only fill empty
           updateFields[field] = value;
           fieldsUpdated.push(field);
         }
