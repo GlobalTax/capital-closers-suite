@@ -7,9 +7,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+
 const SYSTEM_PROMPT = `Eres el asistente de IA de Capittal Partners CRM. Ayudas a los usuarios a consultar datos del CRM usando lenguaje natural en español. Tienes acceso a herramientas para buscar empresas, contactos, mandatos y tareas. Responde siempre en español, de forma concisa y profesional. Usa tablas markdown cuando presentes múltiples resultados. Cuando no encuentres datos, sugiere al usuario refinar su búsqueda. No inventes datos, solo usa los resultados de las herramientas.`;
 
-const tools = [
+// OpenAI-format tools (for fallback)
+const openaiTools = [
   {
     type: "function",
     function: {
@@ -26,7 +29,6 @@ const tools = [
           min_empleados: { type: "number", description: "Número mínimo de empleados" },
           es_target: { type: "boolean", description: "Si es empresa target" },
         },
-        additionalProperties: false,
       },
     },
   },
@@ -43,7 +45,6 @@ const tools = [
           cargo: { type: "string", description: "Cargo del contacto" },
           empresa: { type: "string", description: "Nombre de la empresa del contacto" },
         },
-        additionalProperties: false,
       },
     },
   },
@@ -61,7 +62,6 @@ const tools = [
           empresa: { type: "string", description: "Nombre de la empresa del mandato" },
           nombre_proyecto: { type: "string", description: "Nombre del proyecto" },
         },
-        additionalProperties: false,
       },
     },
   },
@@ -77,7 +77,6 @@ const tools = [
           vencidas: { type: "boolean", description: "Solo tareas vencidas (fecha_vencimiento < hoy)" },
           hoy: { type: "boolean", description: "Solo tareas que vencen hoy" },
         },
-        additionalProperties: false,
       },
     },
   },
@@ -86,7 +85,7 @@ const tools = [
     function: {
       name: "get_stats_resumen",
       description: "Obtener métricas generales del CRM: total empresas, mandatos activos, tareas pendientes, contactos.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
+      parameters: { type: "object", properties: {} },
     },
   },
   {
@@ -100,21 +99,24 @@ const tools = [
           nombre: { type: "string", description: "Nombre de la empresa a buscar" },
         },
         required: ["nombre"],
-        additionalProperties: false,
       },
     },
   },
 ];
 
-// ── Tool execution ──────────────────────────────────────────────────────────
+// Anthropic-format tools
+const anthropicTools = openaiTools.map((t) => ({
+  name: t.function.name,
+  description: t.function.description,
+  input_schema: t.function.parameters,
+}));
+
+// ── Tool execution ──
 async function executeTool(supabaseAdmin: any, name: string, args: any): Promise<string> {
   try {
     switch (name) {
       case "search_empresas": {
-        let q = supabaseAdmin
-          .from("empresas")
-          .select("id, nombre, sector, subsector, ubicacion, facturacion, ebitda, empleados, es_target, sitio_web, descripcion")
-          .limit(50);
+        let q = supabaseAdmin.from("empresas").select("id, nombre, sector, subsector, ubicacion, facturacion, ebitda, empleados, es_target, sitio_web, descripcion").limit(50);
         if (args.nombre) q = q.ilike("nombre", `%${args.nombre}%`);
         if (args.sector) q = q.ilike("sector", `%${args.sector}%`);
         if (args.ubicacion) q = q.ilike("ubicacion", `%${args.ubicacion}%`);
@@ -127,10 +129,7 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
         return JSON.stringify({ count: data.length, empresas: data });
       }
       case "search_contactos": {
-        let q = supabaseAdmin
-          .from("contactos")
-          .select("id, nombre, apellidos, email, cargo, telefono, empresa_principal_id, empresas:empresa_principal_id(nombre)")
-          .limit(50);
+        let q = supabaseAdmin.from("contactos").select("id, nombre, apellidos, email, cargo, telefono, empresa_principal_id, empresas:empresa_principal_id(nombre)").limit(50);
         if (args.nombre) q = q.or(`nombre.ilike.%${args.nombre}%,apellidos.ilike.%${args.nombre}%`);
         if (args.email) q = q.ilike("email", `%${args.email}%`);
         if (args.cargo) q = q.ilike("cargo", `%${args.cargo}%`);
@@ -144,10 +143,7 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
         return JSON.stringify({ count: results.length, contactos: results });
       }
       case "search_mandatos": {
-        let q = supabaseAdmin
-          .from("mandatos")
-          .select("id, nombre_proyecto, tipo, categoria, estado, valor, fecha_inicio, fecha_cierre, prioridad, empresa_principal_id, empresas:empresa_principal_id(nombre)")
-          .limit(50);
+        let q = supabaseAdmin.from("mandatos").select("id, nombre_proyecto, tipo, categoria, estado, valor, fecha_inicio, fecha_cierre, prioridad, empresa_principal_id, empresas:empresa_principal_id(nombre)").limit(50);
         if (args.estado) q = q.eq("estado", args.estado);
         if (args.tipo) q = q.eq("tipo", args.tipo);
         if (args.categoria) q = q.ilike("categoria", `%${args.categoria}%`);
@@ -163,12 +159,7 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
       }
       case "get_tareas_pendientes": {
         const today = new Date().toISOString().split("T")[0];
-        let q = supabaseAdmin
-          .from("tareas")
-          .select("id, titulo, descripcion, estado, prioridad, fecha_vencimiento, tipo, asignado_a, mandato_id")
-          .in("estado", ["pendiente", "en_progreso"])
-          .order("fecha_vencimiento", { ascending: true, nullsFirst: false })
-          .limit(50);
+        let q = supabaseAdmin.from("tareas").select("id, titulo, descripcion, estado, prioridad, fecha_vencimiento, tipo, asignado_a, mandato_id").in("estado", ["pendiente", "en_progreso"]).order("fecha_vencimiento", { ascending: true, nullsFirst: false }).limit(50);
         if (args.prioridad) q = q.eq("prioridad", args.prioridad);
         if (args.vencidas) q = q.lt("fecha_vencimiento", today);
         if (args.hoy) q = q.eq("fecha_vencimiento", today);
@@ -191,11 +182,7 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
         });
       }
       case "get_empresa_detalle": {
-        const { data: empresas, error } = await supabaseAdmin
-          .from("empresas")
-          .select("id, nombre, sector, subsector, ubicacion, facturacion, ebitda, empleados, es_target, sitio_web, descripcion, cif")
-          .ilike("nombre", `%${args.nombre}%`)
-          .limit(1);
+        const { data: empresas, error } = await supabaseAdmin.from("empresas").select("id, nombre, sector, subsector, ubicacion, facturacion, ebitda, empleados, es_target, sitio_web, descripcion, cif").ilike("nombre", `%${args.nombre}%`).limit(1);
         if (error) return JSON.stringify({ error: error.message });
         if (!empresas || empresas.length === 0) return JSON.stringify({ error: "Empresa no encontrada" });
         const empresa = empresas[0];
@@ -203,11 +190,7 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
           supabaseAdmin.from("contactos").select("id, nombre, apellidos, email, cargo, telefono").eq("empresa_principal_id", empresa.id).limit(20),
           supabaseAdmin.from("mandatos").select("id, nombre_proyecto, tipo, estado, valor, fecha_inicio").eq("empresa_principal_id", empresa.id).limit(20),
         ]);
-        return JSON.stringify({
-          empresa,
-          contactos: contactosRes.data ?? [],
-          mandatos: mandatosRes.data ?? [],
-        });
+        return JSON.stringify({ empresa, contactos: contactosRes.data ?? [], mandatos: mandatosRes.data ?? [] });
       }
       default:
         return JSON.stringify({ error: `Tool ${name} not found` });
@@ -215,6 +198,189 @@ async function executeTool(supabaseAdmin: any, name: string, args: any): Promise
   } catch (e) {
     return JSON.stringify({ error: e instanceof Error ? e.message : "Unknown tool error" });
   }
+}
+
+// ── Transform Anthropic SSE stream to OpenAI SSE format ──
+function transformAnthropicStreamToOpenAI(anthropicBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = anthropicBody.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+
+  return new ReadableStream({
+    async pull(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          // Flush remaining
+          if (buffer.trim()) {
+            processLines(buffer, controller, encoder);
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line || line.startsWith("event:")) continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6);
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta" && parsed.delta.text) {
+              const openaiChunk = JSON.stringify({
+                choices: [{ delta: { content: parsed.delta.text }, index: 0, finish_reason: null }],
+              });
+              controller.enqueue(encoder.encode(`data: ${openaiChunk}\n\n`));
+            } else if (parsed.type === "message_stop") {
+              // Will be handled by [DONE] above
+            }
+          } catch {
+            // ignore partial JSON
+          }
+        }
+      }
+    },
+    cancel() {
+      reader.cancel();
+    },
+  });
+}
+
+function processLines(text: string, controller: ReadableStreamDefaultController, encoder: TextEncoder) {
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("event:") || !line.startsWith("data: ")) continue;
+    try {
+      const parsed = JSON.parse(line.slice(6));
+      if (parsed.type === "content_block_delta" && parsed.delta?.text) {
+        const chunk = JSON.stringify({ choices: [{ delta: { content: parsed.delta.text }, index: 0, finish_reason: null }] });
+        controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+      }
+    } catch { /* ignore */ }
+  }
+}
+
+// ── Anthropic non-streaming call ──
+async function callAnthropicNonStreaming(messages: any[], supabaseAdmin: any): Promise<{ toolCalls: any[] | null; textContent: string | null; usage: any }> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+  
+  // Convert messages: extract system, convert tool role messages to Anthropic format
+  const anthropicMessages: any[] = [];
+  for (const msg of messages) {
+    if (msg.role === "system") continue; // handled separately
+    if (msg.role === "tool") {
+      // Anthropic expects tool results as user messages with tool_result content
+      anthropicMessages.push({
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: msg.tool_call_id, content: msg.content }],
+      });
+    } else if (msg.role === "assistant" && msg.tool_calls) {
+      // Convert OpenAI assistant tool_calls to Anthropic format
+      const content: any[] = [];
+      if (msg.content) content.push({ type: "text", text: msg.content });
+      for (const tc of msg.tool_calls) {
+        content.push({
+          type: "tool_use",
+          id: tc.id,
+          name: tc.function.name,
+          input: JSON.parse(tc.function.arguments || "{}"),
+        });
+      }
+      anthropicMessages.push({ role: "assistant", content });
+    } else {
+      anthropicMessages.push({ role: msg.role, content: msg.content });
+    }
+  }
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: anthropicMessages,
+      tools: anthropicTools,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`ANTHROPIC_ERROR:${resp.status}:${text}`);
+  }
+
+  const data = await resp.json();
+  const toolUses = data.content?.filter((b: any) => b.type === "tool_use") || [];
+  const textBlocks = data.content?.filter((b: any) => b.type === "text").map((b: any) => b.text).join("") || null;
+
+  if (toolUses.length > 0) {
+    return { toolCalls: toolUses, textContent: textBlocks, usage: data.usage || {} };
+  }
+  return { toolCalls: null, textContent: textBlocks, usage: data.usage || {} };
+}
+
+// ── Anthropic streaming call ──
+async function callAnthropicStreaming(messages: any[]): Promise<ReadableStream<Uint8Array>> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+  
+  const anthropicMessages: any[] = [];
+  for (const msg of messages) {
+    if (msg.role === "system") continue;
+    if (msg.role === "tool") {
+      anthropicMessages.push({
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: msg.tool_call_id, content: msg.content }],
+      });
+    } else if (msg.role === "assistant" && msg.tool_calls) {
+      const content: any[] = [];
+      if (msg.content) content.push({ type: "text", text: msg.content });
+      for (const tc of msg.tool_calls) {
+        content.push({
+          type: "tool_use",
+          id: tc.id,
+          name: tc.function.name,
+          input: JSON.parse(tc.function.arguments || "{}"),
+        });
+      }
+      anthropicMessages.push({ role: "assistant", content });
+    } else {
+      anthropicMessages.push({ role: msg.role, content: msg.content });
+    }
+  }
+
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: anthropicMessages,
+      temperature: 0.3,
+      stream: true,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`ANTHROPIC_STREAM_ERROR:${resp.status}:${text}`);
+  }
+
+  return transformAnthropicStreamToOpenAI(resp.body!);
 }
 
 serve(async (req) => {
@@ -234,10 +400,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Verify user
+    if (!ANTHROPIC_API_KEY && !lovableApiKey) throw new Error("No AI API key configured");
+
     const userClient = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
@@ -250,31 +417,69 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const allMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
 
-    const allMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages,
-    ];
+    // ── Try Anthropic path ──
+    if (ANTHROPIC_API_KEY) {
+      try {
+        // Step 1: Non-streaming to resolve tool calls
+        const firstCall = await callAnthropicNonStreaming(allMessages, supabaseAdmin);
+        inputTokens += firstCall.usage.input_tokens ?? 0;
+        outputTokens += firstCall.usage.output_tokens ?? 0;
 
-    // Step 1: Non-streaming call to resolve tool calls
+        if (!firstCall.toolCalls) {
+          // No tools needed — stream final answer
+          const stream = await callAnthropicStreaming(allMessages);
+          logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true, CLAUDE_MODEL);
+          return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+        }
+
+        // Step 2: Execute tool calls
+        const assistantContent: any[] = [];
+        if (firstCall.textContent) assistantContent.push({ type: "text", text: firstCall.textContent });
+        for (const tc of firstCall.toolCalls) {
+          assistantContent.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.input });
+        }
+
+        const toolResultMessages: any[] = [
+          ...allMessages,
+          { role: "assistant", content: assistantContent },
+        ];
+
+        // Execute each tool and add results
+        for (const tc of firstCall.toolCalls) {
+          const result = await executeTool(supabaseAdmin, tc.name, tc.input);
+          toolResultMessages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: result,
+          });
+        }
+
+        // Step 3: Stream final response with tool results
+        const stream = await callAnthropicStreaming(toolResultMessages);
+        logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true, CLAUDE_MODEL);
+        return new Response(stream, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+
+      } catch (e: any) {
+        console.error("Anthropic path failed, trying fallback:", e.message);
+        // Fall through to Lovable Gateway fallback
+      }
+    }
+
+    // ── Fallback: Lovable AI Gateway (original logic) ──
+    if (!lovableApiKey) throw new Error("No fallback AI key configured");
+
     const toolResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: allMessages,
-        tools,
-        temperature: 0.3,
-        stream: false,
-      }),
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, tools: openaiTools, temperature: 0.3, stream: false }),
     });
 
     if (!toolResponse.ok) {
       const status = toolResponse.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "Límite de solicitudes excedido. Intenta de nuevo en unos segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (status === 402) return new Response(JSON.stringify({ error: "Créditos de IA agotados. Contacta al administrador." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const text = await toolResponse.text();
-      console.error("AI gateway error:", status, text);
+      if (status === 429) return new Response(JSON.stringify({ error: "Límite de solicitudes excedido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (status === 402) return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ error: "Error del servicio de IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -283,90 +488,55 @@ serve(async (req) => {
     inputTokens += toolResult.usage?.prompt_tokens ?? 0;
     outputTokens += toolResult.usage?.completion_tokens ?? 0;
 
-    // If no tool calls, stream the response directly
     if (!assistantMsg?.tool_calls || assistantMsg.tool_calls.length === 0) {
-      // Model answered directly — stream it
       const streamResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: allMessages,
-          temperature: 0.3,
-          stream: true,
-        }),
+        body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: allMessages, temperature: 0.3, stream: true }),
       });
-
-      if (!streamResp.ok) {
-        return new Response(JSON.stringify({ error: "Error de streaming" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      // Log
-      logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true);
-
+      if (!streamResp.ok) return new Response(JSON.stringify({ error: "Error de streaming" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true, "google/gemini-3-flash-preview");
       return new Response(streamResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
     }
 
-    // Step 2: Execute tool calls
-    const toolMessages: any[] = [
-      ...allMessages,
-      assistantMsg,
-    ];
-
+    const toolMessages: any[] = [...allMessages, assistantMsg];
     for (const tc of assistantMsg.tool_calls) {
       const args = JSON.parse(tc.function.arguments || "{}");
       const result = await executeTool(supabaseAdmin, tc.function.name, args);
-      toolMessages.push({
-        role: "tool",
-        tool_call_id: tc.id,
-        content: result,
-      });
+      toolMessages.push({ role: "tool", tool_call_id: tc.id, content: result });
     }
 
-    // Step 3: Final streaming call with tool results
     const finalResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: toolMessages,
-        temperature: 0.3,
-        stream: true,
-      }),
+      body: JSON.stringify({ model: "google/gemini-3-flash-preview", messages: toolMessages, temperature: 0.3, stream: true }),
     });
-
-    if (!finalResp.ok) {
-      const status = finalResp.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "Límite de solicitudes excedido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (status === 402) return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ error: "Error de streaming" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Log activity
-    logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true);
-
+    if (!finalResp.ok) return new Response(JSON.stringify({ error: "Error de streaming" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    logActivity(supabaseAdmin, user.id, startTime, inputTokens, outputTokens, true, "google/gemini-3-flash-preview");
     return new Response(finalResp.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+
   } catch (e) {
     console.error("crm-assistant error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Error interno" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-async function logActivity(supabaseAdmin: any, userId: string, startTime: number, inputTokens: number, outputTokens: number, success: boolean, errorMsg?: string) {
+async function logActivity(supabaseAdmin: any, userId: string, startTime: number, inputTokens: number, outputTokens: number, success: boolean, model: string, errorMsg?: string) {
   try {
     await supabaseAdmin.from("ai_activity_log").insert({
       module: "crm-assistant",
-      model: "google/gemini-3-flash-preview",
+      model,
       user_id: userId,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       duration_ms: Date.now() - startTime,
       success,
       error_message: errorMsg || null,
-      estimated_cost_usd: ((inputTokens * 0.00001) + (outputTokens * 0.00004)),
+      estimated_cost_usd: model.includes("claude") 
+        ? ((inputTokens * 0.000003) + (outputTokens * 0.000015))
+        : ((inputTokens * 0.00001) + (outputTokens * 0.00004)),
     });
   } catch (e) {
     console.error("Failed to log activity:", e);

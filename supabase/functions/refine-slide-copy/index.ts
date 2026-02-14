@@ -5,6 +5,87 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+
+// ── Anthropic API helper with fallback ──
+async function callAIWithToolCalling(
+  systemPrompt: string,
+  userPrompt: string,
+  toolName: string,
+  toolDescription: string,
+  toolSchema: any
+): Promise<any> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+  if (ANTHROPIC_API_KEY) {
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+          tools: [{
+            name: toolName,
+            description: toolDescription,
+            input_schema: toolSchema,
+          }],
+          tool_choice: { type: "tool", name: toolName },
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const toolUse = data.content?.find((b: any) => b.type === "tool_use");
+        if (toolUse) return toolUse.input;
+      } else {
+        console.error("Anthropic error:", resp.status, await resp.text());
+      }
+    } catch (e) {
+      console.error("Anthropic call failed, falling back:", e);
+    }
+  }
+
+  // Fallback to Lovable AI Gateway
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("No AI API key configured");
+
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [{
+        type: "function",
+        function: { name: toolName, description: toolDescription, parameters: toolSchema },
+      }],
+      tool_choice: { type: "function", function: { name: toolName } },
+    }),
+  });
+
+  if (!resp.ok) {
+    const status = resp.status;
+    if (status === 429) throw new Error("Rate limit exceeded. Please try again in a moment.");
+    if (status === 402) throw new Error("AI credits exhausted. Please add funds to continue.");
+    throw new Error(`AI Gateway error: ${status}`);
+  }
+
+  const data = await resp.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall || toolCall.function.name !== toolName) throw new Error("Unexpected AI response format");
+  return JSON.parse(toolCall.function.arguments);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -17,22 +98,13 @@ serve(async (req) => {
       throw new Error("outline_json is required and must be an array");
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
     // Detect template type from structure
     const isMASellTeaser = outline_json.some((slide: any) => 
       slide.slide_type === "disclaimer" && outline_json.length === 8
     );
-    
-    // Detect firm deck (6 slides, starts with title, has stats at position 4)
     const isFirmDeck = outline_json.length === 6 && 
       outline_json[0]?.slide_type === "title" &&
       outline_json[3]?.slide_type === "stats";
-    
-    // Detect client deck (6 slides, starts with overview, has timeline at position 4)
     const isClientDeck = outline_json.length === 6 && 
       outline_json[0]?.slide_type === "overview" &&
       outline_json[3]?.slide_type === "timeline";
@@ -74,7 +146,6 @@ CONTENT CONSTRAINTS:
 - Max 5 bullets per slide
 - Stats must come ONLY from provided inputs`;
       }
-      
       if (isFirmDeck) {
         return `You are refining copy for a PROFESSIONAL FIRM PRESENTATION for an M&A advisory firm.
 
@@ -115,7 +186,6 @@ CONTENT CONSTRAINTS:
 - Max 5 bullets per slide
 - Stats must come ONLY from provided inputs`;
       }
-      
       if (isClientDeck) {
         return `You are refining copy for a CLIENT-FACING ADVISORY PROCESS PRESENTATION.
 
@@ -155,7 +225,6 @@ CONTENT CONSTRAINTS:
 - Max 5 bullets per slide
 - Timeline items should include timeframe references`;
       }
-      
       return `You are generating a professional M&A-grade presentation.
 
 STRICT RULES:
@@ -173,9 +242,8 @@ CONTENT CONSTRAINTS:
 - No marketing hype or superlatives without data
 - Stats must come from provided inputs only`;
     };
-    
-    const systemPrompt = getSystemPrompt();
 
+    const systemPrompt = getSystemPrompt();
     const outputRequirements = `
 OUTPUT REQUIREMENTS:
 - Maintain the exact slide order and types from the outline
@@ -207,156 +275,81 @@ ${outputRequirements}
 
 For each slide, generate polished professional copy. Use only the information provided above.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "refine_slides",
-              description: "Return refined slides with M&A-grade professional copy",
-              parameters: {
-                type: "object",
-                properties: {
-                  slides: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        slide_index: { type: "number", description: "Original slide index (0-based)" },
-                        slide_type: { type: "string", description: "Type of slide" },
-                        layout: { type: "string", enum: ["A", "B", "C"], description: "Layout code" },
-                        headline: { type: "string", description: "Main headline (max 10 words)" },
-                        subline: { type: "string", description: "Optional subline (max 15 words)" },
-                        bullets: {
-                          type: "array",
-                          items: { type: "string" },
-                          maxItems: 5,
-                          description: "Bullet points (max 12 words each, max 5 bullets)"
-                        },
-                        stats: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              value: { type: "string" },
-                              label: { type: "string" }
-                            },
-                            required: ["value", "label"]
-                          },
-                          maxItems: 4,
-                          description: "Key statistics (only from provided inputs)"
-                        },
-                        team_members: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              name: { type: "string" },
-                              role: { type: "string" }
-                            },
-                            required: ["name", "role"]
-                          },
-                          description: "Team members if applicable"
-                        },
-                        columns: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              title: { type: "string" },
-                              content: { type: "string" }
-                            },
-                            required: ["title", "content"]
-                          },
-                          maxItems: 3,
-                          description: "Columns for comparison slides"
-                        }
-                      },
-                      required: ["slide_index", "slide_type", "layout", "headline"]
-                    }
-                  }
+    const toolSchema = {
+      type: "object",
+      properties: {
+        slides: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slide_index: { type: "number", description: "Original slide index (0-based)" },
+              slide_type: { type: "string", description: "Type of slide" },
+              layout: { type: "string", enum: ["A", "B", "C"], description: "Layout code" },
+              headline: { type: "string", description: "Main headline (max 10 words)" },
+              subline: { type: "string", description: "Optional subline (max 15 words)" },
+              bullets: { type: "array", items: { type: "string" }, description: "Bullet points (max 12 words each, max 5 bullets)" },
+              stats: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: { value: { type: "string" }, label: { type: "string" } },
+                  required: ["value", "label"],
                 },
-                required: ["slides"]
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "refine_slides" } }
-      }),
-    });
+                description: "Key statistics (only from provided inputs)",
+              },
+              team_members: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: { name: { type: "string" }, role: { type: "string" } },
+                  required: ["name", "role"],
+                },
+                description: "Team members if applicable",
+              },
+              columns: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: { title: { type: "string" }, content: { type: "string" } },
+                  required: ["title", "content"],
+                },
+                description: "Columns for comparison slides",
+              },
+            },
+            required: ["slide_index", "slide_type", "layout", "headline"],
+          },
+        },
+      },
+      required: ["slides"],
+    };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI Gateway error: ${response.status}`);
-    }
+    const result = await callAIWithToolCalling(
+      systemPrompt, userPrompt,
+      "refine_slides",
+      "Return refined slides with M&A-grade professional copy",
+      toolSchema
+    );
 
-    const data = await response.json();
-    console.log("AI response:", JSON.stringify(data, null, 2));
-
-    // Extract tool call result
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== "refine_slides") {
-      throw new Error("Unexpected AI response format");
-    }
-
-    const result = JSON.parse(toolCall.function.arguments);
-    
     // Post-process to enforce constraints
     const refinedSlides = result.slides.map((slide: any) => {
-      // Enforce headline max 10 words
       if (slide.headline) {
         const words = slide.headline.split(/\s+/);
-        if (words.length > 10) {
-          slide.headline = words.slice(0, 10).join(" ");
-        }
+        if (words.length > 10) slide.headline = words.slice(0, 10).join(" ");
       }
-      
-      // Enforce subline max 15 words
       if (slide.subline) {
         const words = slide.subline.split(/\s+/);
-        if (words.length > 15) {
-          slide.subline = words.slice(0, 15).join(" ");
-        }
+        if (words.length > 15) slide.subline = words.slice(0, 15).join(" ");
       }
-      
-      // Enforce bullets max 12 words each, max 5 bullets
       if (slide.bullets && Array.isArray(slide.bullets)) {
         slide.bullets = slide.bullets.slice(0, 5).map((bullet: string) => {
           const words = bullet.split(/\s+/);
           return words.length > 12 ? words.slice(0, 12).join(" ") : bullet;
         });
       }
-      
-      // Enforce max 4 stats
       if (slide.stats && Array.isArray(slide.stats)) {
         slide.stats = slide.stats.slice(0, 4);
       }
-      
       return slide;
     });
 
@@ -366,9 +359,11 @@ For each slide, generate polished professional copy. Use only the information pr
     );
   } catch (error) {
     console.error("Error in refine-slide-copy:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.includes("Rate limit") ? 429 : message.includes("credits") ? 402 : 500;
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: message }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
