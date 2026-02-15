@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, requireAuth } from '../_shared/auth.ts';
 
 interface ApolloContact {
   id: string;
@@ -31,12 +27,17 @@ interface ApolloContact {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const { user, error: authError } = await requireAuth(req, corsHeaders);
+    if (authError) return authError;
+
     const APOLLO_API_KEY = Deno.env.get("APOLLO_API_KEY");
     if (!APOLLO_API_KEY) {
       throw new Error("APOLLO_API_KEY not configured");

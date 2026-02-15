@@ -11,7 +11,7 @@ import type {
   OutboundStats 
 } from '@/types/outbound';
 
-const SUPABASE_URL = 'https://fwhqtzkkvnjkazhaficj.supabase.co';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ============================================
 // CAMPAÑAS
@@ -170,9 +170,10 @@ export async function getProspectsPaginated(
     .eq('campaign_id', campaignId)
     .order('score', { ascending: false, nullsFirst: false });
 
-  // Search filter (server-side)
+  // Search filter (server-side) - sanitizar wildcards
   if (search && search.trim()) {
-    query = query.or(`nombre.ilike.%${search}%,empresa.ilike.%${search}%,cargo.ilike.%${search}%`);
+    const safe = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
+    query = query.or(`nombre.ilike.%${safe}%,empresa.ilike.%${safe}%,cargo.ilike.%${safe}%`);
   }
 
   // Status filter

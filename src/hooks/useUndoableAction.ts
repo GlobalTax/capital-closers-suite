@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
 interface UndoableActionOptions {
@@ -29,6 +29,16 @@ export function useUndoableAction(): UndoableActionReturn {
   const [isPending, setIsPending] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastIdRef = useRef<string | number | null>(null);
+
+  // Cancelar acción pendiente al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const cancel = useCallback(() => {
     if (timeoutRef.current) {

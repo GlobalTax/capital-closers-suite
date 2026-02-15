@@ -1,14 +1,16 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, requireAuth } from '../_shared/auth.ts';
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const { user, error: authError } = await requireAuth(req, corsHeaders);
+    if (authError) return authError;
+
     const { input } = await req.json();
 
     if (!input) {

@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, requireAuth } from '../_shared/auth.ts';
 
 // Template configurations with allowed slide types and expected counts
 const TEMPLATE_CONFIGS: Record<string, { allowedTypes: string[]; slideCount: number; fixedSequence?: { type: string; name: string }[] }> = {
@@ -80,12 +76,17 @@ const SLIDE_CONTENT_SCHEMAS: Record<string, string> = {
 };
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const { user, error: authError } = await requireAuth(req, corsHeaders);
+    if (authError) return authError;
+
     const { presentation_type, inputs_json } = await req.json();
 
     // Validate presentation type

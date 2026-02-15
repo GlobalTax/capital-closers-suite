@@ -105,13 +105,16 @@ export const useTimerStore = create<TimerStore>()(
       
       stopTimer: () => {
         const totalSeconds = get().getElapsedSeconds();
-        
-        // Open modal with the time
+
+        // Detener el timer y abrir modal de asignación
         set({
+          timerState: 'idle',
+          startedAt: null,
+          pausedAt: null,
           isAssignmentModalOpen: true,
           pendingTimeSeconds: totalSeconds,
         });
-        
+
         return totalSeconds;
       },
       

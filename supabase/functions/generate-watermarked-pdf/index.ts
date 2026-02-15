@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts, degrees } from "https://esm.sh/pdf-lib@1.17.1";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, requireAuth } from '../_shared/auth.ts';
 
 interface GenerateWatermarkRequest {
   recipientId: string;
@@ -20,11 +16,16 @@ interface WatermarkResult {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const { user, error: authError } = await requireAuth(req, corsHeaders);
+    if (authError) return authError;
+
     const { recipientId, campaignId } = await req.json() as GenerateWatermarkRequest;
 
     if (!recipientId) {

@@ -101,10 +101,21 @@ export function useAIImport() {
 
     try {
       // Verificar duplicados por CIF o nombre
-      const { data: existing } = await supabase
+      let duplicateQuery = supabase
         .from('empresas')
-        .select('id, nombre')
-        .or(`cif.eq.${state.extractedData.empresa.cif || ''},nombre.ilike.${state.extractedData.empresa.nombre}`)
+        .select('id, nombre');
+
+      const cif = state.extractedData.empresa.cif;
+      const nombre = state.extractedData.empresa.nombre;
+      const safeName = nombre.replace(/%/g, '\\%').replace(/_/g, '\\_');
+
+      if (cif) {
+        duplicateQuery = duplicateQuery.or(`cif.eq.${cif},nombre.ilike.${safeName}`);
+      } else {
+        duplicateQuery = duplicateQuery.ilike('nombre', safeName);
+      }
+
+      const { data: existing } = await duplicateQuery
         .limit(1)
         .maybeSingle();
 

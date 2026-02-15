@@ -28,6 +28,11 @@ export function useDocumentGenerator(): UseDocumentGeneratorReturn {
   const generatePreview = useCallback((type: DocumentType, data: DocumentData) => {
     setIsGenerating(true);
     try {
+      // Revocar URL anterior para evitar memory leak
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
       let url: string;
       switch (type) {
         case 'nda':
@@ -56,7 +61,7 @@ export function useDocumentGenerator(): UseDocumentGeneratorReturn {
     } finally {
       setIsGenerating(false);
     }
-  }, []);
+  }, [previewUrl]);
 
   const downloadDocument = useCallback((type: DocumentType, data: DocumentData, filename?: string) => {
     try {
